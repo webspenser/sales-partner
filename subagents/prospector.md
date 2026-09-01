@@ -32,6 +32,7 @@ A scheduled prospecting run, or the count of leads at stages `New` and
 - Apollo adapter (stubbed — not yet enabled)
 - CRM `create_lead`
 - CRM `query_by_stage`
+- CRM `update_stage`
 
 ## Stop conditions
 - The `leads_per_week` target (from `operating-config.md`) of new

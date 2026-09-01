@@ -30,6 +30,12 @@ or reword any of them when implementing this adapter.
 must be exactly the twelve values from the stage enum in
 `crm-contract.md` — no additional options, no renamed options.
 
+`create_lead` writes this table's fields only at creation. Every other
+field except `Stage` is written afterward by `update_lead` — `Score`,
+`Score Breakdown`, `Next Action`, `Next Action Due`, and `Do Not
+Contact` all move through it. `Stage` is the one field `update_lead`
+refuses to write; that write belongs to `update_stage` alone.
+
 ### Contacts
 
 | Field | Type |

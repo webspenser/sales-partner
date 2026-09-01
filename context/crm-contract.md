@@ -7,7 +7,8 @@ below. No sub-agent talks to a provider's API directly, and no sub-agent
 invokes another sub-agent directly — **`update_stage` is the only
 handoff mechanism between sub-agents.** A sub-agent's job is done when it
 calls `update_stage`; the next sub-agent picks the lead up by querying
-for its trigger stage (`query_by_stage`), never by direct invocation.
+for its trigger condition — a stage (`query_by_stage`) or a stage plus a
+score threshold (`query_by_score`) — never by direct invocation.
 
 The concrete mapping onto Airtable — tables, fields, views — lives in
 `crm-airtable-adapter.md`. This document defines behavior only; it names
@@ -116,7 +117,10 @@ Sub-agents never call one another directly, and no sub-agent contract
 names another sub-agent contract. A sub-agent finishes its unit of work
 by calling `update_stage(lead_id, stage, reason)`; the next sub-agent in
 the pipeline finds that lead by calling `query_by_stage` for the stage it
-triggers on. This is the entire coupling between sub-agents — it is what
-lets the pipeline run as five independent triggers on stage queries, and
-also what lets the same pipeline collapse into sequential inline phases
-on a host without sub-agent dispatch, with identical behavior.
+triggers on, or `query_by_score` for the stage-and-score threshold it
+triggers on where its trigger is score-gated (the Preparer and the
+Approacher). This is the entire coupling between sub-agents — it is what
+lets the pipeline run as five independent triggers on stage or
+stage-and-score queries, and also what lets the same pipeline collapse
+into sequential inline phases on a host without sub-agent dispatch, with
+identical behavior.

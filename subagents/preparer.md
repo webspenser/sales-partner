@@ -57,7 +57,7 @@ clears `research_threshold`, capped per run at `research_quota_per_week`
 Writes each finding with CRM `log_research(lead_id, type, summary,
 source_url, date, hook)` and each person with CRM
 `upsert_contact(lead_id, name, title, email, linkedin_url, role,
-verified)` as research proceeds. Re-runs `score-lead`, then calls CRM
+verified, notes)` as research proceeds. Re-runs `score-lead`, then calls CRM
 `update_lead(lead_id, fields)` to write the revised `Score` and the
 appended `Score Breakdown`, then calls CRM `update_stage(lead_id,
 "Researched", reason)` — or `update_stage(lead_id, "Disqualified",

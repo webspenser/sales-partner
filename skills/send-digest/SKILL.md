@@ -60,14 +60,17 @@ Record-level timestamps are compared against the anchor per section:
   store-level record metadata, not one of the fields
   `crm-airtable-adapter.md` declares on the Leads table; it needs no
   new field because every record already carries it.
-- **Movement** compares each Lead record's own **Last Modified Time**
-  (the same kind of native record metadata, tracking the most recent
-  write to the record) against the anchor. `crm-contract.md`'s
-  `update_stage` does not return or expose a dedicated "stage changed
-  at" value, so Last Modified Time is the closest available signal for
-  "this lead's state changed recently." If a later revision of the CRM
-  contract adds an explicit stage-change timestamp, this section
-  should read that field directly instead.
+- **Movement** compares each Lead record's own **`Stage Changed At`**
+  against the anchor. `Stage Changed At` is a declared field on the
+  Leads table (`crm-airtable-adapter.md`), written only by
+  `update_stage`, on every transition, as part of that same call —
+  never by `update_lead` and never by anything else. That exclusivity
+  is what makes it trustworthy here: `update_lead` writes `Score`,
+  `Next Action`, `Do Not Contact`, and other lead fields routinely
+  without touching stage at all, so a generic "record last touched"
+  timestamp would fire on those unrelated edits too and list leads in
+  Movement that never moved. `Stage Changed At` only ever moves when
+  the stage actually does.
 
 ## This skill reads; it never writes
 
@@ -77,8 +80,9 @@ never calls `create_lead`, `update_stage`, `update_lead`,
 no field edits, no Activity or Research row, not even a "digest sent"
 marker. The reads it does use, named precisely:
 
-- CRM **`query_by_score`** (`min_score: 0, stage: "Scored"`, ordered by
-  Score descending per the contract) — Section 3, New leads scored.
+- CRM **`query_by_score`** (`min_score: 0`, ordered by Score descending
+  per the contract), called once per stage a scored lead can currently
+  occupy — Section 3, New leads scored.
 - CRM **`query_by_stage`**, called once per stage of interest — Section
   5, Movement.
 - The Airtable adapter's three purpose-built views —
@@ -107,18 +111,38 @@ marker. The reads it does use, named precisely:
    lead's `Next Action` and `Next Action Due`. No window applied —
    overdue items stay listed every run until acted on; that is the
    point of a due-date view, not a bug.
-4. **Section 3 — New leads scored.** Call `query_by_score(min_score:
-   0, stage: "Scored", limit: 50)`. Filter to leads whose Created Time
-   falls after the anchor. Take the first five of what remains
-   (already ordered by Score descending). For each, derive its
-   one-line rationale from `Score Breakdown`: parse the five
-   `<criterion> <score>×<weight/100>=<points> (<justification>)`
-   lines the `score-lead` skill wrote, take the line with the highest
-   `<points>` value, and keep only its parenthetical justification —
-   drop the arithmetic. If fewer than five leads clear the anchor
-   filter, list however many there are; if none do, render the
-   heading with `None` under it rather than omitting the heading (see
-   Failure modes).
+4. **Section 3 — New leads scored.** Select by *when the lead was
+   created*, not by its current stage — a lead scored at prospecting
+   and then advanced to `Researched` (or further) within this same
+   window is still a new lead since last digest, and is exactly the
+   kind of fast-moving lead the operator most wants to see, so this
+   section must not lose it. Call `query_by_score(min_score: 0, stage:
+   <stage>, limit: 50)` once per stage a lead can occupy while still
+   carrying a `Score` — every stage except `New` (score-lead hasn't run
+   yet) and `Disqualified` (a lead disqualified on an anti-signal was
+   never scored at all, per `score-lead` step 2) — merge the results,
+   and filter to leads whose Created Time falls after the anchor. Sort
+   the merged, filtered set by Score descending and take the top five.
+   For each, derive its one-line rationale from `Score Breakdown`:
+   parse the five `<criterion> <score>×<weight/100>=<points>
+   (<justification>)` lines the `score-lead` skill wrote — using only
+   the most recent block if the lead has since been re-scored — take
+   the line with the highest `<points>` value, and keep only its
+   parenthetical justification, dropping the arithmetic. If fewer than
+   five leads clear the anchor filter, list however many there are; if
+   none do, render the heading with `None` under it rather than
+   omitting the heading (see Failure modes).
+
+   A lead created since the anchor appears **at most once** in this
+   section, keyed by its Created Time, no matter how many times its
+   `Score` has since been recomputed. If that same lead's Score was
+   recomputed as part of a stage change (a Preparer re-score alongside
+   `Scored → Researched`), that transition is reported once, under
+   Movement (Section 5) — not as a second appearance here. Section 3
+   answers "which leads are new since last digest"; Section 5 answers
+   "what changed since last digest." A lead that answers both
+   questions still gets exactly one line in each, never two lines in
+   either.
 5. **Section 4 — Stalled.** Read the Stalled view (Leads with no
    Activity newer than `follow_up_cadence_days`, from
    `operating-config.md`). List each lead, its `Stage`, and the date of
@@ -128,12 +152,15 @@ marker. The reads it does use, named precisely:
    that signals movement worth reporting — at minimum `Won`, `Lost`,
    and `Disqualified`, plus any of `Contacted`, `Replied`, `Call
    Scheduled`, `Call Held`, `Following Up` the operator has asked to
-   see. For each stage's results, keep only leads whose Last Modified
-   Time falls after the anchor, and list them as `<Company>: → <Stage>
+   see. For each stage's results, keep only leads whose `Stage Changed
+   At` falls after the anchor, and list them as `<Company>: → <Stage>
    (<date>, <reason if one was recorded on the transition>)`. Call out
    `Won`, `Lost`, and `Disqualified` explicitly, even when the list for
    one of them is empty (write "No wins this week" rather than
-   dropping the line).
+   dropping the line). Because `Stage Changed At` is written only by
+   `update_stage`, never by `update_lead`, a lead whose `Score` or
+   `Next Action` was edited without its stage moving does not appear
+   here — only an actual transition does.
 7. **Section 6 — Spend.** Read Apify's usage total for the current cap
    week — the same weekly boundary the anchor uses, so spend and
    digest windows line up — and compare it to
@@ -226,6 +253,7 @@ matches the wall clock exactly this week. Anchor: Monday, 2026-08-24,
 - Meridian Robotics — Replied — last Activity 2026-08-20 (11 days, cadence is 4)
 
 ## Movement
+- Harrow Analytics: Scored → Researched (2026-08-30)
 - Fennimore Health: Call Scheduled → Call Held (2026-08-25)
 - Meridian Robotics: Contacted → Replied (2026-08-28)
 - Ashgrove Systems: Researched → Disqualified (2026-08-27; anti-signal — company size under floor)
@@ -235,6 +263,22 @@ matches the wall clock exactly this week. Anchor: Monday, 2026-08-24,
 ## Spend
 $18.40 of $25.00/week Apify cap (74%) — $6.60 remaining this cap week
 ```
+
+Harrow Analytics shows the anchor and the two changed sections working
+together correctly: created 2026-08-25 (after the 2026-08-24 anchor),
+scored 62.5 at prospecting, then re-scored by the Preparer to 71.0 and
+advanced `Scored → Researched` on 2026-08-30 (also after the anchor, so
+`Stage Changed At` clears the Movement filter too). It appears exactly
+once in New leads scored — Created Time selected it, Score shows its
+current, re-scored value — and exactly once in Movement, for the stage
+transition. Neither section repeats what the other already said: New
+leads scored never mentions the re-score or the transition, and
+Movement never repeats the score. Next week's run, with the anchor
+moved forward to 2026-08-31, will not see Harrow Analytics in either
+section again — its Created Time and its `Stage Changed At` are both
+now before the new anchor — which is the non-overlapping-windows
+property holding across a second, later run for both of these sections
+at once.
 
 Delivered by Gmail to `sending_identity` (e.g. `Andrew Ho Choy
 <andrew@example.com>`). Had `digest_channel` instead been `sms` with
@@ -258,8 +302,8 @@ Delivered by email — SMS is configured but no Twilio credential exists yet.
 - **Recomputing "since last digest" from the wrong timestamp.**
   Using the actual moment this run executes (instead of the nominal
   scheduled time), or using a record's Score value or Stage name
-  (instead of its Created/Last Modified Time) as a stand-in for "when
-  this happened," breaks the non-overlapping-windows property the
+  (instead of its Created Time or `Stage Changed At`) as a stand-in for
+  "when this happened," breaks the non-overlapping-windows property the
   anchor formula depends on — consecutive runs either double-report
   a lead that landed near the boundary or skip it, and a late-firing
   or manually-triggered run computes a different anchor than a

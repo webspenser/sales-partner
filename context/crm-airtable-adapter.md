@@ -22,6 +22,7 @@ or reword any of them when implementing this adapter.
 | `Score` | number 0–100 |
 | `Score Breakdown` | long text |
 | `Stage` | single select — the twelve stages (see `crm-contract.md`) |
+| `Stage Changed At` | datetime |
 | `Next Action` | text |
 | `Next Action Due` | date |
 | `Do Not Contact` | checkbox |
@@ -31,10 +32,16 @@ must be exactly the twelve values from the stage enum in
 `crm-contract.md` — no additional options, no renamed options.
 
 `create_lead` writes this table's fields only at creation. Every other
-field except `Stage` is written afterward by `update_lead` — `Score`,
-`Score Breakdown`, `Next Action`, `Next Action Due`, and `Do Not
-Contact` all move through it. `Stage` is the one field `update_lead`
-refuses to write; that write belongs to `update_stage` alone.
+field except `Stage` and `Stage Changed At` is written afterward by
+`update_lead` — `Score`, `Score Breakdown`, `Next Action`, `Next Action
+Due`, and `Do Not Contact` all move through it. `Stage` is the one
+field `update_lead` refuses to write; that write, and the timestamp
+that goes with it, belong to `update_stage` alone. `update_stage` sets
+`Stage Changed At` to the moment of the call on every transition — no
+other operation, including `update_lead`, ever writes this field, so a
+record's `Stage Changed At` value always reflects an actual stage
+transition and never an unrelated field edit that happened to touch
+the record.
 
 ### Contacts
 

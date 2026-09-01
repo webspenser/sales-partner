@@ -20,7 +20,7 @@ no Airtable table or field.
 |---|---|---|---|
 | `create_lead` | `company, domain, location, industry, size, source, score, score_breakdown, source_url` | `lead_id` | Duplicate domain returns the existing `lead_id` and writes nothing |
 | `get_lead` | `lead_id` | full lead record with linked Contacts, Research, Activities | Missing id is an error, not an empty record |
-| `update_stage` | `lead_id, stage, reason` | updated lead | Rejects any stage outside the enumerated list |
+| `update_stage` | `lead_id, stage, reason` | updated lead, with `stage_changed_at` set to the moment of this call | Rejects any stage outside the enumerated list |
 | `update_lead` | `lead_id, fields` | updated lead | Rejects any attempt to write `stage` through this operation — stage changes go only through `update_stage` |
 | `log_activity` | `lead_id, contact_id, channel, direction, summary, draft_body, status, outcome` | `activity_id` | Rejects `status: sent` unless the record was previously `approved` |
 | `log_research` | `lead_id, type, summary, source_url, date, hook` | `research_id` | Rejects a write with an empty `source_url` or an empty `hook` |
@@ -42,15 +42,29 @@ no Airtable table or field.
   not treat "not found" as "no data yet."
 - **`update_stage`** is the only handoff mechanism between sub-agents
   (see below). It validates `stage` against the twelve-value enum and
-  rejects anything else; it does not accept free-text stages.
+  rejects anything else; it does not accept free-text stages. Every
+  call also sets `stage_changed_at` (`Stage Changed At` in the Airtable
+  adapter) to the moment of the transition, as part of the same write —
+  not a second call, not an optional argument. **No other operation
+  ever writes `stage_changed_at`.** This is what makes the field
+  trustworthy as "when did this lead's stage actually change": because
+  `update_lead` writes every other lead-level field routinely (`Score`,
+  `Next Action`, `Do Not Contact`, and so on) without touching stage at
+  all, a record's generic last-modified time would be set by any of
+  those unrelated writes too — `stage_changed_at` moves only when
+  `update_stage` runs, and never otherwise.
 - **`update_lead`** writes every non-stage field on a lead — `Score`,
   `Score Breakdown`, `Do Not Contact`, `Next Action`, `Next Action Due`,
   and any other lead-level field outside the stage itself. It **rejects
-  any attempt to write `stage`** through this operation; that write
-  belongs to `update_stage` alone. Keeping the two separate is what lets
-  `update_stage` validate every stage write against the twelve-value
-  enum and remain the sole handoff mechanism between sub-agents — a
-  combined operation would let a stage change slip through unvalidated
+  any attempt to write `stage`** through this operation, and it never
+  writes `stage_changed_at` either — both belong to `update_stage`
+  alone. Keeping the two separate is what lets `update_stage` validate
+  every stage write against the twelve-value enum and remain the sole
+  handoff mechanism between sub-agents, and what lets
+  `stage_changed_at` be read elsewhere (the `send-digest` skill's
+  Movement section) as an unambiguous transition timestamp rather than
+  a general-purpose "record touched" timestamp — a combined operation
+  would let a stage change slip through unvalidated and untimestamped
   alongside an ordinary field edit.
 - **`log_activity`** is where the operator-approval guardrail is
   enforced, not merely documented. The operation **rejects any call

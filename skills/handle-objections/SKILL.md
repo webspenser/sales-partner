@@ -3,9 +3,10 @@ name: handle-objections
 description: Use when an objection surfaces before or during a call — classifies it and produces a response grounded in the business profile.
 ---
 
-An objection is a request for more information wearing the shape of a
-refusal. The pattern below treats it that way every time — never as
-something to argue down.
+This skill classifies an objection and produces a response built from
+the acknowledge / one-question / evidence pattern below — never a
+rebuttal, and never a concession made before the objection is
+understood.
 
 ## Procedure
 
@@ -39,9 +40,9 @@ something to argue down.
    invent the missing piece; it escalates per the rule below instead
    of answering.
 4. Log the objection and how it was handled (or escalated) as part of
-   the call record — during a live call this happens through
-   `run-live-call-script`'s debrief step, not as a separate write from
-   this skill.
+   the call record — this happens through
+   `subagents/sales-call-specialist.md`'s debrief trigger mode
+   (`Stage = Call Held`), not as a separate write from this skill.
 
 ## Escalation rule
 

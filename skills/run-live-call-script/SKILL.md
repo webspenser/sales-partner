@@ -49,8 +49,13 @@ Fennimore Health, live call with Renata Voss. Brief from
 onboarding, confidence it scales, a bounded budget number), offer
 elements (playbook build, flat-fee scoping $8k–$15k), two open
 questions (start dates staggered or same-day; existing process written
-down or not). Every line the operator sees fits the OUTPUT SHORT rule
-above — this is the actual shape of what gets surfaced, not a
+down or not). This example assumes `business-profile.md`'s Proof
+section contains: *"cut onboarding time from six weeks to nine days
+for Acme Co, a healthtech client of comparable size"* — the same
+assumption `prepare-sales-call`'s and `handle-objections`' worked
+examples use, since Beat 3 and Beat 4 below name that customer and
+metric directly. Every line the operator sees fits the OUTPUT SHORT
+rule above — this is the actual shape of what gets surfaced, not a
 summary of it.
 
 > **Beat 1 — say:** "Renata — fifteen minutes, mainly your side: how

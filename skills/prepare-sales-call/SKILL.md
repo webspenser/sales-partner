@@ -115,8 +115,7 @@ much onboarding already exists.*
 > **Two open questions:**
 > 1. "Of the four roles you're filling, how many onboard on the same
 >    start date versus staggered?"
-> 2. "What does onboarding look like today — is there already a
->    written process, or is this being built from scratch?"
+> 2. "What does onboarding look like today?"
 
 Every need carries its own evidence line; the brief stops at three
 needs rather than listing every candidate found in step 5; the two

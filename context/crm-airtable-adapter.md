@@ -46,12 +46,16 @@ refuses to write; that write belongs to `update_stage` alone.
 | `LinkedIn URL` | url |
 | `Role` | single select: decision-maker, influencer, gatekeeper |
 | `Verified` | checkbox |
+| `Notes` | long text |
 | `Lead` | link to Leads |
 
 `Verified` distinguishes a contact confirmed by research (name, title,
 and channel checked against a live source) from one inferred or
 unconfirmed. Sub-agents that draft outreach should prefer `Verified`
-contacts and treat an unverified `Role` as provisional.
+contacts and treat an unverified `Role` as provisional. `Notes` holds
+provenance annotations that don't belong in any other field — most
+importantly an unverified pattern-guessed email, recorded as `pattern
+guess, unverified` rather than ever written into `Email`.
 
 `upsert_contact` writes this table: matched on `Email` when present,
 otherwise on `Name` plus `Title`, updating the matched row rather than

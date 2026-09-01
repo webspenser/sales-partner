@@ -54,50 +54,56 @@ skill ever required.
 
 ## Worked example
 
-Fictional lead: **Corvid Analytics**, a B2B SaaS data platform, 48
-employees, Toronto. The operator's confirmed rubric in `icp.md` (a
-small, operator-approved adjustment from the shipped default — 1 point
-moved from Industry fit to Buying trigger) is:
+Fictional lead: **Corvid Analytics**, a B2B SaaS data platform, 52
+employees, Toronto. This uses the shipped default rubric in `icp.md`,
+unmodified:
 
 | Criterion | Weight |
 |---|---|
-| Industry fit | 24 |
+| Industry fit | 25 |
 | Company size | 20 |
 | Geography | 10 |
-| Buying trigger present | 26 |
+| Buying trigger present | 25 |
 | Decision-maker reachable | 20 |
 
 **Run 1 — at prospecting**, on public signals only:
 
 ```
-Industry fit 100×0.24=24 (on target list: B2B SaaS)
-Company size 50×0.20=10 (48 employees; within one band boundary of the 50–500 target range)
+Industry fit 100×0.25=25 (on target list: B2B SaaS)
+Company size 100×0.20=20 (52 employees; squarely inside the 50–500 target range)
 Geography 50×0.10=5 (Toronto — secondary/serviceable market; primary market is US)
-Buying trigger present 50×0.26=13 (soft signal: LinkedIn mentions a "recent Series A" with no date; no explicit recent event found)
-Decision-maker reachable 50×0.20=10 (Priya Shah, VP of Revenue Operations, identified by name/title on LinkedIn company page; no contact route found)
+Buying trigger present 50×0.25=12.5 (soft signal: LinkedIn mentions a "recent Series A" with no date; no explicit recent event found)
+Decision-maker reachable 0×0.20=0 (no matching Target-roles person identified yet)
 ```
 
-Total: 24+10+5+13+10 = **62**. Written via `create_lead`. 62 clears
-`research_threshold` (60), so the lead enters research; it does not yet
-clear `approach_threshold` (70).
+Total: 25+20+5+12.5+0 = **62.5**. Written via `create_lead`. 62.5
+clears `research_threshold` (60), so the lead enters research; it does
+not yet clear `approach_threshold` (70).
 
-**Run 2 — after research**, decision-maker reachability resolved
-(buying trigger unchanged — research found nothing fresher than the
-same soft signal):
+**Run 2 — after research**, a decision-maker identified (buying
+trigger unchanged — research found nothing fresher than the same soft
+signal):
 
 ```
 re-scored after research — 2026-08-20
-Industry fit 100×0.24=24 (unchanged: on target list, B2B SaaS)
-Company size 50×0.20=10 (unchanged: 48 employees)
+Industry fit 100×0.25=25 (unchanged: on target list, B2B SaaS)
+Company size 100×0.20=20 (unchanged: 52 employees)
 Geography 50×0.10=5 (unchanged: Toronto, secondary market)
-Buying trigger present 50×0.26=13 (unchanged: no explicit recent trigger found in research; same soft signal stands)
-Decision-maker reachable 100×0.20=20 (Priya Shah's LinkedIn profile confirmed current as VP of Revenue Operations — contact route verified: linkedin.com/in/priyashah-example)
+Buying trigger present 50×0.25=12.5 (unchanged: no explicit recent trigger found in research; same soft signal stands)
+Decision-maker reachable 50×0.20=10 (Priya Shah, VP of Revenue Operations, identified by name/title on LinkedIn company page; no contact route found yet)
 ```
 
-Total: 24+10+5+13+20 = **72**. Written via `update_lead`, with the
+Total: 25+20+5+12.5+10 = **72.5**. Written via `update_lead`, with the
 `re-scored after research` block appended to the Run 1 breakdown, not
-replacing it. 72 clears `approach_threshold` (70) — the lead is ready
+replacing it. 72.5 clears `approach_threshold` (70) — the lead is ready
 for the Approacher.
+
+`Score` holds the exact value the arithmetic produces, including the
+half — 62.5 and 72.5, never rounded to 62/63 or 72/73.
+`research_threshold` and `approach_threshold` are plain integers, so
+each comparison is a direct `Score >= threshold` against that exact
+fractional value; no rounding step exists, so no lead is ever left
+sitting ambiguously on a threshold.
 
 ## Failure modes
 
@@ -106,7 +112,7 @@ for the Approacher.
   of `icp.md`'s stated anchors and, where possible, a source.
 - **Omitting the breakdown.** A `Score` with no `Score Breakdown` is
   unauditable and untunable — nobody, including the operator, can tell
-  why a lead scored 72 instead of 62, or adjust the rubric with
+  why a lead scored 72.5 instead of 62.5, or adjust the rubric with
   confidence later.
 - **Scoring a lead that matched an anti-signal instead of
   disqualifying it.** Step 2 runs before step 3 for exactly this

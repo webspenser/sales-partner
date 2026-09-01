@@ -24,7 +24,7 @@ no Airtable table or field.
 | `update_lead` | `lead_id, fields` | updated lead | Rejects any attempt to write `stage` through this operation — stage changes go only through `update_stage` |
 | `log_activity` | `lead_id, contact_id, channel, direction, summary, draft_body, status, outcome` | `activity_id` | Rejects `status: sent` unless the record was previously `approved` |
 | `log_research` | `lead_id, type, summary, source_url, date, hook` | `research_id` | Rejects a write with an empty `source_url` or an empty `hook` |
-| `upsert_contact` | `lead_id, name, title, email, linkedin_url, role, verified` | `contact_id` | Matches an existing Contact on `email` when present, otherwise on `name` plus `title`, and updates it rather than creating a duplicate; rejects a `role` outside decision-maker / influencer / gatekeeper |
+| `upsert_contact` | `lead_id, name, title, email, linkedin_url, role, verified, notes` | `contact_id` | Matches an existing Contact on `email` when present, otherwise on `name` plus `title`, and updates it rather than creating a duplicate; rejects a `role` outside decision-maker / influencer / gatekeeper |
 | `query_by_stage` | `stage, limit` | list of leads | Empty list is a valid result |
 | `query_by_score` | `min_score, stage, limit` | list of leads ordered by score descending | Empty list is a valid result |
 
@@ -77,7 +77,11 @@ no Airtable table or field.
   person. `verified` defaults to `false` and the operation never sets it
   `true` on its own; only a caller that has actually verified the
   address may pass `true`. `role` is rejected unless it is one of
-  decision-maker, influencer, or gatekeeper.
+  decision-maker, influencer, or gatekeeper. `notes` is free text for
+  provenance annotations that don't belong in `name`, `title`, or any
+  other field — most importantly an unverified pattern-guessed email
+  address, recorded as `pattern guess, unverified` rather than ever
+  written into `email`.
 - **`query_by_stage`** and **`query_by_score`** are read operations used
   by sub-agents to find their own work (e.g., a contract queries
   `stage: Scored`). An empty list is a valid, non-error result — it

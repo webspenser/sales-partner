@@ -34,9 +34,10 @@ search is a legitimate source, viewing it as a human would is not.
 4. For each person, find a contact route: an email address, a
    LinkedIn profile URL, or both. Note where each came from.
 5. Write each person via CRM `upsert_contact(lead_id, name, title,
-   email, linkedin_url, role, verified)`. `role` must be exactly one of
-   decision-maker, influencer, or gatekeeper — the operation rejects
-   anything else.
+   email, linkedin_url, role, verified, notes)`. `role` must be exactly
+   one of decision-maker, influencer, or gatekeeper — the operation
+   rejects anything else. `title` holds only the person's job title —
+   never fold any other annotation into it.
 6. Set `Verified` only when the contact route came from a source that
    directly confirms it belongs to this person — a public bio page
    listing the address, a verified LinkedIn profile matching the
@@ -46,12 +47,10 @@ search is a legitimate source, viewing it as a human would is not.
    If no verifiable email exists but the company's address pattern can
    be inferred (e.g. `first.last@domain.com` observed on one confirmed
    address and extrapolated to another person), leave `Email` empty on
-   that Contact and instead record the guess as free text — in the
-   Contact's notes, or, if no notes field exists on the adapter in use,
-   folded into the Contact's `Title` field as a parenthetical — in the
-   exact form `pattern guess, unverified`, together with the guessed
-   address and the confirmed address it was inferred from. `Verified`
-   stays unchecked.
+   that Contact and instead record the guess in `Notes`, in the exact
+   form `pattern guess, unverified`, together with the guessed address
+   and the confirmed address it was inferred from. `Title` stays a
+   plain job title and `Verified` stays unchecked.
 
 ## Worked example
 
@@ -79,15 +78,17 @@ Contacts written:
 
 - `upsert_contact(lead_id, "Dana Reyes", "VP of Operations", email="",
   linkedin_url="linkedin.com/in/danareyes-example",
-  role="decision-maker", verified=true)` — verified on the LinkedIn
-  profile matching name and title; email left empty since no source
-  confirms it. Title field carries the note: `VP of Operations
-  (email pattern guess, unverified: d.reyes@halvorsenfreight.com)`.
+  role="decision-maker", verified=true, notes="pattern guess,
+  unverified: d.reyes@halvorsenfreight.com, inferred from the
+  confirmed press contact address's domain pattern")` — verified on the
+  LinkedIn profile matching name and title; email left empty since no
+  source confirms it; `Title` stays plain ("VP of Operations"); the
+  guess lives only in `Notes`.
 - `upsert_contact(lead_id, "Press contact", "Press/Media", email=
   "press@halvorsenfreight.com", linkedin_url="", role="gatekeeper",
-  verified=true)` — the address itself is publicly listed as the press
-  contact, which is exactly what it's verified to be: a route to
-  someone who is not the decision-maker.
+  verified=true, notes="")` — the address itself is publicly listed as
+  the press contact, which is exactly what it's verified to be: a
+  route to someone who is not the decision-maker.
 
 ## Failure modes
 
@@ -104,7 +105,12 @@ Contacts written:
   instead of a person.
 - **Writing a pattern-guessed address as if verified.** Any address
   built by extrapolating a naming convention (`first.last@domain.com`)
-  rather than confirmed against a source belongs in the `pattern
-  guess, unverified` note, never in `Email` with `Verified` checked —
-  see step 7. A bounced or wrong-recipient send traces directly back to
-  skipping this rule.
+  rather than confirmed against a source belongs in `Notes` as
+  `pattern guess, unverified`, never in `Email` with `Verified` checked
+  — see step 7. A bounced or wrong-recipient send traces directly back
+  to skipping this rule.
+- **Folding a provenance note into `Title`.** `Title` holds only the
+  person's job title. Mixing a pattern-guess annotation or any other
+  scoring/provenance text into it corrupts a field everything
+  downstream reads as a plain job title — that annotation belongs in
+  `Notes`.

@@ -30,6 +30,8 @@ closely paraphrased]
 
 - [offer element] — maps to need [#] — [why it fits]
 - [offer element] — maps to need [#] — [why it fits]
+- (optional, only if a third element has a clearly evidenced need to map
+  to) [offer element] — maps to need [#] — [why it fits]
 
 ## Likely objections
 

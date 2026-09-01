@@ -152,13 +152,16 @@ path.
    every returned Activity, a link (or the linked Lead's company name
    if the adapter exposes no per-Activity link) and the channel. No
    window applied — this is every draft outstanding right now, however
-   old.
+   old. Render the section heading with that count, e.g. `Awaiting
+   approval (2)`.
 3. **Section 2 — Next actions due today.** Call CRM
    `query_by_stage(next_action_due_before: today, stage: omitted)` —
    omitting `stage` so leads at every stage are considered, not one
    at a time. List each returned lead's `Next Action` and `Next Action
    Due`. No window applied — overdue items stay listed every run until
-   acted on; that is the point of a due-date filter, not a bug.
+   acted on; that is the point of a due-date filter, not a bug. Render
+   the section heading with the count of leads returned, e.g. `Next
+   actions due today (2)`.
 4. **Section 3 — New leads scored.** Select by *when the lead was
    created*, not by its current stage — a lead scored at prospecting
    and then advanced to `Researched` (or further) within this same
@@ -185,7 +188,11 @@ path.
    parenthetical justification, dropping the arithmetic. If fewer than
    five leads clear the anchor filter, list however many there are; if
    none do, render the heading with `None` under it rather than
-   omitting the heading (see Failure modes).
+   omitting the heading (see Failure modes). Render the section heading
+   with both the count actually listed and the cadence phrasing, e.g.
+   `New leads scored (5, top 5 since last digest)` — the count reflects
+   how many leads are actually listed under the heading, which may be
+   fewer than five whenever fewer clear the anchor filter.
 
    A lead created since the anchor appears **at most once** in this
    section, keyed by its Created Time, no matter how many times its
@@ -203,7 +210,8 @@ path.
    omitted so every active stage is considered. List each returned
    lead, its `Stage`, and the date of its last Activity. No anchor
    window applied — staleness is measured against *now*, every run,
-   independent of when the last digest fired.
+   independent of when the last digest fired. Render the section
+   heading with the count of leads returned, e.g. `Stalled (2)`.
 6. **Section 5 — Movement.** Call `query_by_stage` once for each stage
    that signals movement worth reporting — at minimum `Won`, `Lost`,
    and `Disqualified`, plus any of `Contacted`, `Replied`, `Call
@@ -218,7 +226,10 @@ path.
    dropping the line). Because `Stage Changed At` is written only by
    `update_stage`, never by `update_lead`, a lead whose `Score` or
    `Next Action` was edited without its stage moving does not appear
-   here — only an actual transition does.
+   here — only an actual transition does. Render the section heading
+   with the count of leads that actually transitioned — e.g. `Movement
+   (5)` — an explicit "No wins this week"-style line added only because
+   a bucket was empty does not add to that count.
 7. **Section 6 — Spend.** Read Apify's usage total for the current cap
    week — the same weekly boundary the anchor uses, so spend and
    digest windows line up — and compare it to
@@ -295,22 +306,22 @@ matches the wall clock exactly this week. Anchor: Monday, 2026-08-24,
 - Meridian Robotics — email approach draft — [link]
 - Fennimore Health — email follow-up draft ("thank you after call") — [link]
 
-## Next actions due today
+## Next actions due today (2)
 - Fennimore Health — Send onboarding proposal — due 2026-08-28 (3 days overdue)
 - Corvid Analytics — Await reply to approach; re-engage if none by 2026-08-31 — due 2026-08-31
 
-## New leads scored (top 5 since last digest)
+## New leads scored (5, top 5 since last digest)
 1. Solvent Robotics — 82.5 — buying trigger: posted six ops-eng roles in two weeks after a Series B
 2. Northwind Logistics — 77.5 — on target list: mid-market logistics SaaS
 3. Harrow Analytics — 71.0 — decision-maker reachable: VP Data identified with a verified LinkedIn profile
 4. Bellcrest Health — 65.0 — on target list: healthtech, 80 employees
 5. Quill Systems — 60.0 — geography: primary market, San Francisco
 
-## Stalled
+## Stalled (2)
 - Thornfield Media — Contacted — last Activity 2026-08-22 (9 days, cadence is 4)
 - Meridian Robotics — Replied — last Activity 2026-08-20 (11 days, cadence is 4)
 
-## Movement
+## Movement (5)
 - Harrow Analytics: Scored → Researched (2026-08-30)
 - Fennimore Health: Call Scheduled → Call Held (2026-08-25)
 - Meridian Robotics: Contacted → Replied (2026-08-28)

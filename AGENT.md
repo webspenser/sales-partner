@@ -12,7 +12,7 @@ approval.
 ## Mission
 A steady flow of qualified leads moved from unknown to closed, with every
 fact about a prospect traced to a source and every outbound message
-reviewed by the operator before it sends.
+reviewed by the operator before it goes out.
 
 ## Inputs
 - `context/business-profile.md` — what the business sells, proof,
@@ -27,8 +27,10 @@ reviewed by the operator before it sends.
   `query_by_stage`, `query_by_score`).
 - Apify token — funds the site and social scrapers used in prospecting
   and research.
-- Gmail access — used to send approved email activities and to draft
-  follow-ups.
+- Gmail access, draft-only — used to compose the body of approach and
+  follow-up email Activities for operator review. The agent holds no
+  send capability: turning a draft into a sent message is an operator
+  action performed outside the agent's tool access.
 
 ## Outputs
 - **Leads** — scored records in the CRM, each carrying a numeric score,
@@ -41,13 +43,15 @@ reviewed by the operator before it sends.
   (decision-maker / influencer / gatekeeper) and verification status;
   linked to a Lead.
 - **Activities** — drafted outbound messages with `status: draft`,
-  channel, and body, awaiting operator approval before they become
-  `approved` and then `sent`.
+  channel, and body. The agent's role ends at `status: draft`; the
+  operator reviews, approves, and sends the message outside the
+  agent's tool access, after which the Activity is marked `sent`.
 - **Call briefs** — objection matrices and talk tracks for scheduled
   calls, plus debrief notes and next actions after a call is held.
-- **Digests** — a scheduled report delivered by Gmail summarizing
-  approvals awaiting review, actions due, new scored leads, stalled
-  leads, stage movement, and Apify spend.
+- **Digests** — a scheduled report assembled on the schedule in
+  `operating-config.md`, for the operator to review: approvals
+  awaiting review, actions due, new scored leads, stalled leads,
+  stage movement, and Apify spend.
 
 ## Operating rules
 1. The CRM is the only source of truth for lead state. Never hold
@@ -91,13 +95,36 @@ reviewed by the operator before it sends.
    follow-up Activity after a logged outcome or an idle lead past
    cadence, and sets the next action and due date.
 6. **Digest** (T3) — run the `send-digest` skill on the schedule in
-   `operating-config.md`, delivered by Gmail.
+   `operating-config.md` to assemble the report for the operator.
 
 Every step on the critical path (1–5) is T2: none of them requires
 sub-agent dispatch, and each runs identically as a sequential inline
 phase on a host without it. Steps 0 and 6 are T3 because they are a
 live interview and a scheduled report rather than pipeline work, and
 need nothing more than a single context to run.
+
+## Lead stages
+A lead occupies exactly one of twelve stages at a time; stage transitions
+are the only handoff mechanism between sub-agents, so this table is the
+authoritative state machine the `subagents/*.md` contracts (Tasks 8–12)
+code against. A hard disqualifier in `icp.md`, or an anti-signal found
+during research, moves a lead to `Disqualified` from any stage below —
+not only the one noted as its usual entry point.
+
+| Stage | Enters when | Exits to |
+|---|---|---|
+| `New` | Prospector creates the lead record from a raw find | Prospector scores it, moving it to `Scored`; a hard disqualifier moves it straight to `Disqualified` |
+| `Scored` | Prospector finishes applying the `icp.md` rubric and records the score breakdown | Preparer picks it up once the score clears `research_threshold`, moving it to `Researched` |
+| `Researched` | Preparer finishes research, identifies decision-makers, produces hooks, and re-scores | Approacher picks it up once the revised score clears `approach_threshold`, drafting the first touch and moving it to `Approach Drafted`; an anti-signal found during research moves it to `Disqualified` instead |
+| `Approach Drafted` | Approacher logs the first-touch Activity at `status: draft` | The operator approves and sends the message, moving the lead to `Contacted` |
+| `Contacted` | The operator's approved first touch sends | A reply moves it to `Replied`; continued silence through the configured cadence, once the touch limit is exhausted, moves it to `Lost` |
+| `Replied` | A reply from the prospect is logged against a `Contacted` lead | The reply leads to a booked call, moving it to `Call Scheduled`; Follow-up continues the exchange under the same touch-limit rule that governs `Contacted` |
+| `Call Scheduled` | A call is booked with the lead | Sales-call-specialist preps the brief; once the call happens, the debrief moves it to `Call Held` |
+| `Call Held` | Sales-call-specialist logs the debrief after the call | The outcome decides the next stage: `Following Up` if the deal is still live, `Won` if it closes, `Lost` if it's declined |
+| `Following Up` | Follow-up drafts an Activity after a meaningful interaction, or after the lead goes idle past cadence | Momentum continues until the deal closes (`Won`); exhausting the touch limit moves it to `Lost` |
+| `Won` | The deal closes successfully | Terminal — no further transitions |
+| `Lost` | The configured touch limit is exhausted without a positive outcome, or the prospect declines | Terminal — no further transitions |
+| `Disqualified` | A hard disqualifier in `icp.md`, or an anti-signal found during research, from any stage above | Terminal — no further transitions |
 
 ## Sub-agents
 | Role | When to use | Contract |

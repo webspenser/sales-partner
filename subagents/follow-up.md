@@ -8,7 +8,10 @@ limit.
 ## Trigger
 An Activity logged with an `Outcome`, or a lead idle longer than
 `follow_up_cadence_days` (from `operating-config.md`) since its last
-Activity.
+Activity — found via CRM `query_by_stage(idle_days:
+follow_up_cadence_days)`, the same idle-lookup `send-digest`'s Stalled
+section uses, rather than this contract scanning every stage's leads
+for staleness on its own.
 
 ## Inputs
 - The lead's last Activity — `Summary`, `Outcome`, and prior
@@ -27,7 +30,8 @@ Activity.
 
 ## Tools allowed
 - CRM `get_lead`
-- CRM `query_by_stage`
+- CRM `query_by_stage` (including the `idle_days` filter, to find leads
+  past cadence)
 - CRM `log_activity`
 - CRM `update_lead`
 - CRM `update_stage`

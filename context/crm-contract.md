@@ -2,7 +2,7 @@
 
 Provider-neutral contract for the sales-partner agent's data layer. Every
 sub-agent (Prospector, Preparer, Approacher, Sales-call-specialist,
-Follow-up) reads and writes the CRM only through the nine operations
+Follow-up) reads and writes the CRM only through the ten operations
 below. No sub-agent talks to a provider's API directly, and no sub-agent
 invokes another sub-agent directly — **`update_stage` is the only
 handoff mechanism between sub-agents.** A sub-agent's job is done when it
@@ -25,8 +25,9 @@ no Airtable table or field.
 | `log_activity` | `lead_id, contact_id, channel, direction, summary, draft_body, status, outcome` | `activity_id` | Rejects `status: sent` unless the record was previously `approved` |
 | `log_research` | `lead_id, type, summary, source_url, date, hook` | `research_id` | Rejects a write with an empty `source_url` or an empty `hook` |
 | `upsert_contact` | `lead_id, name, title, email, linkedin_url, role, verified, notes` | `contact_id` | Matches an existing Contact on `email` when present, otherwise on `name` plus `title`, and updates it rather than creating a duplicate; rejects a `role` outside decision-maker / influencer / gatekeeper |
-| `query_by_stage` | `stage, limit` | list of leads | Empty list is a valid result |
+| `query_by_stage` | `stage, limit, next_action_due_before, idle_days` | list of leads | Empty list is a valid result; rejects a call where `stage` is omitted and neither `next_action_due_before` nor `idle_days` is given |
 | `query_by_score` | `min_score, stage, limit` | list of leads ordered by score descending | Empty list is a valid result |
+| `query_activities` | `status, since, until, limit` | list of activities, each with its linked Lead | Rejects a `status` outside draft / approved / sent; empty list is a valid result |
 
 ### Notes on individual operations
 
@@ -101,6 +102,36 @@ no Airtable table or field.
   `stage: Scored`). An empty list is a valid, non-error result — it
   means there is currently no work at that stage or score, not that the
   query failed.
+- **`query_by_stage`**'s base behavior is unchanged by its two optional
+  filters: called with just `stage` (and optionally `limit`), it returns
+  exactly what it always returned — every lead at that stage, `stage`
+  required, rejecting anything outside the twelve-value enum. Passing
+  either `next_action_due_before` (a date) or `idle_days` (an integer)
+  changes what the call means: `stage` becomes optional, and the result
+  is filtered to leads whose `Next Action Due` is on or before
+  `next_action_due_before`, or whose most recent Activity is older than
+  `idle_days` days as of the moment of the call, respectively — across
+  every stage when `stage` is omitted, or narrowed to one stage when
+  both are given together. Omitting `stage` while also omitting both
+  filters is rejected rather than silently returning every lead in the
+  CRM; at least one of the three must be present. This is what lets
+  `send-digest` ask "which leads are due today" or "which leads have
+  gone stale" without a table scan across all twelve stages one at a
+  time, and it is why the operation grew these filters rather than the
+  digest reconstructing them from `query_by_stage`'s original one-stage
+  form.
+- **`query_activities`** is the read counterpart to `log_activity`: it
+  finds Activities directly, by `status` and, optionally, a `[since,
+  until]` window on `Date` — the read this contract had no operation
+  for until `send-digest` needed to find every Activity at
+  `status: draft` regardless of which lead it belongs to. `status` is
+  required and validated against the same three values `log_activity`
+  writes (`draft`, `approved`, `sent`); `since` and `until` are each
+  optional, and omitting one leaves that edge of the window unbounded,
+  so omitting both returns every Activity at that status regardless of
+  `Date`. Every returned Activity carries its linked Lead, so a caller
+  does not need a separate `get_lead` call per row just to show which
+  company an Activity belongs to.
 
 ## Stage enum
 

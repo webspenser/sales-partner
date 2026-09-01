@@ -1,6 +1,6 @@
 # CRM Airtable adapter
 
-The concrete Airtable mapping for `crm-contract.md`'s nine operations:
+The concrete Airtable mapping for `crm-contract.md`'s ten operations:
 four tables, their exact fields and types, and the four views the
 operator works from. Field names below are used verbatim by the
 sub-agent contracts and skills in Tasks 8–12 — do not rename, abbreviate,
@@ -30,6 +30,15 @@ or reword any of them when implementing this adapter.
 `Domain` is the uniqueness key `create_lead` dedupes on. `Stage` options
 must be exactly the twelve values from the stage enum in
 `crm-contract.md` — no additional options, no renamed options.
+
+`query_by_stage`'s two optional filters read this table and, for
+`idle_days`, the Activities table too: `next_action_due_before` filters
+on `Next Action Due` directly; `idle_days` filters to Leads whose
+linked Activities' most recent `Date` is older than the given number of
+days (or which have no Activity at all), the same staleness computation
+the **Stalled** view below already performs — the operation and the
+view compute identically, the operation is simply the path a skill or
+sub-agent calls instead of a human opening the view.
 
 `create_lead` writes this table's fields only at creation. Every other
 field except `Stage` and `Stage Changed At` is written afterward by
@@ -141,10 +150,28 @@ the mechanism that makes "nothing sends without operator approval" true
 — the capability to send is withheld until approval happens, not merely
 requested by instruction.
 
+`query_activities` reads this table, filtered by `Status` and,
+optionally, a `[since, until]` window on `Date`. This is the operation
+`send-digest` uses to find every Activity at `Status = draft` — the
+same set the **Awaiting Approval** view below renders for a human — and
+it returns each Activity with its linked `Lead`, so a caller gets the
+company without a second call.
+
 ## Views
 
 These four views are required, since they are the operator's interface
-onto the pipeline:
+onto the pipeline. They are a convenience for the operator looking at
+Airtable directly — a human-facing surface — not the mechanism any
+skill or sub-agent depends on to read this data: `send-digest`, and any
+future skill with the same needs, reads through `query_activities` and
+`query_by_stage`'s `next_action_due_before` / `idle_days` filters
+instead of these views, precisely so that provider-neutrality holds —
+swapping the adapter (a different CRM behind the same contract) keeps
+every skill working, where reading these views directly would not.
+Each view below is defined to compute exactly what its corresponding
+operation returns, so the operator's screen and a skill's query never
+disagree about what counts as "awaiting approval," "due today," or
+"stalled."
 
 - **Awaiting Approval** — Activities where `Status = draft`, sorted by
   Date. This view **is** the entire review interface: because drafts

@@ -2,7 +2,7 @@
 
 Provider-neutral contract for the sales-partner agent's data layer. Every
 sub-agent (Prospector, Preparer, Approacher, Sales-call-specialist,
-Follow-up) reads and writes the CRM only through the seven operations
+Follow-up) reads and writes the CRM only through the nine operations
 below. No sub-agent talks to a provider's API directly, and no sub-agent
 invokes another sub-agent directly — **`update_stage` is the only
 handoff mechanism between sub-agents.** A sub-agent's job is done when it
@@ -22,6 +22,8 @@ no Airtable table or field.
 | `update_stage` | `lead_id, stage, reason` | updated lead | Rejects any stage outside the enumerated list |
 | `update_lead` | `lead_id, fields` | updated lead | Rejects any attempt to write `stage` through this operation — stage changes go only through `update_stage` |
 | `log_activity` | `lead_id, contact_id, channel, direction, summary, draft_body, status, outcome` | `activity_id` | Rejects `status: sent` unless the record was previously `approved` |
+| `log_research` | `lead_id, type, summary, source_url, date, hook` | `research_id` | Rejects a write with an empty `source_url` or an empty `hook` |
+| `upsert_contact` | `lead_id, name, title, email, linkedin_url, role, verified` | `contact_id` | Matches an existing Contact on `email` when present, otherwise on `name` plus `title`, and updates it rather than creating a duplicate; rejects a `role` outside decision-maker / influencer / gatekeeper |
 | `query_by_stage` | `stage, limit` | list of leads | Empty list is a valid result |
 | `query_by_score` | `min_score, stage, limit` | list of leads ordered by score descending | Empty list is a valid result |
 
@@ -60,8 +62,23 @@ no Airtable table or field.
   the mechanism, not a convention: nothing sends without operator
   approval because the capability to send is withheld until approval
   happens, not because agents are instructed to wait.
+- **`log_research`** creates one Research row linked to the lead. It
+  **rejects a write with an empty `source_url` or an empty `hook`.** A
+  Research row without a source is an unverifiable claim; one without a
+  hook is a research dump the outreach phase cannot use — both are
+  exactly the failure modes the Preparer's guardrails prohibit, so this
+  operation is where they are enforced, not merely stated.
+- **`upsert_contact`** creates or updates one Contact row linked to the
+  lead. It matches an existing Contact on `email` when one is given,
+  and otherwise on `name` plus `title`, and updates that row rather than
+  creating a duplicate — this is what lets a caller re-run contact
+  discovery after a bounce without producing two records for the same
+  person. `verified` defaults to `false` and the operation never sets it
+  `true` on its own; only a caller that has actually verified the
+  address may pass `true`. `role` is rejected unless it is one of
+  decision-maker, influencer, or gatekeeper.
 - **`query_by_stage`** and **`query_by_score`** are read operations used
-  by sub-agents to find their own work (e.g., the Preparer queries
+  by sub-agents to find their own work (e.g., a contract queries
   `stage: Scored`). An empty list is a valid, non-error result — it
   means there is currently no work at that stage or score, not that the
   query failed.

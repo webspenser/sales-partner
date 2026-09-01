@@ -1,6 +1,6 @@
 # CRM Airtable adapter
 
-The concrete Airtable mapping for `crm-contract.md`'s seven operations:
+The concrete Airtable mapping for `crm-contract.md`'s nine operations:
 four tables, their exact fields and types, and the four views the
 operator works from. Field names below are used verbatim by the
 sub-agent contracts and skills in Tasks 8–12 — do not rename, abbreviate,
@@ -47,6 +47,12 @@ and channel checked against a live source) from one inferred or
 unconfirmed. Sub-agents that draft outreach should prefer `Verified`
 contacts and treat an unverified `Role` as provisional.
 
+`upsert_contact` writes this table: matched on `Email` when present,
+otherwise on `Name` plus `Title`, updating the matched row rather than
+creating a second one for the same person. `Verified` defaults to
+unchecked; `upsert_contact` never checks it on its own — only a caller
+that has actually confirmed the address may set it.
+
 ### Research
 
 | Field | Type |
@@ -74,6 +80,11 @@ shortened version of `Summary`:
   write an opening line that is specific to this lead rather than
   generic. A Research row with a `Summary` and no usable `Hook` is
   incomplete for the Preparer's purposes.
+
+`log_research` writes this table and rejects a call with an empty
+`Source URL` or an empty `Hook` — the same incompleteness this section
+describes is refused at the operation, not merely discouraged by
+convention.
 
 ### Activities
 

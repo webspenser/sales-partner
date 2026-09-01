@@ -43,6 +43,8 @@ clears `research_threshold`, capped per run at `research_quota_per_week`
 - Apify site and social scrapers
 - CRM `get_lead`
 - CRM `query_by_score`
+- CRM `log_research`
+- CRM `upsert_contact`
 - CRM `update_lead`
 - CRM `update_stage`
 
@@ -52,13 +54,17 @@ clears `research_threshold`, capped per run at `research_quota_per_week`
   `operating-config.md`) for this lead is spent
 
 ## Handoff
-Re-runs `score-lead`, then calls CRM `update_lead(lead_id, fields)` to
-write the revised `Score` and the appended `Score Breakdown`, then calls
-CRM `update_stage(lead_id, "Researched", reason)` — or
-`update_stage(lead_id, "Disqualified", reason)` if an anti-signal was
-found — and stops. The stage transition is the entire handoff; the next
-stage's work is picked up independently by whichever contract queries
-the CRM for leads at that stage and score.
+Writes each finding with CRM `log_research(lead_id, type, summary,
+source_url, date, hook)` and each person with CRM
+`upsert_contact(lead_id, name, title, email, linkedin_url, role,
+verified)` as research proceeds. Re-runs `score-lead`, then calls CRM
+`update_lead(lead_id, fields)` to write the revised `Score` and the
+appended `Score Breakdown`, then calls CRM `update_stage(lead_id,
+"Researched", reason)` — or `update_stage(lead_id, "Disqualified",
+reason)` if an anti-signal was found — and stops. The stage transition
+is the entire handoff; the next stage's work is picked up independently
+by whichever contract queries the CRM for leads at that stage and
+score.
 
 ## Inline fallback
 Runs as the second sequential phase on a host without sub-agent
@@ -68,7 +74,9 @@ stage before moving to the next phase.
 
 ### Guardrails
 - Nothing behind a login is used as a source.
-- A `Source URL` is required on every Research row.
+- A `Source URL` is required on every Research row —
+  `log_research` itself rejects a call with an empty `source_url` or an
+  empty `hook`.
 - Anything inferred rather than directly sourced is marked `unverified`
   in `Summary`.
 - An anti-signal discovered during research moves the lead straight to

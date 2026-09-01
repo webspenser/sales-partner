@@ -29,6 +29,7 @@ Activity.
 - CRM `get_lead`
 - CRM `query_by_stage`
 - CRM `log_activity`
+- CRM `update_lead`
 - CRM `update_stage`
 - Gmail — draft only
 
@@ -44,13 +45,15 @@ mechanism, not an instruction.
   lead
 
 ## Handoff
-When under the touch limit, logs the draft and sets `Next Action` and
+When under the touch limit, logs the draft and calls CRM
+`update_lead(lead_id, fields)` to set `Next Action` and
 `Next Action Due`, leaving the lead's stage as-is for the operator's
 approval-and-send cycle to move it forward. When `max_touches` is
 reached, calls CRM `update_stage(lead_id, "Lost", reason)` instead of
-drafting again. Either way, the contract stops there — the stage and the
-`Next Action` fields are the entire handoff; no other role is invoked
-directly.
+drafting again. When an inbound opt-out is found, calls CRM
+`update_lead(lead_id, fields)` to set `Do Not Contact`. Either way, the
+contract stops there — the stage and the lead fields are the entire
+handoff; no other role is invoked directly.
 
 ## Inline fallback
 Runs as the fifth sequential phase on a host without sub-agent dispatch:

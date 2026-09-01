@@ -18,6 +18,8 @@ Three modes:
   studies
 - `context/icp.md` — target-role and buying-trigger context for the call
 - Web search, for day-of news relevant to the prospect or their company
+- Skills used: `prepare-sales-call`, `handle-objections`,
+  `run-live-call-script`
 
 ## Outputs
 - Prep mode: a call brief, an objection matrix, and a talk track
@@ -26,15 +28,11 @@ Three modes:
 - Debrief mode: an Activities row with `Summary` and `Outcome`, plus
   `Next Action` and `Next Action Due` set on the lead
 
-## Skills
-- `prepare-sales-call`
-- `handle-objections`
-- `run-live-call-script`
-
 ## Tools allowed
 - CRM `get_lead`
 - CRM `query_by_stage`
 - CRM `log_activity`
+- CRM `update_lead`
 - CRM `update_stage`
 - `context/` (read access)
 - Web search
@@ -46,12 +44,14 @@ Three modes:
 
 ## Handoff
 Prep mode calls no stage transition — the lead stays at
-`Call Scheduled` until the call happens. Debrief mode logs the outcome
-and calls CRM `update_stage(lead_id, stage, reason)` to the stage the
-outcome decides: `Following Up` if the deal is still live, `Won` if it
-closes, `Lost` if it's declined — then stops. The stage transition is
-the entire handoff; the next stage's work is picked up independently by
-whichever contract queries the CRM for leads at that stage.
+`Call Scheduled` until the call happens. Debrief mode logs the outcome,
+calls CRM `update_lead(lead_id, fields)` to set `Next Action` and
+`Next Action Due`, then calls CRM `update_stage(lead_id, stage, reason)`
+to the stage the outcome decides: `Following Up` if the deal is still
+live, `Won` if it closes, `Lost` if it's declined — then stops. The
+stage transition is the entire handoff; the next stage's work is picked
+up independently by whichever contract queries the CRM for leads at
+that stage.
 
 ## Inline fallback
 Runs as the fourth sequential phase on a host without sub-agent

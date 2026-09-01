@@ -2,7 +2,7 @@
 
 Provider-neutral contract for the sales-partner agent's data layer. Every
 sub-agent (Prospector, Preparer, Approacher, Sales-call-specialist,
-Follow-up) reads and writes the CRM only through the six operations
+Follow-up) reads and writes the CRM only through the seven operations
 below. No sub-agent talks to a provider's API directly, and no sub-agent
 invokes another sub-agent directly — **`update_stage` is the only
 handoff mechanism between sub-agents.** A sub-agent's job is done when it
@@ -20,6 +20,7 @@ no Airtable table or field.
 | `create_lead` | `company, domain, location, industry, size, source, score, score_breakdown, source_url` | `lead_id` | Duplicate domain returns the existing `lead_id` and writes nothing |
 | `get_lead` | `lead_id` | full lead record with linked Contacts, Research, Activities | Missing id is an error, not an empty record |
 | `update_stage` | `lead_id, stage, reason` | updated lead | Rejects any stage outside the enumerated list |
+| `update_lead` | `lead_id, fields` | updated lead | Rejects any attempt to write `stage` through this operation — stage changes go only through `update_stage` |
 | `log_activity` | `lead_id, contact_id, channel, direction, summary, draft_body, status, outcome` | `activity_id` | Rejects `status: sent` unless the record was previously `approved` |
 | `query_by_stage` | `stage, limit` | list of leads | Empty list is a valid result |
 | `query_by_score` | `min_score, stage, limit` | list of leads ordered by score descending | Empty list is a valid result |
@@ -39,6 +40,15 @@ no Airtable table or field.
 - **`update_stage`** is the only handoff mechanism between sub-agents
   (see below). It validates `stage` against the twelve-value enum and
   rejects anything else; it does not accept free-text stages.
+- **`update_lead`** writes every non-stage field on a lead — `Score`,
+  `Score Breakdown`, `Do Not Contact`, `Next Action`, `Next Action Due`,
+  and any other lead-level field outside the stage itself. It **rejects
+  any attempt to write `stage`** through this operation; that write
+  belongs to `update_stage` alone. Keeping the two separate is what lets
+  `update_stage` validate every stage write against the twelve-value
+  enum and remain the sole handoff mechanism between sub-agents — a
+  combined operation would let a stage change slip through unvalidated
+  alongside an ordinary field edit.
 - **`log_activity`** is where the operator-approval guardrail is
   enforced, not merely documented. The operation **rejects any call
   with `status: sent` unless the activity record being updated was

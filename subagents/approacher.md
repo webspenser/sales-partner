@@ -5,14 +5,12 @@ Choose the opening outbound channel for a qualified lead and draft the
 first-touch message for operator review.
 
 ## Trigger
-`Stage = Researched` **and** `Score >= approach_threshold` — the revised
-score written after research, not the original scoring estimate. A lead
-that looked promising before research can fall below this bar and never
-reach this contract at all, without consuming an outreach touch. This
-contract is invoked once a lead meets that condition and is handed a
-specific `lead_id` already matching it; the query that identifies
-qualifying leads runs outside this contract's own tool access, per the
-`Tools allowed` list below.
+CRM `query_by_score(min_score = approach_threshold, stage =
+"Researched")` — leads at stage `Researched` whose `Score` clears
+`approach_threshold`. That score is the revised value written after
+research, not the original scoring estimate — a lead that looked
+promising before research can fall below this bar and never reach this
+contract at all, without consuming an outreach touch.
 
 ## Inputs
 - The lead record, via CRM `get_lead` (includes linked Contacts and
@@ -35,6 +33,7 @@ qualifying leads runs outside this contract's own tool access, per the
 
 ## Tools allowed
 - CRM `get_lead`
+- CRM `query_by_score`
 - CRM `log_activity`
 - CRM `update_stage`
 - Read access to `templates/`
@@ -57,19 +56,17 @@ other role.
 
 ## Inline fallback
 Runs as the third sequential phase on a host without sub-agent dispatch:
-the same orchestrating loop that would otherwise dispatch this contract
-instead runs it directly, once per lead already identified as
-`Stage = Researched` and `Score >= approach_threshold`. Drafting,
-logging, and the stage update all run in the same context; the operator
-approval-and-send step still happens outside either dispatch model,
-identically.
+call `query_by_score(min_score = approach_threshold, stage =
+"Researched")` directly in the same context to find its own work, draft
+and log the message, and advance the stage, before moving to the next
+phase. The operator approval-and-send step still happens outside either
+dispatch model, identically.
 
 ### Guardrails
 - LinkedIn output is always copy-paste text handed to a human. No
   automated LinkedIn action of any kind — no automated connection
   requests, messages, or scraping.
 - Email drafts stop at `Status = draft`; nothing in this contract can
-  move an Activity to `sent` — `log_activity` itself rejects a `sent`
-  write unless the record was previously `approved`, and approval is an
-  operator action.
+  move an Activity to `sent` — see `crm-contract.md`'s `log_activity`
+  entry for the approval enforcement that guarantees this.
 - One opening touch per lead from this contract.

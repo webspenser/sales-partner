@@ -43,10 +43,8 @@ clears `research_threshold`, capped per run at `research_quota_per_week`
 - Apify site and social scrapers
 - CRM `get_lead`
 - CRM `query_by_score`
+- CRM `update_lead`
 - CRM `update_stage`
-- Provider CRM write access to Research and Contacts records, per
-  `crm-airtable-adapter.md` — outside the six neutral operations, which
-  govern lead-level state only
 
 ## Stop conditions
 - Two or more usable `Hook` values have been written for the lead
@@ -54,12 +52,13 @@ clears `research_threshold`, capped per run at `research_quota_per_week`
   `operating-config.md`) for this lead is spent
 
 ## Handoff
-Re-runs `score-lead`, writes the revised `Score`, appends to
-`Score Breakdown`, then calls CRM `update_stage(lead_id, "Researched",
-reason)` — or `update_stage(lead_id, "Disqualified", reason)` if an
-anti-signal was found — and stops. The stage transition is the entire
-handoff; the next stage's work is picked up independently by whichever
-contract queries the CRM for leads at that stage and score.
+Re-runs `score-lead`, then calls CRM `update_lead(lead_id, fields)` to
+write the revised `Score` and the appended `Score Breakdown`, then calls
+CRM `update_stage(lead_id, "Researched", reason)` — or
+`update_stage(lead_id, "Disqualified", reason)` if an anti-signal was
+found — and stops. The stage transition is the entire handoff; the next
+stage's work is picked up independently by whichever contract queries
+the CRM for leads at that stage and score.
 
 ## Inline fallback
 Runs as the second sequential phase on a host without sub-agent

@@ -1,6 +1,6 @@
 # CRM Airtable adapter
 
-The concrete Airtable mapping for `crm-contract.md`'s six operations:
+The concrete Airtable mapping for `crm-contract.md`'s seven operations:
 four tables, their exact fields and types, and the four views the
 operator works from. Field names below are used verbatim by the
 sub-agent contracts and skills in Tasks 8–12 — do not rename, abbreviate,

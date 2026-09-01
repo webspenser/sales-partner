@@ -23,8 +23,8 @@ reviewed by the operator before it goes out.
 - `context/operating-config.md` — volume targets, cadence, enabled
   channels, digest schedule, tone, sending identity, and spend caps.
 - CRM credentials — Airtable is the first adapter for the neutral CRM
-  contract (`create_lead`, `get_lead`, `update_stage`, `log_activity`,
-  `query_by_stage`, `query_by_score`).
+  contract (`create_lead`, `get_lead`, `update_stage`, `update_lead`,
+  `log_activity`, `query_by_stage`, `query_by_score`).
 - Apify token — funds the site and social scrapers used in prospecting
   and research.
 - Gmail access, draft-only — used to compose the body of approach and

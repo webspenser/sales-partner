@@ -28,7 +28,7 @@ no Airtable table or field.
 | `upsert_contact` | `lead_id, name, title, email, linkedin_url, role, verified, notes` | `contact_id` | Matches an existing Contact on `email` when present, otherwise on `name` plus `title`, and updates it rather than creating a duplicate; rejects a `role` outside decision-maker / influencer / gatekeeper |
 | `query_by_stage` | `stage, limit, next_action_due_before, idle_days` | list of leads | Empty list is a valid result; rejects a call where `stage` is omitted and neither `next_action_due_before` nor `idle_days` is given |
 | `query_by_score` | `min_score, stage, limit` | list of leads ordered by score descending | Empty list is a valid result |
-| `query_activities` | `status, since, until, limit` | list of activities, each with its linked Lead | Rejects a `status` outside draft / approved / sent / voided; empty list is a valid result |
+| `query_activities` | `status, direction, since, until, limit` | list of activities, each with its linked Lead | Rejects a `status` outside draft / approved / sent / voided; `direction` is optional and, when given, must be `outbound` or `inbound`; empty list is a valid result |
 
 ### Notes on individual operations
 
@@ -146,23 +146,32 @@ no Airtable table or field.
   digest reconstructing them from `query_by_stage`'s original one-stage
   form.
 - **`query_activities`** is the read counterpart to `log_activity` and
-  `update_activity`: it finds Activities directly, by `status` and,
-  optionally, a `[since, until]` window on `Date` — the read this
-  contract had no operation for until `send-digest` needed to find
-  every Activity at `status: draft` regardless of which lead it
-  belongs to. `status` is required and validated against the full,
-  four-value `Status` enum (`draft`, `approved`, `sent`, `voided`) —
-  but only two of those four values are ever written by an agent
-  through this contract: `draft` by `log_activity` and `voided` by
-  `update_activity`. `approved` and `sent` are legal `query_activities`
-  filters (so `send-digest` or an audit can still find them), but no
-  operation in this contract writes either one — see the Approval
-  invariant below. `since` and `until` are each optional, and omitting
-  one leaves that edge of the window unbounded, so omitting both
-  returns every Activity at that status regardless of `Date`. Every
-  returned Activity carries its linked Lead, so a caller does not need
-  a separate `get_lead` call per row just to show which company an
-  Activity belongs to.
+  `update_activity`: it finds Activities directly, by `status`,
+  optionally `direction`, and optionally a `[since, until]` window on
+  `Date` — the read this contract had no operation for until
+  `send-digest` needed to find every outbound Activity at
+  `status: draft` regardless of which lead it belongs to. `status` is
+  required and validated against the full, four-value `Status` enum
+  (`draft`, `approved`, `sent`, `voided`) — but only two of those four
+  values are ever written by an agent through this contract: `draft`
+  by `log_activity` and `voided` by `update_activity`. `approved` and
+  `sent` are legal `query_activities` filters (so `send-digest` or an
+  audit can still find them), but no operation in this contract writes
+  either one — see the Approval invariant below. `direction`, when
+  given, must be `outbound` or `inbound`; omitting it returns
+  Activities in either direction. This is what lets a caller separate
+  outbound drafts genuinely awaiting an operator decision from inbound
+  replies and call debriefs that also land at `status: draft` (every
+  Activity `log_activity` creates starts there, regardless of
+  direction) but need no approval — the **Awaiting Approval** view
+  (`crm-airtable-adapter.md`) filters on both `Status = draft` and
+  `Direction = outbound` for exactly this reason, and `send-digest`'s
+  approval-queue read does the same. `since` and `until` are each
+  optional, and omitting one leaves that edge of the window unbounded,
+  so omitting both returns every Activity at that status regardless of
+  `Date`. Every returned Activity carries its linked Lead, so a caller
+  does not need a separate `get_lead` call per row just to show which
+  company an Activity belongs to.
 
 ## Approval invariant
 

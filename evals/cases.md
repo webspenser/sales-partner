@@ -233,7 +233,19 @@ a compromised caller trying to route around the queue) is rejected
 outright — `update_activity` accepts no `status` value except
 `"voided"`, so this call fails regardless of the record's current
 status, not because of an approval check that a `voided`-but-once-
-`approved` record might otherwise slip past.
+`approved` record might otherwise slip past; (f) — added to confirm
+the narrowed **Awaiting Approval** view (`crm-airtable-adapter.md`,
+`Status = "draft"` AND `Direction = "outbound"`) — call
+`query_activities(status: "draft", direction: "outbound")` both before
+and after the opt-out. Before: the two seeded outbound Activities
+appear (the third, inbound opt-out Activity does not, since it's
+`Direction = "inbound"` even though it's also `status: "draft"`).
+After: neither of the two prior outbound Activities appears any more
+(both are `voided`, not `draft`), and the inbound Activity still never
+appears, for the same `Direction` reason as before — the queue this
+case exercises now shows exactly the outbound decisions an operator
+needs to make, before and after, with no inbound noise at either
+point.
 
 ---
 

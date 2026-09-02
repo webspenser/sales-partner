@@ -91,6 +91,11 @@ tone: "[three adjectives from the interview]"
 
 Nothing in this file, and nothing any key here configures, sends a
 message on its own. Nothing sends without operator approval — that
-guardrail is enforced in the CRM contract (`log_activity` rejects any
-write of `status: sent` unless the record's current status is
-`status: approved`), not merely stated here.
+guardrail is enforced in the CRM contract, not merely stated here:
+`log_activity` creates an Activity at `status: draft` only, and
+`update_activity` can move an existing Activity only to
+`status: voided`; `approved` and `sent` are reachable only by the
+operator acting outside the agent's tool access. See
+`crm-contract.md`'s Approval invariant for the full, provable rule —
+this file states the outcome, not the mechanics, precisely so it
+cannot drift out of sync with them again.

@@ -114,9 +114,9 @@ never calls `create_lead`, `update_stage`, `update_lead`,
 no field edits, no Activity or Research row, not even a "digest sent"
 marker. The reads it does use, named precisely:
 
-- CRM **`query_activities`** (`status: "draft"`, no `since`/`until` —
-  every outstanding draft regardless of age) — Section 1, Awaiting
-  approval.
+- CRM **`query_activities`** (`status: "draft"`, `direction:
+  "outbound"`, no `since`/`until` — every outstanding outbound draft
+  regardless of age) — Section 1, Awaiting approval.
 - CRM **`query_by_stage`** with its `next_action_due_before` filter
   (`stage` omitted, so leads across every stage are considered) —
   Section 2, Next actions due today.
@@ -132,7 +132,7 @@ marker. The reads it does use, named precisely:
 - Apify's own usage data — Section 6. This is the one section with no
   CRM read at all; Apify spend is not CRM data and never was.
 
-Every one of the above is a call through `crm-contract.md`'s ten
+Every one of the above is a call through `crm-contract.md`'s eleven
 provider-neutral operations — none of the six sections reads an
 Airtable view directly. `crm-airtable-adapter.md`'s four named views
 (Awaiting Approval, Research Queue, Due Today, Stalled) still exist as
@@ -148,12 +148,16 @@ path.
 1. Compute the window — the anchor and `nominal_time` that bound it on
    both edges — per **The "since last digest" anchor** above.
 2. **Section 1 — Awaiting approval.** Call CRM `query_activities(status:
-   "draft")`, `since`/`until` both omitted. Record the count and, for
-   every returned Activity, a link (or the linked Lead's company name
-   if the adapter exposes no per-Activity link) and the channel. No
-   window applied — this is every draft outstanding right now, however
-   old. Render the section heading with that count, e.g. `Awaiting
-   approval (2)`.
+   "draft", direction: "outbound")`, `since`/`until` both omitted.
+   `direction: "outbound"` is required here, not optional — every
+   Activity `log_activity` creates lands at `status: draft` regardless
+   of direction, so an inbound reply or a call debrief would otherwise
+   show up in this section as if it were a message awaiting a send
+   decision. Record the count and, for every returned Activity, a link
+   (or the linked Lead's company name if the adapter exposes no
+   per-Activity link) and the channel. No window applied — this is
+   every outbound draft outstanding right now, however old. Render the
+   section heading with that count, e.g. `Awaiting approval (2)`.
 3. **Section 2 — Next actions due today.** Call CRM
    `query_by_stage(next_action_due_before: today, stage: omitted)` —
    omitting `stage` so leads at every stage are considered, not one

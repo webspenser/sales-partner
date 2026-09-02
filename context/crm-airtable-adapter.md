@@ -168,18 +168,29 @@ inbound opt-out is logged, so a message already queued for approval
 can never reach `sent` after the prospect has asked not to be
 contacted.
 
-`query_activities` reads this table, filtered by `Status` and,
-optionally, a `[since, until]` window on `Date`. This is the operation
-`send-digest` uses to find every Activity at `Status = draft` — the
-same set the **Awaiting Approval** view below renders for a human — and
-it returns each Activity with its linked `Lead`, so a caller gets the
-company without a second call. `query_activities` accepts `voided`
-as a `Status` value like any other, for a caller that specifically
-wants voided history — but nothing in this adapter treats a `voided`
-Activity as awaiting anything: the **Awaiting Approval** view below
-filters on `Status = draft` specifically, not "not yet sent," so a
-voided Activity never appears there once `update_activity` has moved
-it out of `draft`.
+`query_activities` reads this table, filtered by `Status`, optionally
+`Direction`, and optionally a `[since, until]` window on `Date`. This
+is the operation `send-digest` uses to find every outbound Activity at
+`Status = draft` — the same set the **Awaiting Approval** view below
+renders for a human — and it returns each Activity with its linked
+`Lead`, so a caller gets the company without a second call.
+`query_activities` accepts `voided` as a `Status` value like any
+other, for a caller that specifically wants voided history — but
+nothing in this adapter treats a `voided` Activity as awaiting
+anything: the **Awaiting Approval** view below filters on
+`Status = draft` specifically, not "not yet sent," so a voided
+Activity never appears there once `update_activity` has moved it out
+of `draft`. **The view also filters on `Direction = outbound`,** for a
+different reason than `voided` exclusion: `log_activity` creates
+every Activity at `Status = draft` regardless of `Direction` — an
+inbound reply logged for context, or a call debrief logged by the
+Sales-call-specialist, lands at `draft` exactly like an outbound
+approach message does. Without the `Direction` filter, those
+non-decision rows would sit in the same queue as messages genuinely
+awaiting an operator's send decision, diluting the one view this
+schema's entire no-send guarantee depends on a human actually reading.
+`Direction = outbound` narrows the view to only the rows a decision is
+actually needed on.
 
 ## Views
 
@@ -197,11 +208,15 @@ operation returns, so the operator's screen and a skill's query never
 disagree about what counts as "awaiting approval," "due today," or
 "stalled."
 
-- **Awaiting Approval** — Activities where `Status = draft`, sorted by
-  Date. This view **is** the entire review interface: because drafts
-  live in Activities rather than a separate table, this one view shows
-  every message awaiting operator approval across every lead and every
-  channel.
+- **Awaiting Approval** — Activities where `Status = draft` **and**
+  `Direction = outbound`, sorted by Date. This view **is** the entire
+  review interface: because drafts live in Activities rather than a
+  separate table, this one view shows every message awaiting operator
+  approval across every lead and every channel — and only that: the
+  `Direction = outbound` half of the filter is what keeps inbound
+  replies and call debriefs, which also land at `Status = draft`, out
+  of a queue that exists specifically for decisions the operator still
+  has to make.
 - **Research Queue** — Leads where `Stage = Scored`, sorted by Score
   descending. What the Preparer works through next, highest-score
   first.

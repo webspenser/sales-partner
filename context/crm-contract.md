@@ -22,7 +22,7 @@ no Airtable table or field.
 | `get_lead` | `lead_id` | full lead record with linked Contacts, Research, Activities | Missing id is an error, not an empty record |
 | `update_stage` | `lead_id, stage, reason` | updated lead, with `stage_changed_at` set to the moment of this call | Rejects any stage outside the enumerated list |
 | `update_lead` | `lead_id, fields` | updated lead | Rejects any attempt to write `stage` through this operation — stage changes go only through `update_stage` |
-| `log_activity` | `lead_id, contact_id, channel, direction, summary, draft_body, status, outcome` | `activity_id` | Rejects `status: sent` unless the record's current status is `approved` |
+| `log_activity` | `lead_id, contact_id, channel, direction, summary, draft_body, status, outcome` | `activity_id` of the newly created row | Create-only — takes no `activity_id` and never touches an existing row. Accepts only `status: "draft"`; rejects `approved`, `sent`, and `voided` outright and unconditionally |
 | `update_activity` | `activity_id, status, outcome` | updated activity | Accepts only `status: "voided"` — rejects `draft`, `approved`, and `sent` outright and unconditionally, regardless of the record's current status; this is the only status change this operation can ever perform |
 | `log_research` | `lead_id, type, summary, source_url, date, hook` | `research_id` | Rejects a write with an empty `source_url` or an empty `hook` |
 | `upsert_contact` | `lead_id, name, title, email, linkedin_url, role, verified, notes` | `contact_id` | Matches an existing Contact on `email` when present, otherwise on `name` plus `title`, and updates it rather than creating a duplicate; rejects a `role` outside decision-maker / influencer / gatekeeper |
@@ -68,17 +68,22 @@ no Airtable table or field.
   a general-purpose "record touched" timestamp — a combined operation
   would let a stage change slip through unvalidated and untimestamped
   alongside an ordinary field edit.
-- **`log_activity`** is where the operator-approval guardrail is
-  enforced, not merely documented. The operation **rejects any call
-  with `status: sent` unless the activity record being updated has a
-  current status of `status: approved`.** A sub-agent can log a `draft`
-  activity, or advance one from `approved`, but no sub-agent — and no
-  automated caller of this contract — can move an activity straight to
-  `sent`. Only the operator's approval action can put a record into
-  `approved`, and only then does `sent` become a legal write. This is
-  the mechanism, not a convention: nothing sends without operator
-  approval because the capability to send is withheld until approval
-  happens, not because agents are instructed to wait.
+- **`log_activity`** is **create-only**: it takes no `activity_id`, it
+  never reads or touches an existing Activity row, and every call
+  produces a brand-new row, returning that new row's `activity_id`.
+  The `status` it accepts is hard-restricted to `"draft"` — a call
+  passing `approved`, `sent`, or `voided` is **rejected outright and
+  unconditionally**. There is no "current status" for a create-only
+  operation to check against; the restriction applies to every call,
+  every time, with no conditional path through it. This is where the
+  operator-approval guardrail actually starts: an agent cannot mint an
+  Activity anywhere but `draft`, so it cannot create a row that lands
+  past the **Awaiting Approval** view (`crm-airtable-adapter.md`) —
+  that view filters on `Status = draft`, and every Activity this
+  operation produces starts there, visible and waiting. Nothing sends
+  without operator approval because no operation this contract exposes
+  to an agent can write `approved` or `sent` at all — see the Approval
+  invariant below — not because agents are instructed to wait.
 - **`update_activity`** is the only operation that can change an
   existing Activity after `log_activity` created it, and it exists for
   exactly one purpose: voiding. It takes the `activity_id`
@@ -86,10 +91,11 @@ no Airtable table or field.
   row, but the `status` value it accepts is hard-restricted to
   `"voided"` — a call passing `draft`, `approved`, or `sent` is
   **rejected outright and unconditionally**, regardless of the
-  record's current status. This is not the same shape as
-  `log_activity`'s approval gate (which lets `sent` through once a
-  record is `approved`): `update_activity` has no path to `sent`, no
-  path to `approved`, and no path back to `draft`, ever. Voiding is
+  record's current status. `log_activity` and `update_activity` are
+  disjoint by design: one only ever creates a new row (and only at
+  `draft`), the other only ever touches an existing one (and only to
+  `voided`) — neither can do the other's job, and between the two of
+  them `approved` and `sent` are never a legal write. Voiding is
   the only status change any operation in this contract lets an agent
   perform on an Activity that already exists, and it is a dead end —
   once `voided`, an Activity can never move again. This is the
@@ -146,14 +152,49 @@ no Airtable table or field.
   every Activity at `status: draft` regardless of which lead it
   belongs to. `status` is required and validated against the full,
   four-value `Status` enum (`draft`, `approved`, `sent`, `voided`) —
-  the union of what `log_activity` can write (`draft`, `approved`, or
-  `sent`) and what `update_activity` can write (`voided`, and nothing
-  else); `since` and `until` are each optional, and omitting one
-  leaves that edge of the window unbounded, so omitting both returns
-  every Activity at that status regardless of `Date`. Every returned
-  Activity carries its linked Lead, so a caller does not need a
-  separate `get_lead` call per row just to show which company an
+  but only two of those four values are ever written by an agent
+  through this contract: `draft` by `log_activity` and `voided` by
+  `update_activity`. `approved` and `sent` are legal `query_activities`
+  filters (so `send-digest` or an audit can still find them), but no
+  operation in this contract writes either one — see the Approval
+  invariant below. `since` and `until` are each optional, and omitting
+  one leaves that edge of the window unbounded, so omitting both
+  returns every Activity at that status regardless of `Date`. Every
+  returned Activity carries its linked Lead, so a caller does not need
+  a separate `get_lead` call per row just to show which company an
   Activity belongs to.
+
+## Approval invariant
+
+Stated once, plainly, so a future editor sees exactly what they would
+be breaking before they break it:
+
+- An agent can create an Activity only at `status: "draft"`, via
+  `log_activity` — no other status is accepted, ever.
+- An agent can move an existing Activity only to `status: "voided"`,
+  via `update_activity` — no other status is accepted, ever, and no
+  other operation can touch an existing Activity's `status` at all.
+- `approved` and `sent` are reachable **only** by the operator acting
+  directly in Airtable — approving a draft in the **Awaiting Approval**
+  view and, separately, sending it — outside every one of the eleven
+  operations in this contract. No combination or sequence of calls
+  available to an agent writes either value. Only the operator's
+  approval action can put a record into `approved`, and only the
+  operator's send action can put one into `sent`.
+- **Therefore: no sequence of the eleven operations in this contract
+  reaches `sent`.** This is provable by construction from the three
+  points above, not asserted by convention — verify it by checking
+  that `sent` appears nowhere in any operation's accepted `status`
+  values except as a value `log_activity` and `update_activity` both
+  explicitly reject.
+
+Any change that gives an operation a new way to write `Status` on an
+Activity — a new argument, a relaxed check, a new operation — must be
+checked against this invariant before it ships. If the change would
+let any of the eleven operations write `approved` or `sent`, the
+invariant is broken and the guardrail "nothing sends without operator
+approval" (`AGENT.md`) stops being a mechanism and goes back to being
+an unenforced instruction.
 
 ## Stage enum
 

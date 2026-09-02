@@ -1,3 +1,8 @@
+---
+name: follow-up
+description: Dispatch when an Activity is logged with an `Outcome`, or a lead has been idle longer than `follow_up_cadence_days` — drafts the next follow-up touch, or closes the lead out at the touch limit.
+---
+
 # Follow-up — Sub-Agent Contract
 
 ## Purpose
@@ -6,12 +11,20 @@ the next outbound touch without ever exceeding the configured touch
 limit.
 
 ## Trigger
-An Activity logged with an `Outcome`, or a lead idle longer than
-`follow_up_cadence_days` (from `operating-config.md`) since its last
-Activity — found via CRM `query_by_stage(idle_days:
-follow_up_cadence_days)`, the same idle-lookup `send-digest`'s Stalled
-section uses, rather than this contract scanning every stage's leads
-for staleness on its own.
+Two halves, each of which this contract finds for itself through a CRM
+read rather than waiting to be told:
+
+- **An Activity logged with an `Outcome`** — found via CRM
+  `query_activities(status: "draft", since: <the previous run>)`, which
+  returns every Activity in that window with its linked Lead, keeping
+  only those that carry an `Outcome`. `query_activities` is a read
+  operation, so listing it changes nothing about this contract's
+  no-send property.
+- **A lead idle longer than `follow_up_cadence_days`** (from
+  `operating-config.md`) since its last Activity — found via CRM
+  `query_by_stage(idle_days: follow_up_cadence_days)`, the same
+  idle-lookup `send-digest`'s Stalled section uses, rather than this
+  contract scanning every stage's leads for staleness on its own.
 
 ## Inputs
 - The lead's last Activity — `Summary`, `Outcome`, and prior
@@ -32,6 +45,8 @@ for staleness on its own.
 - CRM `get_lead`
 - CRM `query_by_stage` (including the `idle_days` filter, to find leads
   past cadence)
+- CRM `query_activities` (read-only, to find Activities logged with an
+  `Outcome` — the other half of this contract's trigger)
 - CRM `log_activity`
 - CRM `update_activity`
 - CRM `update_lead`
@@ -80,7 +95,12 @@ action fields.
   permanently on the lead and calls CRM `update_activity` to void every
   pending (`draft` or `approved`) Activity for it — never left sitting
   in the operator's approval queue after the prospect has asked not to
-  be contacted.
+  be contacted. "Permanently" is mechanical, not aspirational:
+  `update_lead` may set `Do Not Contact` but rejects any attempt to
+  clear it, and `log_activity` rejects creating an Activity with
+  `direction: "outbound"` for a lead whose flag is set
+  (`crm-contract.md`). So once this guardrail fires, no later call by
+  this contract or by any other can draft toward that lead again.
 - Every question the prospect actually asked is answered before
   anything new is introduced in the draft.
 - Reaching `max_touches` moves the lead to `Lost` rather than drafting

@@ -1,3 +1,8 @@
+---
+name: prospector
+description: Dispatch for a scheduled prospecting run, or when the count of leads at stages `New` and `Scored` falls below the `leads_per_week` target — turns the ICP into scored, deduplicated Lead records.
+---
+
 # Prospector — Sub-Agent Contract
 
 ## Purpose

@@ -1,3 +1,8 @@
+---
+name: approacher
+description: Dispatch for a lead at stage `Researched` whose revised `Score` clears `approach_threshold` — chooses the opening channel and drafts the first-touch message for operator approval.
+---
+
 # Approacher — Sub-Agent Contract
 
 ## Purpose

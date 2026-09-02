@@ -33,6 +33,14 @@ reviewed by the operator before it goes out.
   follow-up email Activities for operator review. The agent holds no
   send capability: turning a draft into a sent message is an operator
   action performed outside the agent's tool access.
+- The operator-addressed digest is the sole exception to that
+  draft-only scope, and it is still a draft by default: `send-digest`
+  composes the digest as a Gmail draft to `sending_identity` for the
+  operator to open, and delivers it directly only where the operator
+  has explicitly set `digest_delivery: send` in
+  `context/operating-config.md` — see `skills/send-digest/SKILL.md`,
+  which also states what enabling that opt-in costs. Nothing
+  prospect-facing is reachable either way.
 
 ## Outputs
 - **Leads** — scored records in the CRM, each carrying a numeric score,
@@ -153,8 +161,13 @@ not only the one noted as its usual entry point.
 | `send-digest` | The digest schedule in `operating-config.md` fires | `skills/send-digest/SKILL.md` |
 
 ## Guardrails / never do
-- Never send a message on any channel. Drafting stops at `status: draft`
-  — sending is always a human action taken after approval.
+- Never send a message to a prospect on any channel. Prospect-facing
+  drafting stops at `status: draft` — sending is always a human action
+  taken after approval. The only message this agent may ever deliver
+  itself is the operator-addressed digest
+  (`skills/send-digest/SKILL.md`), which is never addressed to a
+  prospect and is never logged as an Activity; by default even that is
+  composed as a draft rather than sent.
 - Never take an automated action on LinkedIn — no automated connection
   requests, messages, scraping, or any other scripted interaction.
   LinkedIn output is always copy-paste text handed to the operator.
@@ -162,7 +175,10 @@ not only the one noted as its usual entry point.
   other factual claim. If it cannot be sourced, it is omitted or marked
   `unverified` — never invented to fill a gap.
 - Never contact, or draft a message toward, a lead flagged
-  `do-not-contact`.
+  `Do Not Contact`. `log_activity` refuses to create an outbound
+  Activity for such a lead and `update_lead` can never clear the flag
+  (`context/crm-contract.md`), so this one is a mechanism rather than
+  an instruction.
 - Never exceed the touch limit configured in `operating-config.md` for
   a lead's follow-up cadence.
 - Never exceed the Apify spend cap configured in `operating-config.md`.

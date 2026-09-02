@@ -249,16 +249,36 @@ path.
 9. Resolve the delivery channel: read `digest_channel` from
    `operating-config.md`. If it is `sms` and no Twilio credential is
    configured — true of the shipped default, since SMS is a stubbed
-   adapter, not yet enabled — switch delivery to email and make the
-   digest's first line say so verbatim, e.g. `Delivered by email — SMS
+   adapter, not yet enabled — switch delivery to email (delivered per
+   step 10: a Gmail draft unless direct send is explicitly enabled) and
+   make the digest's first line say so verbatim, e.g. `Delivered by email — SMS
    is configured but no Twilio credential exists yet.` If
    `digest_channel` is `email`, or is `sms` with a working Twilio
    credential, deliver on that channel with no disclaimer line.
-10. Deliver the rendered digest by Gmail to `sending_identity` (the
-    operator's own address from `operating-config.md`). See **Approval
-    scope** below for why this send needs no separate approval step.
-    This is the skill's only side effect. Stop — no CRM write of any
-    kind follows.
+10. Deliver the rendered digest. **The default is a Gmail draft, not
+    a send:** compose the digest as a Gmail draft addressed to
+    `sending_identity` (the operator's own address from
+    `operating-config.md`), which the operator opens from their own
+    drafts. Delivering it this way needs no send capability at all, and
+    by default the agent holds none.
+
+    Direct send is an explicitly-configured opt-in: it happens only
+    when `digest_delivery: send` is set in `operating-config.md`, whose
+    shipped default is `digest_delivery: draft`. **Enabling it grants a
+    Gmail send capability that is not scoped to the operator's own
+    address.** Gmail has no per-recipient send scope: a credential that
+    can send this digest to `sending_identity` can send mail to anyone,
+    prospects included. The guardrails still forbid using it that way,
+    but with the opt-in on, "the agent cannot reach a prospect" stops
+    being true by construction and goes back to being an instruction —
+    which is why the default is `draft`, and why turning it on is the
+    operator's decision to make in config, never the agent's to make at
+    runtime. See **Approval scope** below for why delivering this one
+    report to this one recipient needs no separate approval step under
+    either setting.
+
+    Delivery — draft or send — is the skill's only side effect. Stop —
+    no CRM write of any kind follows.
 
 ## Why approvals lead
 
@@ -298,6 +318,18 @@ that any other agent output no longer needs approval — it applies to
 this one report, addressed to this one recipient, precisely because
 that recipient is the person the approval gate exists to protect, not
 someone the approval gate exists to protect *from*.
+
+Under the default `digest_delivery: draft` the question is narrower
+still: the digest is composed as a Gmail draft to `sending_identity`
+and the operator opens it, so this skill delivers its one report using
+exactly the draft-only Gmail access `AGENT.md`'s Inputs already
+describes, holding no send capability whatsoever. The reasoning above
+is what licenses the `digest_delivery: send` opt-in; it is not a claim
+that the opt-in is free. Turning it on adds a send scope Gmail cannot
+narrow to a single recipient, so the operator who enables it has
+granted a capability that could technically reach a prospect — an
+instruction-enforced boundary where a withheld-capability one stood
+before. Grant it deliberately or not at all.
 
 ## Worked example
 
@@ -373,10 +405,11 @@ after the anchor" with no upper bound, this run (executing at 11:00)
 would have caught Vantage Fleet too, and next week's on-time run would
 report it again — the double-report Finding 1 describes.
 
-Delivered by Gmail to `sending_identity` (e.g. `Andrew Ho Choy
-<andrew@example.com>`). Had `digest_channel` instead been `sms` with
-no Twilio credential configured, the same body would still go by
-Gmail, with this line prepended above the `#` heading:
+Composed as a Gmail draft to `sending_identity` (e.g. `Andrew Ho Choy
+<andrew@example.com>`) — the shipped `digest_delivery: draft` default —
+for the operator to open. Had `digest_channel` instead been `sms` with
+no Twilio credential configured, the same body would still be delivered
+by Gmail, with this line prepended above the `#` heading:
 
 ```
 Delivered by email — SMS is configured but no Twilio credential exists yet.
@@ -417,6 +450,13 @@ Delivered by email — SMS is configured but no Twilio credential exists yet.
   like the anchor bounds it on the lower edge — is what closes this,
   and it is mandatory for New leads scored and Movement on every run,
   not only the runs a reviewer happens to notice ran late.
+- **Flipping `digest_delivery` to `send` for convenience.** Saving
+  the operator the click of opening a draft is not a reason to hand
+  the agent an unscoped Gmail send capability. Direct send is a
+  deliberate operator decision recorded in `operating-config.md`, not
+  something this skill enables on its own, infers from a preference,
+  or treats as the obvious default once it has run a few times
+  cleanly.
 - **Silently falling back to email without saying so.** The fallback
   from `sms` to `email` when no Twilio credential exists is not itself
   a failure — it's the only sane behavior with a stubbed adapter. The

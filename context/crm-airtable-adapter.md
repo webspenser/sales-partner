@@ -40,17 +40,36 @@ the **Stalled** view below already performs — the operation and the
 view compute identically, the operation is simply the path a skill or
 sub-agent calls instead of a human opening the view.
 
-`create_lead` writes this table's fields only at creation. Every other
-field except `Stage` and `Stage Changed At` is written afterward by
-`update_lead` — `Score`, `Score Breakdown`, `Next Action`, `Next Action
-Due`, and `Do Not Contact` all move through it. `Stage` is the one
-field `update_lead` refuses to write; that write, and the timestamp
-that goes with it, belong to `update_stage` alone. `update_stage` sets
-`Stage Changed At` to the moment of the call on every transition — no
-other operation, including `update_lead`, ever writes this field, so a
-record's `Stage Changed At` value always reflects an actual stage
-transition and never an unrelated field edit that happened to touch
-the record.
+`create_lead` writes this table's fields at creation, and that includes
+`Stage` and `Stage Changed At`: **every record it creates starts at
+`Stage = New`**, with `Stage Changed At` stamped at the moment of
+creation. It takes no stage argument — `New` is the only initial value
+— which is what makes `query_by_stage` on `New` return freshly created
+leads rather than nothing. `Score` and `Score Breakdown` are optional
+at creation and stay empty on a lead disqualified before it was ever
+scored.
+
+Every other field is written afterward by `update_lead` — `Score`,
+`Score Breakdown`, `Next Action`, `Next Action Due`, and `Do Not
+Contact` all move through it. `Stage` is the one field `update_lead`
+refuses to write; that write, and the timestamp that goes with it,
+belong to `update_stage` alone. `update_stage` sets `Stage Changed At`
+to the moment of the call on every transition, and is the only
+operation that writes the field after `create_lead` stamped it at
+creation — `update_lead` never does — so a record's `Stage Changed At`
+value always reflects either its creation or an actual stage
+transition, never an unrelated field edit that happened to touch the
+record. `update_stage` likewise remains the only operation that
+*changes* a `Stage` value once `create_lead` has set it to `New`.
+
+**`Do Not Contact` is a one-way flag.** `update_lead` may check it and
+rejects any write that would uncheck it once checked; no other
+operation writes the field at all, so nothing an agent can call
+restores contactability. And `log_activity` rejects creating an
+Activity with `Direction = outbound` for a Lead whose `Do Not Contact`
+is checked, so an opted-out Lead cannot acquire a new outbound draft
+through any operation this adapter maps — the same withheld-capability
+enforcement as the approval guarantee, applied to the opt-out.
 
 ### Contacts
 
@@ -166,7 +185,14 @@ opt-out guardrail calls `update_activity` to move every pending
 (`draft` or `approved`) Activity for a lead to `voided` the moment an
 inbound opt-out is logged, so a message already queued for approval
 can never reach `sent` after the prospect has asked not to be
-contacted.
+contacted. Voiding handles the messages already queued; the matching
+rule on the creation side is that **`log_activity` refuses to create an
+Activity with `Direction = outbound` for a Lead whose `Do Not Contact`
+is checked** — so once the flag is set, no new outbound draft can be
+minted for that Lead either, and because `update_lead` can never
+uncheck the flag, that refusal is permanent. Inbound Activities are
+unaffected: a reply or a call debrief on an opted-out Lead is still
+recordable history.
 
 `query_activities` reads this table, filtered by `Status`, optionally
 `Direction`, and optionally a `[since, until]` window on `Date`. This

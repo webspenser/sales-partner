@@ -1,3 +1,8 @@
+---
+name: preparer
+description: Dispatch for a lead at stage `Scored` whose `Score` clears `research_threshold` — deep-researches the company, identifies decision-makers, produces hooks, and re-scores it.
+---
+
 # Preparer — Sub-Agent Contract
 
 ## Purpose

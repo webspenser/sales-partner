@@ -18,11 +18,11 @@ no Airtable table or field.
 
 | Operation | Arguments | Returns | On failure |
 |---|---|---|---|
-| `create_lead` | `company, domain, location, industry, size, source, score, score_breakdown, source_url` | `lead_id` | Duplicate domain returns the existing `lead_id` and writes nothing |
+| `create_lead` | `company, domain, location, industry, size, source, source_url`, plus optional `score, score_breakdown` | `lead_id`, on a record created at `Stage = New` with `Stage Changed At` stamped at creation | Duplicate domain returns the existing `lead_id` and writes nothing |
 | `get_lead` | `lead_id` | full lead record with linked Contacts, Research, Activities | Missing id is an error, not an empty record |
 | `update_stage` | `lead_id, stage, reason` | updated lead, with `stage_changed_at` set to the moment of this call | Rejects any stage outside the enumerated list |
-| `update_lead` | `lead_id, fields` | updated lead | Rejects any attempt to write `stage` through this operation — stage changes go only through `update_stage` |
-| `log_activity` | `lead_id, contact_id, channel, direction, summary, draft_body, status, outcome` | `activity_id` of the newly created row | Create-only — takes no `activity_id` and never touches an existing row. Accepts only `status: "draft"`; rejects `approved`, `sent`, and `voided` outright and unconditionally |
+| `update_lead` | `lead_id, fields` | updated lead | Rejects any attempt to write `stage` through this operation — stage changes go only through `update_stage`. May set `Do Not Contact` to true; rejects any attempt to clear it once true |
+| `log_activity` | `lead_id, contact_id, channel, direction, summary, draft_body, status, outcome` | `activity_id` of the newly created row | Create-only — takes no `activity_id` and never touches an existing row. Accepts only `status: "draft"`; rejects `approved`, `sent`, and `voided` outright and unconditionally. Rejects `direction: "outbound"` for a lead whose `Do Not Contact` is true |
 | `update_activity` | `activity_id, status, outcome` | updated activity | Accepts only `status: "voided"` — rejects `draft`, `approved`, and `sent` outright and unconditionally, regardless of the record's current status; this is the only status change this operation can ever perform |
 | `log_research` | `lead_id, type, summary, source_url, date, hook` | `research_id` | Rejects a write with an empty `source_url` or an empty `hook` |
 | `upsert_contact` | `lead_id, name, title, email, linkedin_url, role, verified, notes` | `contact_id` | Matches an existing Contact on `email` when present, otherwise on `name` plus `title`, and updates it rather than creating a duplicate; rejects a `role` outside decision-maker / influencer / gatekeeper |
@@ -38,6 +38,25 @@ no Airtable table or field.
   creates a second row for the same company. This is what lets the
   Prospector call `create_lead` unconditionally on every raw find
   without checking for an existing lead first.
+
+  **Every lead it creates starts at `Stage = New`.** `create_lead`
+  takes no `stage` argument because there is nothing to choose: it
+  writes `New` on the record it creates, and stamps `stage_changed_at`
+  at that same moment, so a lead has a valid stage and a valid stage
+  timestamp from the instant it exists. This is what makes
+  `query_by_stage("New")` a meaningful read — a caller doing its own
+  dedupe pass over freshly created leads finds them there rather than
+  finding nothing. Creation is the one place a stage is written outside
+  `update_stage`; **`update_stage` remains the only operation that
+  *changes* a lead's stage, and the only writer of `stage_changed_at`
+  after creation.**
+
+  `score` and `score_breakdown` are **optional**. A lead matched
+  against a hard disqualifier is created and moved to `Disqualified`
+  without ever being scored (`evals/cases.md`, Case 1; `score-lead`
+  step 2), so a call that omits both is valid and leaves both fields
+  empty — omitting them is not an error, and `create_lead` never
+  invents a placeholder score to fill them.
 - **`get_lead`** always resolves the full record graph: the lead plus
   its linked Contacts, Research, and Activities. A `lead_id` that does
   not exist is an error, not an empty or partial record — callers must
@@ -47,8 +66,10 @@ no Airtable table or field.
   rejects anything else; it does not accept free-text stages. Every
   call also sets `stage_changed_at` (`Stage Changed At` in the Airtable
   adapter) to the moment of the transition, as part of the same write —
-  not a second call, not an optional argument. **No other operation
-  ever writes `stage_changed_at`.** This is what makes the field
+  not a second call, not an optional argument. **After creation, no
+  other operation ever writes `stage_changed_at`** — `create_lead`
+  stamps it once on the record it creates, and from then on only
+  `update_stage` touches it. This is what makes the field
   trustworthy as "when did this lead's stage actually change": because
   `update_lead` writes every other lead-level field routinely (`Score`,
   `Next Action`, `Do Not Contact`, and so on) without touching stage at
@@ -68,6 +89,16 @@ no Airtable table or field.
   a general-purpose "record touched" timestamp — a combined operation
   would let a stage change slip through unvalidated and untimestamped
   alongside an ordinary field edit.
+
+  **`Do Not Contact` is one-way.** `update_lead` may *set* it to true,
+  and that is the only direction it moves: a call that would clear it —
+  writing `false` on a lead whose flag is already true, by any argument
+  shape — is **rejected outright**. Once true, permanently true, for
+  every caller and every sequence of calls. No other operation in this
+  contract writes the field at all, so there is no second path back.
+  This is deliberate and it is the point: an opt-out that an agent can
+  undo is not an opt-out, and the one guardrail in this system carrying
+  legal weight should not rest on an agent choosing not to reverse it.
 - **`log_activity`** is **create-only**: it takes no `activity_id`, it
   never reads or touches an existing Activity row, and every call
   produces a brand-new row, returning that new row's `activity_id`.
@@ -84,6 +115,20 @@ no Airtable table or field.
   without operator approval because no operation this contract exposes
   to an agent can write `approved` or `sent` at all — see the Approval
   invariant below — not because agents are instructed to wait.
+
+  `log_activity` carries a second hard rule alongside its draft-only
+  one, enforced the same way and on every call: **it rejects creating
+  an Activity with `direction: "outbound"` for a lead whose
+  `Do Not Contact` is true.** The check is on the lead the Activity
+  would link to, not on the caller's intent, so it holds regardless of
+  which sub-agent calls it or what it believes about the lead. Inbound
+  Activities are unaffected — a reply or a debrief on an opted-out lead
+  is still recordable history — and it is only the creation of new
+  outbound contact that is refused. Paired with `update_lead`'s
+  one-way flag above, this is what turns "never draft a message toward
+  a lead flagged `Do Not Contact`" (`AGENT.md`) from an instruction
+  into a mechanism: the flag cannot be cleared, and while it is set the
+  only operation that can mint an outbound draft refuses to.
 - **`update_activity`** is the only operation that can change an
   existing Activity after `log_activity` created it, and it exists for
   exactly one purpose: voiding. It takes the `activity_id`
@@ -197,13 +242,33 @@ be breaking before they break it:
   values except as a value `log_activity` and `update_activity` both
   explicitly reject.
 
+The opt-out guarantee sits here too, because it is the same kind of
+guarantee — a property of the operation set, not of an agent's
+behavior:
+
+- `update_lead` may set `Do Not Contact` to true and can never clear
+  it — a write that would move the flag from true back to false is
+  rejected, and no other operation writes the field at all.
+- `log_activity` rejects creating an Activity with
+  `direction: "outbound"` for a lead whose `Do Not Contact` is true,
+  and it is the only operation that can create an Activity.
+- **Therefore: no sequence of the eleven operations in this contract
+  produces an outbound draft for a do-not-contact lead.** Provable the
+  same way as the `sent` invariant above — the only path to a new
+  outbound Activity is `log_activity`, it refuses while the flag is
+  set, and nothing available to an agent can unset the flag.
+
 Any change that gives an operation a new way to write `Status` on an
 Activity — a new argument, a relaxed check, a new operation — must be
 checked against this invariant before it ships. If the change would
 let any of the eleven operations write `approved` or `sent`, the
 invariant is broken and the guardrail "nothing sends without operator
 approval" (`AGENT.md`) stops being a mechanism and goes back to being
-an unenforced instruction.
+an unenforced instruction. The same test applies to the opt-out half:
+any change that would let an operation clear `Do Not Contact`, or let
+`log_activity` create an outbound Activity for a lead carrying it,
+breaks that invariant and demotes "never draft a message toward a lead
+flagged `Do Not Contact`" to an instruction as well.
 
 ## Stage enum
 

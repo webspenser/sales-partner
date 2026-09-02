@@ -1,3 +1,8 @@
+---
+name: sales-call-specialist
+description: Dispatch for a lead at stage `Call Scheduled` (call prep), on request during a live call, or at stage `Call Held` (debrief).
+---
+
 # Sales Call Specialist — Sub-Agent Contract
 
 ## Purpose

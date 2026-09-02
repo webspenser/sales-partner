@@ -29,6 +29,7 @@ follow_up_cadence_days: 4
 max_touches: 4
 digest_schedule: "Monday 08:00"
 digest_channel: email
+digest_delivery: draft
 apify_spend_cap_usd_per_week: 25
 research_budget_per_lead_minutes: 8
 sending_identity: "[name] <[email]>"
@@ -70,6 +71,16 @@ tone: "[three adjectives from the interview]"
   24-hour time (default `"Monday 08:00"`).
 - **`digest_channel`** — the delivery channel for the digest (default
   `email`; SMS is a stubbed adapter, not yet enabled).
+- **`digest_delivery`** — whether `send-digest` composes the digest as
+  a Gmail draft addressed to `sending_identity` for the operator to
+  open (`draft`, the default) or delivers it directly (`send`). This
+  is the one setting in this file that changes what capability the
+  agent holds rather than how it behaves: `send` requires a Gmail send
+  scope, and Gmail cannot narrow that scope to a single recipient, so
+  enabling it grants an ability that could technically reach a
+  prospect. Leave it at `draft` unless the operator has decided
+  otherwise; see `skills/send-digest/SKILL.md`'s step 10 and
+  **Approval scope**.
 - **`apify_spend_cap_usd_per_week`** — the hard ceiling on Apify actor
   spend per week, shared across the Prospector's sourcing and the
   Preparer's research. Reaching it is a `Stop conditions` trigger and

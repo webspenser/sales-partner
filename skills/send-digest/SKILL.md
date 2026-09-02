@@ -53,7 +53,7 @@ given run:
 
 This anchor comes from `operating-config.md` and calendar arithmetic
 alone — never from a stored "last digest sent" value, because no such
-field exists among the CRM contract's ten operations
+field exists among the CRM contract's eleven operations
 (`crm-contract.md`) and this skill does not invent one.
 
 **Both edges matter equally, and pinning only the lower edge is not

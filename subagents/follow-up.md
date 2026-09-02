@@ -33,6 +33,7 @@ for staleness on its own.
 - CRM `query_by_stage` (including the `idle_days` filter, to find leads
   past cadence)
 - CRM `log_activity`
+- CRM `update_activity`
 - CRM `update_lead`
 - CRM `update_stage`
 - Gmail — draft only
@@ -55,9 +56,14 @@ When under the touch limit, logs the draft and calls CRM
 approval-and-send cycle to move it forward. When `max_touches` is
 reached, calls CRM `update_stage(lead_id, "Lost", reason)` instead of
 drafting again. When an inbound opt-out is found, calls CRM
-`update_lead(lead_id, fields)` to set `Do Not Contact`. Either way, the
-contract stops there — the stage and the lead fields are the entire
-handoff; no other role is invoked directly.
+`update_lead(lead_id, fields)` to set `Do Not Contact`, then calls CRM
+`update_activity(activity_id, "voided", reason)` once for every
+Activity on the lead still at `Status = draft` or `Status = approved`
+— found from the Activities `get_lead` already returned for this lead,
+no separate query needed — so none of them can still reach `sent`
+after the opt-out. Either way, the contract stops there — the stage
+and the lead fields are the entire handoff; no other role is invoked
+directly.
 
 ## Inline fallback
 Runs as the fifth sequential phase on a host without sub-agent dispatch:
@@ -67,7 +73,10 @@ action fields.
 
 ### Guardrails
 - Any inbound reply containing an opt-out sets `Do Not Contact`
-  permanently on the lead and voids every pending draft Activity for it.
+  permanently on the lead and calls CRM `update_activity` to void every
+  pending (`draft` or `approved`) Activity for it — never left sitting
+  in the operator's approval queue after the prospect has asked not to
+  be contacted.
 - Every question the prospect actually asked is answered before
   anything new is introduced in the draft.
 - Reaching `max_touches` moves the lead to `Lost` rather than drafting

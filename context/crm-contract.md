@@ -2,7 +2,7 @@
 
 Provider-neutral contract for the sales-partner agent's data layer. Every
 sub-agent (Prospector, Preparer, Approacher, Sales-call-specialist,
-Follow-up) reads and writes the CRM only through the ten operations
+Follow-up) reads and writes the CRM only through the eleven operations
 below. No sub-agent talks to a provider's API directly, and no sub-agent
 invokes another sub-agent directly — **`update_stage` is the only
 handoff mechanism between sub-agents.** A sub-agent's job is done when it
@@ -23,11 +23,12 @@ no Airtable table or field.
 | `update_stage` | `lead_id, stage, reason` | updated lead, with `stage_changed_at` set to the moment of this call | Rejects any stage outside the enumerated list |
 | `update_lead` | `lead_id, fields` | updated lead | Rejects any attempt to write `stage` through this operation — stage changes go only through `update_stage` |
 | `log_activity` | `lead_id, contact_id, channel, direction, summary, draft_body, status, outcome` | `activity_id` | Rejects `status: sent` unless the record was previously `approved` |
+| `update_activity` | `activity_id, status, outcome` | updated activity | Rejects a transition to `sent` unless the record was previously `approved` — the same approval gate `log_activity` enforces on creation; rejects any `status` outside the enumerated list |
 | `log_research` | `lead_id, type, summary, source_url, date, hook` | `research_id` | Rejects a write with an empty `source_url` or an empty `hook` |
 | `upsert_contact` | `lead_id, name, title, email, linkedin_url, role, verified, notes` | `contact_id` | Matches an existing Contact on `email` when present, otherwise on `name` plus `title`, and updates it rather than creating a duplicate; rejects a `role` outside decision-maker / influencer / gatekeeper |
 | `query_by_stage` | `stage, limit, next_action_due_before, idle_days` | list of leads | Empty list is a valid result; rejects a call where `stage` is omitted and neither `next_action_due_before` nor `idle_days` is given |
 | `query_by_score` | `min_score, stage, limit` | list of leads ordered by score descending | Empty list is a valid result |
-| `query_activities` | `status, since, until, limit` | list of activities, each with its linked Lead | Rejects a `status` outside draft / approved / sent; empty list is a valid result |
+| `query_activities` | `status, since, until, limit` | list of activities, each with its linked Lead | Rejects a `status` outside draft / approved / sent / voided; empty list is a valid result |
 
 ### Notes on individual operations
 
@@ -78,6 +79,19 @@ no Airtable table or field.
   the mechanism, not a convention: nothing sends without operator
   approval because the capability to send is withheld until approval
   happens, not because agents are instructed to wait.
+- **`update_activity`** is the only operation that can change an
+  existing Activity after `log_activity` created it. It takes the
+  `activity_id` `log_activity` returned, and writes `status` and
+  `outcome` on that row — nothing else about an Activity is mutable
+  through this contract. It reuses `log_activity`'s approval gate
+  rather than opening a second path around it: a transition to `sent`
+  is rejected unless the record was previously `approved`, so
+  `update_activity` cannot be used to route a draft to `sent` any more
+  than `log_activity` can. This is the operation
+  `subagents/follow-up.md`'s opt-out guardrail calls to void every
+  pending draft Activity for a lead: it sets each one's `status` to
+  `voided`, the fourth value in the `Status` enum documented in
+  `crm-airtable-adapter.md`'s Activities table.
 - **`log_research`** creates one Research row linked to the lead. It
   **rejects a write with an empty `source_url` or an empty `hook`.** A
   Research row without a source is an unverifiable claim; one without a
@@ -120,15 +134,16 @@ no Airtable table or field.
   time, and it is why the operation grew these filters rather than the
   digest reconstructing them from `query_by_stage`'s original one-stage
   form.
-- **`query_activities`** is the read counterpart to `log_activity`: it
-  finds Activities directly, by `status` and, optionally, a `[since,
-  until]` window on `Date` — the read this contract had no operation
-  for until `send-digest` needed to find every Activity at
-  `status: draft` regardless of which lead it belongs to. `status` is
-  required and validated against the same three values `log_activity`
-  writes (`draft`, `approved`, `sent`); `since` and `until` are each
-  optional, and omitting one leaves that edge of the window unbounded,
-  so omitting both returns every Activity at that status regardless of
+- **`query_activities`** is the read counterpart to `log_activity` and
+  `update_activity`: it finds Activities directly, by `status` and,
+  optionally, a `[since, until]` window on `Date` — the read this
+  contract had no operation for until `send-digest` needed to find
+  every Activity at `status: draft` regardless of which lead it
+  belongs to. `status` is required and validated against the same four
+  values `log_activity` and `update_activity` write (`draft`,
+  `approved`, `sent`, `voided`); `since` and `until` are each optional,
+  and omitting one leaves that edge of the window unbounded, so
+  omitting both returns every Activity at that status regardless of
   `Date`. Every returned Activity carries its linked Lead, so a caller
   does not need a separate `get_lead` call per row just to show which
   company an Activity belongs to.

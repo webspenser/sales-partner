@@ -1,6 +1,6 @@
 # CRM Airtable adapter
 
-The concrete Airtable mapping for `crm-contract.md`'s ten operations:
+The concrete Airtable mapping for `crm-contract.md`'s eleven operations:
 four tables, their exact fields and types, and the four views the
 operator works from. Field names below are used verbatim by the
 sub-agent contracts and skills in Tasks 8–12 — do not rename, abbreviate,
@@ -121,7 +121,7 @@ convention.
 | `Date` | date |
 | `Summary` | long text |
 | `Draft Body` | long text |
-| `Status` | single select: draft, approved, sent |
+| `Status` | single select: draft, approved, sent, voided |
 | `Outcome` | text |
 | `Lead` | link to Leads |
 | `Contact` | link to Contacts |
@@ -139,23 +139,38 @@ view, `log_activity`'s guardrail (below) would no longer have a single
 `Status` field to check, and the operator would lose the single-surface
 review interface this schema is built around. Do not make that change.
 
-`Status` only ever moves forward: `draft` → `approved` → `sent`.
-**`log_activity` rejects any write with `status: sent` unless the record
-being updated was previously `status: approved`.** This is a hard rule
-enforced by the operation itself, not a convention sub-agents are
-trusted to follow: no sub-agent, and nothing calling this adapter, can
-write `sent` directly onto a `draft` record. The only path from `draft`
-to `sent` runs through the operator setting `approved` first. This is
-the mechanism that makes "nothing sends without operator approval" true
-— the capability to send is withheld until approval happens, not merely
-requested by instruction.
+`Status` only ever moves forward through `draft` → `approved` → `sent`,
+or sideways from `draft` or `approved` to the terminal `voided` — never
+the reverse of either path, and never from `voided` onward to `sent`.
+**`log_activity` and `update_activity` both reject any write with
+`status: sent` unless the record being updated was previously
+`status: approved`.** This is a hard rule enforced by the operations
+themselves, not a convention sub-agents are trusted to follow: no
+sub-agent, and nothing calling this adapter, can write `sent` directly
+onto a `draft` record, and `update_activity` cannot be used to route
+around that gate either. The only path from `draft` to `sent` runs
+through the operator setting `approved` first. This is the mechanism
+that makes "nothing sends without operator approval" true — the
+capability to send is withheld until approval happens, not merely
+requested by instruction. `voided` exists for exactly one case today:
+`subagents/follow-up.md`'s opt-out guardrail calls `update_activity` to
+move every pending (`draft` or `approved`) Activity for a lead to
+`voided` the moment an inbound opt-out is logged, so a message already
+queued for approval can never reach `sent` after the prospect has
+asked not to be contacted.
 
 `query_activities` reads this table, filtered by `Status` and,
 optionally, a `[since, until]` window on `Date`. This is the operation
 `send-digest` uses to find every Activity at `Status = draft` — the
 same set the **Awaiting Approval** view below renders for a human — and
 it returns each Activity with its linked `Lead`, so a caller gets the
-company without a second call.
+company without a second call. `query_activities` accepts `voided`
+as a `Status` value like any other, for a caller that specifically
+wants voided history — but nothing in this adapter treats a `voided`
+Activity as awaiting anything: the **Awaiting Approval** view below
+filters on `Status = draft` specifically, not "not yet sent," so a
+voided Activity never appears there once `update_activity` has moved
+it out of `draft`.
 
 ## Views
 

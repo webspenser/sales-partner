@@ -92,8 +92,8 @@ a below-bar lead leak into research silently inflates spend on leads
 the rubric already said weren't worth it, and defeats the entire point
 of gating research on `research_threshold`.
 
-**How to run** — Seed the lead as two calls, since `create_lead` takes
-no `stage` argument — `Stage` is written only by `update_stage`
+**How to run** — Seed the lead as two calls: `Stage` is set to `New` at
+creation and changed only by `update_stage`
 (`context/crm-contract.md`; `context/crm-airtable-adapter.md`'s Leads
 table notes). Call `create_lead(company=..., domain=..., location=...,
 industry=..., size=..., source=..., score=45, score_breakdown=...,

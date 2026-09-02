@@ -91,7 +91,8 @@ tone: "[three adjectives from the interview]"
   conditions`.
 - **`sending_identity`** — the `"[name] <[email]>"` the drafted email
   Activities are written from. Filled in by the interview; the agent
-  never sends from this identity itself — every Activity stops at
+  never sends a prospect-facing message from this identity itself —
+  every Activity stops at
   `status: draft` and only the operator's approval and send action puts
   a message on the wire, per the `log_activity` guardrail in
   `crm-contract.md`.
@@ -101,7 +102,7 @@ tone: "[three adjectives from the interview]"
   `write-follow-up` when drafting.
 
 Nothing in this file, and nothing any key here configures, sends a
-message on its own. Nothing sends without operator approval — that
+message to a prospect on its own. Nothing sends without operator approval — that
 guardrail is enforced in the CRM contract, not merely stated here:
 `log_activity` creates an Activity at `status: draft` only, and
 `update_activity` can move an existing Activity only to

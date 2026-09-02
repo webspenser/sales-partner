@@ -39,9 +39,11 @@ for staleness on its own.
 - Gmail — draft only
 
 This contract has no send capability. Gmail access is limited to
-composing a draft; nothing in this contract's tool access can move a
-message beyond `Status = draft`, and that absence is the enforcement
-mechanism, not an instruction.
+composing a draft, and `update_activity`'s only permitted write is
+`status = "voided"` — a dead end that pulls an Activity out of the
+approval queue, never a step toward `approved` or `sent`. Nothing in
+this contract's tool access can move a message toward `sent`, and that
+absence is the enforcement mechanism, not an instruction.
 
 ## Stop conditions
 - A draft Activity has been created and both `Next Action` and
@@ -57,11 +59,13 @@ approval-and-send cycle to move it forward. When `max_touches` is
 reached, calls CRM `update_stage(lead_id, "Lost", reason)` instead of
 drafting again. When an inbound opt-out is found, calls CRM
 `update_lead(lead_id, fields)` to set `Do Not Contact`, then calls CRM
-`update_activity(activity_id, "voided", reason)` once for every
+`update_activity(activity_id, "voided", outcome)` once for every
 Activity on the lead still at `Status = draft` or `Status = approved`
 — found from the Activities `get_lead` already returned for this lead,
 no separate query needed — so none of them can still reach `sent`
-after the opt-out. Either way, the contract stops there — the stage
+after the opt-out; `update_activity` accepts no other `status` value,
+so there is no way for this same call to move any Activity the other
+direction. Either way, the contract stops there — the stage
 and the lead fields are the entire handoff; no other role is invoked
 directly.
 

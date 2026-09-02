@@ -142,22 +142,28 @@ review interface this schema is built around. Do not make that change.
 `Status` only ever moves forward through `draft` → `approved` → `sent`,
 or sideways from `draft` or `approved` to the terminal `voided` — never
 the reverse of either path, and never from `voided` onward to `sent`.
-**`log_activity` and `update_activity` both reject any write with
-`status: sent` unless the record being updated was previously
-`status: approved`.** This is a hard rule enforced by the operations
-themselves, not a convention sub-agents are trusted to follow: no
-sub-agent, and nothing calling this adapter, can write `sent` directly
-onto a `draft` record, and `update_activity` cannot be used to route
-around that gate either. The only path from `draft` to `sent` runs
-through the operator setting `approved` first. This is the mechanism
-that makes "nothing sends without operator approval" true — the
-capability to send is withheld until approval happens, not merely
-requested by instruction. `voided` exists for exactly one case today:
-`subagents/follow-up.md`'s opt-out guardrail calls `update_activity` to
-move every pending (`draft` or `approved`) Activity for a lead to
-`voided` the moment an inbound opt-out is logged, so a message already
-queued for approval can never reach `sent` after the prospect has
-asked not to be contacted.
+**`log_activity` rejects any write with `status: sent` unless the
+record being updated has a current status of `status: approved`.**
+This is a hard rule enforced by the operation itself, not a convention
+sub-agents are trusted to follow: no sub-agent, and nothing calling
+this adapter, can write `sent` directly onto a `draft` record. The
+only path from `draft` to `sent` runs through the operator setting
+`approved` first. This is the mechanism that makes "nothing sends
+without operator approval" true — the capability to send is withheld
+until approval happens, not merely requested by instruction.
+**`update_activity` is restricted the opposite way, and unconditionally:
+it accepts only `status: "voided"`, and rejects `draft`, `approved`,
+and `sent` outright no matter what the record's current status is.**
+It is not a second path to `sent`, and not a second path to `approved`
+either — the only status change any agent can perform on an existing
+Activity through this contract is voiding it, a dead end. `voided`
+exists for exactly one case today: `subagents/follow-up.md`'s opt-out
+guardrail calls `update_activity` to move every pending (`draft` or
+`approved`) Activity for a lead to `voided` the moment an inbound
+opt-out is logged, so a message already queued for approval can never
+reach `sent` after the prospect has asked not to be contacted —
+because `update_activity` has no ability to write `sent` at all, not
+merely because it wasn't asked to.
 
 `query_activities` reads this table, filtered by `Status` and,
 optionally, a `[since, until]` window on `Date`. This is the operation

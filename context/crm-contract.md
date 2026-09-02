@@ -22,8 +22,8 @@ no Airtable table or field.
 | `get_lead` | `lead_id` | full lead record with linked Contacts, Research, Activities | Missing id is an error, not an empty record |
 | `update_stage` | `lead_id, stage, reason` | updated lead, with `stage_changed_at` set to the moment of this call | Rejects any stage outside the enumerated list |
 | `update_lead` | `lead_id, fields` | updated lead | Rejects any attempt to write `stage` through this operation — stage changes go only through `update_stage` |
-| `log_activity` | `lead_id, contact_id, channel, direction, summary, draft_body, status, outcome` | `activity_id` | Rejects `status: sent` unless the record was previously `approved` |
-| `update_activity` | `activity_id, status, outcome` | updated activity | Rejects a transition to `sent` unless the record was previously `approved` — the same approval gate `log_activity` enforces on creation; rejects any `status` outside the enumerated list |
+| `log_activity` | `lead_id, contact_id, channel, direction, summary, draft_body, status, outcome` | `activity_id` | Rejects `status: sent` unless the record's current status is `approved` |
+| `update_activity` | `activity_id, status, outcome` | updated activity | Accepts only `status: "voided"` — rejects `draft`, `approved`, and `sent` outright and unconditionally, regardless of the record's current status; this is the only status change this operation can ever perform |
 | `log_research` | `lead_id, type, summary, source_url, date, hook` | `research_id` | Rejects a write with an empty `source_url` or an empty `hook` |
 | `upsert_contact` | `lead_id, name, title, email, linkedin_url, role, verified, notes` | `contact_id` | Matches an existing Contact on `email` when present, otherwise on `name` plus `title`, and updates it rather than creating a duplicate; rejects a `role` outside decision-maker / influencer / gatekeeper |
 | `query_by_stage` | `stage, limit, next_action_due_before, idle_days` | list of leads | Empty list is a valid result; rejects a call where `stage` is omitted and neither `next_action_due_before` nor `idle_days` is given |
@@ -70,8 +70,8 @@ no Airtable table or field.
   alongside an ordinary field edit.
 - **`log_activity`** is where the operator-approval guardrail is
   enforced, not merely documented. The operation **rejects any call
-  with `status: sent` unless the activity record being updated was
-  previously `status: approved`.** A sub-agent can log a `draft`
+  with `status: sent` unless the activity record being updated has a
+  current status of `status: approved`.** A sub-agent can log a `draft`
   activity, or advance one from `approved`, but no sub-agent — and no
   automated caller of this contract — can move an activity straight to
   `sent`. Only the operator's approval action can put a record into
@@ -80,17 +80,22 @@ no Airtable table or field.
   approval because the capability to send is withheld until approval
   happens, not because agents are instructed to wait.
 - **`update_activity`** is the only operation that can change an
-  existing Activity after `log_activity` created it. It takes the
-  `activity_id` `log_activity` returned, and writes `status` and
-  `outcome` on that row — nothing else about an Activity is mutable
-  through this contract. It reuses `log_activity`'s approval gate
-  rather than opening a second path around it: a transition to `sent`
-  is rejected unless the record was previously `approved`, so
-  `update_activity` cannot be used to route a draft to `sent` any more
-  than `log_activity` can. This is the operation
-  `subagents/follow-up.md`'s opt-out guardrail calls to void every
-  pending draft Activity for a lead: it sets each one's `status` to
-  `voided`, the fourth value in the `Status` enum documented in
+  existing Activity after `log_activity` created it, and it exists for
+  exactly one purpose: voiding. It takes the `activity_id`
+  `log_activity` returned and writes `status` and `outcome` on that
+  row, but the `status` value it accepts is hard-restricted to
+  `"voided"` — a call passing `draft`, `approved`, or `sent` is
+  **rejected outright and unconditionally**, regardless of the
+  record's current status. This is not the same shape as
+  `log_activity`'s approval gate (which lets `sent` through once a
+  record is `approved`): `update_activity` has no path to `sent`, no
+  path to `approved`, and no path back to `draft`, ever. Voiding is
+  the only status change any operation in this contract lets an agent
+  perform on an Activity that already exists, and it is a dead end —
+  once `voided`, an Activity can never move again. This is the
+  operation `subagents/follow-up.md`'s opt-out guardrail calls to void
+  every pending draft Activity for a lead: it sets each one's `status`
+  to `voided`, the fourth value in the `Status` enum documented in
   `crm-airtable-adapter.md`'s Activities table.
 - **`log_research`** creates one Research row linked to the lead. It
   **rejects a write with an empty `source_url` or an empty `hook`.** A
@@ -139,14 +144,16 @@ no Airtable table or field.
   optionally, a `[since, until]` window on `Date` — the read this
   contract had no operation for until `send-digest` needed to find
   every Activity at `status: draft` regardless of which lead it
-  belongs to. `status` is required and validated against the same four
-  values `log_activity` and `update_activity` write (`draft`,
-  `approved`, `sent`, `voided`); `since` and `until` are each optional,
-  and omitting one leaves that edge of the window unbounded, so
-  omitting both returns every Activity at that status regardless of
-  `Date`. Every returned Activity carries its linked Lead, so a caller
-  does not need a separate `get_lead` call per row just to show which
-  company an Activity belongs to.
+  belongs to. `status` is required and validated against the full,
+  four-value `Status` enum (`draft`, `approved`, `sent`, `voided`) —
+  the union of what `log_activity` can write (`draft`, `approved`, or
+  `sent`) and what `update_activity` can write (`voided`, and nothing
+  else); `since` and `until` are each optional, and omitting one
+  leaves that edge of the window unbounded, so omitting both returns
+  every Activity at that status regardless of `Date`. Every returned
+  Activity carries its linked Lead, so a caller does not need a
+  separate `get_lead` call per row just to show which company an
+  Activity belongs to.
 
 ## Stage enum
 

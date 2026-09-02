@@ -92,5 +92,5 @@ tone: "[three adjectives from the interview]"
 Nothing in this file, and nothing any key here configures, sends a
 message on its own. Nothing sends without operator approval — that
 guardrail is enforced in the CRM contract (`log_activity` rejects any
-write of `status: sent` unless the record was previously
+write of `status: sent` unless the record's current status is
 `status: approved`), not merely stated here.

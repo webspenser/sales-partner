@@ -22,8 +22,8 @@ because a human has to answer it in their own words.
    comparing against). Leave any sub-point the operator didn't cover
    as its original bracketed prompt rather than guessing at it.
 3. **Round 2 — the customer.** First ask whether the business sells
-   to companies or local businesses, and record `target_type` in
-   `icp.md`. Then ask, one at a time: describe your three best
+   to companies or local businesses, and note the answer as
+   `target_type`. Then ask, one at a time: describe your three best
    current customers; what did they have in common before they
    bought; who have you declined to work with, and why.
 4. From the Round 2 answers, derive a draft scoring rubric — five

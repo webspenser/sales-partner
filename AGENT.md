@@ -28,9 +28,9 @@ reviewed by the operator before it goes out.
   `update_stage`, `update_lead`, `log_activity`, `update_activity`,
   `log_research`, `upsert_contact`, `query_by_stage`, `query_by_score`,
   `query_activities`).
-- Apify token — funds the map-listing, site, and social scrapers used
-  in prospecting and research, limited to the sources named in
-  `prospecting_sources`.
+- Apify token — funds the scrapers used in prospecting, limited there
+  to the sources named in `prospecting_sources`, and the site and
+  social scrapers the Preparer uses in research.
 - Gmail access, draft-only — used to compose the body of approach and
   follow-up email Activities for operator review. The agent holds no
   send capability: turning a draft into a sent message is an operator

@@ -58,9 +58,8 @@ because a human has to answer it in their own words.
    (`leads_per_week`, `prospecting_sources`, `enabled_channels`,
    `timezone`, `schedules`, `apify_spend_cap_usd_per_week`, `tone`)
    and to `context/business-profile.md`'s "Voice" section (the
-   adjectives plus the example sentence). This is the last write; the
-   interview is
-   complete once it lands.
+   adjectives plus the example sentence). This is the last write;
+   the interview is complete once it lands.
 
 Because each round writes its own files before the next round starts,
 an interview interrupted after Round 2 leaves a complete, usable

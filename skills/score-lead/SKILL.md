@@ -23,6 +23,12 @@ skill ever required.
    intermediate number. Ground each score in something observed (a
    fact from the lead record or research), never an overall impression
    of the company.
+
+   Geography under a `service_area`: measure distance from the lead's
+   sourced address to `service_area.center`. A lead with no sourced
+   address scores 0 on Geography with the justification
+   `no sourced address — unverified`; distance is never estimated from
+   a city name, a phone area code, or anything else.
 4. For each criterion, multiply the 0/50/100 score by weight ÷ 100 to
    get its weighted points, and write the working as one line in the
    form `<Criterion> <score>×<weight/100>=<points> (<justification,

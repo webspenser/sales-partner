@@ -11,6 +11,17 @@ of this file. Neither invents a score, a trigger, or a disqualifier —
 both apply what's written here mechanically and record their reasoning
 against it.
 
+## Target type
+
+```yaml
+target_type: company   # company | local_business
+```
+
+Recorded by the interview's first ICP question. It only chooses which
+examples the interview offers — B2B firmographics and funding triggers
+for `company`, map-listing facts and storefront triggers for
+`local_business`. Every rubric rule below applies identically to both.
+
 ## Firmographics
 
 [Interview: get target industry or industries, company size (by
@@ -19,6 +30,15 @@ which stage, public). Name the bands explicitly — e.g., "50–500
 employees" not "mid-market" — because the scoring rubric's Company size
 criterion below scores against these exact bands.]
 
+```yaml
+size_measure: headcount   # headcount | revenue | locations | review_count
+```
+
+The Company size criterion scores against bands in this measure. A
+local business rarely publishes headcount; `locations` or
+`review_count` (from a map listing) are observable from outside and
+score just as mechanically.
+
 ## Geography
 
 [Interview: get the primary market (where the business actively sells
@@ -26,6 +46,18 @@ and can deliver), any secondary/serviceable markets, and any region
 that is explicitly out of scope (time zone, regulatory, or
 language/service reasons). Name these explicitly — the scoring rubric's
 Geography criterion below scores against this list.]
+
+Optional service area. When set, it *is* the primary market:
+
+```yaml
+service_area:
+  center: ""     # street address or city; empty = not used
+  radius: 25
+  unit: km       # km | mi
+```
+
+When `center` is empty, Geography scores against the region lists
+above exactly as before.
 
 ## Target roles
 
@@ -44,6 +76,11 @@ has actually seen precede a deal. Each trigger listed here should be
 something the Preparer can search for and cite with a source URL; a
 trigger that can't be observed from outside the company doesn't belong
 here.]
+
+Examples for `target_type: local_business`, each observable from
+outside with a source URL: a new opening or new location; hiring
+(storefront signs, job boards); no website, or one visibly outdated;
+a recent ownership change; a surge or drop in reviews.
 
 ## Anti-signals
 
@@ -91,9 +128,14 @@ same way:
   Firmographics; 50 if it falls within one band's boundary but outside
   the sweet spot (e.g., just above or below the named range); 100 if it
   falls squarely inside the stated range.
-- **Geography** — 0 if the company is in a region explicitly marked out
-  of scope in Geography; 50 if it's in a secondary/serviceable market;
-  100 if it's in the primary market named in Geography.
+- **Geography** — when `service_area.center` is set: 100 if the lead's
+  sourced address is within `radius` of `center`; 50 if it is outside
+  the radius but in a named secondary market; 0 otherwise, including
+  when the lead has no sourced address (recorded as `unverified`,
+  never estimated). When `service_area.center` is empty: 0 if the
+  company is in a region explicitly marked out of scope in Geography;
+  50 if it's in a secondary/serviceable market; 100 if it's in the
+  primary market named in Geography.
 - **Buying trigger present** — 0 if prospecting found no event matching
   the Buying triggers list; 50 if there's an indirect or dated signal
   (e.g., a role posted months ago, an old funding round) without a

@@ -21,8 +21,10 @@ because a human has to answer it in their own words.
    "Differentiators" (the alternative every prospect is really
    comparing against). Leave any sub-point the operator didn't cover
    as its original bracketed prompt rather than guessing at it.
-3. **Round 2 — the customer.** Ask, one at a time: describe your three
-   best current customers; what did they have in common before they
+3. **Round 2 — the customer.** First ask whether the business sells
+   to companies or local businesses, and record `target_type` in
+   `icp.md`. Then ask, one at a time: describe your three best
+   current customers; what did they have in common before they
    bought; who have you declined to work with, and why.
 4. From the Round 2 answers, derive a draft scoring rubric — five
    criteria (industry fit, company size, geography, buying trigger,
@@ -32,10 +34,11 @@ because a human has to answer it in their own words.
    "I'd weight industry fit at 25, company size at 20... does that
    match how you'd actually prioritize a lead?") and get an explicit
    confirmation or correction before writing anything. Only after
-   confirmation, write `context/icp.md`'s Firmographics, Geography,
-   Target roles, Anti-signals, and Scoring rubric sections — including
-   the "who did you decline" answers as concrete Anti-signals — before
-   starting Round 3.
+   confirmation, write `context/icp.md`'s Target type, Firmographics
+   (including `size_measure`), Geography (including `service_area`
+   when the business serves a radius), Target roles, Anti-signals,
+   and Scoring rubric sections — including the "who did you decline"
+   answers as concrete Anti-signals — before starting Round 3.
 5. **Round 3 — the proof.** Ask, one at a time: what results can you
    name, with numbers; who will take a reference call. If the operator
    offers a sample email, social post, or web page as evidence, ask

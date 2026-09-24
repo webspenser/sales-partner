@@ -19,7 +19,7 @@ A scheduled prospecting run, or the count of leads at stages `New` and
 - `context/icp.md` — firmographics, geography, target roles, buying
   triggers, anti-signals, and the scoring rubric
 - `context/operating-config.md` — `leads_per_week`,
-  `apify_spend_cap_usd_per_week`
+  `prospecting_sources`, `apify_spend_cap_usd_per_week`
 - Existing CRM domains, read via CRM `query_by_stage` on `New` and
   `Scored`, to keep from re-working a company already in the pipeline
 
@@ -32,9 +32,10 @@ A scheduled prospecting run, or the count of leads at stages `New` and
   reason
 
 ## Tools allowed
-- Apify actors (site and social scrapers used for sourcing)
-- Web search
-- Apollo adapter (stubbed — not yet enabled)
+- Sourcing tools — only the sources listed in `prospecting_sources`
+  (`operating-config.md`): `apify_google_maps`, `apify_site_scraper`,
+  `web_search`. A source not in that list is never used, even when it
+  would find more leads.
 - CRM `create_lead`
 - CRM `query_by_stage`
 - CRM `update_stage`
@@ -72,3 +73,7 @@ for correct behavior.
   to `Disqualified`, never through `Scored`.
 - Every lead record carries a `Source URL` — the score and every
   criterion behind it must trace to something found, not assumed.
+- If `apollo` is listed in `prospecting_sources`, report that the
+  Apollo adapter is stubbed and not yet enabled, and continue with the
+  remaining listed sources — never quietly swap in an unlisted one.
+  If no listed source is usable, stop and escalate.

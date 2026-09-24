@@ -47,16 +47,19 @@ because a human has to answer it in their own words.
    operator gave; if none were supplied, leave `samples/` empty rather
    than inventing content for it.
 7. **Round 4 — the operating parameters.** Ask, one at a time: how many
-   leads per week should the pipeline target; which channels should it
-   use; when should prospecting run and when should the digest arrive
-   (weekday and time, or daily, plus your time zone); what is the
-   weekly Apify spend cap; how should the outreach sound (three to five
-   adjectives, plus one example sentence in that voice).
+   leads per week should the pipeline target; which sourcing tools may
+   it use (map listings for local businesses, company sites, web
+   search); which channels should it use; when should prospecting run
+   and when should the digest arrive (weekday and time, or daily, plus
+   your time zone); what is the weekly Apify spend cap; how should the
+   outreach sound (three to five adjectives, plus one example sentence
+   in that voice).
 8. Write the answers to `context/operating-config.md`'s keys
-   (`leads_per_week`, `enabled_channels`, `timezone`, `schedules`,
-   `apify_spend_cap_usd_per_week`, `tone`) and to
-   `context/business-profile.md`'s "Voice" section (the adjectives plus
-   the example sentence). This is the last write; the interview is
+   (`leads_per_week`, `prospecting_sources`, `enabled_channels`,
+   `timezone`, `schedules`, `apify_spend_cap_usd_per_week`, `tone`)
+   and to `context/business-profile.md`'s "Voice" section (the
+   adjectives plus the example sentence). This is the last write; the
+   interview is
    complete once it lands.
 
 Because each round writes its own files before the next round starts,

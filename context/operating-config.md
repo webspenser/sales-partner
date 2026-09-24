@@ -21,6 +21,7 @@ these keys are what make that countable.
 
 ```yaml
 leads_per_week: 40
+prospecting_sources: [apify_google_maps, apify_site_scraper, web_search]
 research_quota_per_week: 10
 research_threshold: 60
 approach_threshold: 70
@@ -46,6 +47,16 @@ tone: "[three adjectives from the interview]"
 
 - **`leads_per_week`** — the Prospector's target count of new `Scored`
   leads per run; see `subagents/prospector.md`'s `Stop conditions`.
+- **`prospecting_sources`** — the sourcing tools the Prospector may
+  use, and the only ones. `apify_google_maps` returns local-business
+  listings (name, address, phone, website, rating, review count);
+  `apify_site_scraper` reads company sites and public social pages;
+  `web_search` is general search; `apollo` is a stubbed adapter —
+  listing it makes the Prospector report that it is not yet enabled,
+  never substitute another source. Both Apify sources draw on
+  `apify_spend_cap_usd_per_week`. To research every new lead, set
+  `research_quota_per_week` equal to `leads_per_week` and lower
+  `research_budget_per_lead_minutes` so the week's budget still fits.
 - **`research_quota_per_week`** — the ceiling on how many leads the
   Preparer researches per week, applied on top of `research_threshold`;
   see `subagents/preparer.md`'s `Trigger` and `Stop conditions`.

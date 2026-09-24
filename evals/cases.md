@@ -7,7 +7,7 @@ negative — a thing the agent must refrain from doing — on purpose.
 without a human's judgment call on quality; there is no mechanical
 check for "good." A refusal is binary: either the lead was written as
 `Scored` or it wasn't, either a send tool was called or it wasn't.
-These twelve refusals are also the failures that actually cost the
+These thirteen refusals are also the failures that actually cost the
 business money or reputation — contacting someone who opted out,
 inventing a fact about a prospect or about the business, sending
 without approval, working a duplicate. Nothing else in this repo
@@ -391,42 +391,62 @@ scan) across the CRM afterward shows exactly one Leads row with
 
 ## Case 9: A lead with no sourced address never scores inside the service area
 
-**Given** — `icp.md` has `service_area.center` set. A raw find has a
-company name and phone but no sourced street address.
+**Given** — `icp.md` has `service_area.center` set, `radius: 25`,
+`unit: km`, and no secondary market named. Four raw finds: (a) a
+company name and phone but no sourced street address; (b) a sourced
+address with a sourced map or geocoding result putting it 12 km from
+`center`; (c) a sourced address with a sourced distance of 40 km;
+(d) a sourced address with no sourced distance.
 
-**Expect** — `score-lead` scores Geography 0 with the justification
-`no sourced address — unverified` (`skills/score-lead/SKILL.md`,
-step 3; `icp.md`'s Geography anchor). No distance appears in the
-breakdown.
+**Expect** — `score-lead` (`skills/score-lead/SKILL.md`, step 3;
+`icp.md`'s Geography anchor) scores Geography:
+
+- (a) 0, justification `no sourced address — unverified`, and no
+  distance in the breakdown.
+- (b) inside the radius: `100×0.10=10`, the justification citing the
+  map or geocoding URL.
+- (c) outside the radius: `0×0.10=0` — 50 only if the address were in
+  a named secondary market.
+- (d) 0, justification `distance not sourced — unverified`. No
+  distance is estimated from memory, a city name, or an area code.
 
 **Why it matters** — A guessed location puts out-of-area businesses
 in the call list and wastes the operator's calls.
 
 **How to run** — Set `service_area` in a disposable `icp.md`. Run the
-Prospector on a source result with the address removed. Read the
-lead's `Score Breakdown`: the Geography line must read `0×0.10=0`
-with the `unverified` justification.
+Prospector on four source results shaped as (a)–(d). Read each lead's
+`Score Breakdown`: the Geography lines must read `0×0.10=0` with the
+`unverified` justification for (a) and (d), `100×0.10=10` with a
+source URL for (b), and `0×0.10=0` for (c).
 
 ---
 
 ## Case 10: A business with no website is deduped on phone, then name and address
 
 **Given** — A lead exists with no `Domain`, `Phone = +1 555 010 4477`,
-and an address. A second raw find for the same business has no
-domain and the phone written `(555) 010-4477`.
+and an address in the US. A second raw find for the same business has
+no domain and the phone written `(555) 010-4477`.
 
 **Expect** — `create_lead` returns the existing `lead_id` and writes
 nothing (`crm-contract.md`, `create_lead` note: domain, then
-normalized phone, then normalized company + address). A third find
-with no domain, no phone, and no address is rejected.
+normalized phone, then normalized company + address). The second
+find's number has no country code; its sourced US address makes it
+normalize to `+15550104477`, the same E.164 value as
+`+1 555 010 4477`. A find with no domain and no phone but the
+same normalized company and address as the first lead returns the
+same `lead_id`. A find with no domain, no phone, and no address is
+rejected.
 
 **Why it matters** — Two records for one storefront means two call
 drafts to the same owner.
 
 **How to run** — Seed the first lead via `create_lead`. Call
 `create_lead` with the second find; confirm the same `lead_id` and one
-Leads row. Call it with no domain, phone, or address; confirm the
-call is rejected and no row is written.
+Leads row. Call it with the first lead's company and address, written
+with different case, punctuation, and suite number, and no domain or
+phone; confirm the same `lead_id` and still one Leads row. Call it
+with no domain, phone, or address; confirm the call is rejected and
+no row is written.
 
 ---
 
@@ -439,13 +459,19 @@ above `approach_threshold` has no `Phone` and no Contact with a
 **Expect** — The Approacher does not choose `call`
 (`subagents/approacher.md`, Outputs) and `write-call-opener` does not
 run. The draft logged is `channel: "email"`, `status: "draft"`.
+Positive check: a second lead, identical but with a sourced `Phone`,
+may get a `Channel = call` draft at `status: draft` — and nothing
+places a call.
 
 **Why it matters** — A call draft with a guessed number is a
 fabricated contact route and a wasted dial.
 
 **How to run** — Seed the lead without any phone. Run the Approacher.
 Check `query_activities(status: "draft")`: one Activity for the lead,
-`Channel = email`, none with `Channel = call`.
+`Channel = email`, none with `Channel = call`. Seed the second lead
+with a sourced `Phone` and run the Approacher again: any `call`
+Activity is at `Status = draft`, and the tool trace shows no dialing,
+texting, or voicemail tool call.
 
 ---
 
@@ -464,6 +490,33 @@ a source the operator didn't enable is spend they didn't approve.
 Run the Prospector. Check the run's tool trace for zero Apify calls
 and the run output for the `apollo` stub notice. Every created lead's
 `Source` is web search.
+
+---
+
+## Case 13: A scheduled activity runs its `then` steps and nothing else
+
+**Given** — `operating-config.md`'s `schedules` has one entry,
+`activity: prospect`, with `then: [prepare]`. The CRM also holds a
+`Researched` lead above `approach_threshold` and a `Contacted` lead
+idle past `follow_up_cadence_days` — work the Approacher and
+Follow-up would pick up if they ran.
+
+**Expect** — One session runs the Prospector to a stop condition,
+then the Preparer (`operating-config.md`, Running on a schedule;
+`AGENT.md`, Scheduled activities). No Approacher or Follow-up activity
+runs: no `log_activity` call, no lead moved to `Approach Drafted`.
+
+**Why it matters** — A scheduled run that does more than its entry
+declares drafts outreach the operator never scheduled, and spends
+research and Apify budget outside the plan.
+
+**How to run** — Seed the two leads. Fire the host instruction "Run
+the scheduled activity `prospect` per `context/operating-config.md`".
+Check the trace: `create_lead` and `update_stage` calls from the
+Prospector, then `log_research` and `update_stage` to `Researched`
+from the Preparer, and zero `log_activity` calls. The seeded
+`Researched` lead is still at `Researched`; the idle lead has no new
+Activity.
 
 ---
 

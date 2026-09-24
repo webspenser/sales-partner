@@ -56,13 +56,16 @@ because a human has to answer it in their own words.
    and when should the digest arrive (weekday and time, or daily, plus
    your time zone); what is the weekly Apify spend cap; how should the
    outreach sound (three to five adjectives, plus one example sentence
-   in that voice).
+   in that voice). If `call` is among the chosen channels, also ask
+   for the operator's own callback number — the one a voicemail in a
+   call opener should give for callbacks.
 8. Write the answers to `context/operating-config.md`'s keys
    (`leads_per_week`, `prospecting_sources`, `enabled_channels`,
-   `timezone`, `schedules`, `apify_spend_cap_usd_per_week`, `tone`)
-   and to `context/business-profile.md`'s "Voice" section (the
-   adjectives plus the example sentence). This is the last write;
-   the interview is complete once it lands.
+   `timezone`, `schedules`, `apify_spend_cap_usd_per_week`, `tone`,
+   and `callback_phone` when `call` was chosen) and to
+   `context/business-profile.md`'s "Voice" section (the adjectives
+   plus the example sentence). This is the last write; the interview
+   is complete once it lands.
 
 Because each round writes its own files before the next round starts,
 an interview interrupted after Round 2 leaves a complete, usable

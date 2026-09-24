@@ -40,6 +40,7 @@ digest_delivery: draft
 apify_spend_cap_usd_per_week: 25
 research_budget_per_lead_minutes: 8
 sending_identity: "[name] <[email]>"
+callback_phone: "[phone]"
 tone: "[three adjectives from the interview]"
 ```
 
@@ -129,6 +130,10 @@ tone: "[three adjectives from the interview]"
   `status: draft` and only the operator's approval and send action puts
   a message on the wire, per the `log_activity` guardrail in
   `crm-contract.md`.
+- **`callback_phone`** — the operator's own number the voicemail in a
+  call opener gives for callbacks. Filled in by the interview when
+  `call` is in `enabled_channels`; never a prospect-facing send
+  capability — the agent only writes it into a draft.
 - **`tone`** — three adjectives describing how outbound copy should
   read, filled in by the interview from `business-profile.md`'s Voice
   section. Read by `write-cold-email`, `write-linkedin-touch`, and

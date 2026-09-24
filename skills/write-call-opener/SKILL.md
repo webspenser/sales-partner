@@ -16,7 +16,10 @@ voicemail itself. Hard constraints:
   specific sourced thing research found about this business.
 - **Exactly one question**, one a person can answer on the spot.
 - **Voicemail under 25 seconds**: name, the hook, one reason to call
-  back, the callback number from `sending_identity`'s owner.
+  back, the callback number from `callback_phone` in
+  `context/operating-config.md`. If it is unset or still the
+  `[phone]` placeholder, the voicemail leaves the number out for the
+  operator to add — never an invented number.
 - **Every claim about the business traces to
   `context/business-profile.md`**; every fact about the prospect has a
   Research row with a source URL.
@@ -26,8 +29,8 @@ voicemail itself. Hard constraints:
 1. Read the lead via CRM `get_lead`: its Research `Hook`s, its
    Contacts, and its `Phone`. Pick the number to dial per the first
    rule above.
-2. Read `tone` from `context/operating-config.md` and the Voice section
-   of `context/business-profile.md`.
+2. Read `tone` and `callback_phone` from `context/operating-config.md`
+   and the Voice section of `context/business-profile.md`.
 3. Fill `templates/cold-call-opener.md`: the call line, the opener, the
    gatekeeper line, and the voicemail.
 4. Count the opener's words; at or over 60, cut a sentence.
@@ -45,7 +48,8 @@ voicemail itself. Hard constraints:
 Facebook page last updated in 2024." Hook: "customers searching for
 the bakery land on a two-year-old Facebook page." Contact: owner
 Marisol Vega (from the listing's owner response), no direct line;
-the listing's main number is used.
+the listing's main number is used. `callback_phone` in
+`context/operating-config.md` is configured as (555) 010-9000.
 
 > Call: Harbor Street Bakery — (555) 010-4477 — ask for Marisol Vega
 >

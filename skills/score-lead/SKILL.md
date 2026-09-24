@@ -24,11 +24,14 @@ skill ever required.
    fact from the lead record or research), never an overall impression
    of the company.
 
-   Geography under a `service_area`: measure distance from the lead's
-   sourced address to `service_area.center`. A lead with no sourced
-   address scores 0 on Geography with the justification
-   `no sourced address — unverified`; distance is never estimated from
-   a city name, a phone area code, or anything else.
+   Geography under a `service_area`: distance from the lead's sourced
+   address to `service_area.center` counts only when it comes from a
+   sourced map or geocoding result, cited by URL in the Geography
+   justification. A lead with no sourced address scores 0 on Geography
+   with the justification `no sourced address — unverified`. A lead
+   with an address but no sourced distance scores 0 with the
+   justification `distance not sourced — unverified`. Distance is never
+   estimated from memory, a city name, or a phone area code.
 4. For each criterion, multiply the 0/50/100 score by weight ÷ 100 to
    get its weighted points, and write the working as one line in the
    form `<Criterion> <score>×<weight/100>=<points> (<justification,

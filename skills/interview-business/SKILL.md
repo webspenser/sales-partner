@@ -24,8 +24,14 @@ because a human has to answer it in their own words.
 3. **Round 2 — the customer.** First ask whether the business sells
    to companies or local businesses, and note the answer as
    `target_type`. Then ask, one at a time: describe your three best
-   current customers; what did they have in common before they
-   bought; who have you declined to work with, and why.
+   current customers; what did they have in common before they bought;
+   who have you declined to work with, and why; which size measure fits
+   (offer headcount or revenue for companies, locations or review count
+   for local businesses), and its bands; if the business serves an
+   area, the service area center and radius, with the unit; and
+   which events signal a prospect is newly in-market, offering the
+   example set in `context/icp.md`'s Buying triggers section that
+   matches `target_type`.
 4. From the Round 2 answers, derive a draft scoring rubric — five
    criteria (industry fit, company size, geography, buying trigger,
    decision-maker reachable, or the operator's own equivalents), a
@@ -34,11 +40,11 @@ because a human has to answer it in their own words.
    "I'd weight industry fit at 25, company size at 20... does that
    match how you'd actually prioritize a lead?") and get an explicit
    confirmation or correction before writing anything. Only after
-   confirmation, write `context/icp.md`'s Target type, Firmographics
-   (including `size_measure`), Geography (including `service_area`
-   when the business serves a radius), Target roles, Anti-signals,
-   and Scoring rubric sections — including the "who did you decline"
-   answers as concrete Anti-signals — before starting Round 3.
+   confirmation, write these `context/icp.md` sections: Target type,
+   Firmographics (with `size_measure`), Geography (with `service_area`
+   when it serves an area), Target roles, Buying triggers, Anti-signals,
+   and Scoring rubric — including the "who did you decline" answers as
+   concrete Anti-signals — before starting Round 3.
 5. **Round 3 — the proof.** Ask, one at a time: what results can you
    name, with numbers; who will take a reference call. If the operator
    offers a sample email, social post, or web page as evidence, ask
@@ -84,7 +90,9 @@ companies.
 - Round 2 answers: best three customers were all 50–500-employee SaaS
   companies within 90 days of a funding round; declined two roofing
   companies and one that wanted a full-time hire, not a fractional
-  engagement. Draft rubric proposed: Industry fit 25, Company size 20,
+  engagement. Size measure: headcount, 50–500; no service area (they
+  sell nationally); buying trigger: a funding round in the last 90
+  days. Draft rubric proposed: Industry fit 25, Company size 20,
   Geography 10, Buying trigger 25, Decision-maker reachable 20 —
   operator confirms as-is. Written to `icp.md`, including "not
   B2B SaaS" and "wants full-time hire, not fractional" as Anti-signals.

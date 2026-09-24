@@ -24,11 +24,11 @@ for `company`, map-listing facts and storefront triggers for
 
 ## Firmographics
 
-[Interview: get target industry or industries, company size (by
-headcount and/or revenue), and company stage (bootstrapped, funded,
-which stage, public). Name the bands explicitly — e.g., "50–500
-employees" not "mid-market" — because the scoring rubric's Company size
-criterion below scores against these exact bands.]
+[Interview: get target industry or industries, size as bands in
+`size_measure` (below), and company stage (bootstrapped, funded, which
+stage, public). Name the bands explicitly — e.g., "50–500 employees"
+or "1–3 locations," not "mid-market" — because the scoring rubric's
+Company size criterion below scores against these exact bands.]
 
 ```yaml
 size_measure: headcount   # headcount | revenue | locations | review_count
@@ -124,18 +124,23 @@ same way:
   if it's a neighboring industry the business has served before but
   didn't name as primary target; 100 only if the industry is named on
   the target list above.
-- **Company size** — 0 if headcount/revenue falls outside every band in
-  Firmographics; 50 if it falls within one band's boundary but outside
-  the sweet spot (e.g., just above or below the named range); 100 if it
-  falls squarely inside the stated range.
+- **Company size** — measured against the bands in `size_measure`: 0
+  if the lead's size falls outside every band in Firmographics; 50 if
+  it falls within one band's boundary but outside the sweet spot
+  (e.g., just above or below the named range); 100 if it falls
+  squarely inside the stated range.
 - **Geography** — when `service_area.center` is set: 100 if the lead's
   sourced address is within `radius` of `center`; 50 if it is outside
-  the radius but in a named secondary market; 0 otherwise, including
-  when the lead has no sourced address (recorded as `unverified`,
-  never estimated). When `service_area.center` is empty: 0 if the
-  company is in a region explicitly marked out of scope in Geography;
-  50 if it's in a secondary/serviceable market; 100 if it's in the
-  primary market named in Geography.
+  the radius but in a named secondary market; 0 otherwise. Distance
+  counts only when it comes from a sourced map or geocoding result,
+  cited by URL in the justification. No sourced address scores 0 as
+  `no sourced address — unverified`; an address with no sourced
+  distance scores 0 as `distance not sourced — unverified`. Distance
+  is never estimated from memory, a city name, or an area code. When
+  `service_area.center` is empty: 0 if the company is in a region
+  explicitly marked out of scope in Geography; 50 if it's in a
+  secondary/serviceable market; 100 if it's in the primary market
+  named in Geography.
 - **Buying trigger present** — 0 if prospecting found no event matching
   the Buying triggers list; 50 if there's an indirect or dated signal
   (e.g., a role posted months ago, an old funding round) without a
@@ -146,10 +151,10 @@ same way:
 - **Decision-maker reachable** — 0 if no person matching Target roles
   can be identified at the company; 50 if a matching person is
   identified by name/title but no contact route (verified email,
-  LinkedIn profile) has been found; 100 if a matching person is
-  identified with a verified contact route. Like the trigger criterion,
-  this is usually a guess at Prospecting time and gets resolved by the
-  Preparer.
+  LinkedIn profile, a sourced direct phone number) has been found; 100
+  if a matching person is identified with a verified contact route.
+  Like the trigger criterion, this is usually a guess at Prospecting
+  time and gets resolved by the Preparer.
 
 Buying trigger present and Decision-maker reachable together carry 45
 of the 100 points precisely because they are the two criteria

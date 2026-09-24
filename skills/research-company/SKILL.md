@@ -23,14 +23,18 @@ only gathers and records.
       automated action behind a login)
    5. Industry events (speaking slots, sponsorships, published
       attendee lists)
+   6. For a local business: its map or directory listing (rating,
+      review count, hours, recent reviews → `listing`) and whether it
+      has a website and what state it is in (`web_presence`)
 3. For each finding worth recording, write one Research row via CRM
    `log_research(lead_id, type, summary, source_url, date, hook)`:
-   `Type` from {news, funding, social, event, hire}; `Summary` states
-   what was learned in enough detail to stand alone; `Source URL` is
-   required and non-empty; `Date` is the finding's actual date, not
-   today's date. `log_research` itself rejects a call with an empty
-   `source_url` or an empty `hook`, so a finding with no usable hook
-   does not get written as a Research row at all — see step 4.
+   `Type` from {news, funding, social, event, hire, listing, web_presence};
+   `Summary` states what was learned in enough detail to stand alone;
+   `Source URL` is required and non-empty; `Date` is the finding's
+   actual date, not today's date. `log_research` itself rejects a call
+   with an empty `source_url` or an empty `hook`, so a finding with no
+   usable hook does not get written as a Research row at all — see
+   step 4.
 4. Before writing, decide whether the finding clears the bar for a
    usable hook. A hook is usable only if it is **all three**:
    - **Specific to this company** — not a fact true of the whole

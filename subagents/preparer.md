@@ -30,8 +30,8 @@ clears `research_threshold`, capped per run at `research_quota_per_week`
 - Research rows linked to the lead, each with `Type`, `Summary`,
   `Source URL`, `Date`, and, where usable, `Hook`
 - Contacts rows linked to the lead, each with `Name`, `Title`, `Email`
-  (if verifiable), `LinkedIn URL` (if found), `Role` (decision-maker /
-  influencer / gatekeeper), and `Verified`
+  (if verifiable), `Phone` (if sourced), `LinkedIn URL` (if found),
+  `Role` (decision-maker / influencer / gatekeeper), and `Verified`
 - A revised `Score`, written by re-running `score-lead` against the same
   rubric in `icp.md` now that research has resolved the
   `Buying trigger present` and `Decision-maker reachable` criteria — the
@@ -61,7 +61,7 @@ clears `research_threshold`, capped per run at `research_quota_per_week`
 ## Handoff
 Writes each finding with CRM `log_research(lead_id, type, summary,
 source_url, date, hook)` and each person with CRM
-`upsert_contact(lead_id, name, title, email, linkedin_url, role,
+`upsert_contact(lead_id, name, title, email, phone, linkedin_url, role,
 verified, notes)` as research proceeds. Re-runs `score-lead`, then calls CRM
 `update_lead(lead_id, fields)` to write the revised `Score` and the
 appended `Score Breakdown`, then calls CRM `update_stage(lead_id,

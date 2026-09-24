@@ -49,8 +49,8 @@ reviewed by the operator before it goes out.
   a per-criterion breakdown against the rubric in `icp.md`, and a
   current pipeline stage.
 - **Research** rows — one per finding (news, funding, social, event,
-  hire), each with a source URL and, where usable, a hook; linked to a
-  Lead.
+  hire, listing, web presence), each with a source URL and, where
+  usable, a hook; linked to a Lead.
 - **Contacts** — decision-makers and influencers with role tags
   (decision-maker / influencer / gatekeeper) and verification status;
   linked to a Lead.

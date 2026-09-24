@@ -13,8 +13,11 @@ or reword any of them when implementing this adapter.
 | Field | Type |
 |---|---|
 | `Company` | text |
-| `Domain` | text, unique |
+| `Domain` | text |
 | `Location` | text |
+| `Address` | text |
+| `Phone` | phone |
+| `Email` | email |
 | `Industry` | single select |
 | `Size` | single select |
 | `Source` | text |
@@ -27,9 +30,12 @@ or reword any of them when implementing this adapter.
 | `Next Action Due` | date |
 | `Do Not Contact` | checkbox |
 
-`Domain` is the uniqueness key `create_lead` dedupes on. `Stage` options
-must be exactly the twelve values from the stage enum in
-`crm-contract.md` — no additional options, no renamed options.
+`create_lead` dedupes on `Domain`, then on `Phone` (digits only), then
+on `Company` plus `Address` (normalized), in that order — see
+`crm-contract.md`. None of the three is a unique column, because each
+may be empty on a given lead. `Stage` options must be exactly the
+twelve values from the stage enum in `crm-contract.md` — no additional
+options, no renamed options.
 
 `query_by_stage`'s two optional filters read this table and, for
 `idle_days`, the Activities table too: `next_action_due_before` filters
@@ -78,6 +84,7 @@ enforcement as the approval guarantee, applied to the opt-out.
 | `Name` | text |
 | `Title` | text |
 | `Email` | email |
+| `Phone` | phone |
 | `LinkedIn URL` | url |
 | `Role` | single select: decision-maker, influencer, gatekeeper |
 | `Verified` | checkbox |
@@ -102,7 +109,7 @@ that has actually confirmed the address may set it.
 
 | Field | Type |
 |---|---|
-| `Type` | single select: news, funding, social, event, hire |
+| `Type` | single select: news, funding, social, event, hire, listing, web_presence |
 | `Summary` | long text |
 | `Source URL` | url |
 | `Date` | date |

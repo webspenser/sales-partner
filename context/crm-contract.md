@@ -18,26 +18,37 @@ no Airtable table or field.
 
 | Operation | Arguments | Returns | On failure |
 |---|---|---|---|
-| `create_lead` | `company, domain, location, industry, size, source, source_url`, plus optional `score, score_breakdown` | `lead_id`, on a record created at `Stage = New` with `Stage Changed At` stamped at creation | Duplicate domain returns the existing `lead_id` and writes nothing |
+| `create_lead` | `company, domain, location, industry, size, source, source_url`, plus optional `address, phone, email, score, score_breakdown` | `lead_id`, on a record created at `Stage = New` with `Stage Changed At` stamped at creation | A lead matching an existing one by the dedupe order (domain, then phone, then company + address) returns the existing `lead_id` and writes nothing; rejects a call with none of `domain`, `phone`, or `address` |
 | `get_lead` | `lead_id` | full lead record with linked Contacts, Research, Activities | Missing id is an error, not an empty record |
 | `update_stage` | `lead_id, stage, reason` | updated lead, with `stage_changed_at` set to the moment of this call | Rejects any stage outside the enumerated list |
 | `update_lead` | `lead_id, fields` | updated lead | Rejects any attempt to write `stage` through this operation — stage changes go only through `update_stage`. May set `Do Not Contact` to true; rejects any attempt to clear it once true |
 | `log_activity` | `lead_id, contact_id, channel, direction, summary, draft_body, status, outcome` | `activity_id` of the newly created row | Create-only — takes no `activity_id` and never touches an existing row. Accepts only `status: "draft"`; rejects `approved`, `sent`, and `voided` outright and unconditionally. Rejects `direction: "outbound"` for a lead whose `Do Not Contact` is true |
 | `update_activity` | `activity_id, status, outcome` | updated activity | Accepts only `status: "voided"` — rejects `draft`, `approved`, and `sent` outright and unconditionally, regardless of the record's current status; this is the only status change this operation can ever perform |
 | `log_research` | `lead_id, type, summary, source_url, date, hook` | `research_id` | Rejects a write with an empty `source_url` or an empty `hook` |
-| `upsert_contact` | `lead_id, name, title, email, linkedin_url, role, verified, notes` | `contact_id` | Matches an existing Contact on `email` when present, otherwise on `name` plus `title`, and updates it rather than creating a duplicate; rejects a `role` outside decision-maker / influencer / gatekeeper |
+| `upsert_contact` | `lead_id, name, title, email, phone, linkedin_url, role, verified, notes` | `contact_id` | Matches an existing Contact on `email` when present, otherwise on `name` plus `title`, and updates it rather than creating a duplicate; rejects a `role` outside decision-maker / influencer / gatekeeper |
 | `query_by_stage` | `stage, limit, next_action_due_before, idle_days` | list of leads | Empty list is a valid result; rejects a call where `stage` is omitted and neither `next_action_due_before` nor `idle_days` is given |
 | `query_by_score` | `min_score, stage, limit` | list of leads ordered by score descending | Empty list is a valid result |
 | `query_activities` | `status, direction, since, until, limit` | list of activities, each with its linked Lead | Rejects a `status` outside draft / approved / sent / voided; `direction` is optional and, when given, must be `outbound` or `inbound`; empty list is a valid result |
 
 ### Notes on individual operations
 
-- **`create_lead`** dedupes on `domain`. If a lead with the same domain
-  already exists, the call returns that lead's existing `lead_id` and
-  writes no new record — it never errors on a duplicate and never
-  creates a second row for the same company. This is what lets the
-  Prospector call `create_lead` unconditionally on every raw find
-  without checking for an existing lead first.
+- **`create_lead`** dedupes in a fixed order. An existing lead with the
+  same `domain` is a match; failing that, the same normalized `phone`
+  (digits only, with country code); failing that, the same normalized
+  `company + address` (lowercased, punctuation and suite numbers
+  stripped). On a match the call returns that lead's existing
+  `lead_id` and writes no new record — it never errors on a duplicate
+  and never creates a second row for the same business. This is what
+  lets the Prospector call `create_lead` unconditionally on every raw
+  find without checking for an existing lead first. `domain` is
+  optional because many local businesses have no website; a call
+  carrying none of `domain`, `phone`, or `address` is **rejected**,
+  since a lead with no dedupe key could never be kept unique.
+
+  `address`, `phone`, and `email` are optional and hold only sourced
+  values: `email` is the business's general inbox (an `info@` address
+  from its site or listing), never a person's address and never a
+  pattern guess. A value that cannot be sourced is left empty.
 
   **Every lead it creates starts at `Stage = New`.** `create_lead`
   takes no `stage` argument because there is nothing to choose: it
@@ -153,7 +164,11 @@ no Airtable table or field.
   Research row without a source is an unverifiable claim; one without a
   hook is a research dump the outreach phase cannot use — both are
   exactly the failure modes the Preparer's guardrails prohibit, so this
-  operation is where they are enforced, not merely stated.
+  operation is where they are enforced, not merely stated. `type` is one
+  of news, funding, social, event, hire, listing, web_presence; anything
+  else is rejected. `listing` holds map- or directory-listing facts
+  (rating, review count, hours); `web_presence` holds whether a website
+  exists and its visible state.
 - **`upsert_contact`** creates or updates one Contact row linked to the
   lead. It matches an existing Contact on `email` when one is given,
   and otherwise on `name` plus `title`, and updates that row rather than
@@ -166,7 +181,10 @@ no Airtable table or field.
   provenance annotations that don't belong in `name`, `title`, or any
   other field — most importantly an unverified pattern-guessed email
   address, recorded as `pattern guess, unverified` rather than ever
-  written into `email`.
+  written into `email`. `phone` is optional and holds only a sourced
+  number — a business's main line belongs on the lead, a person's
+  direct line here. A business owner is written with
+  `role: decision-maker` and the title the source gives.
 - **`query_by_stage`** and **`query_by_score`** are read operations used
   by sub-agents to find their own work (e.g., a contract queries
   `stage: Scored`). An empty list is a valid, non-error result — it

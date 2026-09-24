@@ -25,7 +25,8 @@ A scheduled prospecting run, or the count of leads at stages `New` and
 
 ## Outputs
 - New Leads records, one per company found, each carrying `Company`,
-  `Domain`, `Location`, `Industry`, `Size`, `Source`, `Source URL`,
+  `Domain` (when it has a website), `Location`, `Address`, `Phone`, `Email`
+  (each when sourced), `Industry`, `Size`, `Source`, `Source URL`,
   `Score`, `Score Breakdown`, and `Stage = Scored`
 - A lead matching an anti-signal in `icp.md` instead carries
   `Stage = Disqualified`, with the matched anti-signal recorded as the
@@ -63,10 +64,11 @@ stop condition is reached. No isolation or parallel dispatch is required
 for correct behavior.
 
 ### Guardrails
-- Deduplicate on `Domain` before writing. `create_lead` already dedupes
-  on `Domain` and returns the existing `lead_id` without writing a
-  second record, so this contract may call `create_lead` unconditionally
-  on every raw find rather than pre-checking for a duplicate.
+- Deduplicate before writing. `create_lead` already dedupes on domain,
+  then phone, then company + address, and returns the existing
+  `lead_id` without writing a second record, so this contract may call
+  `create_lead` unconditionally on every raw find rather than
+  pre-checking for a duplicate.
 - Never fabricate an email address. If no contact detail can be sourced,
   leave it absent rather than guessed.
 - Any match against `icp.md`'s Anti-signals list sends the lead straight

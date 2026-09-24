@@ -32,12 +32,13 @@ search is a legitimate source, viewing it as a human would is not.
    Classify by what the role actually controls at this company, not by
    seniority — see the failure modes below.
 4. For each person, find a contact route: an email address, a
-   LinkedIn profile URL, or both. Note where each came from.
+   direct phone number, a LinkedIn profile URL, or any combination.
+   Note where each came from.
 5. Write each person via CRM `upsert_contact(lead_id, name, title,
-   email, linkedin_url, role, verified, notes)`. `role` must be exactly
-   one of decision-maker, influencer, or gatekeeper — the operation
-   rejects anything else. `title` holds only the person's job title —
-   never fold any other annotation into it.
+   email, phone, linkedin_url, role, verified, notes)`. `role` must be
+   exactly one of decision-maker, influencer, or gatekeeper — the
+   operation rejects anything else. `title` holds only the person's
+   job title — never fold any other annotation into it.
 6. Set `Verified` only when the contact route came from a source that
    directly confirms it belongs to this person — a public bio page
    listing the address, a verified LinkedIn profile matching the
@@ -77,7 +78,7 @@ Operations Manager (influencer)."
 Contacts written:
 
 - `upsert_contact(lead_id, "Dana Reyes", "VP of Operations", email="",
-  linkedin_url="linkedin.com/in/danareyes-example",
+  phone="", linkedin_url="linkedin.com/in/danareyes-example",
   role="decision-maker", verified=true, notes="pattern guess,
   unverified: d.reyes@halvorsenfreight.com, inferred from the
   confirmed press contact address's domain pattern")` — verified on the
@@ -85,10 +86,10 @@ Contacts written:
   source confirms it; `Title` stays plain ("VP of Operations"); the
   guess lives only in `Notes`.
 - `upsert_contact(lead_id, "Press contact", "Press/Media", email=
-  "press@halvorsenfreight.com", linkedin_url="", role="gatekeeper",
-  verified=true, notes="")` — the address itself is publicly listed as
-  the press contact, which is exactly what it's verified to be: a
-  route to someone who is not the decision-maker.
+  "press@halvorsenfreight.com", phone="", linkedin_url="",
+  role="gatekeeper", verified=true, notes="")` — the address itself is
+  publicly listed as the press contact, which is exactly what it's
+  verified to be: a route to someone who is not the decision-maker.
 
 ## Failure modes
 

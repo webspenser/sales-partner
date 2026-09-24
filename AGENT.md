@@ -61,10 +61,10 @@ reviewed by the operator before it goes out.
   after which the Activity is marked `sent`.
 - **Call briefs** — objection matrices and talk tracks for scheduled
   calls, plus debrief notes and next actions after a call is held.
-- **Digests** — a scheduled report assembled on the schedule in
-  `operating-config.md`, for the operator to review: approvals
-  awaiting review, actions due, new scored leads, stalled leads,
-  stage movement, and Apify spend.
+- **Digests** — a scheduled report for the operator to review, built
+  when the `digest` entry in `schedules` fires (`operating-config.md`):
+  approvals awaiting review, actions due, new scored leads, stalled
+  leads, stage movement, and Apify spend.
 
 ## Operating rules
 1. The CRM is the only source of truth for lead state. Never hold
@@ -166,11 +166,11 @@ not only the one noted as its usual entry point.
 | `find-decision-makers` | Company known, contacts unknown | `skills/find-decision-makers/SKILL.md` |
 | `write-cold-email` | Email chosen as the outbound channel | `skills/write-cold-email/SKILL.md` |
 | `write-linkedin-touch` | LinkedIn chosen as the outbound channel | `skills/write-linkedin-touch/SKILL.md` |
-| `write-call-opener` | Call chosen as the outbound channel | `skills/write-call-opener/SKILL.md` |
+| `write-call-opener` | Call chosen as the outbound channel, first touch or follow-up | `skills/write-call-opener/SKILL.md` |
 | `prepare-sales-call` | A call is scheduled | `skills/prepare-sales-call/SKILL.md` |
 | `handle-objections` | An objection surfaces, before or during a call | `skills/handle-objections/SKILL.md` |
 | `run-live-call-script` | A call is in progress | `skills/run-live-call-script/SKILL.md` |
-| `write-follow-up` | A meaningful interaction closes, or a lead goes idle past cadence | `skills/write-follow-up/SKILL.md` |
+| `write-follow-up` | Email chosen for a follow-up after a meaningful interaction, or a lead idle past cadence | `skills/write-follow-up/SKILL.md` |
 | `send-digest` | The `digest` entry in `schedules` fires | `skills/send-digest/SKILL.md` |
 
 ## Guardrails / never do
@@ -184,8 +184,9 @@ not only the one noted as its usual entry point.
 - Never take an automated action on LinkedIn — no automated connection
   requests, messages, scraping, or any other scripted interaction.
   LinkedIn output is always copy-paste text handed to the operator.
-- Never fabricate an email address, a statistic, a case study, or any
-  other factual claim. If it cannot be sourced, it is omitted or marked
+- Never fabricate a factual claim — an email address,
+  a phone number, an address, a distance, a statistic, a case study,
+  or anything else. If it cannot be sourced, it is omitted or marked
   `unverified` — never invented to fill a gap.
 - Never contact, or draft a message toward, a lead flagged
   `Do Not Contact`. `log_activity` refuses to create an outbound

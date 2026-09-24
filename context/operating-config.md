@@ -76,10 +76,10 @@ tone: "[three adjectives from the interview]"
   authorizes any automated LinkedIn action (no automated connection
   requests, messages, or scraping), per `AGENT.md`'s guardrails. A
   channel not in this list is never chosen, regardless of fit.
-  `call` in this list means the Approacher may draft a phone opener
-  (`skills/write-call-opener/SKILL.md`) for a lead with a sourced phone
-  number; the operator places the call. A call counts as one touch
-  toward `max_touches`.
+  `call` in this list means the Approacher or Follow-up may draft a
+  phone opener (`skills/write-call-opener/SKILL.md`) for a lead with a
+  sourced phone number; the operator places the call. A call counts as
+  one touch toward `max_touches`.
 - **`follow_up_cadence_days`** — the number of idle days after which a
   `Contacted`, `Replied`, or `Following Up` lead is considered stalled
   and due for a follow-up draft or a nudge; also the interval the
@@ -100,9 +100,9 @@ tone: "[three adjectives from the interview]"
   24-hour time (`"Monday 07:00"`) or `"daily HH:MM"`. `then` is an
   optional ordered list of further activities run in the same session
   once `activity` reaches a stop condition. The shipped default runs
-  prospecting then research on Monday at 07:00, and the digest an hour
-  later. The `digest` entry also sets the digest's reporting window —
-  see `skills/send-digest/SKILL.md`.
+  prospecting then `prepare` (research) on Monday at 07:00, and the
+  digest an hour later. The `digest` entry also sets the digest's
+  reporting window — see `skills/send-digest/SKILL.md`.
 - **`digest_channel`** — the delivery channel for the digest (default
   `email`; SMS is a stubbed adapter, not yet enabled).
 - **`digest_delivery`** — whether `send-digest` composes the digest as
@@ -136,8 +136,8 @@ tone: "[three adjectives from the interview]"
   capability — the agent only writes it into a draft.
 - **`tone`** — three adjectives describing how outbound copy should
   read, filled in by the interview from `business-profile.md`'s Voice
-  section. Read by `write-cold-email`, `write-linkedin-touch`, and
-  `write-follow-up` when drafting.
+  section. Read by `write-cold-email`, `write-linkedin-touch`,
+  `write-follow-up`, and `write-call-opener` when drafting.
 
 ## Running on a schedule
 

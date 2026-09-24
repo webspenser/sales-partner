@@ -24,7 +24,8 @@ clears `research_threshold`, capped per run at `research_quota_per_week`
 - `context/icp.md` — buying triggers, target roles, anti-signals, and
   the scoring rubric
 - `context/operating-config.md` — `research_threshold`,
-  `research_quota_per_week`, `research_budget_per_lead_minutes`
+  `research_quota_per_week`, `research_budget_per_lead_minutes`,
+  `prospecting_sources`, `apify_spend_cap_usd_per_week`
 
 ## Outputs
 - Research rows linked to the lead, each with `Type`, `Summary`,
@@ -46,6 +47,9 @@ clears `research_threshold`, capped per run at `research_quota_per_week`
 ## Tools allowed
 - Web search
 - Apify site and social scrapers
+- Map and directory listings, read through web search, or through
+  `apify_google_maps` when it is listed in `prospecting_sources` —
+  within `apify_spend_cap_usd_per_week`
 - CRM `get_lead`
 - CRM `query_by_score`
 - CRM `log_research`

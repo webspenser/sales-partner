@@ -1,6 +1,6 @@
 ---
 name: send-digest
-description: Use when the digest schedule in operating-config.md fires — assembles the pipeline summary and delivers it to the operator.
+description: Use when the `digest` entry in `schedules` (context/operating-config.md) fires — assembles the pipeline summary and delivers it to the operator.
 ---
 
 This skill produces a report, not a pipeline action. It reads the CRM
@@ -119,6 +119,8 @@ marker. The reads it does use, named precisely:
 - CRM **`query_activities`** (`status: "draft"`, `direction:
   "outbound"`, no `since`/`until` — every outstanding outbound draft
   regardless of age) — Section 1, Awaiting approval.
+- CRM **`get_lead`**, once for each `call` draft that query returns, to
+  find the Contact `phone` for the number to dial — Section 1.
 - CRM **`query_by_stage`** with its `next_action_due_before` filter
   (`stage` omitted, so leads across every stage are considered) —
   Section 2, Next actions due today.
@@ -157,7 +159,8 @@ path.
    show up in this section as if it were a message awaiting a send
    decision. Record the count and, for every returned Activity, a link
    (or the linked Lead's company name if the adapter exposes no
-   per-Activity link) and the channel. For a `call` draft, also record
+   per-Activity link) and the channel. For a `call` draft, also call
+   CRM `get_lead` on its linked Lead (a read) and record
    the number to dial — the draft's Contact `phone` when present,
    otherwise the Lead's `phone` — so the operator can dial straight
    from the digest. No window applied — this is every outbound draft

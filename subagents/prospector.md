@@ -20,8 +20,8 @@ A scheduled prospecting run, or the count of leads at stages `New` and
   triggers, anti-signals, and the scoring rubric
 - `context/operating-config.md` — `leads_per_week`,
   `prospecting_sources`, `apify_spend_cap_usd_per_week`
-- Existing CRM domains, read via CRM `query_by_stage` on `New` and
-  `Scored`, to keep from re-working a company already in the pipeline
+- Existing leads, read via CRM `query_by_stage` on `New` and
+  `Scored`, to keep from re-working a business already in the pipeline
 
 ## Outputs
 - New Leads records, one per company found, each carrying `Company`,
@@ -44,8 +44,8 @@ A scheduled prospecting run, or the count of leads at stages `New` and
 ## Stop conditions
 - The `leads_per_week` target (from `operating-config.md`) of new
   `Scored` leads is reached for the run
-- The current source is exhausted — no further candidates are returned
-  by the query or scrape in use
+- Every source listed in `prospecting_sources` is exhausted — no
+  further candidates are returned by any listed query or scrape
 - The `apify_spend_cap_usd_per_week` cap (from `operating-config.md`) is
   hit
 

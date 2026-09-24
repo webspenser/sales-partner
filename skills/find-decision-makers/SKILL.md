@@ -18,6 +18,11 @@ search is a legitimate source, viewing it as a human would is not.
    the company's public LinkedIn page (and the public LinkedIn profiles
    it links to), and any public professional directory (e.g. a
    conference speaker list, a press mention with a named title).
+   For a local business, also read its map or directory listing
+   (owner replies to reviews, "owned by" details) and any of the
+   public business registries, which name owners and officers.
+   Whatever the source, an owner is written with `role: decision-maker`
+   and the title the source gives, e.g. "Owner" — never inferred.
 3. For each person found who plausibly matches a Target role, classify
    them into exactly one of three roles:
    - **decision-maker** — has the authority to approve or kill the

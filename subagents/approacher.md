@@ -23,7 +23,7 @@ contract at all, without consuming an outreach touch.
 - `context/business-profile.md` — proof points and differentiators to
   ground the draft
 - `context/operating-config.md` — `enabled_channels`, `tone`,
-  `sending_identity`
+  `sending_identity`, `callback_phone`
 - `templates/` — blank channel templates (cold email, LinkedIn
   connection note, LinkedIn DM, cold call opener)
 - `samples/` — gold-standard filled examples for voice and structure

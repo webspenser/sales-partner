@@ -1,6 +1,6 @@
 ---
 name: write-call-opener
-description: Use when call is the chosen channel for a first touch — drafts a short phone opener, gatekeeper line, and voicemail built on a research hook, for the operator to read from.
+description: Use when call is the chosen channel for a first touch or a follow-up — drafts a short phone opener, gatekeeper line, and voicemail built on a research hook, for the operator to read from.
 ---
 
 The operator places every call. This skill writes what they read from
@@ -9,8 +9,8 @@ voicemail itself. Hard constraints:
 
 - **The lead has a sourced phone number.** Use the chosen Contact's
   `phone` when present, otherwise the lead's `Phone`. With neither,
-  this skill does not run — the Approacher picks another enabled
-  channel.
+  this skill does not run — the Approacher or Follow-up picks another
+  enabled channel.
 - **Opener under 60 words**, spoken aloud in about 20 seconds.
 - **Opens with who is calling in one line, then the hook** — the
   specific sourced thing research found about this business.

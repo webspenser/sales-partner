@@ -32,14 +32,26 @@ read rather than waiting to be told:
 - Questions actually asked and promises actually made in that history,
   read from `Summary`
 - `context/operating-config.md` — `follow_up_cadence_days`,
-  `max_touches`
+  `max_touches`, `enabled_channels`
+- The lead's sourced contact routes, via the same `get_lead`: Contact
+  `email` and `phone`, and the lead's general `Email` and `Phone`
 
 ## Outputs
-- A drafted follow-up Activities row: `Channel = email`,
-  `Direction = outbound`, `Draft Body`, `Status = draft`, linked to the
-  lead
+- A drafted follow-up Activities row, linked to the lead:
+  `Channel` chosen from `enabled_channels`, `Direction = outbound`,
+  `Draft Body`, `Status = draft`. The channel follows the Approacher's
+  sourced-route rule: `email` only with a sourced email address (a
+  Contact `email`, or the lead's general `Email`), `call` only with a
+  sourced phone, and `linkedin` as copy-paste text, as in the
+  Approacher. An `email` follow-up is drafted with
+  `skills/write-follow-up/SKILL.md`, a `call` follow-up with
+  `skills/write-call-opener/SKILL.md` (it logs `channel="call"`,
+  `status="draft"`).
 - `Next Action` and `Next Action Due` set on the lead record
-- If `max_touches` is reached instead: no new draft; `Stage = Lost`
+- If no enabled channel has a sourced route: no draft; `Next Action`
+  set for the operator via `update_lead`, naming the missing route
+- If `max_touches` is reached instead: no new draft; `Stage = Lost`.
+  `max_touches` counts every touch, on every channel
 
 ## Tools allowed
 - CRM `get_lead`
@@ -52,6 +64,7 @@ read rather than waiting to be told:
 - CRM `update_lead`
 - CRM `update_stage`
 - Gmail — draft only
+- Read access to `templates/` (for a `call` follow-up's opener)
 
 This contract has no send capability. Gmail access is limited to
 composing a draft, and `update_activity`'s only permitted write is
@@ -63,6 +76,8 @@ absence is the enforcement mechanism, not an instruction.
 ## Stop conditions
 - A draft Activity has been created and both `Next Action` and
   `Next Action Due` are set on the lead, or
+- No enabled channel has a sourced route and `Next Action` is set for
+  the operator, or
 - `max_touches` (from `operating-config.md`) has been reached for the
   lead
 
@@ -72,17 +87,19 @@ When under the touch limit, logs the draft and calls CRM
 `Next Action Due`, leaving the lead's stage as-is for the operator's
 approval-and-send cycle to move it forward. When `max_touches` is
 reached, calls CRM `update_stage(lead_id, "Lost", reason)` instead of
-drafting again. When an inbound opt-out is found, calls CRM
-`update_lead(lead_id, fields)` to set `Do Not Contact`, then calls CRM
-`update_activity(activity_id, "voided", outcome)` once for every
-Activity on the lead still at `Status = draft` or `Status = approved`
-— found from the Activities `get_lead` already returned for this lead,
-no separate query needed — so none of them can still reach `sent`
-after the opt-out; `update_activity` accepts no other `status` value,
-so there is no way for this same call to move any Activity the other
-direction. Either way, the contract stops there — the stage
-and the lead fields are the entire handoff; no other role is invoked
-directly.
+drafting again. When no enabled channel has a sourced route, logs
+nothing and calls CRM `update_lead(lead_id, fields)` to set
+`Next Action` for the operator. When an inbound opt-out is found,
+calls CRM `update_lead(lead_id, fields)` to set `Do Not Contact`, then
+calls CRM `update_activity(activity_id, "voided", outcome)` once for
+every Activity on the lead still at `Status = draft` or
+`Status = approved` — found from the Activities `get_lead` already
+returned for this lead, no separate query needed — so none of them can
+still reach `sent` after the opt-out; `update_activity` accepts no
+other `status` value, so there is no way for this same call to move
+any Activity the other direction. Either way, the contract stops
+there — the stage and the lead fields are the entire handoff; no
+other role is invoked directly.
 
 ## Inline fallback
 Runs as the fifth sequential phase on a host without sub-agent dispatch:
@@ -105,3 +122,6 @@ action fields.
   anything new is introduced in the draft.
 - Reaching `max_touches` moves the lead to `Lost` rather than drafting
   again — never exceeded.
+- A follow-up never defaults to email. With no sourced route on any
+  enabled channel, it drafts nothing — never a guessed address or
+  number.

@@ -1,7 +1,12 @@
 ---
 name: write-follow-up
-description: Use when something meaningful has happened with a lead, or when a lead has gone quiet past the configured cadence — drafts the next touch and sets the next action.
+description: Use when email is the chosen channel for a follow-up after something meaningful has happened with a lead, or when a lead has gone quiet past the configured cadence — drafts the next email touch and sets the next action.
 ---
+
+This skill is the email path for a follow-up. `subagents/follow-up.md`
+chooses the channel from `enabled_channels` and runs this skill only
+when `email` is chosen and a sourced email address exists; a `call`
+follow-up is drafted with `skills/write-call-opener/SKILL.md` instead.
 
 ## Procedure
 

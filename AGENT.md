@@ -21,7 +21,8 @@ reviewed by the operator before it goes out.
 - `context/icp.md` — target firmographics, geography, roles, buying
   triggers, the scoring rubric, and anti-signals.
 - `context/operating-config.md` — volume targets, cadence, enabled
-  channels, digest schedule, tone, sending identity, and spend caps.
+  channels, prospecting sources, run schedules and time zone, tone,
+  sending identity, and spend caps.
 - CRM credentials — Airtable is the first adapter for the neutral CRM
   contract, eleven operations (`create_lead`, `get_lead`,
   `update_stage`, `update_lead`, `log_activity`, `update_activity`,
@@ -104,14 +105,23 @@ reviewed by the operator before it goes out.
 5. **Follow up** (T2) — `subagents/follow-up.md` drafts the next
    follow-up Activity after a logged outcome or an idle lead past
    cadence, and sets the next action and due date.
-6. **Digest** (T3) — run the `send-digest` skill on the schedule in
-   `operating-config.md` to assemble the report for the operator.
+6. **Digest** (T3) — run the `send-digest` skill on its `schedules`
+   entry in `operating-config.md` to assemble the report for the
+   operator.
 
 Every step on the critical path (1–5) is T2: none of them requires
 sub-agent dispatch, and each runs identically as a sequential inline
 phase on a host without it. Steps 0 and 6 are T3 because they are a
 live interview and a scheduled report rather than pipeline work, and
 need nothing more than a single context to run.
+
+**Scheduled activities.** Steps 1, 2, 3, 5, and 6 can run unattended
+on the `schedules` in `operating-config.md`. The host fires each entry
+with "Run the scheduled activity `<activity>` per
+`context/operating-config.md`"; the agent runs that step, then any
+steps in the entry's `then` list. Steps 0 and 4 are never scheduled —
+both need the operator present. See `operating-config.md`'s Running on
+a schedule.
 
 ## Lead stages
 A lead occupies exactly one of twelve stages at a time; stage transitions
@@ -158,7 +168,7 @@ not only the one noted as its usual entry point.
 | `handle-objections` | An objection surfaces, before or during a call | `skills/handle-objections/SKILL.md` |
 | `run-live-call-script` | A call is in progress | `skills/run-live-call-script/SKILL.md` |
 | `write-follow-up` | A meaningful interaction closes, or a lead goes idle past cadence | `skills/write-follow-up/SKILL.md` |
-| `send-digest` | The digest schedule in `operating-config.md` fires | `skills/send-digest/SKILL.md` |
+| `send-digest` | The `digest` entry in `schedules` fires | `skills/send-digest/SKILL.md` |
 
 ## Guardrails / never do
 - Never send a message to a prospect on any channel. Prospect-facing

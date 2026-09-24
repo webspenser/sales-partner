@@ -24,18 +24,19 @@ precisely, not left to "whenever this happened to last run":
 > times — neither is ever the actual moment the skill happens to
 > execute.**
 
-Concretely, with the shipped default `digest_schedule: "Monday
-08:00"`, the cadence interval is 7 days. To compute the window for any
-given run:
+Concretely, with the shipped default `digest` entry in `schedules`
+(`when: "Monday 08:00"`), the cadence interval is 7 days; for a `daily
+HH:MM` entry it is 1 day. To compute the window for any given run:
 
 1. Find this run's **nominal** scheduled time: the most recent
-   occurrence of `digest_schedule`'s weekday and time at or before the
-   actual moment this skill executes. This is deliberately *not* "the
-   actual wall-clock time the skill happens to run" — a run fired
-   exactly on time, a run fired three hours late because the scheduler
-   was delayed, and a run triggered manually on Wednesday for review
-   all round down to the same nominal time (the most recent Monday
-   08:00), and therefore compute the same nominal time.
+   occurrence of the `digest` entry's `when`, read in `timezone`, at
+   or before the actual moment this skill executes. This is
+   deliberately *not* "the actual wall-clock time the skill happens to
+   run" — a run fired exactly on time, a run fired three hours late
+   because the scheduler was delayed, and a run triggered manually on
+   Wednesday for review all round down to the same nominal time (the
+   most recent Monday 08:00), and therefore compute the same nominal
+   time.
 2. Subtract one cadence interval (7 days for the default weekly
    schedule) from that nominal time. That is the anchor — the window's
    lower edge.
@@ -59,15 +60,16 @@ field exists among the CRM contract's eleven operations
 **Both edges matter equally, and pinning only the lower edge is not
 enough.** A late-firing run is the normal condition for a scheduled
 job, not an edge case, and an anchor with no upper bound double-reports
-under it routinely: take `digest_schedule: "Monday 08:00"`, and a run
-that actually executes three hours late. Its anchor is correctly
-`nominal_time − 7d`, but if the query for "since last digest" is left
-open-ended above — "anything after the anchor," full stop — the query
-implicitly returns everything that exists at the moment the query
-actually runs, i.e. up to `nominal_time + 3h`, and that includes a lead
-created at `nominal_time + 1h`. The *following* week's on-time run then
-computes anchor `= (this week's) nominal_time`, and reports everything
-after that — which still includes the same lead, created at
+under it routinely: take a `digest` entry with `when: "Monday
+08:00"`, and a run that actually executes three hours late. Its
+anchor is correctly `nominal_time − 7d`, but if the query for "since
+last digest" is left open-ended above — "anything after the anchor,"
+full stop — the query implicitly returns everything that exists at
+the moment the query actually runs, i.e. up to `nominal_time + 3h`,
+and that includes a lead created at `nominal_time + 1h`. The
+*following* week's on-time run then computes anchor `= (this
+week's) nominal_time`, and reports everything after that — which
+still includes the same lead, created at
 `nominal_time + 1h`, because that timestamp is after this week's
 `nominal_time` too. The lead appears in both digests. Fixing the upper
 bound at `nominal_time` (step 3, above) closes this exactly: the late

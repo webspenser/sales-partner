@@ -48,11 +48,12 @@ because a human has to answer it in their own words.
    than inventing content for it.
 7. **Round 4 — the operating parameters.** Ask, one at a time: how many
    leads per week should the pipeline target; which channels should it
-   use; how often should the digest arrive; what is the weekly Apify
-   spend cap; how should the outreach sound (three to five adjectives,
-   plus one example sentence in that voice).
+   use; when should prospecting run and when should the digest arrive
+   (weekday and time, or daily, plus your time zone); what is the
+   weekly Apify spend cap; how should the outreach sound (three to five
+   adjectives, plus one example sentence in that voice).
 8. Write the answers to `context/operating-config.md`'s keys
-   (`leads_per_week`, `enabled_channels`, `digest_schedule`,
+   (`leads_per_week`, `enabled_channels`, `timezone`, `schedules`,
    `apify_spend_cap_usd_per_week`, `tone`) and to
    `context/business-profile.md`'s "Voice" section (the adjectives plus
    the example sentence). This is the last write; the interview is
@@ -83,10 +84,11 @@ companies.
   to 4 weeks for Meridian Analytics"; Meridian's founder will take
   reference calls. Operator pastes an actual outbound email they sent
   Meridian — saved verbatim to `samples/`.
-- Round 4 answers: 40 leads/week, email and LinkedIn, Monday 08:00
-  digest, $25/week Apify cap, tone "direct, technical, no fluff" with
-  the example line "We don't do discovery calls to sell you discovery
-  calls — here's the finding." Written to `operating-config.md` and
+- Round 4 answers: 40 leads/week, email and LinkedIn, prospecting
+  Monday 07:00 and digest Monday 08:00 Eastern, $25/week Apify cap,
+  tone "direct, technical, no fluff" with the example line "We don't
+  do discovery calls to sell you discovery calls — here's the
+  finding." Written to `operating-config.md` and
   `business-profile.md`'s Voice section.
 
 ## Failure modes

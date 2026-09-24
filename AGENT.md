@@ -54,10 +54,11 @@ reviewed by the operator before it goes out.
 - **Contacts** — decision-makers and influencers with role tags
   (decision-maker / influencer / gatekeeper) and verification status;
   linked to a Lead.
-- **Activities** — drafted outbound messages with `status: draft`,
-  channel, and body. The agent's role ends at `status: draft`; the
-  operator reviews, approves, and sends the message outside the
-  agent's tool access, after which the Activity is marked `sent`.
+- **Activities** — drafted outbound messages — email, LinkedIn
+  copy, or a call opener — with `status: draft`, channel, and body.
+  The agent's role ends at `status: draft`; the operator reviews,
+  approves, and sends the message outside the agent's tool access,
+  after which the Activity is marked `sent`.
 - **Call briefs** — objection matrices and talk tracks for scheduled
   calls, plus debrief notes and next actions after a call is held.
 - **Digests** — a scheduled report assembled on the schedule in
@@ -165,6 +166,7 @@ not only the one noted as its usual entry point.
 | `find-decision-makers` | Company known, contacts unknown | `skills/find-decision-makers/SKILL.md` |
 | `write-cold-email` | Email chosen as the outbound channel | `skills/write-cold-email/SKILL.md` |
 | `write-linkedin-touch` | LinkedIn chosen as the outbound channel | `skills/write-linkedin-touch/SKILL.md` |
+| `write-call-opener` | Call chosen as the outbound channel | `skills/write-call-opener/SKILL.md` |
 | `prepare-sales-call` | A call is scheduled | `skills/prepare-sales-call/SKILL.md` |
 | `handle-objections` | An objection surfaces, before or during a call | `skills/handle-objections/SKILL.md` |
 | `run-live-call-script` | A call is in progress | `skills/run-live-call-script/SKILL.md` |

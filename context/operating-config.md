@@ -75,6 +75,10 @@ tone: "[three adjectives from the interview]"
   authorizes any automated LinkedIn action (no automated connection
   requests, messages, or scraping), per `AGENT.md`'s guardrails. A
   channel not in this list is never chosen, regardless of fit.
+  `call` in this list means the Approacher may draft a phone opener
+  (`skills/write-call-opener/SKILL.md`) for a lead with a sourced phone
+  number; the operator places the call. A call counts as one touch
+  toward `max_touches`.
 - **`follow_up_cadence_days`** — the number of idle days after which a
   `Contacted`, `Replied`, or `Following Up` lead is considered stalled
   and due for a follow-up draft or a nudge; also the interval the

@@ -157,9 +157,12 @@ path.
    show up in this section as if it were a message awaiting a send
    decision. Record the count and, for every returned Activity, a link
    (or the linked Lead's company name if the adapter exposes no
-   per-Activity link) and the channel. No window applied — this is
-   every outbound draft outstanding right now, however old. Render the
-   section heading with that count, e.g. `Awaiting approval (2)`.
+   per-Activity link) and the channel. For a `call` draft, also record
+   the number to dial — the draft's Contact `phone` when present,
+   otherwise the Lead's `phone` — so the operator can dial straight
+   from the digest. No window applied — this is every outbound draft
+   outstanding right now, however old. Render the section heading with
+   that count, e.g. `Awaiting approval (2)`.
 3. **Section 2 — Next actions due today.** Call CRM
    `query_by_stage(next_action_due_before: today, stage: omitted)` —
    omitting `stage` so leads at every stage are considered, not one

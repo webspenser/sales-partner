@@ -25,12 +25,15 @@ contract at all, without consuming an outreach touch.
 - `context/operating-config.md` — `enabled_channels`, `tone`,
   `sending_identity`
 - `templates/` — blank channel templates (cold email, LinkedIn
-  connection note, LinkedIn DM)
+  connection note, LinkedIn DM, cold call opener)
 - `samples/` — gold-standard filled examples for voice and structure
 
 ## Outputs
 - A channel recommendation with rationale, chosen only from
-  `enabled_channels`
+  `enabled_channels`. `call` may be chosen
+  only for a lead with a sourced phone number, on the lead or
+  on the chosen Contact; otherwise the next-best enabled
+  channel is chosen.
 - A drafted first-touch message logged as an Activities row: `Channel`,
   `Direction = outbound`, `Draft Body`, `Status = draft`, linked to the
   lead and the chosen Contact
@@ -75,3 +78,6 @@ dispatch model, identically.
   move an Activity to `sent` — see `crm-contract.md`'s `log_activity`
   entry for the approval enforcement that guarantees this.
 - One opening touch per lead from this contract.
+- A `call` draft is a script for the operator to read from, logged at
+  `Status = draft` like any other channel; nothing in this contract
+  places, schedules, or records a call.

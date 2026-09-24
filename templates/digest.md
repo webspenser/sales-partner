@@ -10,7 +10,7 @@
 
 ## Awaiting approval ([count])
 
-- [lead/company — channel — draft summary — link, or "None"]
+- [lead/company — channel — draft summary — link; for a call draft, the number to dial — or "None"]
 
 ## Next actions due today ([count])
 

@@ -18,7 +18,7 @@ no Airtable table or field.
 
 | Operation | Arguments | Returns | On failure |
 |---|---|---|---|
-| `create_lead` | `company, domain, location, industry, size, source, source_url`, plus optional `address, phone, email, score, score_breakdown` | `lead_id`, on a record created at `Stage = New` with `Stage Changed At` stamped at creation | A lead matching an existing one by the dedupe order (domain, then phone, then company + address) returns the existing `lead_id` and writes nothing; rejects a call with none of `domain`, `phone`, or `address` |
+| `create_lead` | `company, location, industry, size, source, source_url`, plus optional `domain, address, phone, email, score, score_breakdown` | `lead_id`, on a record created at `Stage = New` with `Stage Changed At` stamped at creation | A lead matching an existing one by the dedupe order (domain, then phone, then company + address) returns the existing `lead_id` and writes nothing; rejects a call with none of `domain`, `phone`, or `address` |
 | `get_lead` | `lead_id` | full lead record with linked Contacts, Research, Activities | Missing id is an error, not an empty record |
 | `update_stage` | `lead_id, stage, reason` | updated lead, with `stage_changed_at` set to the moment of this call | Rejects any stage outside the enumerated list |
 | `update_lead` | `lead_id, fields` | updated lead | Rejects any attempt to write `stage` through this operation — stage changes go only through `update_stage`. May set `Do Not Contact` to true; rejects any attempt to clear it once true |
@@ -34,16 +34,23 @@ no Airtable table or field.
 
 - **`create_lead`** dedupes in a fixed order. An existing lead with the
   same `domain` is a match; failing that, the same normalized `phone`
-  (digits only, with country code); failing that, the same normalized
-  `company + address` (lowercased, punctuation and suite numbers
-  stripped). On a match the call returns that lead's existing
-  `lead_id` and writes no new record — it never errors on a duplicate
-  and never creates a second row for the same business. This is what
-  lets the Prospector call `create_lead` unconditionally on every raw
-  find without checking for an existing lead first. `domain` is
-  optional because many local businesses have no website; a call
-  carrying none of `domain`, `phone`, or `address` is **rejected**,
-  since a lead with no dedupe key could never be kept unique.
+  (E.164, below); failing that, the same normalized `company + address`
+  (lowercased, punctuation and suite numbers stripped).
+
+  A phone is normalized to E.164: `+` and digits, nothing else. A
+  number written without a country code takes the country of the
+  lead's sourced address; failing that, the country of
+  `service_area.center` in `icp.md`; failing both, it is compared as
+  written, digits only, and is never given a guessed country code.
+
+  On a match the call returns that lead's existing `lead_id` and
+  writes no new record — it never errors on a duplicate and never
+  creates a second row for the same business. This is what lets the
+  Prospector call `create_lead` unconditionally on every raw find
+  without checking for an existing lead first. `domain` is optional
+  because many local businesses have no website; a call carrying
+  none of `domain`, `phone`, or `address` is **rejected**, since a
+  lead with no dedupe key could never be kept unique.
 
   `address`, `phone`, and `email` are optional and hold only sourced
   values: `email` is the business's general inbox (an `info@` address

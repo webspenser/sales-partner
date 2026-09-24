@@ -30,12 +30,16 @@ or reword any of them when implementing this adapter.
 | `Next Action Due` | date |
 | `Do Not Contact` | checkbox |
 
-`create_lead` dedupes on `Domain`, then on `Phone` (digits only), then
-on `Company` plus `Address` (normalized), in that order — see
-`crm-contract.md`. None of the three is a unique column, because each
-may be empty on a given lead. `Stage` options must be exactly the
-twelve values from the stage enum in `crm-contract.md` — no additional
-options, no renamed options.
+`create_lead` dedupes on `Domain`, then on `Phone`, then on `Company`
+plus `Address` (normalized), in that order — see `crm-contract.md`.
+A phone is normalized to E.164: `+` and digits, nothing else. A number
+written without a country code takes the country of the lead's sourced
+address; failing that, the country of `service_area.center` in
+`icp.md`; failing both, it is compared as written, digits only, and is
+never given a guessed country code. None of the three is a unique
+column, because each may be empty on a given lead. `Stage` options
+must be exactly the twelve values from the stage enum in
+`crm-contract.md` — no additional options, no renamed options.
 
 `query_by_stage`'s two optional filters read this table and, for
 `idle_days`, the Activities table too: `next_action_due_before` filters

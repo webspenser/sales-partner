@@ -8,7 +8,7 @@ message, email, LinkedIn note, or call opener is a draft you approve.
 
 Built on the [Agent Standard](https://github.com/webspenser/agent-builder/blob/main/STANDARD.md)
 with [Agent Builder](https://github.com/webspenser/agent-builder).
-Version 0.9.0.
+Version 0.9.1.
 
 ## Use it today (source mode)
 
@@ -16,9 +16,9 @@ Version 0.9.0.
    copy — not a fork, so your data and changes stay in your repo.
 2. Clone it and open Claude Code (or another host) in the folder.
    Run `./install.sh` once to wire the host files.
-3. The agent starts with its interview and fills `context/` with your
-   business profile, ideal customer, and operating settings. Commit
-   those files to your repo.
+3. Ask the agent to run its interview (the `interview-business` skill);
+   it fills `context/` with your business profile, ideal customer, and
+   operating settings. Commit those files to your repo.
 
 Plugin installs — the agent's logic from a catalog, your data in your
 own folder — arrive with instance mode in version 1.0.0.
@@ -43,8 +43,10 @@ file.
     tests/run-all.sh                                   # content checks
     /path/to/agent-builder/bin/validate-agent.sh .     # structure
 
-CI runs both on every push and pull request. Every pull request bumps
-`version` in `agent.yaml` and the four host manifests.
+CI runs on pushes to `main` and on every pull request. Content tests and
+the release rule run only in webspenser/sales-partner — in your own
+copy, CI checks structure only, so committing your filled-in `context/`
+is fine.
 
 ## License
 

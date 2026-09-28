@@ -1,0 +1,7 @@
+{
+  "name": "sales-partner",
+  "owner": { "name": "Webspenser" },
+  "plugins": [
+    { "name": "sales-partner", "source": "./", "description": "Interviews a business, then runs a five-stage lead pipeline — prospect, research, approach, sales call, follow-up — over a CRM" }
+  ]
+}

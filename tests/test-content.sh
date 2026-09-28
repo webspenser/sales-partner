@@ -25,7 +25,7 @@ assert_contains "$SP/skills/interview-business/SKILL.md" '`schedules`'
 assert_contains "$SP/AGENT.md" 'Scheduled activities'
 while IFS= read -r f; do
   assert_not_contains "$f" 'digest_schedule'
-done < <(find "$SP" -name '*.md' -not -path './docs/*' -not -path './tests/*' -not -path './.git/*' -not -name README.md)
+done < <(find "$SP" -name '*.md' -not -path './docs/*' -not -path './tests/*' -not -path './.git/*' -not -name README.md -not -path './.claude/*' -not -path './CLAUDE.md' -not -path './GEMINI.md' -not -path './AGENTS.md')
 
 echo "-- prospecting sources"
 assert_contains "$SP/context/operating-config.md" 'prospecting_sources: [apify_google_maps, apify_site_scraper, web_search]'

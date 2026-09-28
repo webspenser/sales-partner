@@ -1,0 +1,18 @@
+.DS_Store
+.env
+.env.*
+!.env.example
+
+# Host files written by install.sh — the sources live in adapters/
+CLAUDE.md
+GEMINI.md
+AGENTS.md
+!adapters/CLAUDE.md
+!adapters/GEMINI.md
+!adapters/AGENTS.md
+.claude/
+.gemini/
+
+# Local secrets and credentials
+**/credentials.json
+**/*.key

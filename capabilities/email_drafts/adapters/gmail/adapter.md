@@ -11,8 +11,8 @@ draft-create and thread-search tools.
   `gmail:get_thread` when the caller needs a thread's messages.
 
 `adapter.yaml` blocks every tool of the matched server whose name
-contains `send`, so `no_send` holds by mechanism even on a Gmail
-server that offers sending.
+contains `send`, `reply` or `forward`, so `no_send` holds by mechanism
+even on a Gmail server that offers sending, replying or forwarding.
 
 ## Probe
 

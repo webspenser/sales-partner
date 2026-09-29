@@ -187,8 +187,9 @@ done
 echo "-- email drafts and release 1.1.0"
 assert_contains "$SP/agent.yaml" 'capabilities: crm, email_drafts'
 assert_contains "$SP/agent.yaml" 'version: 1.1.0'
+assert_not_contains "$SP/AGENT.md" 'delivers it directly'
 assert_contains "$SP/capabilities/email_drafts/contract.md" '- `no_send` —'
-assert_contains "$SP/capabilities/email_drafts/adapters/gmail/adapter.yaml" 'block: send'
+assert_contains "$SP/capabilities/email_drafts/adapters/gmail/adapter.yaml" 'block: send, reply, forward'
 assert_contains "$SP/capabilities/email_drafts/adapters/gmail/adapter.yaml" 'enforce_no_send: adapter'
 assert_contains "$SP/skills/setup/SKILL.md" '**Tools.**'
 assert_contains "$SP/skills/setup/SKILL.md" '`standard: "1.2"`'

@@ -83,7 +83,7 @@ operation writes the field at all, so nothing an agent can call
 restores contactability. And `log_activity` rejects creating an
 Activity with `Direction = outbound` for a Lead whose `Do Not Contact`
 is checked, so an opted-out Lead cannot acquire a new outbound draft
-through any operation this adapter maps — the same withheld-capability
+through any operation this adapter maps — the same guard-policy
 enforcement as the approval guarantee, applied to the opt-out.
 
 ### Contacts
@@ -194,8 +194,8 @@ and separately sending it, both outside every one of the eleven
 operations this adapter maps (the contract's Approval invariant
 states this as a provable rule, not a convention). This is the
 mechanism that makes "nothing sends without operator approval" true —
-the capability to write `approved` or `sent` does not exist anywhere
-in the agent's tool access, not merely withheld by instruction.
+the adapter's guard policy (`guard.yaml`, below) refuses any write of
+`approved` or `sent`, so it does not rest on instruction alone.
 `voided` exists for exactly one case today: `subagents/follow-up.md`'s
 opt-out guardrail calls `update_activity` to move every pending
 (`draft` or `approved`) Activity for a lead to `voided` the moment an
@@ -233,6 +233,23 @@ awaiting an operator's send decision, diluting the one view this
 schema's entire no-send guarantee depends on a human actually reading.
 `Direction = outbound` narrows the view to only the rows a decision is
 actually needed on.
+
+## Tool mapping
+
+`airtable:` means the connected Airtable server's tools. Every
+operation reaches Airtable through these:
+
+- Reads (`get_lead`, `query_by_stage`, `query_by_score`,
+  `query_activities`, and the matching and dedupe lookups inside the
+  write operations) use `airtable:list_records_for_table` or
+  `airtable:search_records`, with `airtable:get_table_schema` for
+  select-field options.
+- Creates (`create_lead`, `log_activity`, `log_research`, and the
+  create half of `upsert_contact`) use
+  `airtable:create_records_for_table`.
+- Updates (`update_lead`, `update_stage`, `update_activity`, and the
+  update half of `upsert_contact`) use
+  `airtable:update_records_for_table`.
 
 ## Views
 
@@ -279,8 +296,44 @@ what they find to `bindings/crm.md` in the instance:
    holds the Leads, Contacts, Research, and Activities tables; ask the
    operator if more than one could. Record `base_id` and `base_name`.
 2. `airtable:list_tables_for_base` on that base — every table and
-   field named in this adapter must exist with the listed type.
+   field named in this adapter must exist with the listed type. Also
+   record `field_status: <field ID of Activities.Status>` and
+   `field_do_not_contact: <field ID of Leads."Do Not Contact">`.
+
+Write each `field_` line as a plain line, `field_<name>: <ID>`, with
+nothing else on it: no bullet, no backticks or quotes, no trailing note.
+A decorated line blocks every Airtable write. Example of
+`bindings/crm.md`:
+
+```
+base_id: appXXXXXXXXXXXXXX
+base_name: Sales
+field_status: fldXXXXXXXXXXXXXX
+field_do_not_contact: fldYYYYYYYYYYYYYY
+```
 
 `airtable:` means the connected Airtable server's tools, whatever
 their prefix. If a table or field is missing, show the operator the
 list and stop; this adapter has no bootstrap script.
+
+## Guard policy
+
+`guard.yaml` in this folder is enforced by the agent's guard policy
+engine before every Airtable call inside an instance. Its allow list
+holds only the read tools (`list_bases`, `search_bases`,
+`list_tables_for_base`, `get_table_schema`, `list_records_for_table`,
+`search_records`) and the two record-write tools
+(`create_records_for_table`, `update_records_for_table`); every other
+tool is blocked, and any tool whose name contains `delete` is denied.
+Airtable writes name fields by ID, so the rules are checked against the
+field IDs the probe recorded in `bindings/crm.md`:
+
+- `Status` may only be written as `draft` on create and as `voided` on
+  update;
+- `Do Not Contact` may only be written as `true`.
+
+Every Airtable write stays blocked until the probe has recorded both
+IDs (`field_status` and `field_do_not_contact`) in `bindings/crm.md`.
+That includes lead creation (`create_lead`) and every other operation
+that writes, not only the ones that touch those two fields. If writes
+are refused, re-run setup's tools step so the probe records the IDs.

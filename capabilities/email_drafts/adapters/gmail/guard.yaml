@@ -1,0 +1,6 @@
+# Gmail guard policy: drafts and reading only. The guard policy engine
+# blocks every tool not listed here, and anything that sends.
+covers: [no_send]
+allow: [create_draft, list_drafts, get_draft, search_threads, get_thread,
+        get_message, list_labels]
+deny: ["*send*", "*reply*", "*forward*"]

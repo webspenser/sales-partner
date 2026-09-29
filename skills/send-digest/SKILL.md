@@ -258,25 +258,25 @@ path.
    `operating-config.md`. If it is `sms` and no Twilio credential is
    configured — true of the shipped default, since SMS is a stubbed
    adapter, not yet enabled — switch delivery to email (delivered per
-   step 10: always a draft under Agent Standard 1.2) and
+   step 10: always a draft) and
    make the digest's first line say so verbatim, e.g. `Delivered by email — SMS
    is configured but no Twilio credential exists yet.` If
    `digest_channel` is `email`, or is `sms` with a working Twilio
    credential, deliver on that channel with no disclaimer line. If
    step 10's send-fallback line also applies, it goes first, above
    this one.
-10. Deliver the rendered digest. **Under Agent Standard 1.2 the digest
-    is always a draft, never a send:** create it with `email_drafts`
+10. Deliver the rendered digest. **The digest is always a draft,
+    never a send:** create it with `email_drafts`
     `create_draft`, addressed to `sending_identity` (the operator's own
     address from `operating-config.md`), and the operator opens it from
     their own drafts. Delivering it this way needs no send capability
-    at all, and the agent holds none: the email binding blocks every
-    send tool.
+    at all, and the agent holds none: the email adapter's guard policy
+    denies every send tool.
 
     `digest_delivery` shipped as `draft`. If it is set to `send`, the
     only difference is a disclaimer: compose the draft exactly as for
     `draft` and put this line first, above the `#` heading:
-    "digest_delivery is send, but this agent's email binding
+    "digest_delivery is send, but this agent's email adapter
     cannot send; delivered as a draft." The setting cannot be honored,
     and you must not look for another way to send.
 
@@ -337,7 +337,7 @@ this one report, addressed to this one recipient, precisely because
 that recipient is the person the approval gate exists to protect, not
 someone the approval gate exists to protect *from*.
 
-Under Agent Standard 1.2 the question is narrower still: the digest
+The question is narrower still: the digest
 is composed as a draft via `email_drafts` `create_draft` to
 `sending_identity` and the operator opens it, so this skill delivers
 its one report using exactly the draft-only access `AGENT.md`'s
@@ -474,7 +474,7 @@ Delivered by email — SMS is configured but no Twilio credential exists yet.
   the operator the click of opening a draft is not a reason to hand
   the agent an unscoped send capability. Direct send would be a
   deliberate operator decision recorded in `operating-config.md`, and
-  under Standard 1.2 it is not even available. This skill never
+  in this release direct send is not available at all. This skill never
   enables it on its own, infers it from a preference, or treats it as
   the obvious default once it has run a few times cleanly.
 - **Silently falling back to email without saying so.** The fallback

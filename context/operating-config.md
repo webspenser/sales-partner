@@ -115,9 +115,9 @@ tone: "[three adjectives from the interview]"
   enabling it grants an ability that could technically reach a
   prospect. Leave it at `draft` unless the operator has decided
   otherwise; see `skills/send-digest/SKILL.md`'s step 10 and
-  **Approval scope**. Under Agent Standard 1.2, `send` is dormant and falls
-  back to a draft with a disclaimer line (the email binding blocks
-  send tools) until an `email_send` capability exists; see
+  **Approval scope**. `send` is dormant and falls back to a draft with a
+  disclaimer line (the email adapter's guard policy denies send tools)
+  until an `email_send` capability exists; see
   `skills/send-digest/SKILL.md`.
 - **`apify_spend_cap_usd_per_week`** — the hard ceiling on Apify actor
   spend per week, shared across the Prospector's sourcing and the

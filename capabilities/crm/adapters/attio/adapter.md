@@ -223,16 +223,21 @@ the lead's Created Time.
 Attio's `update-list-entry-by-id` can write any value to any
 attribute, so the contract's guarantees are enforced by mechanism:
 
-1. **`guard.py` in this folder** runs before every Attio call inside an
-   instance (the agent's `hooks/guard.sh` starts it; nothing to wire by
-   hand). It blocks any write of `status` other than `draft` on create
-   or `voided` on update, any `do_not_contact` update other than
-   `true`, attribute keys given as IDs instead of slugs, and list
-   configuration changes. The operator's own edits in the Attio app
-   never pass through it, so approving and sending stay operator-only.
-2. **`adapter.yaml` blocks** every Attio tool whose name contains
-   `delete` or `merge`.
-3. **Nothing can send.** Email goes through the `email_drafts`
+1. **`guard.yaml` in this folder**, enforced by the agent's guard policy
+   engine before every Attio call inside an instance (the agent's
+   `hooks/guard.sh` starts it; nothing to wire by hand):
+   - an allow list: only the read tools, `whoami`, and the write tools
+     this adapter uses are callable; any other Attio tool is blocked;
+   - `delete` and `merge` tools, and list configuration changes
+     (`create-list`, `update-list`), are always denied;
+   - `status` may only be written as `draft` on create and `voided` on
+     update;
+   - `do_not_contact` may only be updated to `true`;
+   - attribute keys given as IDs instead of slugs are refused.
+
+   The operator's own edits in the Attio app never pass through it, so
+   approving and sending stay operator-only.
+2. **Nothing can send.** Email goes through the `email_drafts`
    capability, whose adapter blocks send tools.
 
 ## Views (the operator's interface)

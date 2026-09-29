@@ -142,7 +142,7 @@ assert_not_contains "$SP/skills/send-digest/SKILL.md" 'digest schedule in operat
 assert_contains "$SP/context/operating-config.md" 'then `prepare` (research)'
 
 echo "-- instance mode (1.1)"
-assert_contains "$SP/agent.yaml" 'standard: "1.2"'
+assert_contains "$SP/agent.yaml" 'standard: "2.0"'
 assert_contains "$SP/agent.yaml" 'catalog_repo: webspenser/agent-library'
 assert_contains "$SP/skills/setup/SKILL.md" '`interview-business`'
 assert_contains "$SP/migrations/0.9.x-1.0.0.md" 'mode: source'
@@ -159,13 +159,13 @@ assert_contains "$SP/skills/interview-business/SKILL.md" 'into the instance'"'"'
 assert_not_contains "$SP/skills/interview-business/SKILL.md" 'artifacts supplied into `samples/`'
 assert_contains "$SP/subagents/approacher.md" 'the instance'"'"'s `context/samples/` first, then the package'"'"'s `samples/`'
 echo "-- capabilities (Agent Standard 1.2)"
-assert_contains "$SP/agent.yaml" 'standard: "1.2"'
+assert_contains "$SP/agent.yaml" 'standard: "2.0"'
 assert_contains "$SP/capabilities/crm/contract.md" '## Invariants'
 assert_contains "$SP/capabilities/crm/contract.md" '- `draft_only` —'
 assert_contains "$SP/capabilities/crm/contract.md" '- `dnc_one_way` —'
 assert_contains "$SP/capabilities/crm/contract.md" '- `no_delete` —'
 assert_contains "$SP/capabilities/crm/adapters/airtable/adapter.md" '## Probe'
-assert_contains "$SP/capabilities/crm/adapters/airtable/adapter.yaml" 'enforce_draft_only: instruction'
+assert_pass bash -c "[ \"\$(wc -l < '$SP/capabilities/crm/adapters/airtable/adapter.yaml' | tr -d ' ')\" = 3 ] && grep -qx 'capability: crm' '$SP/capabilities/crm/adapters/airtable/adapter.yaml' && grep -qx 'provider: airtable' '$SP/capabilities/crm/adapters/airtable/adapter.yaml' && grep -qx 'server_match: airtable' '$SP/capabilities/crm/adapters/airtable/adapter.yaml'"
 assert_contains "$SP/AGENT.md" 'bound in `instance.yaml` (`bind_crm`)'
 [ ! -e "$SP"/context/crm-contract.md ] && [ ! -e "$SP"/context/crm-airtable-adapter.md ] \
   && _report ok "CRM files left context/" || _report no "CRM files still in context/"
@@ -189,13 +189,27 @@ assert_contains "$SP/agent.yaml" 'capabilities: crm, email_drafts'
 assert_contains "$SP/agent.yaml" 'version: 1.1.0'
 assert_not_contains "$SP/AGENT.md" 'delivers it directly'
 assert_contains "$SP/capabilities/email_drafts/contract.md" '- `no_send` —'
-assert_contains "$SP/capabilities/email_drafts/adapters/gmail/adapter.yaml" 'block: send, reply, forward'
-assert_contains "$SP/capabilities/email_drafts/adapters/gmail/adapter.yaml" 'enforce_no_send: adapter'
+assert_contains "$SP/capabilities/email_drafts/adapters/gmail/guard.yaml" 'covers: [no_send]'
+assert_contains "$SP/capabilities/crm/adapters/attio/guard.yaml" 'covers: [draft_only, dnc_one_way, no_delete]'
+for y in "$SP"/capabilities/*/adapters/*/adapter.yaml; do
+  assert_pass bash -c "[ \"\$(grep -c . '$y')\" = 3 ] && grep -q '^capability: ' '$y' && grep -q '^provider: ' '$y' && grep -q '^server_match: ' '$y'"
+done
+[ ! -e "$AT/guard.py" ] && _report ok "guard.py removed" || _report no "guard.py still present"
 assert_contains "$SP/skills/setup/SKILL.md" '**Tools.**'
 assert_contains "$SP/skills/setup/SKILL.md" '`standard: "1.2"`'
 assert_contains "$SP/migrations/1.0.1-1.1.0.md" 'tools step'
 assert_contains "$SP/skills/send-digest/SKILL.md" 'cannot send; delivered as a draft'
 assert_contains "$SP/subagents/follow-up.md" '`email_drafts` — `create_draft`'
 assert_not_contains "$SP/subagents/follow-up.md" '- Gmail — draft only'
+
+allowed_by() { # allowed_by <policy> <prefix> <tool>
+  printf '{"tool_name":"%s%s","tool_input":{}}' "$2" "$3" | python3 -B "$SP/hooks/guard_policy.py" "$1" - x 2>&1 | grep -q 'not in the allow list' && return 1 || return 0
+}
+for t in $(grep -oE 'attio:[a-z-]+' "$SP/capabilities/crm/adapters/attio/adapter.md" | sort -u | cut -d: -f2); do
+  allowed_by "$SP/capabilities/crm/adapters/attio/guard.yaml" mcp__attio__ "$t" && _report ok "Attio $t allowed" || _report no "Attio $t not in guard.yaml allow"
+done
+for t in $(grep -oE 'gmail:[a-z_]+' "$SP/capabilities/email_drafts/adapters/gmail/adapter.md" | sort -u | cut -d: -f2); do
+  allowed_by "$SP/capabilities/email_drafts/adapters/gmail/guard.yaml" mcp__gmail__ "$t" && _report ok "Gmail $t allowed" || _report no "Gmail $t not in guard.yaml allow"
+done
 
 finish

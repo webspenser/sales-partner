@@ -10,9 +10,15 @@ draft-create and thread-search tools.
 - `search_threads` — `gmail:search_threads` with the query; use
   `gmail:get_thread` when the caller needs a thread's messages.
 
-`adapter.yaml` blocks every tool of the matched server whose name
-contains `send`, `reply` or `forward`, so `no_send` holds by mechanism
-even on a Gmail server that offers sending, replying or forwarding.
+`guard.yaml` in this folder is enforced by the agent's guard policy
+engine before every Gmail call inside an instance. Its allow list holds
+only the draft and read tools (`create_draft`, `list_drafts`,
+`get_draft`, `search_threads`, `get_thread`, `get_message`,
+`list_labels`). Any tool whose name contains `send`, `reply` or
+`forward` is denied, and every tool not on the list is blocked, so
+`no_send` holds by mechanism even on a Gmail server that offers
+sending, replying or forwarding. If your Gmail server names these tools
+differently, add its names to `allow`.
 
 ## Probe
 

@@ -1,0 +1,23 @@
+# Attio guard policy: enforces the crm contract's invariants on Attio tool calls.
+covers: [draft_only, dnc_one_way, no_delete]
+
+allow: [whoami, list-*, get-*, search-*, semantic-search-*, run-basic-report,
+        add-record-to-list, create-record, upsert-record, update-record,
+        update-list-entry-by-id, update-list-entry-by-record-id,
+        create-note, create-task, update-task]
+deny: ["*delete*", "*merge*", create-list, update-list]
+
+create_tools: [add-record-to-list, create-record]
+update_tools: [update-list-entry-by-id, update-list-entry-by-record-id,
+               update-record, upsert-record]
+values_at: [entry_values, values]
+unwrap: [option, status, value, title]
+unknown_writes: update
+refuse_keys: [uuid]
+
+rules:
+  - field: status
+    create: [draft]
+    update: [voided]
+  - field: do_not_contact
+    update: [true]

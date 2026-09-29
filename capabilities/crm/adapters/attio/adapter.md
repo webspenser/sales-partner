@@ -5,8 +5,8 @@ hold each kind of data, the exact attribute slugs, the tool-call
 procedure behind every operation, and the views the operator works
 from.
 
-The schema is created by `bootstrap.py` in this folder (see Probe), which you can
-re-run safely: it only adds what is missing and never deletes anything.
+The schema is created by `bootstrap.py` in this folder (see Probe). You can
+re-run that script safely: it only adds what is missing and never deletes anything.
 Attribute slugs below are used verbatim; do not rename them in Attio
 without updating this file.
 
@@ -17,8 +17,8 @@ tools, whatever their prefix.
 
 ## Why lists, not custom objects
 
-This workspace's plan allows no more custom objects, so every contract
-entity other than Contacts is an Attio **list** whose parent object is
+Lists work on every Attio plan, including those with no custom-object
+allowance, so every contract entity other than Contacts is an Attio **list** whose parent object is
 `companies`:
 
 | Contract entity | Attio home | Entries per company |
@@ -88,14 +88,14 @@ Attio select rejects any option that doesn't exist yet.
 | `lead_source` | select, set to `Outbound` on create only, and only when `bindings/crm.md` says `lead_source_outbound: yes` |
 
 The `sp_` prefix keeps these three apart from fields your other
-workflows use on People (`lead_source`, `last_touchpoint`, and so on).
+workflows use on People.
 The adapter never writes those other fields, with one exception: every
 person it **creates** gets `lead_source` = `Outbound` (only when
 `bindings/crm.md` says `lead_source_outbound: yes`), because the
 agent found them by prospecting rather than them coming in. It never
 sets or changes `lead_source` on a person who already exists, since
-that person may have arrived through an inbound source (Guide, Audit,
-Referral, and so on) that must be kept.
+that person may have arrived through an inbound source
+that must be kept.
 
 ### List `sales_partner_research` — the Research table
 
@@ -108,8 +108,8 @@ Referral, and so on) that must be kept.
 | `date` | date |
 | `hook` | text |
 
-`summary` and `hook` mean exactly what the Airtable adapter's (`../airtable/adapter.md`)
-Research section says: `summary` is the finding, and `hook` is the
+`summary` and `hook` mean exactly what the Research section of the
+Airtable adapter (`../airtable/adapter.md`) says: `summary` is the finding, and `hook` is the
 usable angle the Approacher opens with.
 
 ### List `sales_partner_outreach` — the Activities table

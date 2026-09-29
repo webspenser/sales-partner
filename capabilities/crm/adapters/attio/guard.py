@@ -13,6 +13,9 @@ Rules (capabilities/crm/contract.md, Invariants):
   dnc_one_way - an update may write do_not_contact only as true.
   no_delete   - list configuration tools are refused; deletes and merges are
                 refused by adapter.yaml's `block`.
+An unknown tool that carries entry_values or values is checked with the
+update rules, so a tool this guard has not heard of cannot slip a write
+through; tools without those keys stay allowed.
 Write calls must key attributes by api slug: an attribute ID could hide
 `status` or `do_not_contact`.
 """
@@ -51,9 +54,10 @@ def problems(event):
     tool = tool_name.rsplit("__", 1)[1]
     if tool in REFUSED_TOOLS:
         return [f"{tool} changes the workspace's list configuration; sales-partner never does"]
-    if tool not in CREATE_TOOLS | UPDATE_TOOLS:
-        return []
     args = event.get("tool_input")
+    known = tool in CREATE_TOOLS | UPDATE_TOOLS
+    if not known and not (isinstance(args, dict) and ("entry_values" in args or "values" in args)):
+        return []
     if not isinstance(args, dict):
         raise ValueError("tool_input is not an object")
     values = args.get("entry_values", args.get("values", {}))
@@ -64,7 +68,7 @@ def problems(event):
         allowed = "draft" if tool in CREATE_TOOLS else "voided"
         if as_text(scalars(values["status"])) != [allowed]:
             found.append(f"status may only be written as {allowed} here (approved and sent are the operator's)")
-    if "do_not_contact" in values and tool in UPDATE_TOOLS:
+    if "do_not_contact" in values and tool not in CREATE_TOOLS:
         if as_text(scalars(values["do_not_contact"])) != ["true"]:
             found.append("do_not_contact is one-way and can only be set to true")
     return found

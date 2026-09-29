@@ -179,6 +179,7 @@ AT="$SP/capabilities/crm/adapters/attio"
 assert_contains "$AT/adapter.md" '## Probe'
 assert_contains "$AT/adapter.md" 'lead_source_outbound: yes'
 assert_not_contains "$AT/adapter.md" 'Webspenser'
+[ -x "$AT/bootstrap.py" ] && _report ok "bootstrap.py present and executable" || _report no "bootstrap.py missing or not executable"
 assert_not_contains "$AT/bootstrap.py" '.env'
 for op in create_lead get_lead update_stage update_lead log_activity update_activity log_research upsert_contact query_by_stage query_by_score query_activities; do
   assert_contains "$AT/adapter.md" "\`$op\`"

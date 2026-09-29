@@ -42,6 +42,10 @@ check 2 "update-list refused"          update-list '{"list":"sales_partner_outre
 check 0 "read tool allowed"            list-records-in-list '{"list":"sales_partner_outreach"}'
 check 2 "entry_values not an object"   update-list-entry-by-id "{$E,\"entry_values\":[1]}"
 check 2 "tool_input not an object"     update-list-entry-by-id '"x"'
+check 2 "unknown tool, approved"       assert-list-entry "{$E,\"entry_values\":{\"status\":\"approved\"}}"
+check 0 "unknown tool, no values"      create-note '{"title":"t","content":"c"}'
+check 2 "create-record approved"       create-record '{"object":"people","values":{"status":"approved"}}'
+check 2 "mixed status dict"            add-record-to-list "{$L,\"entry_values\":{\"status\":{\"option\":\"draft\",\"title\":\"approved\"}}}"
 raw   2 "malformed JSON blocks"        '{not json'
 raw   2 "no tool_name blocks"          '{"tool_input":{}}'
 [ -x "$G" ] && _report ok "guard is executable" || _report no "guard not executable"

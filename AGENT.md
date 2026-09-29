@@ -23,35 +23,39 @@ reviewed by the operator before it goes out.
 - `context/operating-config.md` — volume targets, cadence, enabled
   channels, prospecting sources, run schedules and time zone, tone,
   sending identity, and spend caps.
-- CRM credentials — Airtable is the first adapter for the neutral CRM
-  contract, eleven operations (`create_lead`, `get_lead`,
+- A CRM, bound in `instance.yaml` (`bind_crm`) to one of the adapters
+  in `capabilities/crm/adapters/` — the neutral CRM contract, eleven
+  operations (`create_lead`, `get_lead`,
   `update_stage`, `update_lead`, `log_activity`, `update_activity`,
   `log_research`, `upsert_contact`, `query_by_stage`, `query_by_score`,
   `query_activities`).
 - Apify token — funds the scrapers used in prospecting, limited there
   to the sources named in `prospecting_sources`, and the site and
   social scrapers the Preparer uses in research.
-- Gmail access, draft-only — used to compose the body of approach and
-  follow-up email Activities for operator review. The agent holds no
-  send capability: turning a draft into a sent message is an operator
-  action performed outside the agent's tool access.
+- Email drafts, through the `email_drafts` capability
+  (`capabilities/email_drafts/`, bound in `instance.yaml` as
+  `bind_email_drafts`) — `create_draft` composes the body of approach
+  and follow-up email Activities for operator review, and
+  `search_threads` reads replies. Its adapter blocks every send tool:
+  turning a draft into a sent message is an operator action outside
+  the agent's tools.
 - The operator-addressed digest is the sole exception to that
-  draft-only scope, and it is still a draft by default: `send-digest`
-  composes the digest as a Gmail draft to `sending_identity` for the
-  operator to open, and delivers it directly only where the operator
-  has explicitly set `digest_delivery: send` in
-  `context/operating-config.md` — see `skills/send-digest/SKILL.md`,
-  which also states what enabling that opt-in costs. Nothing
-  prospect-facing is reachable either way.
-- **Where these files live (Agent Standard 1.1).** `context/…` above
+  draft-only scope, and it is always a draft: `send-digest` composes it
+  through the `email_drafts` capability (`create_draft`) to
+  `sending_identity` for the operator to open. `digest_delivery: send`
+  is dormant: until a future `email_send` capability exists it only adds
+  a disclaimer line to the digest and delivers nothing — see
+  `skills/send-digest/SKILL.md` (step 10). Nothing prospect-facing is
+  reachable.
+- **Where these files live (Agent Standard 1.2).** `context/…` above
   means the instance folder — the folder holding this agent's
-  `instance.yaml`, where the user's data lives — except
-  `context/crm-contract.md` and `context/crm-airtable-adapter.md`, which
-  are package files, read from the package. The operator's own
-  examples are in the instance's `context/samples/`. `templates/`,
-  `samples/` (the examples the agent ships with), `skills/`,
-  `subagents/`, and `migrations/` mean this package's files. Everything
-  the agent writes goes into the instance.
+  `instance.yaml`, where the user's data lives. `capabilities/`
+  (contracts and adapters) is the package's, and `bindings/` holds what
+  setup learned about the user's connected systems. The operator's own
+  examples are in the instance's `context/samples/`. `capabilities/`,
+  `templates/`, `samples/` (the examples the agent ships with),
+  `skills/`, `subagents/`, and `migrations/` mean this package's files.
+  Everything the agent writes goes into the instance.
 
 ## Outputs
 - **Leads** — scored records in the CRM, each carrying a numeric score,
@@ -200,7 +204,7 @@ not only the one noted as its usual entry point.
 - Never contact, or draft a message toward, a lead flagged
   `Do Not Contact`. `log_activity` refuses to create an outbound
   Activity for such a lead and `update_lead` can never clear the flag
-  (`context/crm-contract.md`), so this one is a mechanism rather than
+  (`capabilities/crm/contract.md`), so this one is a mechanism rather than
   an instruction.
 - Never exceed the touch limit configured in `operating-config.md` for
   a lead's follow-up cadence.

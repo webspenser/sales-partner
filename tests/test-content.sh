@@ -44,7 +44,7 @@ assert_contains "$SP/skills/score-lead/SKILL.md" 'no sourced address'
 assert_contains "$SP/skills/interview-business/SKILL.md" 'companies or local businesses'
 
 echo "-- contact fields and dedupe"
-C="$SP/context/crm-contract.md"; A="$SP/context/crm-airtable-adapter.md"
+C="$SP/capabilities/crm/contract.md"; A="$SP/capabilities/crm/adapters/airtable/adapter.md"
 assert_contains "$C" '`company, location, industry, size, source, source_url`, plus optional `domain, address, phone, email, score, score_breakdown`'
 assert_contains "$C" 'failing that, the same normalized `phone`'
 assert_contains "$C" 'none of `domain`, `phone`, or `address`'
@@ -142,16 +142,15 @@ assert_not_contains "$SP/skills/send-digest/SKILL.md" 'digest schedule in operat
 assert_contains "$SP/context/operating-config.md" 'then `prepare` (research)'
 
 echo "-- instance mode (1.1)"
-assert_contains "$SP/agent.yaml" 'standard: "1.1"'
+assert_contains "$SP/agent.yaml" 'standard: "1.2"'
 assert_contains "$SP/agent.yaml" 'catalog_repo: webspenser/agent-library'
 assert_contains "$SP/skills/setup/SKILL.md" '`interview-business`'
 assert_contains "$SP/migrations/0.9.x-1.0.0.md" 'mode: source'
-assert_contains "$SP/AGENT.md" 'Agent Standard 1.1'
+assert_contains "$SP/AGENT.md" 'Agent Standard 1.2'
 
 echo "-- 1.0.1: hook points at AGENT.md; samples and context ownership"
 assert_contains "$SP/hooks/session-start.sh" 'Read the full instructions now, before anything else'
-assert_contains "$SP/agent.yaml" 'version: 1.0.1'
-assert_contains "$SP/README.md" 'Version 1.0.1.'
+assert_contains "$SP/README.md" 'Version 1.1.0.'
 assert_contains "$SP/migrations/1.0.0-1.0.1.md" 'context/samples/'
 assert_not_contains "$SP/skills/setup/SKILL.md" '<interview-skill>'
 assert_not_contains "$SP/skills/setup/SKILL.md" '<context-files>'
@@ -159,7 +158,44 @@ assert_contains "$SP/skills/setup/SKILL.md" '`context/business-profile.md`, `con
 assert_contains "$SP/skills/interview-business/SKILL.md" 'into the instance'"'"'s `context/samples/`'
 assert_not_contains "$SP/skills/interview-business/SKILL.md" 'artifacts supplied into `samples/`'
 assert_contains "$SP/subagents/approacher.md" 'the instance'"'"'s `context/samples/` first, then the package'"'"'s `samples/`'
-assert_contains "$SP/AGENT.md" '`context/crm-contract.md` and `context/crm-airtable-adapter.md`, which'
-assert_contains "$SP/AGENT.md" 'are package files, read from the package'
+echo "-- capabilities (Agent Standard 1.2)"
+assert_contains "$SP/agent.yaml" 'standard: "1.2"'
+assert_contains "$SP/capabilities/crm/contract.md" '## Invariants'
+assert_contains "$SP/capabilities/crm/contract.md" '- `draft_only` —'
+assert_contains "$SP/capabilities/crm/contract.md" '- `dnc_one_way` —'
+assert_contains "$SP/capabilities/crm/contract.md" '- `no_delete` —'
+assert_contains "$SP/capabilities/crm/adapters/airtable/adapter.md" '## Probe'
+assert_contains "$SP/capabilities/crm/adapters/airtable/adapter.yaml" 'enforce_draft_only: instruction'
+assert_contains "$SP/AGENT.md" 'bound in `instance.yaml` (`bind_crm`)'
+[ ! -e "$SP"/context/crm-contract.md ] && [ ! -e "$SP"/context/crm-airtable-adapter.md ] \
+  && _report ok "CRM files left context/" || _report no "CRM files still in context/"
+while IFS= read -r f; do
+  assert_not_contains "$f" 'context/crm-'
+done < <(find "$SP" -name '*.md' -not -path './docs/*' -not -path './tests/*' -not -path './.git/*' -not -path './migrations/*')
+
+echo "-- Attio adapter"
+AT="$SP/capabilities/crm/adapters/attio"
+assert_contains "$AT/adapter.md" '## Probe'
+assert_contains "$AT/adapter.md" 'lead_source_outbound: yes'
+assert_not_contains "$AT/adapter.md" 'Webspenser'
+[ -x "$AT/bootstrap.py" ] && _report ok "bootstrap.py present and executable" || _report no "bootstrap.py missing or not executable"
+assert_not_contains "$AT/bootstrap.py" '.env'
+for op in create_lead get_lead update_stage update_lead log_activity update_activity log_research upsert_contact query_by_stage query_by_score query_activities; do
+  assert_contains "$AT/adapter.md" "\`$op\`"
+done
+
+echo "-- email drafts and release 1.1.0"
+assert_contains "$SP/agent.yaml" 'capabilities: crm, email_drafts'
+assert_contains "$SP/agent.yaml" 'version: 1.1.0'
+assert_not_contains "$SP/AGENT.md" 'delivers it directly'
+assert_contains "$SP/capabilities/email_drafts/contract.md" '- `no_send` —'
+assert_contains "$SP/capabilities/email_drafts/adapters/gmail/adapter.yaml" 'block: send, reply, forward'
+assert_contains "$SP/capabilities/email_drafts/adapters/gmail/adapter.yaml" 'enforce_no_send: adapter'
+assert_contains "$SP/skills/setup/SKILL.md" '**Tools.**'
+assert_contains "$SP/skills/setup/SKILL.md" '`standard: "1.2"`'
+assert_contains "$SP/migrations/1.0.1-1.1.0.md" 'tools step'
+assert_contains "$SP/skills/send-digest/SKILL.md" 'cannot send; delivered as a draft'
+assert_contains "$SP/subagents/follow-up.md" '`email_drafts` — `create_draft`'
+assert_not_contains "$SP/subagents/follow-up.md" '- Gmail — draft only'
 
 finish

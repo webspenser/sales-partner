@@ -1,6 +1,6 @@
 # CRM Airtable adapter
 
-The concrete Airtable mapping for `crm-contract.md`'s eleven operations:
+The concrete Airtable mapping for the contract (`../../contract.md`)'s eleven operations:
 four tables, their exact fields and types, and the four views the
 operator works from. Field names below are used verbatim by the
 sub-agent contracts and skills in Tasks 8–12 — do not rename, abbreviate,
@@ -24,14 +24,14 @@ or reword any of them when implementing this adapter.
 | `Source URL` | url |
 | `Score` | number 0–100 |
 | `Score Breakdown` | long text |
-| `Stage` | single select — the twelve stages (see `crm-contract.md`) |
+| `Stage` | single select — the twelve stages (see the contract) |
 | `Stage Changed At` | datetime |
 | `Next Action` | text |
 | `Next Action Due` | date |
 | `Do Not Contact` | checkbox |
 
 `create_lead` dedupes on `Domain`, then on `Phone`, then on `Company`
-plus `Address` (normalized), in that order — see `crm-contract.md`.
+plus `Address` (normalized), in that order — see the contract.
 A phone is normalized to E.164: `+` and digits, nothing else. A number
 written without a country code takes the country of the lead's sourced
 address; failing that, the country of `service_area.center` in
@@ -39,7 +39,7 @@ address; failing that, the country of `service_area.center` in
 never given a guessed country code. None of the three is a unique
 column, because each may be empty on a given lead. `Stage` options
 must be exactly the twelve values from the stage enum in
-`crm-contract.md` — no additional options, no renamed options.
+the contract — no additional options, no renamed options.
 
 `query_by_stage`'s two optional filters read this table and, for
 `idle_days`, the Activities table too: `next_action_due_before` filters
@@ -49,6 +49,11 @@ days (or which have no Activity at all), the same staleness computation
 the **Stalled** view below already performs — the operation and the
 view compute identically, the operation is simply the path a skill or
 sub-agent calls instead of a human opening the view.
+
+`get_lead` reads one Leads record by its record id and follows the
+links to its Contacts, Research, and Activities rows. `query_by_score`
+filters the Leads table on `Stage` and `Score >= min_score`, sorted by
+`Score` descending and cut at `limit`.
 
 `create_lead` writes this table's fields at creation, and that includes
 `Stage` and `Stage Changed At`: **every record it creates starts at
@@ -186,7 +191,7 @@ write `Status` at all — `approved` and `sent` are never a legal write.
 Those two values are reachable only by the operator acting directly in
 Airtable: approving a draft in the **Awaiting Approval** view below,
 and separately sending it, both outside every one of the eleven
-operations this adapter maps (`crm-contract.md`'s Approval invariant
+operations this adapter maps (the contract's Approval invariant
 states this as a provable rule, not a convention). This is the
 mechanism that makes "nothing sends without operator approval" true —
 the capability to write `approved` or `sent` does not exist anywhere
@@ -264,3 +269,18 @@ disagree about what counts as "awaiting approval," "due today," or
   cadence. Leads that have gone quiet longer than the pipeline's
   configured touch cadence allows, and need attention (a nudge, a
   follow-up, or a move to `Lost`).
+
+## Probe
+
+Setup runs these read-only calls when binding this adapter, and writes
+what they find to `bindings/crm.md` in the instance:
+
+1. `airtable:search_bases` (or `list_bases`) — find the base that
+   holds the Leads, Contacts, Research, and Activities tables; ask the
+   operator if more than one could. Record `base_id` and `base_name`.
+2. `airtable:list_tables_for_base` on that base — every table and
+   field named in this adapter must exist with the listed type.
+
+`airtable:` means the connected Airtable server's tools, whatever
+their prefix. If a table or field is missing, show the operator the
+list and stop; this adapter has no bootstrap script.

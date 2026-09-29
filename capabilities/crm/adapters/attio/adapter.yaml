@@ -1,0 +1,8 @@
+capability: crm
+provider: attio
+server_match: attio
+block: delete, merge
+guard: guard.py
+enforce_draft_only: adapter
+enforce_dnc_one_way: adapter
+enforce_no_delete: adapter

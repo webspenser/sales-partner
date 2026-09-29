@@ -63,11 +63,12 @@ read rather than waiting to be told:
 - CRM `update_activity`
 - CRM `update_lead`
 - CRM `update_stage`
-- Gmail — draft only
+- `email_drafts` — `create_draft` and `search_threads` only
 - Read access to `templates/` (for a `call` follow-up's opener)
 
-This contract has no send capability. Gmail access is limited to
-composing a draft, and `update_activity`'s only permitted write is
+This contract has no send capability. `email_drafts` offers only
+drafting and reading, its adapter blocks every send tool, and
+`update_activity`'s only permitted write is
 `status = "voided"` — a dead end that pulls an Activity out of the
 approval queue, never a step toward `approved` or `sent`. Nothing in
 this contract's tool access can move a message toward `sent`, and that
@@ -116,7 +117,7 @@ action fields.
   `update_lead` may set `Do Not Contact` but rejects any attempt to
   clear it, and `log_activity` rejects creating an Activity with
   `direction: "outbound"` for a lead whose flag is set
-  (`crm-contract.md`). So once this guardrail fires, no later call by
+  (`capabilities/crm/contract.md`). So once this guardrail fires, no later call by
   this contract or by any other can draft toward that lead again.
 - Every question the prospect actually asked is answered before
   anything new is introduced in the draft.

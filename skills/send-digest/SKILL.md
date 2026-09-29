@@ -55,7 +55,7 @@ HH:MM` entry it is 1 day. To compute the window for any given run:
 This anchor comes from `operating-config.md` and calendar arithmetic
 alone — never from a stored "last digest sent" value, because no such
 field exists among the CRM contract's eleven operations
-(`crm-contract.md`) and this skill does not invent one.
+(`capabilities/crm/contract.md`) and this skill does not invent one.
 
 **Both edges matter equally, and pinning only the lower edge is not
 enough.** A late-firing run is the normal condition for a scheduled
@@ -94,11 +94,11 @@ window per section:
   moment `create_lead` writes it — against the full window,
   `(anchor, nominal_time]`, not the anchor alone. Created Time is
   store-level record metadata, not one of the fields
-  `crm-airtable-adapter.md` declares on the Leads table; it needs no
+  the Airtable adapter (`capabilities/crm/adapters/airtable/adapter.md`) declares on the Leads table; it needs no
   new field because every record already carries it.
 - **Movement** compares each Lead record's own **`Stage Changed At`**
   against the same `(anchor, nominal_time]` window. `Stage Changed At`
-  is a declared field on the Leads table (`crm-airtable-adapter.md`),
+  is a declared field on the Leads table (`capabilities/crm/adapters/airtable/adapter.md`),
   written only by `update_stage`, on every transition, as part of that
   same call — never by `update_lead` and never by anything else. That
   exclusivity is what makes it trustworthy here: `update_lead` writes
@@ -136,9 +136,9 @@ marker. The reads it does use, named precisely:
 - Apify's own usage data — Section 6. This is the one section with no
   CRM read at all; Apify spend is not CRM data and never was.
 
-Every one of the above is a call through `crm-contract.md`'s eleven
+Every one of the above is a call through `capabilities/crm/contract.md`'s eleven
 provider-neutral operations — none of the six sections reads an
-Airtable view directly. `crm-airtable-adapter.md`'s four named views
+Airtable view directly. The Airtable adapter's (`capabilities/crm/adapters/airtable/adapter.md`) four named views
 (Awaiting Approval, Research Queue, Due Today, Stalled) still exist as
 a convenience for the operator looking at Airtable by hand, and are
 defined to compute exactly what the operations above return, but this
@@ -258,35 +258,45 @@ path.
    `operating-config.md`. If it is `sms` and no Twilio credential is
    configured — true of the shipped default, since SMS is a stubbed
    adapter, not yet enabled — switch delivery to email (delivered per
-   step 10: a Gmail draft unless direct send is explicitly enabled) and
+   step 10: always a draft under Agent Standard 1.2) and
    make the digest's first line say so verbatim, e.g. `Delivered by email — SMS
    is configured but no Twilio credential exists yet.` If
    `digest_channel` is `email`, or is `sms` with a working Twilio
-   credential, deliver on that channel with no disclaimer line.
-10. Deliver the rendered digest. **The default is a Gmail draft, not
-    a send:** compose the digest as a Gmail draft addressed to
-    `sending_identity` (the operator's own address from
-    `operating-config.md`), which the operator opens from their own
-    drafts. Delivering it this way needs no send capability at all, and
-    by default the agent holds none.
+   credential, deliver on that channel with no disclaimer line. If
+   step 10's send-fallback line also applies, it goes first, above
+   this one.
+10. Deliver the rendered digest. **Under Agent Standard 1.2 the digest
+    is always a draft, never a send:** create it with `email_drafts`
+    `create_draft`, addressed to `sending_identity` (the operator's own
+    address from `operating-config.md`), and the operator opens it from
+    their own drafts. Delivering it this way needs no send capability
+    at all, and the agent holds none: the email binding blocks every
+    send tool.
 
-    Direct send is an explicitly-configured opt-in: it happens only
-    when `digest_delivery: send` is set in `operating-config.md`, whose
-    shipped default is `digest_delivery: draft`. **Enabling it grants a
-    Gmail send capability that is not scoped to the operator's own
+    `digest_delivery` shipped as `draft`. If it is set to `send`, the
+    only difference is a disclaimer: compose the draft exactly as for
+    `draft` and put this line first, above the `#` heading:
+    "digest_delivery is send, but this agent's email binding
+    cannot send; delivered as a draft." The setting cannot be honored,
+    and you must not look for another way to send.
+
+    The opt-in is dormant, not removed. Direct send would need a future
+    `email_send` capability bound in the instance; only if one is bound
+    may `digest_delivery: send` deliver directly. **Enabling it would
+    grant a send capability that is not scoped to the operator's own
     address.** Gmail has no per-recipient send scope: a credential that
     can send this digest to `sending_identity` can send mail to anyone,
-    prospects included. The guardrails still forbid using it that way,
-    but with the opt-in on, "the agent cannot reach a prospect" stops
-    being true by construction and goes back to being an instruction —
-    which is why the default is `draft`, and why turning it on is the
-    operator's decision to make in config, never the agent's to make at
-    runtime. See **Approval scope** below for why delivering this one
-    report to this one recipient needs no separate approval step under
-    either setting.
+    prospects included. The guardrails would still forbid using it that
+    way, but with the opt-in on, "the agent cannot reach a prospect"
+    stops being true by construction and goes back to being an
+    instruction, which is why the default is `draft`, and why turning
+    it on is the operator's decision to make in config, never the
+    agent's to make at runtime. See **Approval scope** below for why
+    delivering this one report to this one recipient needs no separate
+    approval step.
 
-    Delivery — draft or send — is the skill's only side effect. Stop —
-    no CRM write of any kind follows.
+    Delivery, as a draft, is the skill's only side effect. Stop — no
+    CRM write of any kind follows.
 
 ## Why approvals lead
 
@@ -309,7 +319,7 @@ summary to the top.
 ## Approval scope
 
 `AGENT.md`'s guardrail — "nothing sends without operator approval" —
-and `crm-contract.md`'s `log_activity` enforcement of it both gate one
+and `capabilities/crm/contract.md`'s `log_activity` enforcement of it both gate one
 specific thing: **outbound prospect communication**, logged as an
 Activity and walked through `draft` → `approved` → `sent` — or, if an
 inbound opt-out arrives first, diverted from `draft`/`approved`
@@ -318,26 +328,28 @@ reaches `sent`. The digest
 is never logged as an Activity, is never addressed to a prospect, and
 never touches `log_activity` at all — it is a report the agent sends
 to the operator, about the operator's own pipeline. Delivering it by
-Gmail is not a violation of that guardrail; it is a different act
+email is not a violation of that guardrail; it is a different act
 entirely, on a different channel scope than the draft-only Gmail
 access `AGENT.md`'s Inputs describes for composing prospect-facing
-Activities. Do not read this skill's Gmail delivery as an argument
+Activities. Do not read this skill's email delivery as an argument
 that any other agent output no longer needs approval — it applies to
 this one report, addressed to this one recipient, precisely because
 that recipient is the person the approval gate exists to protect, not
 someone the approval gate exists to protect *from*.
 
-Under the default `digest_delivery: draft` the question is narrower
-still: the digest is composed as a Gmail draft to `sending_identity`
-and the operator opens it, so this skill delivers its one report using
-exactly the draft-only Gmail access `AGENT.md`'s Inputs already
-describes, holding no send capability whatsoever. The reasoning above
-is what licenses the `digest_delivery: send` opt-in; it is not a claim
-that the opt-in is free. Turning it on adds a send scope Gmail cannot
-narrow to a single recipient, so the operator who enables it has
-granted a capability that could technically reach a prospect — an
+Under Agent Standard 1.2 the question is narrower still: the digest
+is composed as a draft via `email_drafts` `create_draft` to
+`sending_identity` and the operator opens it, so this skill delivers
+its one report using exactly the draft-only access `AGENT.md`'s
+Inputs already describes, holding no send capability whatsoever. The
+reasoning above would license a `digest_delivery: send` opt-in once an
+`email_send` capability exists; it is not a claim that the opt-in is
+free. Turning it on would add a send scope Gmail cannot narrow to a
+single recipient, so the operator who enables it would grant a
+capability that could technically reach a prospect — an
 instruction-enforced boundary where a withheld-capability one stood
-before. Grant it deliberately or not at all.
+before. Until then the opt-in is dormant; grant it deliberately or not
+at all.
 
 ## Worked example
 
@@ -413,11 +425,11 @@ after the anchor" with no upper bound, this run (executing at 11:00)
 would have caught Vantage Fleet too, and next week's on-time run would
 report it again — the double-report Finding 1 describes.
 
-Composed as a Gmail draft to `sending_identity` (e.g. `Andrew Ho Choy
+Composed as a draft via `email_drafts` `create_draft` to `sending_identity` (e.g. `Andrew Ho Choy
 <andrew@example.com>`) — the shipped `digest_delivery: draft` default —
 for the operator to open. Had `digest_channel` instead been `sms` with
 no Twilio credential configured, the same body would still be delivered
-by Gmail, with this line prepended above the `#` heading:
+by email, with this line prepended above the `#` heading:
 
 ```
 Delivered by email — SMS is configured but no Twilio credential exists yet.
@@ -460,11 +472,11 @@ Delivered by email — SMS is configured but no Twilio credential exists yet.
   not only the runs a reviewer happens to notice ran late.
 - **Flipping `digest_delivery` to `send` for convenience.** Saving
   the operator the click of opening a draft is not a reason to hand
-  the agent an unscoped Gmail send capability. Direct send is a
-  deliberate operator decision recorded in `operating-config.md`, not
-  something this skill enables on its own, infers from a preference,
-  or treats as the obvious default once it has run a few times
-  cleanly.
+  the agent an unscoped send capability. Direct send would be a
+  deliberate operator decision recorded in `operating-config.md`, and
+  under Standard 1.2 it is not even available. This skill never
+  enables it on its own, infers it from a preference, or treats it as
+  the obvious default once it has run a few times cleanly.
 - **Silently falling back to email without saying so.** The fallback
   from `sms` to `email` when no Twilio credential exists is not itself
   a failure — it's the only sane behavior with a stubbed adapter. The

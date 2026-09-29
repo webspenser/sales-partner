@@ -83,7 +83,7 @@ tone: "[three adjectives from the interview]"
 - **`follow_up_cadence_days`** — the number of idle days after which a
   `Contacted`, `Replied`, or `Following Up` lead is considered stalled
   and due for a follow-up draft or a nudge; also the interval the
-  **Stalled** CRM view (`crm-airtable-adapter.md`) is built against.
+  **Stalled** view of the bound CRM adapter (for Airtable, `capabilities/crm/adapters/airtable/adapter.md`) is built against.
 - **`max_touches`** — the total outbound touch limit per lead across the
   whole pipeline. Reaching it without a positive outcome moves the lead
   to `Lost` instead of drafting again — never exceeded, per
@@ -106,15 +106,19 @@ tone: "[three adjectives from the interview]"
 - **`digest_channel`** — the delivery channel for the digest (default
   `email`; SMS is a stubbed adapter, not yet enabled).
 - **`digest_delivery`** — whether `send-digest` composes the digest as
-  a Gmail draft addressed to `sending_identity` for the operator to
-  open (`draft`, the default) or delivers it directly (`send`). This
+  a draft (via `email_drafts`) addressed to `sending_identity` for the
+  operator to open (`draft`, the default) or delivers it directly
+  (`send`). This
   is the one setting in this file that changes what capability the
   agent holds rather than how it behaves: `send` requires a Gmail send
   scope, and Gmail cannot narrow that scope to a single recipient, so
   enabling it grants an ability that could technically reach a
   prospect. Leave it at `draft` unless the operator has decided
   otherwise; see `skills/send-digest/SKILL.md`'s step 10 and
-  **Approval scope**.
+  **Approval scope**. Under Agent Standard 1.2, `send` is dormant and falls
+  back to a draft with a disclaimer line (the email binding blocks
+  send tools) until an `email_send` capability exists; see
+  `skills/send-digest/SKILL.md`.
 - **`apify_spend_cap_usd_per_week`** — the hard ceiling on Apify actor
   spend per week, shared across the Prospector's sourcing and the
   Preparer's research. Reaching it is a `Stop conditions` trigger and
@@ -129,7 +133,7 @@ tone: "[three adjectives from the interview]"
   every Activity stops at
   `status: draft` and only the operator's approval and send action puts
   a message on the wire, per the `log_activity` guardrail in
-  `crm-contract.md`.
+  `capabilities/crm/contract.md`.
 - **`callback_phone`** — the operator's own number the voicemail in a
   call opener gives for callbacks. Filled in by the interview when
   `call` is in `enabled_channels`; never a prospect-facing send
@@ -172,6 +176,6 @@ guardrail is enforced in the CRM contract, not merely stated here:
 `update_activity` can move an existing Activity only to
 `status: voided`; `approved` and `sent` are reachable only by the
 operator acting outside the agent's tool access. See
-`crm-contract.md`'s Approval invariant for the full, provable rule —
+`capabilities/crm/contract.md`'s Approval invariant for the full, provable rule —
 this file states the outcome, not the mechanics, precisely so it
 cannot drift out of sync with them again.

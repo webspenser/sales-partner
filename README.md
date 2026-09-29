@@ -24,9 +24,16 @@ in that folder loads the agent. Plugin updates never touch your folder.
 ## Use it from source
 
 1. Click **Use this template** to create your own private copy.
-2. Clone it, run `./install.sh`, and add `instance.yaml` at the root
-   with `mode: source`.
-3. Ask the agent to run its interview (the `interview-business` skill).
+2. Clone it and run `./install.sh`.
+3. Run the `setup` skill in source mode. It writes `instance.yaml` at
+   the root; the guard needs the `agent` line:
+
+   ```yaml
+   agent: sales-partner
+   agent_version: 2.0.0
+   mode: source
+   ```
+4. Ask the agent to run its interview (the `interview-business` skill).
 
 ## Tools it needs
 

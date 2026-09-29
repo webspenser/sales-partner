@@ -300,6 +300,18 @@ what they find to `bindings/crm.md` in the instance:
    record `field_status: <field ID of Activities.Status>` and
    `field_do_not_contact: <field ID of Leads."Do Not Contact">`.
 
+Write each `field_` line as a plain line, `field_<name>: <ID>`, with
+nothing else on it: no bullet, no backticks or quotes, no trailing note.
+A decorated line blocks every Airtable write. Example of
+`bindings/crm.md`:
+
+```
+base_id: appXXXXXXXXXXXXXX
+base_name: Sales
+field_status: fldXXXXXXXXXXXXXX
+field_do_not_contact: fldYYYYYYYYYYYYYY
+```
+
 `airtable:` means the connected Airtable server's tools, whatever
 their prefix. If a table or field is missing, show the operator the
 list and stop; this adapter has no bootstrap script.

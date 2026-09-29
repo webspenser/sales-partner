@@ -5,5 +5,6 @@ set -uo pipefail
 cd "$(dirname "$0")/.."
 STATUS=0
 echo "== content"; tests/test-content.sh || STATUS=1
+echo "== attio guard"; tests/test-attio-guard.sh || STATUS=1
 [ "$STATUS" -eq 0 ] && echo "ALL GREEN" || echo "FAILURES ABOVE"
 exit "$STATUS"

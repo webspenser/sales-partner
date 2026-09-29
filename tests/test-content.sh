@@ -201,6 +201,12 @@ assert_not_contains "$SP/subagents/follow-up.md" '- Gmail — draft only'
 allowed_by() { # allowed_by <policy> <prefix> <tool>
   printf '{"tool_name":"%s%s","tool_input":{}}' "$2" "$3" | python3 -B "$SP/hooks/guard_policy.py" "$1" - x >/dev/null 2>&1
 }
+in_allow() { # in_allow <policy> <prefix> <tool>: listed and not denied; a write may still exit 2 for missing bindings
+  local out
+  out=$(printf '{"tool_name":"%s%s","tool_input":{}}' "$2" "$3" | python3 -B "$SP/hooks/guard_policy.py" "$1" - x 2>&1)
+  case "$out" in *"is not in the allow list"*|*"is denied"*|*"cannot check"*|*Traceback*) return 1 ;; esac
+  return 0
+}
 for t in $(grep -oE 'attio:[a-z-]+' "$SP/capabilities/crm/adapters/attio/adapter.md" | sort -u | cut -d: -f2); do
   allowed_by "$SP/capabilities/crm/adapters/attio/guard.yaml" mcp__attio__ "$t" && _report ok "Attio $t allowed" || _report no "Attio $t not in guard.yaml allow"
 done
@@ -208,7 +214,7 @@ for t in $(grep -oE 'gmail:[a-z_]+' "$SP/capabilities/email_drafts/adapters/gmai
   allowed_by "$SP/capabilities/email_drafts/adapters/gmail/guard.yaml" mcp__gmail__ "$t" && _report ok "Gmail $t allowed" || _report no "Gmail $t not in guard.yaml allow"
 done
 for t in $(grep -oE 'airtable:[a-z_]+' "$SP/capabilities/crm/adapters/airtable/adapter.md" | sort -u | cut -d: -f2); do
-  allowed_by "$SP/capabilities/crm/adapters/airtable/guard.yaml" mcp__airtable__ "$t" && _report ok "Airtable $t allowed" || _report no "Airtable $t not in guard.yaml allow"
+  in_allow "$SP/capabilities/crm/adapters/airtable/guard.yaml" mcp__airtable__ "$t" && _report ok "Airtable $t allowed" || _report no "Airtable $t not in guard.yaml allow"
 done
 assert_contains "$SP/capabilities/crm/adapters/airtable/adapter.md" 'field_status'
 [ "$(ls -A "$SP/migrations")" = ".gitkeep" ] && _report ok "migrations/ holds only .gitkeep" || _report no "migrations/ must hold only .gitkeep"

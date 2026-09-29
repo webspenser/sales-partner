@@ -234,6 +234,23 @@ schema's entire no-send guarantee depends on a human actually reading.
 `Direction = outbound` narrows the view to only the rows a decision is
 actually needed on.
 
+## Tool mapping
+
+`airtable:` means the connected Airtable server's tools. Every
+operation reaches Airtable through these:
+
+- Reads (`get_lead`, `query_by_stage`, `query_by_score`,
+  `query_activities`, and the matching and dedupe lookups inside the
+  write operations) use `airtable:list_records_for_table` or
+  `airtable:search_records`, with `airtable:get_table_schema` for
+  select-field options.
+- Creates (`create_lead`, `log_activity`, `log_research`, and the
+  create half of `upsert_contact`) use
+  `airtable:create_records_for_table`.
+- Updates (`update_lead`, `update_stage`, `update_activity`, and the
+  update half of `upsert_contact`) use
+  `airtable:update_records_for_table`.
+
 ## Views
 
 These four views are required, since they are the operator's interface
@@ -303,5 +320,8 @@ field IDs the probe recorded in `bindings/crm.md`:
   update;
 - `Do Not Contact` may only be written as `true`.
 
-Writes are blocked until the probe has recorded both IDs
-(`field_status` and `field_do_not_contact`).
+Every Airtable write stays blocked until the probe has recorded both
+IDs (`field_status` and `field_do_not_contact`) in `bindings/crm.md`.
+That includes lead creation (`create_lead`) and every other operation
+that writes, not only the ones that touch those two fields. If writes
+are refused, re-run setup's tools step so the probe records the IDs.

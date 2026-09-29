@@ -474,7 +474,7 @@ Delivered by email — SMS is configured but no Twilio credential exists yet.
   the operator the click of opening a draft is not a reason to hand
   the agent an unscoped send capability. Direct send would be a
   deliberate operator decision recorded in `operating-config.md`, and
-  it is not even available. This skill never
+  in this release direct send is not available at all. This skill never
   enables it on its own, infers it from a preference, or treats it as
   the obvious default once it has run a few times cleanly.
 - **Silently falling back to email without saying so.** The fallback

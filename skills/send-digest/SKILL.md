@@ -276,9 +276,9 @@ path.
     `digest_delivery` shipped as `draft`. If it is set to `send`, the
     only difference is a disclaimer: compose the draft exactly as for
     `draft` and put this line first, above the `#` heading:
-    "digest_delivery is send, but this agent's email binding cannot
-    send; delivered as a draft." The setting cannot be honored, and you
-    must not look for another way to send.
+    "digest_delivery is send, but this agent's email binding
+    cannot send; delivered as a draft." The setting cannot be honored,
+    and you must not look for another way to send.
 
     The opt-in is dormant, not removed. Direct send would need a future
     `email_send` capability bound in the instance; only if one is bound

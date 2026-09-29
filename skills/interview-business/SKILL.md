@@ -52,9 +52,10 @@ because a human has to answer it in their own words.
    never draft one yourself to fill the gap.
 6. Write `context/business-profile.md`'s "Proof" section from Round 3's
    named metrics and references before starting Round 4. Save any real
-   artifacts supplied into `samples/`, unmodified from what the
-   operator gave; if none were supplied, leave `samples/` empty rather
-   than inventing content for it.
+   artifacts supplied into the instance's `context/samples/`,
+   unmodified from what the operator gave; if none were supplied,
+   leave `context/samples/` empty rather than inventing content for
+   it. Never write into the package's `samples/`.
 7. **Round 4 — the operating parameters.** Ask, one at a time: how many
    leads per week should the pipeline target; which sourcing tools may
    it use (map listings for local businesses, company sites, web
@@ -99,7 +100,7 @@ companies.
 - Round 3 answers: "cut time-to-first-qualified-pipeline from 11 weeks
   to 4 weeks for Meridian Analytics"; Meridian's founder will take
   reference calls. Operator pastes an actual outbound email they sent
-  Meridian — saved verbatim to `samples/`.
+  Meridian — saved verbatim to `context/samples/`.
 - Round 4 answers: 40 leads/week, email and LinkedIn, prospecting
   Monday 07:00 and digest Monday 08:00 Eastern, $25/week Apify cap,
   tone "direct, technical, no fluff" with the example line "We don't
@@ -119,7 +120,8 @@ companies.
   from Round 2 is a draft, not a write. `icp.md` is never updated with
   scoring weights the operator hasn't explicitly agreed to, even when
   the draft looks obviously right.
-- **Filling `samples/` with invented copy instead of asking for real
-  artifacts.** A sample the agent wrote itself teaches the voice back
-  to itself, not the operator's actual voice. If no real artifact is
-  offered, leave `samples/` empty rather than manufacture one.
+- **Filling `context/samples/` with invented copy instead of asking
+  for real artifacts.** A sample the agent wrote itself teaches the
+  voice back to itself, not the operator's actual voice. If no real
+  artifact is offered, leave `context/samples/` empty rather than
+  manufacture one.

@@ -26,7 +26,9 @@ contract at all, without consuming an outreach touch.
   `sending_identity`, `callback_phone`
 - `templates/` — blank channel templates (cold email, LinkedIn
   connection note, LinkedIn DM, cold call opener)
-- `samples/` — gold-standard filled examples for voice and structure
+- Samples — gold-standard filled examples for voice and structure:
+  the instance's `context/samples/` first, then the package's `samples/`
+  (the operator's own examples outrank the shipped ones)
 
 ## Outputs
 - A channel recommendation with rationale, chosen only from
@@ -45,7 +47,7 @@ contract at all, without consuming an outreach touch.
 - CRM `log_activity`
 - CRM `update_stage`
 - Read access to `templates/`
-- Read access to `samples/`
+- Read access to `context/samples/` and `samples/`
 
 This contract has no send capability. That is the enforcement mechanism,
 not an instruction.

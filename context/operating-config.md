@@ -83,7 +83,7 @@ tone: "[three adjectives from the interview]"
 - **`follow_up_cadence_days`** — the number of idle days after which a
   `Contacted`, `Replied`, or `Following Up` lead is considered stalled
   and due for a follow-up draft or a nudge; also the interval the
-  **Stalled** CRM view (`crm-airtable-adapter.md`) is built against.
+  **Stalled** view of the bound CRM adapter (for Airtable, `capabilities/crm/adapters/airtable/adapter.md`) is built against.
 - **`max_touches`** — the total outbound touch limit per lead across the
   whole pipeline. Reaching it without a positive outcome moves the lead
   to `Lost` instead of drafting again — never exceeded, per
@@ -129,7 +129,7 @@ tone: "[three adjectives from the interview]"
   every Activity stops at
   `status: draft` and only the operator's approval and send action puts
   a message on the wire, per the `log_activity` guardrail in
-  `crm-contract.md`.
+  `capabilities/crm/contract.md`.
 - **`callback_phone`** — the operator's own number the voicemail in a
   call opener gives for callbacks. Filled in by the interview when
   `call` is in `enabled_channels`; never a prospect-facing send
@@ -172,6 +172,6 @@ guardrail is enforced in the CRM contract, not merely stated here:
 `update_activity` can move an existing Activity only to
 `status: voided`; `approved` and `sent` are reachable only by the
 operator acting outside the agent's tool access. See
-`crm-contract.md`'s Approval invariant for the full, provable rule —
+`capabilities/crm/contract.md`'s Approval invariant for the full, provable rule —
 this file states the outcome, not the mechanics, precisely so it
 cannot drift out of sync with them again.

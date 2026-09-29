@@ -1,0 +1,7 @@
+capability: crm
+provider: airtable
+server_match: airtable
+block: delete
+enforce_draft_only: instruction
+enforce_dnc_one_way: instruction
+enforce_no_delete: adapter

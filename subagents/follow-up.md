@@ -116,7 +116,7 @@ action fields.
   `update_lead` may set `Do Not Contact` but rejects any attempt to
   clear it, and `log_activity` rejects creating an Activity with
   `direction: "outbound"` for a lead whose flag is set
-  (`crm-contract.md`). So once this guardrail fires, no later call by
+  (`capabilities/crm/contract.md`). So once this guardrail fires, no later call by
   this contract or by any other can draft toward that lead again.
 - Every question the prospect actually asked is answered before
   anything new is introduced in the draft.

@@ -77,7 +77,7 @@ dispatch model, identically.
   automated LinkedIn action of any kind — no automated connection
   requests, messages, or scraping.
 - Email drafts stop at `Status = draft`; nothing in this contract can
-  move an Activity to `sent` — see `crm-contract.md`'s `log_activity`
+  move an Activity to `sent` — see `capabilities/crm/contract.md`'s `log_activity`
   entry for the approval enforcement that guarantees this.
 - One opening touch per lead from this contract.
 - A `call` draft is a script for the operator to read from, logged at

@@ -23,7 +23,7 @@ reviewed by the operator before it goes out.
 - `context/operating-config.md` — volume targets, cadence, enabled
   channels, prospecting sources, run schedules and time zone, tone,
   sending identity, and spend caps.
-- CRM credentials — Airtable is the first adapter for the neutral CRM
+- A CRM, bound in `instance.yaml` (`bind_crm`) to one of the adapters in `capabilities/crm/adapters/` — the neutral CRM
   contract, eleven operations (`create_lead`, `get_lead`,
   `update_stage`, `update_lead`, `log_activity`, `update_activity`,
   `log_research`, `upsert_contact`, `query_by_stage`, `query_by_score`,
@@ -43,15 +43,15 @@ reviewed by the operator before it goes out.
   `context/operating-config.md` — see `skills/send-digest/SKILL.md`,
   which also states what enabling that opt-in costs. Nothing
   prospect-facing is reachable either way.
-- **Where these files live (Agent Standard 1.1).** `context/…` above
+- **Where these files live (Agent Standard 1.2).** `context/…` above
   means the instance folder — the folder holding this agent's
-  `instance.yaml`, where the user's data lives — except
-  `context/crm-contract.md` and `context/crm-airtable-adapter.md`, which
-  are package files, read from the package. The operator's own
-  examples are in the instance's `context/samples/`. `templates/`,
-  `samples/` (the examples the agent ships with), `skills/`,
-  `subagents/`, and `migrations/` mean this package's files. Everything
-  the agent writes goes into the instance.
+  `instance.yaml`, where the user's data lives. `capabilities/`
+  (contracts and adapters) is the package's, and `bindings/` holds what
+  setup learned about the user's connected systems. The operator's own
+  examples are in the instance's `context/samples/`. `capabilities/`,
+  `templates/`, `samples/` (the examples the agent ships with),
+  `skills/`, `subagents/`, and `migrations/` mean this package's files.
+  Everything the agent writes goes into the instance.
 
 ## Outputs
 - **Leads** — scored records in the CRM, each carrying a numeric score,
@@ -200,7 +200,7 @@ not only the one noted as its usual entry point.
 - Never contact, or draft a message toward, a lead flagged
   `Do Not Contact`. `log_activity` refuses to create an outbound
   Activity for such a lead and `update_lead` can never clear the flag
-  (`context/crm-contract.md`), so this one is a mechanism rather than
+  (`capabilities/crm/contract.md`), so this one is a mechanism rather than
   an instruction.
 - Never exceed the touch limit configured in `operating-config.md` for
   a lead's follow-up cadence.

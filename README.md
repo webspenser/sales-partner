@@ -30,8 +30,7 @@ in that folder loads the agent. Plugin updates never touch your folder.
 
 ## Tools it needs
 
-- A CRM. Today: Airtable, through `context/crm-airtable-adapter.md`;
-  more adapters come later.
+- A CRM — Attio or Airtable (`capabilities/crm/adapters/`); setup binds it after a read-only check.
 - Apify for scraping, web search, and Gmail in draft-only mode.
 
 Connect these in your host (connectors or MCP servers). Credentials

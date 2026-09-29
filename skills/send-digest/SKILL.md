@@ -55,7 +55,7 @@ HH:MM` entry it is 1 day. To compute the window for any given run:
 This anchor comes from `operating-config.md` and calendar arithmetic
 alone — never from a stored "last digest sent" value, because no such
 field exists among the CRM contract's eleven operations
-(`crm-contract.md`) and this skill does not invent one.
+(`capabilities/crm/contract.md`) and this skill does not invent one.
 
 **Both edges matter equally, and pinning only the lower edge is not
 enough.** A late-firing run is the normal condition for a scheduled
@@ -94,11 +94,11 @@ window per section:
   moment `create_lead` writes it — against the full window,
   `(anchor, nominal_time]`, not the anchor alone. Created Time is
   store-level record metadata, not one of the fields
-  `crm-airtable-adapter.md` declares on the Leads table; it needs no
+  the Airtable adapter (`capabilities/crm/adapters/airtable/adapter.md`) declares on the Leads table; it needs no
   new field because every record already carries it.
 - **Movement** compares each Lead record's own **`Stage Changed At`**
   against the same `(anchor, nominal_time]` window. `Stage Changed At`
-  is a declared field on the Leads table (`crm-airtable-adapter.md`),
+  is a declared field on the Leads table (`capabilities/crm/adapters/airtable/adapter.md`),
   written only by `update_stage`, on every transition, as part of that
   same call — never by `update_lead` and never by anything else. That
   exclusivity is what makes it trustworthy here: `update_lead` writes
@@ -136,9 +136,9 @@ marker. The reads it does use, named precisely:
 - Apify's own usage data — Section 6. This is the one section with no
   CRM read at all; Apify spend is not CRM data and never was.
 
-Every one of the above is a call through `crm-contract.md`'s eleven
+Every one of the above is a call through `capabilities/crm/contract.md`'s eleven
 provider-neutral operations — none of the six sections reads an
-Airtable view directly. `crm-airtable-adapter.md`'s four named views
+Airtable view directly. The Airtable adapter's (`capabilities/crm/adapters/airtable/adapter.md`) four named views
 (Awaiting Approval, Research Queue, Due Today, Stalled) still exist as
 a convenience for the operator looking at Airtable by hand, and are
 defined to compute exactly what the operations above return, but this
@@ -309,7 +309,7 @@ summary to the top.
 ## Approval scope
 
 `AGENT.md`'s guardrail — "nothing sends without operator approval" —
-and `crm-contract.md`'s `log_activity` enforcement of it both gate one
+and `capabilities/crm/contract.md`'s `log_activity` enforcement of it both gate one
 specific thing: **outbound prospect communication**, logged as an
 Activity and walked through `draft` → `approved` → `sent` — or, if an
 inbound opt-out arrives first, diverted from `draft`/`approved`

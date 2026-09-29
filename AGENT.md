@@ -45,9 +45,13 @@ reviewed by the operator before it goes out.
   prospect-facing is reachable either way.
 - **Where these files live (Agent Standard 1.1).** `context/…` above
   means the instance folder — the folder holding this agent's
-  `instance.yaml`, where the user's data lives. `templates/`,
-  `samples/`, `skills/`, and `subagents/` mean this package's files.
-  Everything the agent writes goes into the instance.
+  `instance.yaml`, where the user's data lives — except
+  `context/crm-contract.md` and `context/crm-airtable-adapter.md`, which
+  are package files, read from the package. The operator's own
+  examples are in the instance's `context/samples/`. `templates/`,
+  `samples/` (the examples the agent ships with), `skills/`,
+  `subagents/`, and `migrations/` mean this package's files. Everything
+  the agent writes goes into the instance.
 
 ## Outputs
 - **Leads** — scored records in the CRM, each carrying a numeric score,

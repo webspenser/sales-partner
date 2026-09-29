@@ -148,4 +148,18 @@ assert_contains "$SP/skills/setup/SKILL.md" '`interview-business`'
 assert_contains "$SP/migrations/0.9.x-1.0.0.md" 'mode: source'
 assert_contains "$SP/AGENT.md" 'Agent Standard 1.1'
 
+echo "-- 1.0.1: hook points at AGENT.md; samples and context ownership"
+assert_contains "$SP/hooks/session-start.sh" 'Read the full instructions now, before anything else'
+assert_contains "$SP/agent.yaml" 'version: 1.0.1'
+assert_contains "$SP/README.md" 'Version 1.0.1.'
+assert_contains "$SP/migrations/1.0.0-1.0.1.md" 'context/samples/'
+assert_not_contains "$SP/skills/setup/SKILL.md" '<interview-skill>'
+assert_not_contains "$SP/skills/setup/SKILL.md" '<context-files>'
+assert_contains "$SP/skills/setup/SKILL.md" '`context/business-profile.md`, `context/icp.md`, `context/operating-config.md`'
+assert_contains "$SP/skills/interview-business/SKILL.md" 'into the instance'"'"'s `context/samples/`'
+assert_not_contains "$SP/skills/interview-business/SKILL.md" 'artifacts supplied into `samples/`'
+assert_contains "$SP/subagents/approacher.md" 'the instance'"'"'s `context/samples/` first, then the package'"'"'s `samples/`'
+assert_contains "$SP/AGENT.md" '`context/crm-contract.md` and `context/crm-airtable-adapter.md`, which'
+assert_contains "$SP/AGENT.md" 'are package files, read from the package'
+
 finish

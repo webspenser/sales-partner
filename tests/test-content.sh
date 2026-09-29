@@ -141,4 +141,11 @@ assert_not_contains "$SP/AGENT.md" 'on the schedule in'
 assert_not_contains "$SP/skills/send-digest/SKILL.md" 'digest schedule in operating-config.md'
 assert_contains "$SP/context/operating-config.md" 'then `prepare` (research)'
 
+echo "-- instance mode (1.1)"
+assert_contains "$SP/agent.yaml" 'standard: "1.1"'
+assert_contains "$SP/agent.yaml" 'catalog_repo: webspenser/agent-library'
+assert_contains "$SP/skills/setup/SKILL.md" '`interview-business`'
+assert_contains "$SP/migrations/0.9.x-1.0.0.md" 'mode: source'
+assert_contains "$SP/AGENT.md" 'Agent Standard 1.1'
+
 finish

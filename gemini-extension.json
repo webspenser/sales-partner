@@ -1,6 +1,6 @@
 {
   "name": "sales-partner",
-  "version": "0.9.1",
+  "version": "1.0.0",
   "description": "Interviews a business, then runs a five-stage lead pipeline — prospect, research, approach, sales call, follow-up — over a CRM",
   "contextFileName": "AGENT.md"
 }

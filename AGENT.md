@@ -43,6 +43,11 @@ reviewed by the operator before it goes out.
   `context/operating-config.md` — see `skills/send-digest/SKILL.md`,
   which also states what enabling that opt-in costs. Nothing
   prospect-facing is reachable either way.
+- **Where these files live (Agent Standard 1.1).** `context/…` above
+  means the instance folder — the folder holding this agent's
+  `instance.yaml`, where the user's data lives. `templates/`,
+  `samples/`, `skills/`, and `subagents/` mean this package's files.
+  Everything the agent writes goes into the instance.
 
 ## Outputs
 - **Leads** — scored records in the CRM, each carrying a numeric score,

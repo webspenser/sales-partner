@@ -8,20 +8,25 @@ message, email, LinkedIn note, or call opener is a draft you approve.
 
 Built on the [Agent Standard](https://github.com/webspenser/agent-builder/blob/main/STANDARD.md)
 with [Agent Builder](https://github.com/webspenser/agent-builder).
-Version 0.9.1.
+Version 1.0.0.
 
-## Use it today (source mode)
+## Install (plugin mode)
 
-1. Click **Use this template** on GitHub to create your own private
-   copy — not a fork, so your data and changes stay in your repo.
-2. Clone it and open Claude Code (or another host) in the folder.
-   Run `./install.sh` once to wire the host files.
-3. Ask the agent to run its interview (the `interview-business` skill);
-   it fills `context/` with your business profile, ideal customer, and
-   operating settings. Commit those files to your repo.
+    /plugin marketplace add webspenser/agent-library
+    /plugin install sales-partner@webspenser
 
-Plugin installs — the agent's logic from a catalog, your data in your
-own folder — arrive with instance mode in version 1.0.0.
+Then open Claude Code in an empty folder — this becomes your instance,
+where your data lives — and run `/sales-partner:setup`. It writes
+`instance.yaml`, runs the interview to fill `context/`, and offers to
+make the folder a private git repo. From then on, opening Claude Code
+in that folder loads the agent. Plugin updates never touch your folder.
+
+## Use it from source
+
+1. Click **Use this template** to create your own private copy.
+2. Clone it, run `./install.sh`, and add `instance.yaml` at the root
+   with `mode: source` (see `migrations/0.9.x-1.0.0.md`).
+3. Ask the agent to run its interview (the `interview-business` skill).
 
 ## Tools it needs
 

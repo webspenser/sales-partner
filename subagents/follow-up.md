@@ -63,11 +63,12 @@ read rather than waiting to be told:
 - CRM `update_activity`
 - CRM `update_lead`
 - CRM `update_stage`
-- Gmail — draft only
+- `email_drafts` — `create_draft` and `search_threads` only
 - Read access to `templates/` (for a `call` follow-up's opener)
 
-This contract has no send capability. Gmail access is limited to
-composing a draft, and `update_activity`'s only permitted write is
+This contract has no send capability. `email_drafts` offers only
+drafting and reading, its adapter blocks every send tool, and
+`update_activity`'s only permitted write is
 `status = "voided"` — a dead end that pulls an Activity out of the
 approval queue, never a step toward `approved` or `sent`. Nothing in
 this contract's tool access can move a message toward `sent`, and that

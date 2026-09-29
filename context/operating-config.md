@@ -114,7 +114,9 @@ tone: "[three adjectives from the interview]"
   enabling it grants an ability that could technically reach a
   prospect. Leave it at `draft` unless the operator has decided
   otherwise; see `skills/send-digest/SKILL.md`'s step 10 and
-  **Approval scope**.
+  **Approval scope**. Under Agent Standard 1.2, `send` falls back to a
+  draft (the email binding blocks send tools); see
+  `skills/send-digest/SKILL.md`.
 - **`apify_spend_cap_usd_per_week`** — the hard ceiling on Apify actor
   spend per week, shared across the Prospector's sourcing and the
   Preparer's research. Reaching it is a `Stop conditions` trigger and

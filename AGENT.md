@@ -31,14 +31,17 @@ reviewed by the operator before it goes out.
 - Apify token — funds the scrapers used in prospecting, limited there
   to the sources named in `prospecting_sources`, and the site and
   social scrapers the Preparer uses in research.
-- Gmail access, draft-only — used to compose the body of approach and
-  follow-up email Activities for operator review. The agent holds no
-  send capability: turning a draft into a sent message is an operator
-  action performed outside the agent's tool access.
+- Email drafts, through the `email_drafts` capability
+  (`capabilities/email_drafts/`, bound in `instance.yaml` as
+  `bind_email_drafts`) — `create_draft` composes the body of approach
+  and follow-up email Activities for operator review, and
+  `search_threads` reads replies. Its adapter blocks every send tool:
+  turning a draft into a sent message is an operator action outside
+  the agent's tools.
 - The operator-addressed digest is the sole exception to that
   draft-only scope, and it is still a draft by default: `send-digest`
-  composes the digest as a Gmail draft to `sending_identity` for the
-  operator to open, and delivers it directly only where the operator
+  composes the digest as a draft (`create_draft`) to `sending_identity`
+  for the operator to open, and delivers it directly only where the operator
   has explicitly set `digest_delivery: send` in
   `context/operating-config.md` — see `skills/send-digest/SKILL.md`,
   which also states what enabling that opt-in costs. Nothing

@@ -270,6 +270,13 @@ path.
     drafts. Delivering it this way needs no send capability at all, and
     by default the agent holds none.
 
+    With Agent Standard 1.2 the email binding blocks every send tool,
+    so `digest_delivery: send` cannot be honored: compose the draft
+    exactly as for `draft` and put this line first, above the `#`
+    heading: "digest_delivery is send, but this agent's email binding
+    cannot send; delivered as a draft." A future `email_send`
+    capability would make direct delivery possible.
+
     Direct send is an explicitly-configured opt-in: it happens only
     when `digest_delivery: send` is set in `operating-config.md`, whose
     shipped default is `digest_delivery: draft`. **Enabling it grants a

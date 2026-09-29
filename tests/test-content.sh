@@ -150,8 +150,7 @@ assert_contains "$SP/AGENT.md" 'Agent Standard 1.2'
 
 echo "-- 1.0.1: hook points at AGENT.md; samples and context ownership"
 assert_contains "$SP/hooks/session-start.sh" 'Read the full instructions now, before anything else'
-assert_contains "$SP/agent.yaml" 'version: 1.0.1'
-assert_contains "$SP/README.md" 'Version 1.0.1.'
+assert_contains "$SP/README.md" 'Version 1.1.0.'
 assert_contains "$SP/migrations/1.0.0-1.0.1.md" 'context/samples/'
 assert_not_contains "$SP/skills/setup/SKILL.md" '<interview-skill>'
 assert_not_contains "$SP/skills/setup/SKILL.md" '<context-files>'
@@ -184,5 +183,18 @@ assert_not_contains "$AT/bootstrap.py" '.env'
 for op in create_lead get_lead update_stage update_lead log_activity update_activity log_research upsert_contact query_by_stage query_by_score query_activities; do
   assert_contains "$AT/adapter.md" "\`$op\`"
 done
+
+echo "-- email drafts and release 1.1.0"
+assert_contains "$SP/agent.yaml" 'capabilities: crm, email_drafts'
+assert_contains "$SP/agent.yaml" 'version: 1.1.0'
+assert_contains "$SP/capabilities/email_drafts/contract.md" '- `no_send` —'
+assert_contains "$SP/capabilities/email_drafts/adapters/gmail/adapter.yaml" 'block: send'
+assert_contains "$SP/capabilities/email_drafts/adapters/gmail/adapter.yaml" 'enforce_no_send: adapter'
+assert_contains "$SP/skills/setup/SKILL.md" '**Tools.**'
+assert_contains "$SP/skills/setup/SKILL.md" '`standard: "1.2"`'
+assert_contains "$SP/migrations/1.0.1-1.1.0.md" 'tools step'
+assert_contains "$SP/skills/send-digest/SKILL.md" 'cannot send; delivered as a draft'
+assert_contains "$SP/subagents/follow-up.md" '`email_drafts` — `create_draft`'
+assert_not_contains "$SP/subagents/follow-up.md" '- Gmail — draft only'
 
 finish

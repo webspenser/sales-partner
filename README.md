@@ -8,7 +8,7 @@ message, email, LinkedIn note, or call opener is a draft you approve.
 
 Built on the [Agent Standard](https://github.com/webspenser/agent-builder/blob/main/STANDARD.md)
 with [Agent Builder](https://github.com/webspenser/agent-builder).
-Version 1.0.1.
+Version 1.1.0.
 
 ## Install (plugin mode)
 
@@ -31,7 +31,7 @@ in that folder loads the agent. Plugin updates never touch your folder.
 ## Tools it needs
 
 - A CRM — Attio or Airtable (`capabilities/crm/adapters/`); setup binds it after a read-only check.
-- Apify for scraping, web search, and Gmail in draft-only mode.
+- Apify for scraping and web search; Gmail for drafts (setup blocks its send tools).
 
 Connect these in your host (connectors or MCP servers). Credentials
 never go in this repo.

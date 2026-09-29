@@ -1,0 +1,5 @@
+capability: email_drafts
+provider: gmail
+server_match: gmail
+block: send
+enforce_no_send: adapter

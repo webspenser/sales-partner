@@ -145,20 +145,17 @@ echo "-- instance mode (1.1)"
 assert_contains "$SP/agent.yaml" 'standard: "2.0"'
 assert_contains "$SP/agent.yaml" 'catalog_repo: webspenser/agent-library'
 assert_contains "$SP/skills/setup/SKILL.md" '`interview-business`'
-assert_contains "$SP/migrations/0.9.x-1.0.0.md" 'mode: source'
-assert_contains "$SP/AGENT.md" 'Agent Standard 1.2'
 
 echo "-- 1.0.1: hook points at AGENT.md; samples and context ownership"
 assert_contains "$SP/hooks/session-start.sh" 'Read the full instructions now, before anything else'
-assert_contains "$SP/README.md" 'Version 1.1.0.'
-assert_contains "$SP/migrations/1.0.0-1.0.1.md" 'context/samples/'
+assert_contains "$SP/README.md" 'Version 2.0.0.'
 assert_not_contains "$SP/skills/setup/SKILL.md" '<interview-skill>'
 assert_not_contains "$SP/skills/setup/SKILL.md" '<context-files>'
 assert_contains "$SP/skills/setup/SKILL.md" '`context/business-profile.md`, `context/icp.md`, `context/operating-config.md`'
 assert_contains "$SP/skills/interview-business/SKILL.md" 'into the instance'"'"'s `context/samples/`'
 assert_not_contains "$SP/skills/interview-business/SKILL.md" 'artifacts supplied into `samples/`'
 assert_contains "$SP/subagents/approacher.md" 'the instance'"'"'s `context/samples/` first, then the package'"'"'s `samples/`'
-echo "-- capabilities (Agent Standard 1.2)"
+echo "-- capabilities (Agent Standard 2.0)"
 assert_contains "$SP/agent.yaml" 'standard: "2.0"'
 assert_contains "$SP/capabilities/crm/contract.md" '## Invariants'
 assert_contains "$SP/capabilities/crm/contract.md" '- `draft_only` —'
@@ -184,9 +181,9 @@ for op in create_lead get_lead update_stage update_lead log_activity update_acti
   assert_contains "$AT/adapter.md" "\`$op\`"
 done
 
-echo "-- email drafts and release 1.1.0"
+echo "-- email drafts and release 2.0.0"
 assert_contains "$SP/agent.yaml" 'capabilities: crm, email_drafts'
-assert_contains "$SP/agent.yaml" 'version: 1.1.0'
+assert_contains "$SP/agent.yaml" 'version: 2.0.0'
 assert_not_contains "$SP/AGENT.md" 'delivers it directly'
 assert_contains "$SP/capabilities/email_drafts/contract.md" '- `no_send` —'
 assert_contains "$SP/capabilities/email_drafts/adapters/gmail/guard.yaml" 'covers: [no_send]'
@@ -196,14 +193,13 @@ for y in "$SP"/capabilities/*/adapters/*/adapter.yaml; do
 done
 [ ! -e "$AT/guard.py" ] && _report ok "guard.py removed" || _report no "guard.py still present"
 assert_contains "$SP/skills/setup/SKILL.md" '**Tools.**'
-assert_contains "$SP/skills/setup/SKILL.md" '`standard: "1.2"`'
-assert_contains "$SP/migrations/1.0.1-1.1.0.md" 'tools step'
+assert_contains "$SP/skills/setup/SKILL.md" 'whether the adapter'"'"'s guard policy covers it'
 assert_contains "$SP/skills/send-digest/SKILL.md" 'cannot send; delivered as a draft'
 assert_contains "$SP/subagents/follow-up.md" '`email_drafts` — `create_draft`'
 assert_not_contains "$SP/subagents/follow-up.md" '- Gmail — draft only'
 
 allowed_by() { # allowed_by <policy> <prefix> <tool>
-  printf '{"tool_name":"%s%s","tool_input":{}}' "$2" "$3" | python3 -B "$SP/hooks/guard_policy.py" "$1" - x 2>&1 | grep -q 'not in the allow list' && return 1 || return 0
+  printf '{"tool_name":"%s%s","tool_input":{}}' "$2" "$3" | python3 -B "$SP/hooks/guard_policy.py" "$1" - x >/dev/null 2>&1
 }
 for t in $(grep -oE 'attio:[a-z-]+' "$SP/capabilities/crm/adapters/attio/adapter.md" | sort -u | cut -d: -f2); do
   allowed_by "$SP/capabilities/crm/adapters/attio/guard.yaml" mcp__attio__ "$t" && _report ok "Attio $t allowed" || _report no "Attio $t not in guard.yaml allow"
@@ -211,5 +207,10 @@ done
 for t in $(grep -oE 'gmail:[a-z_]+' "$SP/capabilities/email_drafts/adapters/gmail/adapter.md" | sort -u | cut -d: -f2); do
   allowed_by "$SP/capabilities/email_drafts/adapters/gmail/guard.yaml" mcp__gmail__ "$t" && _report ok "Gmail $t allowed" || _report no "Gmail $t not in guard.yaml allow"
 done
+for t in $(grep -oE 'airtable:[a-z_]+' "$SP/capabilities/crm/adapters/airtable/adapter.md" | sort -u | cut -d: -f2); do
+  allowed_by "$SP/capabilities/crm/adapters/airtable/guard.yaml" mcp__airtable__ "$t" && _report ok "Airtable $t allowed" || _report no "Airtable $t not in guard.yaml allow"
+done
+assert_contains "$SP/capabilities/crm/adapters/airtable/adapter.md" 'field_status'
+[ "$(ls -A "$SP/migrations")" = ".gitkeep" ] && _report ok "migrations/ holds only .gitkeep" || _report no "migrations/ must hold only .gitkeep"
 
 finish

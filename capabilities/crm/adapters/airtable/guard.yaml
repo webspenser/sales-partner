@@ -1,0 +1,20 @@
+# Airtable guard policy. Airtable writes name fields by ID, so the Status
+# and Do Not Contact rules need the IDs setup's probe records in
+# bindings/crm.md (field_status, field_do_not_contact).
+covers: [draft_only, dnc_one_way, no_delete]
+allow: [list_bases, search_bases, list_tables_for_base, get_table_schema,
+        list_records_for_table, search_records, create_records_for_table,
+        update_records_for_table]
+deny: ["*delete*"]
+create_tools: [create_records_for_table]
+update_tools: [update_records_for_table]
+values_at: ["records[].fields"]
+unknown_writes: block
+rules:
+  - field: Status
+    binding_id: required
+    create: [draft]
+    update: [voided]
+  - field: Do Not Contact
+    binding_id: required
+    update: [true]

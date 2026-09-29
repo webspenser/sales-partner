@@ -83,7 +83,7 @@ operation writes the field at all, so nothing an agent can call
 restores contactability. And `log_activity` rejects creating an
 Activity with `Direction = outbound` for a Lead whose `Do Not Contact`
 is checked, so an opted-out Lead cannot acquire a new outbound draft
-through any operation this adapter maps — the same withheld-capability
+through any operation this adapter maps — the same guard-policy
 enforcement as the approval guarantee, applied to the opt-out.
 
 ### Contacts
@@ -194,8 +194,8 @@ and separately sending it, both outside every one of the eleven
 operations this adapter maps (the contract's Approval invariant
 states this as a provable rule, not a convention). This is the
 mechanism that makes "nothing sends without operator approval" true —
-the capability to write `approved` or `sent` does not exist anywhere
-in the agent's tool access, not merely withheld by instruction.
+the adapter's guard policy (`guard.yaml`, below) refuses any write of
+`approved` or `sent`, so it does not rest on instruction alone.
 `voided` exists for exactly one case today: `subagents/follow-up.md`'s
 opt-out guardrail calls `update_activity` to move every pending
 (`draft` or `approved`) Activity for a lead to `voided` the moment an
@@ -279,8 +279,29 @@ what they find to `bindings/crm.md` in the instance:
    holds the Leads, Contacts, Research, and Activities tables; ask the
    operator if more than one could. Record `base_id` and `base_name`.
 2. `airtable:list_tables_for_base` on that base — every table and
-   field named in this adapter must exist with the listed type.
+   field named in this adapter must exist with the listed type. Also
+   record `field_status: <field ID of Activities.Status>` and
+   `field_do_not_contact: <field ID of Leads."Do Not Contact">`.
 
 `airtable:` means the connected Airtable server's tools, whatever
 their prefix. If a table or field is missing, show the operator the
 list and stop; this adapter has no bootstrap script.
+
+## Guard policy
+
+`guard.yaml` in this folder is enforced by the agent's guard policy
+engine before every Airtable call inside an instance. Its allow list
+holds only the read tools (`list_bases`, `search_bases`,
+`list_tables_for_base`, `get_table_schema`, `list_records_for_table`,
+`search_records`) and the two record-write tools
+(`create_records_for_table`, `update_records_for_table`); every other
+tool is blocked, and any tool whose name contains `delete` is denied.
+Airtable writes name fields by ID, so the rules are checked against the
+field IDs the probe recorded in `bindings/crm.md`:
+
+- `Status` may only be written as `draft` on create and as `voided` on
+  update;
+- `Do Not Contact` may only be written as `true`.
+
+Writes are blocked until the probe has recorded both IDs
+(`field_status` and `field_do_not_contact`).

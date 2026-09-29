@@ -297,8 +297,8 @@ flagged `Do Not Contact`" to an instruction as well.
 
 ## Invariants
 
-Each adapter declares in its `adapter.yaml` how it enforces each of
-these — `adapter`, `host-deny`, or `instruction` (Agent Standard 1.2).
+Each adapter's `guard.yaml` lists in `covers` the invariants its guard
+policy enforces; an invariant it does not list is instruction-only.
 
 - `draft_only` — the agent creates Activities only at `status: draft`,
   and the only status it may later write is `voided`; `approved` and

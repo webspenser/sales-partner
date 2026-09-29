@@ -58,5 +58,18 @@ check 2 "forward refused"           $GM ${G}forward_message '{}' "is denied"
 check 2 "trash not allowed"         $GM ${G}trash_thread '{}' "is not in the allow list"
 check 2 "new unlisted tool"         $GM ${G}schedule_email '{}' "is not in the allow list"
 
+echo "-- Airtable"
+AR=capabilities/crm/adapters/airtable/guard.yaml; A=mcp__claude_ai_Airtable__
+printf '%s\n' '# CRM binding — Airtable' 'base_id: appAAAAAAAAAAAAAA' 'field_status: fldSSSSSSSSSSSSSS' 'field_do_not_contact: fldDDDDDDDDDDDDDD' > "$W/b.md"
+B='"baseId":"appAAAAAAAAAAAAAA","tableId":"tblTTTTTTTTTTTTTT"'
+check 0 "create draft by ID"        $AR ${A}create_records_for_table "{$B,\"records\":[{\"fields\":{\"fldSSSSSSSSSSSSSS\":\"draft\"}}]}" "" "$W/b.md"
+check 2 "create approved by ID"     $AR ${A}create_records_for_table "{$B,\"records\":[{\"fields\":{\"fldSSSSSSSSSSSSSS\":\"approved\"}}]}" "Status may only be written as draft on create" "$W/b.md"
+check 2 "update sent by name"       $AR ${A}update_records_for_table "{$B,\"records\":[{\"id\":\"recRRRRRRRRRRRRRR\",\"fields\":{\"Status\":\"sent\"}}]}" "" "$W/b.md"
+check 0 "update voided by ID"       $AR ${A}update_records_for_table "{$B,\"records\":[{\"id\":\"recRRRRRRRRRRRRRR\",\"fields\":{\"fldSSSSSSSSSSSSSS\":\"voided\"}}]}" "" "$W/b.md"
+check 2 "clear DNC by ID"           $AR ${A}update_records_for_table "{$B,\"records\":[{\"id\":\"recRRRRRRRRRRRRRR\",\"fields\":{\"fldDDDDDDDDDDDDDD\":false}}]}" "Do Not Contact may only be written as true" "$W/b.md"
+check 2 "write without field IDs"   $AR ${A}create_records_for_table "{$B,\"records\":[{\"fields\":{\"fldXXXXXXXXXXXXXX\":\"x\"}}]}" "has not recorded field_status"
+check 2 "delete refused"            $AR ${A}delete_records_for_table "{$B}" "is denied"
+check 2 "schema change refused"     $AR ${A}create_field "{$B}" "is not in the allow list"
+check 0 "read allowed"              $AR ${A}list_records_for_table "{$B}"
 
 finish

@@ -47,7 +47,7 @@ reviewed by the operator before it goes out.
   a disclaimer line to the digest and delivers nothing — see
   `skills/send-digest/SKILL.md` (step 10). Nothing prospect-facing is
   reachable.
-- **Where these files live (Agent Standard 1.2).** `context/…` above
+- **Where these files live.** `context/…` above
   means the instance folder — the folder holding this agent's
   `instance.yaml`, where the user's data lives. `capabilities/`
   (contracts and adapters) is the package's, and `bindings/` holds what

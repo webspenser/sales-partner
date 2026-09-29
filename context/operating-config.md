@@ -106,16 +106,18 @@ tone: "[three adjectives from the interview]"
 - **`digest_channel`** — the delivery channel for the digest (default
   `email`; SMS is a stubbed adapter, not yet enabled).
 - **`digest_delivery`** — whether `send-digest` composes the digest as
-  a Gmail draft addressed to `sending_identity` for the operator to
-  open (`draft`, the default) or delivers it directly (`send`). This
+  a draft (via `email_drafts`) addressed to `sending_identity` for the
+  operator to open (`draft`, the default) or delivers it directly
+  (`send`). This
   is the one setting in this file that changes what capability the
   agent holds rather than how it behaves: `send` requires a Gmail send
   scope, and Gmail cannot narrow that scope to a single recipient, so
   enabling it grants an ability that could technically reach a
   prospect. Leave it at `draft` unless the operator has decided
   otherwise; see `skills/send-digest/SKILL.md`'s step 10 and
-  **Approval scope**. Under Agent Standard 1.2, `send` falls back to a
-  draft (the email binding blocks send tools); see
+  **Approval scope**. Under Agent Standard 1.2, `send` is dormant and falls
+  back to a draft with a disclaimer line (the email binding blocks
+  send tools) until an `email_send` capability exists; see
   `skills/send-digest/SKILL.md`.
 - **`apify_spend_cap_usd_per_week`** — the hard ceiling on Apify actor
   spend per week, shared across the Prospector's sourcing and the

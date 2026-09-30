@@ -107,8 +107,9 @@ reviewed by the operator before it goes out.
 ## Workflow
 0. **Interview** (T3) — run the `interview-business` skill with the
    operator and write `context/business-profile.md`, `context/icp.md`,
-   and `context/operating-config.md`. Runs once at install and again
-   whenever something material about the business changes.
+   `context/operating-config.md`, and the instance's `schedules.yaml`.
+   Runs once at install and again whenever something material about
+   the business changes.
 1. **Prospect** (T2) — `subagents/prospector.md` turns the ICP into
    scored, deduplicated Leads at stage `Scored`.
 2. **Prepare** (T2) — `subagents/preparer.md` deep-researches leads at

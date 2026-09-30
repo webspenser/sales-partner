@@ -50,7 +50,10 @@ A scheduled prospecting run, or the count of leads at stages `New` and
   hit
 
 In a scheduled (unattended) run, never ask the operator a question; if
-a required input is missing, stop and report what is missing.
+a required input is missing, stop and report what is missing. In a
+scheduled run, source leads with web search only; Apify connectors are
+not attached to routines. If `web_search` is not in
+`prospecting_sources`, stop and report that.
 
 ## Handoff
 Calls CRM `update_stage(lead_id, "Scored", reason)` on every lead that

@@ -1,6 +1,6 @@
 ---
 name: interview-business
-description: Use when installing this agent for a business, or when its offer, market, or targeting has materially changed — conducts the intake interview and writes the three context files.
+description: Use when installing this agent for a business, or when its offer, market, or targeting has materially changed — conducts the intake interview and writes the context files and the instance's schedules.yaml.
 ---
 
 This skill is the only writer of `context/business-profile.md`,
@@ -64,7 +64,9 @@ because a human has to answer it in their own words.
    follow-up drafting, the digest — the shipped default is prospecting
    then research on Monday at 07:00 and the digest on Monday at 08:00),
    and for each one the weekday and time, or daily, plus your time zone
-   as an IANA name such as `America/New_York`; what is the weekly
+   as an IANA name such as `America/New_York` (tell them scheduled
+   prospecting and research use web search only, since Apify is never
+   attached to a scheduled run); what is the weekly
    Apify spend cap; how should the
    outreach sound (three to five adjectives, plus one example sentence
    in that voice). If `call` is among the chosen channels, also ask

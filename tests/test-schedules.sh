@@ -22,4 +22,8 @@ out=$(python3 -B "$C" check "$W/attio" 2>&1); rc=$?
 for a in prospect prepare approach follow-up digest; do
   grep -q "^activity_$a:" agent.yaml && _report ok "activity $a declared" || _report no "activity $a missing"
 done
+for f in subagents/prospector.md subagents/preparer.md; do
+  grep -qF "web search only; Apify connectors are" "$f" && grep -qF "attached to routines." "$f" \
+    && _report ok "$f: scheduled runs use web search only" || _report no "$f: no web-search-only rule for scheduled runs"
+done
 finish

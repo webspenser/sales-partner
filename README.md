@@ -45,7 +45,9 @@ Each tool's guard policy makes Attio, Airtable, and Gmail unattended-safe.
 Connect these in your host (connectors or MCP servers). Credentials
 never go in this repo.
 
-Scheduled runs: after setup, run `/sales-partner:schedule`.
+Scheduled runs: after setup, run `/sales-partner:schedule`. Scheduled
+prospecting and research use web search only: Apify is never attached
+to a routine, because no guard policy covers it.
 
 ## Developing
 

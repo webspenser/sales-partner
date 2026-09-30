@@ -8,7 +8,7 @@ message, email, LinkedIn note, or call opener is a draft you approve.
 
 Built on the [Agent Standard](https://github.com/webspenser/agent-builder/blob/main/STANDARD.md)
 with [Agent Builder](https://github.com/webspenser/agent-builder).
-Version 2.1.0.
+Version 3.0.0.
 
 ## Install (plugin mode)
 
@@ -30,14 +30,14 @@ in that folder loads the agent. Plugin updates never touch your folder.
 
    ```yaml
    agent: sales-partner
-   agent_version: 2.1.0
+   agent_version: 3.0.0
    mode: source
    ```
 4. Ask the agent to run its interview (the `interview-business` skill).
 
 ## Tools it needs
 
-- A CRM — Attio or Airtable (`capabilities/crm/adapters/`); setup binds it after a read-only check.
+- A CRM — Attio or Airtable (`capabilities/crm/tools/`); setup binds it after a read-only check.
 - Apify for scraping and web search; Gmail for drafts.
 
 Each tool's guard policy makes Attio, Airtable, and Gmail unattended-safe.

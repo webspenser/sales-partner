@@ -25,7 +25,7 @@ Each case has four parts:
   invoke, what to check afterward.
 
 Run these against a real or disposable CRM base wired to the Airtable
-adapter (`capabilities/crm/adapters/airtable/adapter.md`) — not a description of what
+tool (`capabilities/crm/tools/airtable/usage.md`) — not a description of what
 should happen, but an actual `create_lead` / `log_activity` / etc. call
 trace you can inspect. "Seed" below means writing that starting state
 through the CRM contract's own operations, the same way a sub-agent
@@ -94,7 +94,7 @@ of gating research on `research_threshold`.
 
 **How to run** — Seed the lead as two calls: `Stage` is set to `New` at
 creation and changed only by `update_stage`
-(`capabilities/crm/contract.md`; `capabilities/crm/adapters/airtable/adapter.md`'s Leads
+(`capabilities/crm/contract.md`; `capabilities/crm/tools/airtable/usage.md`'s Leads
 table notes). Call `create_lead(company=..., domain=..., location=...,
 industry=..., size=..., source=..., score=45, score_breakdown=...,
 source_url=...)`, capture the returned `lead_id`, then call
@@ -202,7 +202,7 @@ unconditionally, regardless of the record's current status
 (`capabilities/crm/contract.md`'s `update_activity` entry), so this
 operation is not a second, looser path to `sent` the way an
 approval-gated write would be. `voided` is the fourth value in the
-`Status` enum (`capabilities/crm/adapters/airtable/adapter.md`'s Activities table).
+`Status` enum (`capabilities/crm/tools/airtable/usage.md`'s Activities table).
 After this run, every Activity that was `draft` or `approved` on this
 lead before the opt-out must read `Status = "voided"`, and none may
 ever reach `Status = "sent"` afterward.
@@ -234,7 +234,7 @@ outright — `update_activity` accepts no `status` value except
 `"voided"`, so this call fails regardless of the record's current
 status, not because of an approval check that a `voided`-but-once-
 `approved` record might otherwise slip past; (f) — added to confirm
-the narrowed **Awaiting Approval** view of the bound CRM adapter (Airtable: `capabilities/crm/adapters/airtable/adapter.md`,
+the narrowed **Awaiting Approval** view of the bound CRM tool (Airtable: `capabilities/crm/tools/airtable/usage.md`,
 `Status = "draft"` AND `Direction = "outbound"`) — call
 `query_activities(status: "draft", direction: "outbound")` both before
 and after the opt-out. Before: the two seeded outbound Activities
@@ -369,7 +369,7 @@ address, and returns the existing `lead_id` without writing a second
 record, so this contract may call `create_lead` unconditionally on
 every raw find rather than pre-checking for a duplicate." None of the
 three dedupe fields — `Domain`, `Phone`, or `Company` plus `Address` —
-is a unique column in `capabilities/crm/adapters/airtable/adapter.md`'s Leads table,
+is a unique column in `capabilities/crm/tools/airtable/usage.md`'s Leads table,
 "because each may be empty on a given lead"; the fixed dedupe order in
 `create_lead` is what keeps the record unique instead.
 

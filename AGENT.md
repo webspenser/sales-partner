@@ -26,8 +26,8 @@ reviewed by the operator before it goes out.
 - `schedules.yaml` (instance root) — the time zone and the
   `schedule_<activity>` times for the activities that run unattended.
   Written by the `interview-business` skill.
-- A CRM, bound in `instance.yaml` (`bind_crm`) to one of the adapters
-  in `capabilities/crm/adapters/` — the neutral CRM contract, eleven
+- A CRM, bound in `instance.yaml` (`bind_crm`) to one of the tools
+  in `capabilities/crm/tools/` — the neutral CRM contract, eleven
   operations (`create_lead`, `get_lead`,
   `update_stage`, `update_lead`, `log_activity`, `update_activity`,
   `log_research`, `upsert_contact`, `query_by_stage`, `query_by_score`,
@@ -39,7 +39,7 @@ reviewed by the operator before it goes out.
   (`capabilities/email_drafts/`, bound in `instance.yaml` as
   `bind_email_drafts`) — `create_draft` composes the body of approach
   and follow-up email Activities for operator review, and
-  `search_threads` reads replies. Its adapter blocks every send tool:
+  `search_threads` reads replies. Its tool blocks every send tool:
   turning a draft into a sent message is an operator action outside
   the agent's tools.
 - The operator-addressed digest is the sole exception to that
@@ -53,7 +53,7 @@ reviewed by the operator before it goes out.
 - **Where these files live.** `context/…` above
   means the instance folder — the folder holding this agent's
   `instance.yaml`, where the user's data lives. `capabilities/`
-  (contracts and adapters) is the package's, and `bindings/` holds what
+  (contracts and tools) is the package's, and `bindings/` holds what
   setup learned about the user's connected systems. The operator's own
   examples are in the instance's `context/samples/`. `capabilities/`,
   `templates/`, `samples/` (the examples the agent ships with),

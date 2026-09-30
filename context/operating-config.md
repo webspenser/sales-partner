@@ -45,7 +45,7 @@ tone: "[three adjectives from the interview]"
   use, and the only ones. `apify_google_maps` returns local-business
   listings (name, address, phone, website, rating, review count);
   `apify_site_scraper` reads company sites and public social pages;
-  `web_search` is general search; `apollo` is a stubbed adapter —
+  `web_search` is general search; `apollo` is a stubbed tool —
   listing it makes the Prospector report that it is not yet enabled,
   never substitute another source. Both Apify sources draw on
   `apify_spend_cap_usd_per_week`. To research every new lead, set
@@ -76,14 +76,14 @@ tone: "[three adjectives from the interview]"
 - **`follow_up_cadence_days`** — the number of idle days after which a
   `Contacted`, `Replied`, or `Following Up` lead is considered stalled
   and due for a follow-up draft or a nudge; also the interval the
-  **Stalled** view of the bound CRM adapter (for Airtable, `capabilities/crm/adapters/airtable/adapter.md`) is built against.
+  **Stalled** view of the bound CRM tool (for Airtable, `capabilities/crm/tools/airtable/usage.md`) is built against.
 - **`max_touches`** — the total outbound touch limit per lead across the
   whole pipeline. Reaching it without a positive outcome moves the lead
   to `Lost` instead of drafting again — never exceeded, per
   `subagents/follow-up.md`'s `Stop conditions` and `AGENT.md`'s
   guardrails.
 - **`digest_channel`** — the delivery channel for the digest (default
-  `email`; SMS is a stubbed adapter, not yet enabled).
+  `email`; SMS is a stubbed tool, not yet enabled).
 - **`digest_delivery`** — whether `send-digest` composes the digest as
   a draft (via `email_drafts`) addressed to `sending_identity` for the
   operator to open (`draft`, the default) or delivers it directly
@@ -95,7 +95,7 @@ tone: "[three adjectives from the interview]"
   prospect. Leave it at `draft` unless the operator has decided
   otherwise; see `skills/send-digest/SKILL.md`'s step 10 and
   **Approval scope**. `send` is dormant and falls back to a draft with a
-  disclaimer line (the email adapter's guard policy denies send tools)
+  disclaimer line (the email tool's guard policy denies send tools)
   until an `email_send` capability exists; see
   `skills/send-digest/SKILL.md`.
 - **`apify_spend_cap_usd_per_week`** — the hard ceiling on Apify actor

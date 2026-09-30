@@ -82,6 +82,6 @@ for correct behavior.
 - Every lead record carries a `Source URL` — the score and every
   criterion behind it must trace to something found, not assumed.
 - If `apollo` is listed in `prospecting_sources`, report that the
-  Apollo adapter is stubbed and not yet enabled, and continue with the
+  Apollo tool is stubbed and not yet enabled, and continue with the
   remaining listed sources — never quietly swap in an unlisted one.
   If no listed source is usable, stop and escalate.

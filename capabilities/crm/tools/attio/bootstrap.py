@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Create the Attio schema that adapter.md describes.
+"""Create the Attio schema that usage.md describes.
 
 Idempotent: every object, attribute, select option, and status is created
 only if missing, so re-running after a partial failure is safe. Nothing is
@@ -9,7 +9,7 @@ Reads ATTIO_API_KEY from the environment (set it in your shell; never write it t
 object_configuration, list_configuration, record_permission, list_entry
 (all read-write).
 
-    python3 capabilities/crm/adapters/attio/bootstrap.py
+    python3 capabilities/crm/tools/attio/bootstrap.py
 
 Uses lists rather than custom objects so it works on plans with no
 custom-object allowance.
@@ -41,7 +41,7 @@ def attr(slug, title, type_, options=None, config=None, description=""):
 
 
 # Every list hangs off Companies. Pipeline holds exactly one entry per
-# company (the adapter upserts by parent record); Research and Outreach
+# company (the tool upserts by parent record); Research and Outreach
 # hold many entries per company, one per finding / per message.
 LISTS = {
     PIPELINE: ("Sales Partner Pipeline", [

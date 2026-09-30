@@ -1,4 +1,4 @@
-# CRM — Attio adapter
+# CRM — Attio tool
 
 Maps the contract (`../../contract.md`) onto Attio: which Attio objects and lists
 hold each kind of data, the exact attribute slugs, the tool-call
@@ -41,7 +41,7 @@ filtering `sales_partner_pipeline` on `lead`.
 
 ### Companies (standard object)
 
-The adapter writes only `name` and `domains`. `domains` is unique in
+The tool writes only `name` and `domains`. `domains` is unique in
 Attio, which gives dedupe rule 1 (domain) for free. Every pipeline
 field lives on the list entry below, so the company record stays clean
 for the rest of the CRM.
@@ -89,7 +89,7 @@ Attio select rejects any option that doesn't exist yet.
 
 The `sp_` prefix keeps these three apart from fields your other
 workflows use on People.
-The adapter never writes those other fields, with one exception: every
+The tool never writes those other fields, with one exception: every
 person it **creates** gets `lead_source` = `Outbound` (only when
 `bindings/crm.md` says `lead_source_outbound: yes`), because the
 agent found them by prospecting rather than them coming in. It never
@@ -109,7 +109,7 @@ that must be kept.
 | `hook` | text |
 
 `summary` and `hook` mean exactly what the Research section of the
-Airtable adapter (`../airtable/adapter.md`) says: `summary` is the finding, and `hook` is the
+Airtable tool (`../airtable/usage.md`) says: `summary` is the finding, and `hook` is the
 usable angle the Approacher opens with.
 
 ### List `sales_partner_outreach` — the Activities table
@@ -127,7 +127,7 @@ usable angle the Approacher opens with.
 | `outcome` | text |
 
 Drafts are Outreach entries at `status = draft`. There is no separate
-drafts list, for the same reason the Airtable adapter gives: the
+drafts list, for the same reason the Airtable tool gives: the
 approval queue must stay a single view.
 
 ## Operations
@@ -183,7 +183,7 @@ write nothing) exactly where the contract says the operation rejects.
   `entry_id` as `activity_id`. Never update an existing entry here.
 - **`update_activity`** — Reject `status` other than `voided`. Call
   `attio:update-list-entry-by-id` on `sales_partner_outreach` with
-  `status: voided` and `outcome`. This is the only write this adapter
+  `status: voided` and `outcome`. This is the only write this tool
   ever makes to an existing Outreach entry.
 - **`log_research`** — Reject an empty `source_url` or `hook`, or a
   `type` outside the seven values. Then `attio:add-record-to-list` on
@@ -227,7 +227,7 @@ attribute, so the contract's guarantees are enforced by mechanism:
    engine before every Attio call inside an instance (the agent's
    `hooks/guard.sh` starts it; nothing to wire by hand):
    - an allow list: only the read tools, `whoami`, and the write tools
-     this adapter uses are callable; any other Attio tool is blocked;
+     this tool uses are callable; any other Attio tool is blocked;
    - `delete` and `merge` tools, and list configuration changes
      (`create-list`, `update-list`), are always denied;
    - `status` may only be written as `draft` on create and `voided` on
@@ -238,7 +238,7 @@ attribute, so the contract's guarantees are enforced by mechanism:
    The operator's own edits in the Attio app never pass through it, so
    approving and sending stay operator-only.
 2. **Nothing can send.** Email goes through the `email_drafts`
-   capability, whose adapter blocks send tools.
+   capability, whose tool blocks send tools.
 
 ## Views (the operator's interface)
 
@@ -263,7 +263,7 @@ views.
 
 ## Probe
 
-Setup runs these read-only calls when binding this adapter, and writes
+Setup runs these read-only calls when binding this tool, and writes
 what they find to `bindings/crm.md` in the instance:
 
 1. `attio:whoami` — record `workspace:`.
@@ -282,7 +282,7 @@ If step 3 or 4 finds anything missing, offer the schema script. The
 operator sets `ATTIO_API_KEY` in their shell (never in a file; token
 scopes: object_configuration, list_configuration, record_permission,
 list_entry, all read-write) and runs
-`python3 "<package>/capabilities/crm/adapters/attio/bootstrap.py"`.
+`python3 "<package>/capabilities/crm/tools/attio/bootstrap.py"`.
 It only adds what is missing. Then probe again.
 
 `bindings/crm.md` looks like:

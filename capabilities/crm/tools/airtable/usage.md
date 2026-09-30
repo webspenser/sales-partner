@@ -313,8 +313,8 @@ field_do_not_contact: fldYYYYYYYYYYYYYY
 ```
 
 `airtable:` means the connected Airtable server's tools, whatever
-their prefix. If a table or field is missing, show the operator the
-list and stop; this tool has no bootstrap script.
+their prefix. If a table or field is missing, offer the steps in `## Setup`
+(this tool has no bootstrap script), then probe again.
 
 ## Guard policy
 
@@ -337,3 +337,77 @@ IDs (`field_status` and `field_do_not_contact`) in `bindings/crm.md`.
 That includes lead creation (`create_lead`) and every other operation
 that writes, not only the ones that touch those two fields. If writes
 are refused, re-run setup's tools step so the probe records the IDs.
+
+## Setup
+
+The probe needs four tables in one Airtable base, with the fields below.
+Create any that are missing yourself in Airtable, then tell the agent so it
+probes again. This tool has no script route. Field names are used
+verbatim, so match the spelling and capitalization exactly.
+
+1. Open (or create) the base that will hold the pipeline.
+2. Create a table named `Leads` with these fields:
+
+   | Field | Type | Options |
+   |---|---|---|
+   | `Company` | Single line text | |
+   | `Domain` | Single line text | |
+   | `Location` | Single line text | |
+   | `Address` | Single line text | |
+   | `Phone` | Phone number | |
+   | `Email` | Email | |
+   | `Industry` | Single select | |
+   | `Size` | Single select | |
+   | `Source` | Single line text | |
+   | `Source URL` | URL | |
+   | `Score` | Number | integer, 0 to 100 |
+   | `Score Breakdown` | Long text | |
+   | `Stage` | Single select | exactly the twelve stages: New, Scored, Researched, Approach Drafted, Contacted, Replied, Call Scheduled, Call Held, Following Up, Won, Lost, Disqualified |
+   | `Stage Changed At` | Date and time | |
+   | `Next Action` | Single line text | |
+   | `Next Action Due` | Date | |
+   | `Do Not Contact` | Checkbox | |
+
+   Leave `Industry` and `Size` options empty or set them from the bands in
+   `icp.md`.
+3. Create a table named `Contacts`:
+
+   | Field | Type | Options |
+   |---|---|---|
+   | `Name` | Single line text | |
+   | `Title` | Single line text | |
+   | `Email` | Email | |
+   | `Phone` | Phone number | |
+   | `LinkedIn URL` | URL | |
+   | `Role` | Single select | decision-maker, influencer, gatekeeper |
+   | `Verified` | Checkbox | |
+   | `Notes` | Long text | |
+   | `Lead` | Link to another record | table `Leads` |
+
+4. Create a table named `Research`:
+
+   | Field | Type | Options |
+   |---|---|---|
+   | `Type` | Single select | news, funding, social, event, hire, listing, web_presence |
+   | `Summary` | Long text | |
+   | `Source URL` | URL | |
+   | `Date` | Date | |
+   | `Hook` | Long text | |
+   | `Lead` | Link to another record | table `Leads` |
+
+5. Create a table named `Activities`:
+
+   | Field | Type | Options |
+   |---|---|---|
+   | `Channel` | Single select | email, linkedin, call, other |
+   | `Direction` | Single select | outbound, inbound |
+   | `Date` | Date | |
+   | `Summary` | Long text | |
+   | `Draft Body` | Long text | |
+   | `Status` | Single select | draft, approved, sent, voided |
+   | `Outcome` | Single line text | |
+   | `Lead` | Link to another record | table `Leads` |
+   | `Contact` | Link to another record | table `Contacts` |
+
+6. Create the four views from the Views section above (Awaiting Approval,
+   Research Queue, Due Today, Stalled). They are for you, not for the agent.

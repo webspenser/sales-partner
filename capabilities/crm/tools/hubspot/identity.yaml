@@ -1,0 +1,3 @@
+capability: crm
+provider: hubspot
+server_match: hubspot

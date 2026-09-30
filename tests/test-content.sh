@@ -140,14 +140,14 @@ assert_contains "$SP/skills/setup/SKILL.md" '`interview-business`'
 
 echo "-- 1.0.1: hook points at AGENT.md; samples and context ownership"
 assert_contains "$SP/hooks/session-start.sh" 'Read the full instructions now, before anything else'
-assert_contains "$SP/README.md" 'Version 3.0.0.'
+assert_contains "$SP/README.md" 'Version 4.0.0.'
 assert_not_contains "$SP/skills/setup/SKILL.md" '<interview-skill>'
 assert_not_contains "$SP/skills/setup/SKILL.md" '<context-files>'
 assert_contains "$SP/skills/setup/SKILL.md" '`context/business-profile.md`, `context/icp.md`, `context/operating-config.md`'
 assert_contains "$SP/skills/interview-business/SKILL.md" 'into the instance'"'"'s `context/samples/`'
 assert_not_contains "$SP/skills/interview-business/SKILL.md" 'artifacts supplied into `samples/`'
 assert_contains "$SP/subagents/approacher.md" 'the instance'"'"'s `context/samples/` first, then the package'"'"'s `samples/`'
-echo "-- capabilities (Agent Standard 3.0)"
+echo "-- capabilities"
 assert_contains "$SP/capabilities/crm/contract.md" '## Invariants'
 assert_contains "$SP/capabilities/crm/contract.md" '- `draft_only` —'
 assert_contains "$SP/capabilities/crm/contract.md" '- `dnc_one_way` —'
@@ -155,12 +155,6 @@ assert_contains "$SP/capabilities/crm/contract.md" '- `no_delete` —'
 assert_contains "$SP/capabilities/crm/tools/airtable/usage.md" '## Probe'
 assert_pass bash -c "[ \"\$(wc -l < '$SP/capabilities/crm/tools/airtable/identity.yaml' | tr -d ' ')\" = 3 ] && grep -qx 'capability: crm' '$SP/capabilities/crm/tools/airtable/identity.yaml' && grep -qx 'provider: airtable' '$SP/capabilities/crm/tools/airtable/identity.yaml' && grep -qx 'server_match: airtable' '$SP/capabilities/crm/tools/airtable/identity.yaml'"
 assert_contains "$SP/AGENT.md" 'bound in `instance.yaml` (`bind_crm`)'
-# crm-airtable-adapter.md is the Agent Standard 2 name of the legacy file
-[ ! -e "$SP"/context/crm-contract.md ] && [ ! -e "$SP"/context/crm-airtable-adapter.md ] \
-  && _report ok "CRM files left context/" || _report no "CRM files still in context/"
-while IFS= read -r f; do
-  assert_not_contains "$f" 'context/crm-'
-done < <(find "$SP" -name '*.md' -not -path './docs/*' -not -path './tests/*' -not -path './.git/*' -not -path './migrations/*')
 
 for h in CLAUDE GEMINI AGENTS; do
   git -C "$SP" check-ignore --no-index -q "hosts/$h.md" \
@@ -177,6 +171,37 @@ assert_not_contains "$AT/bootstrap.py" '.env'
 for op in create_lead get_lead update_stage update_lead log_activity update_activity log_research upsert_contact query_by_stage query_by_score query_activities; do
   assert_contains "$AT/usage.md" "\`$op\`"
 done
+
+echo "-- HubSpot tool"
+HT="$SP/capabilities/crm/tools/hubspot"
+assert_contains "$HT/usage.md" '## Probe'
+assert_contains "$HT/usage.md" '## Setup'
+assert_contains "$HT/usage.md" 'hub_id:'
+assert_contains "$HT/usage.md" 'CONFIRMATION_WAIVED_FOR_SESSION'
+assert_not_contains "$HT/usage.md" 'Webspenser'
+[ -x "$HT/bootstrap.py" ] && _report ok "hubspot bootstrap.py present and executable" || _report no "hubspot bootstrap.py missing or not executable"
+assert_contains "$HT/bootstrap.py" 'HUBSPOT_TOKEN'
+for op in create_lead get_lead update_stage update_lead log_activity update_activity log_research upsert_contact query_by_stage query_by_score query_activities; do
+  assert_contains "$HT/usage.md" "\`$op\`"
+done
+
+echo "-- 4.0 final review"
+assert_contains "$HT/usage.md" 'read -rs HUBSPOT_TOKEN && export HUBSPOT_TOKEN'
+assert_contains "$AT/usage.md" 'read -rs ATTIO_API_KEY && export ATTIO_API_KEY'
+assert_contains "$HT/bootstrap.py" 'read -rs HUBSPOT_TOKEN && export HUBSPOT_TOKEN'
+assert_contains "$SP/skills/setup/SKILL.md" 'read -rs <VAR> && export <VAR>'
+if grep -rnE 'export [A-Z_]*(TOKEN|KEY)=' "$SP/capabilities" "$SP/skills" "$SP/README.md" "$SP/AGENT.md" 2>/dev/null | grep -q .; then
+  _report no "a key is set with export VAR=..., which lands in shell history"; else _report ok "no export VAR=<key> instructions"; fi
+[ "$(grep -cF 'apply the `sp_stage` check' "$HT/usage.md")" -ge 3 ] && _report ok "create_lead: domain, phone and address matches all apply the sp_stage check" || _report no "create_lead: a match step skips the sp_stage check"
+assert_contains "$HT/usage.md" 'Never overwrite a native field that already has a value'
+assert_contains "$HT/usage.md" 'only when the search showed its current'
+u=$(grep -E '^\| `sp_channel` \| Channel \|' "$HT/usage.md" | awk -F'|' '{print $5}' | tr -d ' ')
+b=$(python3 -B -c "
+import importlib.util,sys
+sp=importlib.util.spec_from_file_location('b','$HT/bootstrap.py'); m=importlib.util.module_from_spec(sp); sp.loader.exec_module(m)
+props=[p for obj in m.PROPERTIES.values() for p in obj if p['name']=='sp_channel']
+print(','.join(o['value'] for o in props[0]['options']))")
+[ "$u" = "email,linkedin,call,other" ] && [ "$b" = "$u" ] && _report ok "sp_channel options identical in usage.md and bootstrap.py, with other" || _report no "sp_channel options: usage.md=$u bootstrap.py=$b"
 
 echo "-- email drafts"
 assert_contains "$SP/agent.yaml" 'capabilities: crm, email_drafts'
@@ -212,12 +237,14 @@ done
 for t in $(grep -oE 'airtable:[a-z_]+' "$SP/capabilities/crm/tools/airtable/usage.md" | sort -u | cut -d: -f2); do
   in_allow "$SP/capabilities/crm/tools/airtable/guard.yaml" mcp__airtable__ "$t" && _report ok "Airtable $t allowed" || _report no "Airtable $t not in guard.yaml allow"
 done
+for t in $(grep -oE 'hubspot:[a-z_]+' "$SP/capabilities/crm/tools/hubspot/usage.md" | sort -u | cut -d: -f2); do
+  allowed_by "$SP/capabilities/crm/tools/hubspot/guard.yaml" mcp__hubspot__ "$t" && _report ok "HubSpot $t allowed" || _report no "HubSpot $t not in guard.yaml allow"
+done
 assert_contains "$SP/capabilities/crm/tools/airtable/usage.md" 'field_status'
-[ -f "$SP/migrations/3.0.0.md" ] && [ "$(ls "$SP/migrations")" = "3.0.0.md" ] && _report ok "migrations/ holds the 3.0.0 note" || _report no "migrations/ must hold the 3.0.0 note"
 
-echo "-- scheduled runs (Agent Standard 3.0)"
-assert_contains "$SP/agent.yaml" 'standard: "3.0"'
-assert_contains "$SP/agent.yaml" 'version: 3.0.0'
+echo "-- scheduled runs"
+assert_contains "$SP/agent.yaml" 'standard: "4.0"'
+assert_contains "$SP/agent.yaml" 'version: 4.0.0'
 assert_contains "$SP/agent.yaml" 'activity_digest: crm, email_drafts'
 assert_not_contains "$SP/context/operating-config.md" 'schedules:'
 assert_not_contains "$SP/context/operating-config.md" 'timezone:'

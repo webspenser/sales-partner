@@ -6,9 +6,13 @@ allow: [list_bases, search_bases, list_tables_for_base, get_table_schema,
         list_records_for_table, search_records, create_records_for_table,
         update_records_for_table]
 deny: ["*delete*"]
-create_tools: [create_records_for_table]
-update_tools: [update_records_for_table]
-values_at: ["records[].fields"]
+writes:
+  - kind: create
+    tools: [create_records_for_table]
+    at: ["records[].fields"]
+  - kind: update
+    tools: [update_records_for_table]
+    at: ["records[].fields"]
 unknown_writes: block
 rules:
   - field: Status

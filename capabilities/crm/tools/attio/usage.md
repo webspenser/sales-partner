@@ -370,9 +370,11 @@ missing; it never deletes or renames anything.
    scopes, all read-write: `object_configuration`, `list_configuration`,
    `record_permission`, `list_entry`.
 2. In your own terminal, set the key for that terminal only, and run the
-   script. Never paste the key into the chat or a file:
+   script. `read -rs` prompts for the key without showing it and writes
+   nothing to your shell history. Paste the key at that prompt only;
+   never paste it into the chat or a file:
 
-       export ATTIO_API_KEY=...
+       read -rs ATTIO_API_KEY && export ATTIO_API_KEY
        python3 "<package>/capabilities/crm/tools/attio/bootstrap.py"
 
    The environment variable the script reads is `ATTIO_API_KEY`.

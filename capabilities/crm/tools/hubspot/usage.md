@@ -94,9 +94,9 @@ funding, social, event, hire, listing, web_presence.
 | `hs_task_subject` | a short title: `<channel> <direction> — <company>` |
 | `hs_task_body` | `draft_body` |
 | `hs_timestamp` | `Date` (the task's due date; set to now on create) |
-| `hs_task_type` | `EMAIL` for email, `LINKED_IN_MESSAGE` for linkedin, `CALL` for call |
+| `hs_task_type` | `EMAIL` for email, `LINKED_IN_MESSAGE` for linkedin, `CALL` for call, `TODO` for other |
 | `sp_status` | `status`: `draft` / `approved` / `sent` / `voided` |
-| `sp_channel` | `channel`: `email` / `linkedin` / `call` |
+| `sp_channel` | `channel`: `email` / `linkedin` / `call` / `other` |
 | `sp_direction` | `direction`: `outbound` / `inbound` |
 | `sp_summary` | `summary` |
 | `sp_outcome` | `outcome` |
@@ -133,23 +133,24 @@ write nothing) exactly where the contract says the operation rejects.
 
 ### `create_lead`
 
+Every search below asks for the properties
+`["name", "domain", "phone", "address", "city", "state", "zip", "country", "sp_stage"]`.
+When a search finds a match, apply **the `sp_stage` check**: if the
+matched company has an `sp_stage`, it is already a lead, so return its
+ID and stop. If it has no `sp_stage` (a company already in your CRM,
+outside the pipeline), adopt it (step 7) and return its ID as `lead_id`.
+
 1. Reject if `domain`, `phone`, and `address` are all empty.
 2. If `domain` is present: `hubspot:search_crm_objects` on `COMPANY`
-   with the filter `domain` `EQ` the bare domain, properties
-   `["name", "domain", "sp_stage"]`. If a company matches and has an
-   `sp_stage`, return its ID and stop. If it matches without an
-   `sp_stage` (a company already in your CRM, outside the pipeline),
-   adopt it: go to step 6 with `updateRequest` instead of
-   `createRequest`.
+   with the filter `domain` `EQ` the bare domain. If a company matches,
+   apply the `sp_stage` check.
 3. Otherwise, if `phone` is present, normalize it to E.164 per the
    contract, then search `COMPANY` with `phone` `EQ` that value. If one
-   matches, return its ID and stop.
+   matches, apply the `sp_stage` check.
 4. Otherwise, if `address` is present, search `COMPANY` with
-   `query: <company>` and properties
-   `["name", "address", "city", "state", "zip"]`. Compare the
-   normalized company + address (lowercase, punctuation and suite
-   numbers stripped) against each hit. If one matches, return its ID
-   and stop.
+   `query: <company>`. Compare the normalized company + address
+   (lowercase, punctuation and suite numbers stripped) against each
+   hit. If one matches, apply the `sp_stage` check.
 5. No match: create it.
 6. `hubspot:manage_crm_objects` with
 
@@ -163,9 +164,20 @@ write nothing) exactly where the contract says the operation rejects.
 
    Read the clock right before the call. Leave out every empty value;
    never invent a placeholder score. Return the new company's ID.
-   When adopting an existing company (step 2), send the same
-   properties minus `name` and `domain` as
-   `{"updateRequest": {"objects": [{"objectType": "companies", "objectId": <id>, "properties": {…}}]}}`.
+7. **Adopting an existing company** (a match in step 2, 3, or 4 with no
+   `sp_stage`). The company is the user's own record, so the update
+   adds to it and never replaces anything. It writes only:
+   - the `sp_*` properties from step 6, always including
+     `"sp_stage": "New"` and `"sp_stage_changed_at": "<now, ISO 8601 UTC>"`;
+   - a native field (`name`, `domain`, `phone`, `address`, `city`,
+     `state`, `zip`, `country`) only when the search showed its current
+     value as empty.
+
+   **Never overwrite a native field that already has a value**, such as
+   `phone` or `address`, even when the new value differs; leave it out
+   of the update. Read the clock right before the call, then send
+   `{"updateRequest": {"objects": [{"objectType": "companies", "objectId": <id>, "properties": {…}}]}}`
+   and return the company's ID as `lead_id`.
 
 ### `get_lead`
 
@@ -417,7 +429,7 @@ both equal to the text shown.
 | Internal name | Label | Field type | Options |
 |---|---|---|---|
 | `sp_status` | Outreach status | Dropdown select | draft, approved, sent, voided |
-| `sp_channel` | Channel | Dropdown select | email, linkedin, call |
+| `sp_channel` | Channel | Dropdown select | email, linkedin, call, other |
 | `sp_direction` | Direction | Dropdown select | outbound, inbound |
 | `sp_summary` | Summary | Multi-line text | |
 | `sp_outcome` | Outcome | Multi-line text | |
@@ -439,9 +451,11 @@ missing; it never deletes or renames anything.
    `crm.objects.companies.read`, `crm.objects.contacts.read`.
    Copy its access token.
 2. In your own terminal, set the token for that terminal only, and run
-   the script. Never paste the token into the chat or a file:
+   the script. `read -rs` prompts for the token without showing it and
+   writes nothing to your shell history. Paste the token at that prompt
+   only; never paste it into the chat or a file:
 
-       export HUBSPOT_TOKEN=…
+       read -rs HUBSPOT_TOKEN && export HUBSPOT_TOKEN
        python3 "<package>/capabilities/crm/tools/hubspot/bootstrap.py"
 
    The environment variable the script reads is `HUBSPOT_TOKEN`.

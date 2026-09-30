@@ -67,7 +67,7 @@ PROPERTIES = {
     "tasks": [
         prop("sp_status", "Outreach status", "enumeration", "select",
              opts(["draft", "approved", "sent", "voided"])),
-        prop("sp_channel", "Channel", "enumeration", "select", opts(["email", "linkedin", "call"])),
+        prop("sp_channel", "Channel", "enumeration", "select", opts(["email", "linkedin", "call", "other"])),
         prop("sp_direction", "Direction", "enumeration", "select", opts(["outbound", "inbound"])),
         prop("sp_summary", "Summary", "string", "textarea"),
         prop("sp_outcome", "Outcome", "string", "textarea"),
@@ -132,7 +132,8 @@ def main():
     if not token:
         print("HUBSPOT_TOKEN is not set. Create a HubSpot private app with these scopes:\n  "
               + "\n  ".join(SCOPES)
-              + "\nthen, in this terminal only: export HUBSPOT_TOKEN=<token> and run this again.",
+              + "\nthen, in this terminal only, run: read -rs HUBSPOT_TOKEN && export HUBSPOT_TOKEN"
+              + "\n(it prompts without echoing and keeps the token out of shell history), and run this again.",
               file=sys.stderr)
         return 2
     try:

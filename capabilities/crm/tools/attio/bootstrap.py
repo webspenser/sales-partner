@@ -105,7 +105,8 @@ PEOPLE_ATTRS = [
 def load_key():
     key = (os.getenv("ATTIO_API_KEY") or "").strip()
     if not key:
-        sys.exit("ATTIO_API_KEY is not set. Export it in your shell for this run; never store it in a file.")
+        sys.exit("ATTIO_API_KEY is not set. In this terminal only, run: read -rs ATTIO_API_KEY && export ATTIO_API_KEY\n"
+                 "(it prompts without echoing and keeps the key out of shell history), and run this again; never store it in a file.")
     return key
 
 

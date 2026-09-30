@@ -191,6 +191,24 @@ for op in create_lead get_lead update_stage update_lead log_activity update_acti
   assert_contains "$HT/usage.md" "\`$op\`"
 done
 
+echo "-- 4.0 final review"
+assert_contains "$HT/usage.md" 'read -rs HUBSPOT_TOKEN && export HUBSPOT_TOKEN'
+assert_contains "$AT/usage.md" 'read -rs ATTIO_API_KEY && export ATTIO_API_KEY'
+assert_contains "$HT/bootstrap.py" 'read -rs HUBSPOT_TOKEN && export HUBSPOT_TOKEN'
+assert_contains "$SP/skills/setup/SKILL.md" 'read -rs <VAR> && export <VAR>'
+if grep -rnE 'export [A-Z_]*(TOKEN|KEY)=' "$SP/capabilities" "$SP/skills" "$SP/README.md" "$SP/AGENT.md" 2>/dev/null | grep -q .; then
+  _report no "a key is set with export VAR=..., which lands in shell history"; else _report ok "no export VAR=<key> instructions"; fi
+[ "$(grep -cF 'apply the `sp_stage` check' "$HT/usage.md")" -ge 3 ] && _report ok "create_lead: domain, phone and address matches all apply the sp_stage check" || _report no "create_lead: a match step skips the sp_stage check"
+assert_contains "$HT/usage.md" 'Never overwrite a native field that already has a value'
+assert_contains "$HT/usage.md" 'only when the search showed its current'
+u=$(grep -E '^\| `sp_channel` \| Channel \|' "$HT/usage.md" | awk -F'|' '{print $5}' | tr -d ' ')
+b=$(python3 -B -c "
+import importlib.util,sys
+sp=importlib.util.spec_from_file_location('b','$HT/bootstrap.py'); m=importlib.util.module_from_spec(sp); sp.loader.exec_module(m)
+props=[p for obj in m.PROPERTIES.values() for p in obj if p['name']=='sp_channel']
+print(','.join(o['value'] for o in props[0]['options']))")
+[ "$u" = "email,linkedin,call,other" ] && [ "$b" = "$u" ] && _report ok "sp_channel options identical in usage.md and bootstrap.py, with other" || _report no "sp_channel options: usage.md=$u bootstrap.py=$b"
+
 echo "-- email drafts"
 assert_contains "$SP/agent.yaml" 'capabilities: crm, email_drafts'
 assert_not_contains "$SP/AGENT.md" 'delivers it directly'

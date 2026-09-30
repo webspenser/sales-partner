@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Runs this agent's tests. Structure is checked by the builder's validator
-# (CI: webspenser/agent-builder/validate@v4).
+# (CI: webspenser/agent-builder/validate@main).
 set -uo pipefail
 cd "$(dirname "$0")/.."
 STATUS=0

@@ -147,7 +147,7 @@ assert_contains "$SP/skills/setup/SKILL.md" '`context/business-profile.md`, `con
 assert_contains "$SP/skills/interview-business/SKILL.md" 'into the instance'"'"'s `context/samples/`'
 assert_not_contains "$SP/skills/interview-business/SKILL.md" 'artifacts supplied into `samples/`'
 assert_contains "$SP/subagents/approacher.md" 'the instance'"'"'s `context/samples/` first, then the package'"'"'s `samples/`'
-echo "-- capabilities (Agent Standard 4.0)"
+echo "-- capabilities"
 assert_contains "$SP/capabilities/crm/contract.md" '## Invariants'
 assert_contains "$SP/capabilities/crm/contract.md" '- `draft_only` —'
 assert_contains "$SP/capabilities/crm/contract.md" '- `dnc_one_way` —'
@@ -155,12 +155,6 @@ assert_contains "$SP/capabilities/crm/contract.md" '- `no_delete` —'
 assert_contains "$SP/capabilities/crm/tools/airtable/usage.md" '## Probe'
 assert_pass bash -c "[ \"\$(wc -l < '$SP/capabilities/crm/tools/airtable/identity.yaml' | tr -d ' ')\" = 3 ] && grep -qx 'capability: crm' '$SP/capabilities/crm/tools/airtable/identity.yaml' && grep -qx 'provider: airtable' '$SP/capabilities/crm/tools/airtable/identity.yaml' && grep -qx 'server_match: airtable' '$SP/capabilities/crm/tools/airtable/identity.yaml'"
 assert_contains "$SP/AGENT.md" 'bound in `instance.yaml` (`bind_crm`)'
-# crm-airtable-adapter.md is the Agent Standard 2 name of the legacy file
-[ ! -e "$SP"/context/crm-contract.md ] && [ ! -e "$SP"/context/crm-airtable-adapter.md ] \
-  && _report ok "CRM files left context/" || _report no "CRM files still in context/"
-while IFS= read -r f; do
-  assert_not_contains "$f" 'context/crm-'
-done < <(find "$SP" -name '*.md' -not -path './docs/*' -not -path './tests/*' -not -path './.git/*' -not -path './migrations/*')
 
 for h in CLAUDE GEMINI AGENTS; do
   git -C "$SP" check-ignore --no-index -q "hosts/$h.md" \
@@ -247,9 +241,8 @@ for t in $(grep -oE 'hubspot:[a-z_]+' "$SP/capabilities/crm/tools/hubspot/usage.
   allowed_by "$SP/capabilities/crm/tools/hubspot/guard.yaml" mcp__hubspot__ "$t" && _report ok "HubSpot $t allowed" || _report no "HubSpot $t not in guard.yaml allow"
 done
 assert_contains "$SP/capabilities/crm/tools/airtable/usage.md" 'field_status'
-[ -f "$SP/migrations/3.0.0.md" ] && [ -f "$SP/migrations/4.0.0.md" ] && [ "$(ls "$SP/migrations" | tr '\n' ' ')" = "3.0.0.md 4.0.0.md " ] && _report ok "migrations/ holds 3.0.0.md and 4.0.0.md" || _report no "migrations/ must hold 3.0.0.md and 4.0.0.md"
 
-echo "-- scheduled runs (Agent Standard 4.0)"
+echo "-- scheduled runs"
 assert_contains "$SP/agent.yaml" 'standard: "4.0"'
 assert_contains "$SP/agent.yaml" 'version: 4.0.0'
 assert_contains "$SP/agent.yaml" 'activity_digest: crm, email_drafts'

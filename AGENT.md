@@ -57,7 +57,7 @@ reviewed by the operator before it goes out.
   setup learned about the user's connected systems. The operator's own
   examples are in the instance's `context/samples/`. `capabilities/`,
   `templates/`, `samples/` (the examples the agent ships with),
-  `skills/`, `subagents/`, and `migrations/` mean this package's files.
+  `skills/`, and `subagents/` mean this package's files.
   Everything the agent writes goes into the instance.
 
 ## Outputs

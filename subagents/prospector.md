@@ -49,6 +49,9 @@ A scheduled prospecting run, or the count of leads at stages `New` and
 - The `apify_spend_cap_usd_per_week` cap (from `operating-config.md`) is
   hit
 
+In a scheduled (unattended) run, never ask the operator a question; if
+a required input is missing, stop and report what is missing.
+
 ## Handoff
 Calls CRM `update_stage(lead_id, "Scored", reason)` on every lead that
 clears scoring, or `update_stage(lead_id, "Disqualified", reason)` on any

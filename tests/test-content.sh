@@ -15,13 +15,8 @@ done < <(grep -oE '"\$SP/[^"]+"' "$0" | tr -d '"' | sort -u)
 [ "$missing" -eq 0 ] && _report ok "all referenced files exist" || _report no "referenced files missing"
 
 echo "-- schedules"
-assert_contains "$SP/context/operating-config.md" 'timezone:'
-assert_contains "$SP/context/operating-config.md" 'schedules:'
-assert_contains "$SP/context/operating-config.md" '- activity: prospect'
-assert_contains "$SP/context/operating-config.md" '- activity: digest'
-assert_contains "$SP/context/operating-config.md" '## Running on a schedule'
-assert_contains "$SP/skills/send-digest/SKILL.md" '`digest` entry in `schedules`'
-assert_contains "$SP/skills/interview-business/SKILL.md" '`schedules`'
+assert_contains "$SP/skills/send-digest/SKILL.md" '`schedule_digest`'
+assert_contains "$SP/skills/interview-business/SKILL.md" '`schedules.yaml`'
 assert_contains "$SP/AGENT.md" 'Scheduled activities'
 while IFS= read -r f; do
   assert_not_contains "$f" 'digest_schedule'
@@ -115,7 +110,7 @@ echo "-- evals widened (I6)"
 assert_contains "$E" '`100×0.10=10`'
 assert_contains "$E" 'same normalized company and address'
 assert_contains "$E" 'may get a `Channel = call` draft'
-assert_contains "$E" 'then: [prepare]'
+assert_contains "$E" 'then_prospect: prepare'
 
 echo "-- minors (M1-M11, D1-D2)"
 assert_contains "$SP/skills/send-digest/SKILL.md" 'CRM **`get_lead`**'
@@ -134,21 +129,18 @@ assert_contains "$SP/skills/write-call-opener/SKILL.md" 'status="draft"'
 assert_contains "$SP/skills/write-call-opener/SKILL.md" 'never dials'
 assert_contains "$SP/skills/write-call-opener/SKILL.md" 'never an invented number'
 assert_contains "$SP/subagents/approacher.md" 'places, schedules, or records a call'
-assert_contains "$SP/context/operating-config.md" 'then: [prepare]'
 assert_contains docs/superpowers/specs/2026-09-01-sales-partner-agent-design.md 'holds thirteen cases'
-assert_contains "$SP/AGENT.md" 'when the `digest` entry in `schedules` fires'
+assert_contains "$SP/AGENT.md" '`schedule_digest` in the instance'"'"'s `schedules.yaml`'
 assert_not_contains "$SP/AGENT.md" 'on the schedule in'
 assert_not_contains "$SP/skills/send-digest/SKILL.md" 'digest schedule in operating-config.md'
-assert_contains "$SP/context/operating-config.md" 'then `prepare` (research)'
 
 echo "-- instance mode (1.1)"
-assert_contains "$SP/agent.yaml" 'standard: "2.0"'
 assert_contains "$SP/agent.yaml" 'catalog_repo: webspenser/agent-library'
 assert_contains "$SP/skills/setup/SKILL.md" '`interview-business`'
 
 echo "-- 1.0.1: hook points at AGENT.md; samples and context ownership"
 assert_contains "$SP/hooks/session-start.sh" 'Read the full instructions now, before anything else'
-assert_contains "$SP/README.md" 'Version 2.0.0.'
+assert_contains "$SP/README.md" 'Version 2.1.0.'
 assert_not_contains "$SP/skills/setup/SKILL.md" '<interview-skill>'
 assert_not_contains "$SP/skills/setup/SKILL.md" '<context-files>'
 assert_contains "$SP/skills/setup/SKILL.md" '`context/business-profile.md`, `context/icp.md`, `context/operating-config.md`'
@@ -156,7 +148,6 @@ assert_contains "$SP/skills/interview-business/SKILL.md" 'into the instance'"'"'
 assert_not_contains "$SP/skills/interview-business/SKILL.md" 'artifacts supplied into `samples/`'
 assert_contains "$SP/subagents/approacher.md" 'the instance'"'"'s `context/samples/` first, then the package'"'"'s `samples/`'
 echo "-- capabilities (Agent Standard 2.0)"
-assert_contains "$SP/agent.yaml" 'standard: "2.0"'
 assert_contains "$SP/capabilities/crm/contract.md" '## Invariants'
 assert_contains "$SP/capabilities/crm/contract.md" '- `draft_only` —'
 assert_contains "$SP/capabilities/crm/contract.md" '- `dnc_one_way` —'
@@ -181,9 +172,8 @@ for op in create_lead get_lead update_stage update_lead log_activity update_acti
   assert_contains "$AT/adapter.md" "\`$op\`"
 done
 
-echo "-- email drafts and release 2.0.0"
+echo "-- email drafts"
 assert_contains "$SP/agent.yaml" 'capabilities: crm, email_drafts'
-assert_contains "$SP/agent.yaml" 'version: 2.0.0'
 assert_not_contains "$SP/AGENT.md" 'delivers it directly'
 assert_contains "$SP/capabilities/email_drafts/contract.md" '- `no_send` —'
 assert_contains "$SP/capabilities/email_drafts/adapters/gmail/guard.yaml" 'covers: [no_send]'
@@ -219,4 +209,17 @@ done
 assert_contains "$SP/capabilities/crm/adapters/airtable/adapter.md" 'field_status'
 [ "$(ls -A "$SP/migrations")" = ".gitkeep" ] && _report ok "migrations/ holds only .gitkeep" || _report no "migrations/ must hold only .gitkeep"
 
+echo "-- scheduled runs (Agent Standard 2.1)"
+assert_contains "$SP/agent.yaml" 'standard: "2.1"'
+assert_contains "$SP/agent.yaml" 'version: 2.1.0'
+assert_contains "$SP/agent.yaml" 'activity_digest: crm, email_drafts'
+assert_not_contains "$SP/context/operating-config.md" 'schedules:'
+assert_not_contains "$SP/context/operating-config.md" 'timezone:'
+assert_not_contains "$SP/context/operating-config.md" 'cron + headless CLI'
+assert_not_contains "$SP/context/operating-config.md" 'n8n'
+assert_contains "$SP/skills/interview-business/SKILL.md" 'schedules.yaml'
+assert_contains "$SP/skills/send-digest/SKILL.md" 'schedule_digest'
+assert_contains "$SP/AGENT.md" 'schedules.yaml'
+assert_contains "$SP/AGENT.md" 'unattended'
+[ -f "$SP/skills/schedule/SKILL.md" ] && _report ok "schedule skill present" || _report no "schedule skill missing"
 finish

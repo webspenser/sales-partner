@@ -62,6 +62,9 @@ clears `research_threshold`, capped per run at `research_quota_per_week`
 - The `research_budget_per_lead_minutes` time budget (from
   `operating-config.md`) for this lead is spent
 
+In a scheduled (unattended) run, never ask the operator a question; if
+a required input is missing, stop and report what is missing.
+
 ## Handoff
 Writes each finding with CRM `log_research(lead_id, type, summary,
 source_url, date, hook)` and each person with CRM

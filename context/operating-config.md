@@ -14,7 +14,7 @@ during setup and again whenever operating needs change; every
 sub-agent and skill listed in `AGENT.md` reads its limits from here,
 never from a hardcoded number in a prompt.
 
-Every value below is a number, a list, or a schedule — never a vague
+Every value below is a number, a list, or a fixed choice — never a vague
 setting — because every `Stop conditions` entry in this agent's
 sub-agent contracts (`subagents/*.md`) is a countable resource, and
 these keys are what make that countable.
@@ -28,13 +28,6 @@ approach_threshold: 70
 enabled_channels: [email, linkedin]
 follow_up_cadence_days: 4
 max_touches: 4
-timezone: "America/New_York"
-schedules:
-  - activity: prospect
-    when: "Monday 07:00"
-    then: [prepare]
-  - activity: digest
-    when: "Monday 08:00"
 digest_channel: email
 digest_delivery: draft
 apify_spend_cap_usd_per_week: 25
@@ -89,20 +82,6 @@ tone: "[three adjectives from the interview]"
   to `Lost` instead of drafting again — never exceeded, per
   `subagents/follow-up.md`'s `Stop conditions` and `AGENT.md`'s
   guardrails.
-- **`timezone`** — the IANA time zone every `when` in `schedules` is
-  read in (default `"America/New_York"`; the interview sets the
-  operator's own).
-- **`schedules`** — the recurring activities the host fires, one entry
-  each. `activity` is one of `prospect`, `prepare`, `approach`,
-  `follow-up`, or `digest` — the Workflow steps in `AGENT.md` that can
-  run unattended. `interview` and the sales-call steps are never
-  scheduled: both need the operator present. `when` is a weekday and
-  24-hour time (`"Monday 07:00"`) or `"daily HH:MM"`. `then` is an
-  optional ordered list of further activities run in the same session
-  once `activity` reaches a stop condition. The shipped default runs
-  prospecting then `prepare` (research) on Monday at 07:00, and the
-  digest an hour later. The `digest` entry also sets the digest's
-  reporting window — see `skills/send-digest/SKILL.md`.
 - **`digest_channel`** — the delivery channel for the digest (default
   `email`; SMS is a stubbed adapter, not yet enabled).
 - **`digest_delivery`** — whether `send-digest` composes the digest as
@@ -145,29 +124,9 @@ tone: "[three adjectives from the interview]"
 
 ## Running on a schedule
 
-This agent is a set of markdown files; it cannot wake itself up.
-`schedules` is the single declaration of *when* each activity runs,
-and the host is what fires it. Each entry becomes one host trigger that
-starts a session with this instruction:
-
-> Run the scheduled activity `<activity>` per
-> `context/operating-config.md`.
-
-The session then runs that Workflow step to its stop conditions, then
-each activity in `then`, in order. Examples for the shipped
-`prospect` entry:
-
-- **Claude Code routine** — create a scheduled routine for Monday 07:00
-  in `timezone`, with the instruction above as its prompt, pointed at
-  this folder.
-- **cron + headless CLI** — `0 7 * * 1 cd /path/to/sales-partner && claude -p "Run the scheduled activity prospect per context/operating-config.md"`,
-  with the machine's `TZ` set to `timezone`.
-- **n8n** — a Schedule Trigger node (Monday 07:00, `timezone`) feeding
-  a node that starts the host with the same instruction.
-
-Editing `schedules` without updating the host trigger changes nothing:
-the file declares, the host fires. When the two disagree, the file is
-the one to trust and the trigger is the one to fix.
+Schedules live in the instance's `schedules.yaml`, which the interview
+writes. The `schedule` skill turns them into Claude cloud routines, only
+for activities whose capabilities are all covered by guard policies.
 
 Nothing in this file, and nothing any key here configures, sends a
 message to a prospect on its own. Nothing sends without operator approval — that

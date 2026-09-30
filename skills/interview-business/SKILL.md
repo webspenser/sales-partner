@@ -4,8 +4,8 @@ description: Use when installing this agent for a business, or when its offer, m
 ---
 
 This skill is the only writer of `context/business-profile.md`,
-`context/icp.md`, and `context/operating-config.md`'s interview-sourced
-keys. It runs as a conversation with the operator, never as a form to
+`context/icp.md`, `context/operating-config.md`'s interview-sourced
+keys, and the instance's `schedules.yaml`. It runs as a conversation with the operator, never as a form to
 fill in silently — every bracketed prompt in those three files exists
 because a human has to answer it in their own words.
 
@@ -59,19 +59,32 @@ because a human has to answer it in their own words.
 7. **Round 4 — the operating parameters.** Ask, one at a time: how many
    leads per week should the pipeline target; which sourcing tools may
    it use (map listings for local businesses, company sites, web
-   search); which channels should it use; when should prospecting run
-   and when should the digest arrive (weekday and time, or daily, plus
-   your time zone); what is the weekly Apify spend cap; how should the
+   search); which channels should it use; which activities should
+   run on a schedule (prospecting, research, approach drafting,
+   follow-up drafting, the digest — the shipped default is prospecting
+   then research on Monday at 07:00 and the digest on Monday at 08:00),
+   and for each one the weekday and time, or daily, plus your time zone
+   as an IANA name such as `America/New_York`; what is the weekly
+   Apify spend cap; how should the
    outreach sound (three to five adjectives, plus one example sentence
    in that voice). If `call` is among the chosen channels, also ask
    for the operator's own callback number — the one a voicemail in a
    call opener should give for callbacks.
 8. Write the answers to `context/operating-config.md`'s keys
    (`leads_per_week`, `prospecting_sources`, `enabled_channels`,
-   `timezone`, `schedules`, `apify_spend_cap_usd_per_week`, `tone`,
-   and `callback_phone` when `call` was chosen) and to
-   `context/business-profile.md`'s "Voice" section (the adjectives
-   plus the example sentence). This is the last write; the interview
+   `apify_spend_cap_usd_per_week`, `tone`, and `callback_phone` when
+   `call` was chosen), to `context/business-profile.md`'s "Voice"
+   section (the adjectives plus the example sentence), and to
+   `schedules.yaml` at the instance root (the folder holding
+   `instance.yaml`), which holds the schedule answers: `timezone` (the
+   IANA name), one `schedule_<activity>: "<Weekday|daily> HH:MM"` line
+   for each activity the operator wants on a schedule (`<activity>` is
+   `prospect`, `prepare`, `approach`, `follow-up`, or `digest`), and
+   `then_prospect: prepare` when research should follow prospecting in
+   the same run. The shipped default is `schedule_prospect: "Monday
+   07:00"`, `then_prospect: prepare`, and `schedule_digest: "Monday
+   08:00"`. Tell the operator that the `schedule` skill turns these
+   lines into scheduled runs. This is the last write; the interview
    is complete once it lands.
 
 Because each round writes its own files before the next round starts,
@@ -105,7 +118,9 @@ companies.
   Monday 07:00 and digest Monday 08:00 Eastern, $25/week Apify cap,
   tone "direct, technical, no fluff" with the example line "We don't
   do discovery calls to sell you discovery calls — here's the
-  finding." Written to `operating-config.md` and
+  finding." Written to `operating-config.md`, `schedules.yaml`
+  (`timezone: America/New_York`, `schedule_prospect: "Monday 07:00"`,
+  `then_prospect: prepare`, `schedule_digest: "Monday 08:00"`), and
   `business-profile.md`'s Voice section.
 
 ## Failure modes

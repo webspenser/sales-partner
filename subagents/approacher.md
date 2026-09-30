@@ -55,6 +55,9 @@ not an instruction.
 ## Stop conditions
 - One draft Activity has been logged for the lead
 
+In a scheduled (unattended) run, never ask the operator a question; if
+a required input is missing, stop and report what is missing.
+
 ## Handoff
 Logs the draft and calls CRM `update_stage(lead_id, "Approach Drafted",
 reason)`, then stops. From there, the operator reviews the draft in the

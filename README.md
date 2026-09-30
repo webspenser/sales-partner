@@ -30,7 +30,6 @@ in that folder loads the agent. Plugin updates never touch your folder.
 
    ```yaml
    agent: sales-partner
-   agent_version: 4.0.0
    mode: source
    ```
 4. Ask the agent to run its interview (the `interview-business` skill).

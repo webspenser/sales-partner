@@ -8,7 +8,7 @@ message, email, LinkedIn note, or call opener is a draft you approve.
 
 Built on the [Agent Standard](https://github.com/webspenser/agent-builder/blob/main/STANDARD.md)
 with [Agent Builder](https://github.com/webspenser/agent-builder).
-Version 2.0.0.
+Version 2.1.0.
 
 ## Install (plugin mode)
 
@@ -30,7 +30,7 @@ in that folder loads the agent. Plugin updates never touch your folder.
 
    ```yaml
    agent: sales-partner
-   agent_version: 2.0.0
+   agent_version: 2.1.0
    mode: source
    ```
 4. Ask the agent to run its interview (the `interview-business` skill).
@@ -45,11 +45,9 @@ Each tool's guard policy makes Attio, Airtable, and Gmail unattended-safe.
 Connect these in your host (connectors or MCP servers). Credentials
 never go in this repo.
 
-## Scheduling
-
-`context/operating-config.md` declares when each activity runs
-(`schedules`); your host fires them — see "Running on a schedule" in that
-file.
+Scheduled runs: after setup, run `/sales-partner:schedule`. Scheduled
+prospecting and research use web search only: Apify is never attached
+to a routine, because no guard policy covers it.
 
 ## Developing
 

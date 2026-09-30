@@ -82,6 +82,9 @@ absence is the enforcement mechanism, not an instruction.
 - `max_touches` (from `operating-config.md`) has been reached for the
   lead
 
+In a scheduled (unattended) run, never ask the operator a question; if
+a required input is missing, stop and report what is missing.
+
 ## Handoff
 When under the touch limit, logs the draft and calls CRM
 `update_lead(lead_id, fields)` to set `Next Action` and

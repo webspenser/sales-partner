@@ -21,8 +21,11 @@ reviewed by the operator before it goes out.
 - `context/icp.md` — target firmographics, geography, roles, buying
   triggers, the scoring rubric, and anti-signals.
 - `context/operating-config.md` — volume targets, cadence, enabled
-  channels, prospecting sources, run schedules and time zone, tone,
-  sending identity, and spend caps.
+  channels, prospecting sources, tone, sending identity, and spend
+  caps.
+- `schedules.yaml` (instance root) — the time zone and the
+  `schedule_<activity>` times for the activities that run unattended.
+  Written by the `interview-business` skill.
 - A CRM, bound in `instance.yaml` (`bind_crm`) to one of the adapters
   in `capabilities/crm/adapters/` — the neutral CRM contract, eleven
   operations (`create_lead`, `get_lead`,
@@ -75,7 +78,7 @@ reviewed by the operator before it goes out.
 - **Call briefs** — objection matrices and talk tracks for scheduled
   calls, plus debrief notes and next actions after a call is held.
 - **Digests** — a scheduled report for the operator to review, built
-  when the `digest` entry in `schedules` fires (`operating-config.md`):
+  when `schedule_digest` in the instance's `schedules.yaml` fires:
   approvals awaiting review, actions due, new scored leads, stalled
   leads, stage movement, and Apify spend.
 
@@ -104,8 +107,9 @@ reviewed by the operator before it goes out.
 ## Workflow
 0. **Interview** (T3) — run the `interview-business` skill with the
    operator and write `context/business-profile.md`, `context/icp.md`,
-   and `context/operating-config.md`. Runs once at install and again
-   whenever something material about the business changes.
+   `context/operating-config.md`, and the instance's `schedules.yaml`.
+   Runs once at install and again whenever something material about
+   the business changes.
 1. **Prospect** (T2) — `subagents/prospector.md` turns the ICP into
    scored, deduplicated Leads at stage `Scored`.
 2. **Prepare** (T2) — `subagents/preparer.md` deep-researches leads at
@@ -120,9 +124,9 @@ reviewed by the operator before it goes out.
 5. **Follow up** (T2) — `subagents/follow-up.md` drafts the next
    follow-up Activity after a logged outcome or an idle lead past
    cadence, and sets the next action and due date.
-6. **Digest** (T3) — run the `send-digest` skill on its `schedules`
-   entry in `operating-config.md` to assemble the report for the
-   operator.
+6. **Digest** (T3) — run the `send-digest` skill on
+   `schedule_digest` in the instance's `schedules.yaml` to assemble the
+   report for the operator.
 
 Every step on the critical path (1–5) is T2: none of them requires
 sub-agent dispatch, and each runs identically as a sequential inline
@@ -130,13 +134,17 @@ phase on a host without it. Steps 0 and 6 are T3 because they are a
 live interview and a scheduled report rather than pipeline work, and
 need nothing more than a single context to run.
 
-**Scheduled activities.** Steps 1, 2, 3, 5, and 6 can run unattended
-on the `schedules` in `operating-config.md`. The host fires each entry
-with "Run the scheduled activity `<activity>` per
-`context/operating-config.md`"; the agent runs that step, then any
-steps in the entry's `then` list. Steps 0 and 4 are never scheduled —
-both need the operator present. See `operating-config.md`'s Running on
-a schedule.
+**Scheduled activities.** The schedulable steps are the five activities
+declared in `agent.yaml` — 1 (`prospect`), 2 (`prepare`), 3
+(`approach`), 5 (`follow-up`), and 6 (`digest`). Steps 0 and 4 are never
+scheduled: both need the operator present. The instance's
+`schedules.yaml` says when each runs, and the `schedule` skill turns it
+into Claude cloud routines. A scheduled run starts with the scheduled
+prompt, runs that step to its stop conditions, and then any step named
+in its `then_<activity>` line. In a scheduled (unattended) run the agent
+asks no questions, edits no instance files, writes only to connected
+systems (the CRM and email drafts), and stops with a report when an
+input it needs is missing.
 
 ## Lead stages
 A lead occupies exactly one of twelve stages at a time; stage transitions
@@ -184,7 +192,7 @@ not only the one noted as its usual entry point.
 | `handle-objections` | An objection surfaces, before or during a call | `skills/handle-objections/SKILL.md` |
 | `run-live-call-script` | A call is in progress | `skills/run-live-call-script/SKILL.md` |
 | `write-follow-up` | Email chosen for a follow-up after a meaningful interaction, or a lead idle past cadence | `skills/write-follow-up/SKILL.md` |
-| `send-digest` | The `digest` entry in `schedules` fires | `skills/send-digest/SKILL.md` |
+| `send-digest` | `schedule_digest` in `schedules.yaml` fires | `skills/send-digest/SKILL.md` |
 
 ## Guardrails / never do
 - Never send a message to a prospect on any channel. Prospect-facing

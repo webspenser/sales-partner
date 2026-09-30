@@ -1,6 +1,6 @@
 ---
 name: send-digest
-description: Use when the `digest` entry in `schedules` (context/operating-config.md) fires — assembles the pipeline summary and delivers it to the operator.
+description: Use when the digest's scheduled run fires (`schedule_digest` in the instance's `schedules.yaml`) — assembles the pipeline summary and delivers it to the operator.
 ---
 
 This skill produces a report, not a pipeline action. It reads the CRM
@@ -24,12 +24,13 @@ precisely, not left to "whenever this happened to last run":
 > times — neither is ever the actual moment the skill happens to
 > execute.**
 
-Concretely, with the shipped default `digest` entry in `schedules`
-(`when: "Monday 08:00"`), the cadence interval is 7 days; for a `daily
-HH:MM` entry it is 1 day. To compute the window for any given run:
+Concretely, with the shipped default `schedule_digest: "Monday 08:00"`
+in the instance's `schedules.yaml`, the cadence interval is 7 days; for a
+`daily HH:MM` value it is 1 day. To compute the window for any given run:
 
 1. Find this run's **nominal** scheduled time: the most recent
-   occurrence of the `digest` entry's `when`, read in `timezone`, at
+   occurrence of the `schedule_digest` value, read in the `timezone` from
+   `schedules.yaml`, at
    or before the actual moment this skill executes. This is
    deliberately *not* "the actual wall-clock time the skill happens to
    run" — a run fired exactly on time, a run fired three hours late
@@ -52,15 +53,15 @@ HH:MM` entry it is 1 day. To compute the window for any given run:
    `nominal_time`, so its window picks up exactly where this one left
    off.
 
-This anchor comes from `operating-config.md` and calendar arithmetic
-alone — never from a stored "last digest sent" value, because no such
+This anchor comes from `schedule_digest` and `timezone` in the
+instance's `schedules.yaml` and calendar arithmetic alone — never from a stored "last digest sent" value, because no such
 field exists among the CRM contract's eleven operations
 (`capabilities/crm/contract.md`) and this skill does not invent one.
 
 **Both edges matter equally, and pinning only the lower edge is not
 enough.** A late-firing run is the normal condition for a scheduled
 job, not an edge case, and an anchor with no upper bound double-reports
-under it routinely: take a `digest` entry with `when: "Monday
+under it routinely: take `schedule_digest: "Monday
 08:00"`, and a run that actually executes three hours late. Its
 anchor is correctly `nominal_time − 7d`, but if the query for "since
 last digest" is left open-ended above — "anything after the anchor,"
@@ -146,6 +147,9 @@ skill does not depend on them: swap the adapter for a different CRM
 behind the same contract, and every one of these six sections still
 works, because none of them named an Airtable-specific view as its read
 path.
+
+In a scheduled (unattended) run, never ask the operator a question; if
+a required input is missing, stop and report what is missing.
 
 ## Procedure
 

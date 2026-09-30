@@ -495,24 +495,24 @@ and the run output for the `apollo` stub notice. Every created lead's
 
 ## Case 13: A scheduled activity runs its `then` steps and nothing else
 
-**Given** — `operating-config.md`'s `schedules` has one entry,
-`activity: prospect`, with `then: [prepare]`. The CRM also holds a
+**Given** — the instance's `schedules.yaml` has `schedule_prospect`
+with `then_prospect: prepare`. The CRM also holds a
 `Researched` lead above `approach_threshold` and a `Contacted` lead
 idle past `follow_up_cadence_days` — work the Approacher and
 Follow-up would pick up if they ran.
 
 **Expect** — One session runs the Prospector to a stop condition,
-then the Preparer (`operating-config.md`, Running on a schedule;
-`AGENT.md`, Scheduled activities). No Approacher or Follow-up activity
+then the Preparer (`AGENT.md`, Scheduled activities). No Approacher or Follow-up activity
 runs: no `log_activity` call, no lead moved to `Approach Drafted`.
 
-**Why it matters** — A scheduled run that does more than its entry
-declares drafts outreach the operator never scheduled, and spends
+**Why it matters** — A scheduled run that does more than its
+`schedules.yaml` entry declares drafts outreach the operator never scheduled, and spends
 research and Apify budget outside the plan.
 
-**How to run** — Seed the two leads. Fire the host instruction "Run
-the scheduled activity `prospect` per `context/operating-config.md`".
-Check the trace: `create_lead` and `update_stage` calls from the
+**How to run** — Seed the two leads. Start a session with the
+scheduled prompt for `prospect` then `prepare` (the one the `schedule`
+skill prints, "Scheduled run of `prospect`, then `prepare` (unattended)
+..."). Check the trace: `create_lead` and `update_stage` calls from the
 Prospector, then `log_research` and `update_stage` to `Researched`
 from the Preparer, and zero `log_activity` calls. The seeded
 `Researched` lead is still at `Researched`; the idle lead has no new

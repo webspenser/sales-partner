@@ -6,5 +6,6 @@ cd "$(dirname "$0")/.."
 STATUS=0
 echo "== content"; tests/test-content.sh || STATUS=1
 echo "== policies"; tests/test-policies.sh || STATUS=1
+echo "== schedules"; tests/test-schedules.sh || STATUS=1
 [ "$STATUS" -eq 0 ] && echo "ALL GREEN" || echo "FAILURES ABOVE"
 exit "$STATUS"

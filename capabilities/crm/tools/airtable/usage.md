@@ -1,10 +1,10 @@
-# CRM Airtable adapter
+# CRM Airtable tool
 
 The concrete Airtable mapping for the contract (`../../contract.md`)'s eleven operations:
 four tables, their exact fields and types, and the four views the
 operator works from. Field names below are used verbatim by the
 sub-agent contracts and skills in Tasks 8–12 — do not rename, abbreviate,
-or reword any of them when implementing this adapter.
+or reword any of them when implementing this tool.
 
 ## Tables
 
@@ -83,7 +83,7 @@ operation writes the field at all, so nothing an agent can call
 restores contactability. And `log_activity` rejects creating an
 Activity with `Direction = outbound` for a Lead whose `Do Not Contact`
 is checked, so an opted-out Lead cannot acquire a new outbound draft
-through any operation this adapter maps — the same guard-policy
+through any operation this tool maps — the same guard-policy
 enforcement as the approval guarantee, applied to the opt-out.
 
 ### Contacts
@@ -191,10 +191,10 @@ write `Status` at all — `approved` and `sent` are never a legal write.
 Those two values are reachable only by the operator acting directly in
 Airtable: approving a draft in the **Awaiting Approval** view below,
 and separately sending it, both outside every one of the eleven
-operations this adapter maps (the contract's Approval invariant
+operations this tool maps (the contract's Approval invariant
 states this as a provable rule, not a convention). This is the
 mechanism that makes "nothing sends without operator approval" true —
-the adapter's guard policy (`guard.yaml`, below) refuses any write of
+the tool's guard policy (`guard.yaml`, below) refuses any write of
 `approved` or `sent`, so it does not rest on instruction alone.
 `voided` exists for exactly one case today: `subagents/follow-up.md`'s
 opt-out guardrail calls `update_activity` to move every pending
@@ -218,7 +218,7 @@ renders for a human — and it returns each Activity with its linked
 `Lead`, so a caller gets the company without a second call.
 `query_activities` accepts `voided` as a `Status` value like any
 other, for a caller that specifically wants voided history — but
-nothing in this adapter treats a `voided` Activity as awaiting
+nothing in this tool treats a `voided` Activity as awaiting
 anything: the **Awaiting Approval** view below filters on
 `Status = draft` specifically, not "not yet sent," so a voided
 Activity never appears there once `update_activity` has moved it out
@@ -260,7 +260,7 @@ skill or sub-agent depends on to read this data: `send-digest`, and any
 future skill with the same needs, reads through `query_activities` and
 `query_by_stage`'s `next_action_due_before` / `idle_days` filters
 instead of these views, precisely so that provider-neutrality holds —
-swapping the adapter (a different CRM behind the same contract) keeps
+swapping the tool (a different CRM behind the same contract) keeps
 every skill working, where reading these views directly would not.
 Each view below is defined to compute exactly what its corresponding
 operation returns, so the operator's screen and a skill's query never
@@ -289,14 +289,14 @@ disagree about what counts as "awaiting approval," "due today," or
 
 ## Probe
 
-Setup runs these read-only calls when binding this adapter, and writes
+Setup runs these read-only calls when binding this tool, and writes
 what they find to `bindings/crm.md` in the instance:
 
 1. `airtable:search_bases` (or `list_bases`) — find the base that
    holds the Leads, Contacts, Research, and Activities tables; ask the
    operator if more than one could. Record `base_id` and `base_name`.
 2. `airtable:list_tables_for_base` on that base — every table and
-   field named in this adapter must exist with the listed type. Also
+   field named in this tool must exist with the listed type. Also
    record `field_status: <field ID of Activities.Status>` and
    `field_do_not_contact: <field ID of Leads."Do Not Contact">`.
 
@@ -314,7 +314,7 @@ field_do_not_contact: fldYYYYYYYYYYYYYY
 
 `airtable:` means the connected Airtable server's tools, whatever
 their prefix. If a table or field is missing, show the operator the
-list and stop; this adapter has no bootstrap script.
+list and stop; this tool has no bootstrap script.
 
 ## Guard policy
 

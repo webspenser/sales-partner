@@ -16,13 +16,13 @@ jobs:
       # made with "Use this template" run the structure check only.
       - name: Agent Standard (release rule on pull requests)
         if: github.event_name == 'pull_request' && github.repository == 'webspenser/sales-partner'
-        uses: webspenser/agent-builder/validate@v2
+        uses: webspenser/agent-builder/validate@v3
         with:
           path: .
           require-bump-against: origin/${{ github.base_ref }}
       - name: Agent Standard
         if: github.event_name != 'pull_request' || github.repository != 'webspenser/sales-partner'
-        uses: webspenser/agent-builder/validate@v2
+        uses: webspenser/agent-builder/validate@v3
         with:
           path: .
       - name: Content tests

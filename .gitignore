@@ -3,13 +3,13 @@
 .env.*
 !.env.example
 
-# Host files written by install.sh — the sources live in adapters/
+# Host files written by install.sh — the sources live in hosts/
 CLAUDE.md
 GEMINI.md
 AGENTS.md
-!adapters/CLAUDE.md
-!adapters/GEMINI.md
-!adapters/AGENTS.md
+!hosts/CLAUDE.md
+!hosts/GEMINI.md
+!hosts/AGENTS.md
 .claude/
 .gemini/
 

@@ -11,12 +11,12 @@ check() { # check <rc> <label> <policy> <tool_name> <tool_input> [text] [binding
   out=$(printf '{"tool_name":"%s","tool_input":%s}' "$4" "$5" | python3 -B "$E" "$3" "${7:--}" "sales-partner guard policy" 2>&1); rc=$?
   if [ "$rc" -eq "$1" ] && { [ -z "${6:-}" ] || printf '%s\n' "$out" | grep -qF -- "$6"; }; then _report ok "$2"; else _report no "$2 (rc=$rc): $out"; fi
 }
-for p in capabilities/*/adapters/*/guard.yaml; do
+for p in capabilities/*/tools/*/guard.yaml; do
   python3 -B "$E" --check "$p" >/dev/null && _report ok "$p parses" || _report no "$p does not parse"
 done
 
 echo "-- Attio"
-AT=capabilities/crm/adapters/attio/guard.yaml; P=mcp__claude_ai_Attio__
+AT=capabilities/crm/tools/attio/guard.yaml; P=mcp__claude_ai_Attio__
 L='"list":"sales_partner_outreach","parent_object":"companies","parent_record_id":"00000000-0000-0000-0000-000000000001"'
 X='"list":"sales_partner_outreach","entry_id":"00000000-0000-0000-0000-000000000002"'
 check 0 "create draft"              $AT ${P}add-record-to-list "{$L,\"entry_values\":{\"status\":\"draft\",\"summary\":\"x\"}}"
@@ -49,7 +49,7 @@ out=$(printf '{not json' | python3 -B "$E" "$AT" - x 2>&1); rc=$?
 [ "$rc" -eq 2 ] && _report ok "malformed JSON blocks" || _report no "malformed JSON (rc=$rc)"
 
 echo "-- Gmail"
-GM=capabilities/email_drafts/adapters/gmail/guard.yaml; G=mcp__claude_ai_Gmail__
+GM=capabilities/email_drafts/tools/gmail/guard.yaml; G=mcp__claude_ai_Gmail__
 check 0 "create draft"              $GM ${G}create_draft '{"to":"a@b.c","subject":"s","body":"b"}'
 check 0 "search threads"            $GM ${G}search_threads '{"query":"x"}'
 check 2 "send refused"              $GM ${G}send_message '{}' "is denied"
@@ -59,7 +59,7 @@ check 2 "trash not allowed"         $GM ${G}trash_thread '{}' "is not in the all
 check 2 "new unlisted tool"         $GM ${G}schedule_email '{}' "is not in the allow list"
 
 echo "-- Airtable"
-AR=capabilities/crm/adapters/airtable/guard.yaml; A=mcp__claude_ai_Airtable__
+AR=capabilities/crm/tools/airtable/guard.yaml; A=mcp__claude_ai_Airtable__
 printf '%s\n' '# CRM binding — Airtable' 'base_id: appAAAAAAAAAAAAAA' 'field_status: fldSSSSSSSSSSSSSS' 'field_do_not_contact: fldDDDDDDDDDDDDDD' > "$W/b.md"
 B='"baseId":"appAAAAAAAAAAAAAA","tableId":"tblTTTTTTTTTTTTTT"'
 check 0 "create draft by ID"        $AR ${A}create_records_for_table "{$B,\"records\":[{\"fields\":{\"fldSSSSSSSSSSSSSS\":\"draft\"}}]}" "" "$W/b.md"

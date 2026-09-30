@@ -1,4 +1,4 @@
-# Email drafts — Gmail adapter
+# Email drafts — Gmail tool
 
 Maps the contract (`../../contract.md`) onto a Gmail MCP server.
 `gmail:` means the connected Gmail server's tools, whatever their

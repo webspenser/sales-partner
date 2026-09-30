@@ -91,15 +91,15 @@ Record-level timestamps are compared against the `(anchor, nominal_time]`
 window per section:
 
 - **New leads scored** compares each Lead record's own **Created
-  Time** — the timestamp the Airtable adapter stamps on every row the
+  Time** — the timestamp the Airtable tool stamps on every row the
   moment `create_lead` writes it — against the full window,
   `(anchor, nominal_time]`, not the anchor alone. Created Time is
   store-level record metadata, not one of the fields
-  the Airtable adapter (`capabilities/crm/adapters/airtable/adapter.md`) declares on the Leads table; it needs no
+  the Airtable tool (`capabilities/crm/tools/airtable/usage.md`) declares on the Leads table; it needs no
   new field because every record already carries it.
 - **Movement** compares each Lead record's own **`Stage Changed At`**
   against the same `(anchor, nominal_time]` window. `Stage Changed At`
-  is a declared field on the Leads table (`capabilities/crm/adapters/airtable/adapter.md`),
+  is a declared field on the Leads table (`capabilities/crm/tools/airtable/usage.md`),
   written only by `update_stage`, on every transition, as part of that
   same call — never by `update_lead` and never by anything else. That
   exclusivity is what makes it trustworthy here: `update_lead` writes
@@ -139,11 +139,11 @@ marker. The reads it does use, named precisely:
 
 Every one of the above is a call through `capabilities/crm/contract.md`'s eleven
 provider-neutral operations — none of the six sections reads an
-Airtable view directly. The Airtable adapter's (`capabilities/crm/adapters/airtable/adapter.md`) four named views
+Airtable view directly. The Airtable tool's (`capabilities/crm/tools/airtable/usage.md`) four named views
 (Awaiting Approval, Research Queue, Due Today, Stalled) still exist as
 a convenience for the operator looking at Airtable by hand, and are
 defined to compute exactly what the operations above return, but this
-skill does not depend on them: swap the adapter for a different CRM
+skill does not depend on them: swap the tool for a different CRM
 behind the same contract, and every one of these six sections still
 works, because none of them named an Airtable-specific view as its read
 path.
@@ -162,7 +162,7 @@ a required input is missing, stop and report what is missing.
    of direction, so an inbound reply or a call debrief would otherwise
    show up in this section as if it were a message awaiting a send
    decision. Record the count and, for every returned Activity, a link
-   (or the linked Lead's company name if the adapter exposes no
+   (or the linked Lead's company name if the tool exposes no
    per-Activity link) and the channel. For a `call` draft, also call
    CRM `get_lead` on its linked Lead (a read) and record
    the number to dial — the draft's Contact `phone` when present,
@@ -261,7 +261,7 @@ a required input is missing, stop and report what is missing.
 9. Resolve the delivery channel: read `digest_channel` from
    `operating-config.md`. If it is `sms` and no Twilio credential is
    configured — true of the shipped default, since SMS is a stubbed
-   adapter, not yet enabled — switch delivery to email (delivered per
+   tool, not yet enabled — switch delivery to email (delivered per
    step 10: always a draft) and
    make the digest's first line say so verbatim, e.g. `Delivered by email — SMS
    is configured but no Twilio credential exists yet.` If
@@ -274,13 +274,13 @@ a required input is missing, stop and report what is missing.
     `create_draft`, addressed to `sending_identity` (the operator's own
     address from `operating-config.md`), and the operator opens it from
     their own drafts. Delivering it this way needs no send capability
-    at all, and the agent holds none: the email adapter's guard policy
+    at all, and the agent holds none: the email tool's guard policy
     denies every send tool.
 
     `digest_delivery` shipped as `draft`. If it is set to `send`, the
     only difference is a disclaimer: compose the draft exactly as for
     `draft` and put this line first, above the `#` heading:
-    "digest_delivery is send, but this agent's email adapter
+    "digest_delivery is send, but this agent's email tool
     cannot send; delivered as a draft." The setting cannot be honored,
     and you must not look for another way to send.
 
@@ -483,7 +483,7 @@ Delivered by email — SMS is configured but no Twilio credential exists yet.
   the obvious default once it has run a few times cleanly.
 - **Silently falling back to email without saying so.** The fallback
   from `sms` to `email` when no Twilio credential exists is not itself
-  a failure — it's the only sane behavior with a stubbed adapter. The
+  a failure — it's the only sane behavior with a stubbed tool. The
   failure is delivering that fallback digest with no disclaimer line,
   leaving the operator to assume SMS delivery is live when it never
   ran. Step 9's disclaimer line is mandatory whenever the fallback

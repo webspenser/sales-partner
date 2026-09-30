@@ -11,7 +11,7 @@ for its trigger condition — a stage (`query_by_stage`) or a stage plus a
 score threshold (`query_by_score`) — never by direct invocation.
 
 The concrete mapping onto a provider — tables, fields, views — lives in
-each adapter (`adapters/<provider>/adapter.md`). This document defines
+each tool (`tools/<provider>/usage.md`). This document defines
 behavior only; it names no Airtable table or field.
 
 ## Operations
@@ -83,7 +83,7 @@ behavior only; it names no Airtable table or field.
   (see below). It validates `stage` against the twelve-value enum and
   rejects anything else; it does not accept free-text stages. Every
   call also sets `stage_changed_at` (`Stage Changed At` in the Airtable
-  adapter) to the moment of the transition, as part of the same write —
+  tool) to the moment of the transition, as part of the same write —
   not a second call, not an optional argument. **After creation, no
   other operation ever writes `stage_changed_at`** — `create_lead`
   stamps it once on the record it creates, and from then on only
@@ -127,7 +127,7 @@ behavior only; it names no Airtable table or field.
   every time, with no conditional path through it. This is where the
   operator-approval guardrail actually starts: an agent cannot mint an
   Activity anywhere but `draft`, so it cannot create a row that lands
-  past the **Awaiting Approval** view (the Airtable adapter (`adapters/airtable/adapter.md`)) —
+  past the **Awaiting Approval** view (the Airtable tool (`tools/airtable/usage.md`)) —
   that view filters on `Status = draft`, and every Activity this
   operation produces starts there, visible and waiting. Nothing sends
   without operator approval because no operation this contract exposes
@@ -165,7 +165,7 @@ behavior only; it names no Airtable table or field.
   operation `subagents/follow-up.md`'s opt-out guardrail calls to void
   every pending draft Activity for a lead: it sets each one's `status`
   to `voided`, the fourth value in the `Status` enum documented in
-  the Airtable adapter's (`adapters/airtable/adapter.md`) Activities table.
+  the Airtable tool's (`tools/airtable/usage.md`) Activities table.
 - **`log_research`** creates one Research row linked to the lead. It
   **rejects a write with an empty `source_url` or an empty `hook`.** A
   Research row without a source is an unverifiable claim; one without a
@@ -234,7 +234,7 @@ behavior only; it names no Airtable table or field.
   replies and call debriefs that also land at `status: draft` (every
   Activity `log_activity` creates starts there, regardless of
   direction) but need no approval — the **Awaiting Approval** view
-  (the Airtable adapter (`adapters/airtable/adapter.md`)) filters on both `Status = draft` and
+  (the Airtable tool (`tools/airtable/usage.md`)) filters on both `Status = draft` and
   `Direction = outbound` for exactly this reason, and `send-digest`'s
   approval-queue read does the same. `since` and `until` are each
   optional, and omitting one leaves that edge of the window unbounded,
@@ -297,7 +297,7 @@ flagged `Do Not Contact`" to an instruction as well.
 
 ## Invariants
 
-Each adapter's `guard.yaml` lists in `covers` the invariants its guard
+Each tool's `guard.yaml` lists in `covers` the invariants its guard
 policy enforces; an invariant it does not list is instruction-only.
 
 - `draft_only` — the agent creates Activities only at `status: draft`,

@@ -67,7 +67,7 @@ read rather than waiting to be told:
 - Read access to `templates/` (for a `call` follow-up's opener)
 
 This contract has no send capability. `email_drafts` offers only
-drafting and reading, its adapter blocks every send tool, and
+drafting and reading, its tool blocks every send tool, and
 `update_activity`'s only permitted write is
 `status = "voided"` — a dead end that pulls an Activity out of the
 approval queue, never a step toward `approved` or `sent`. Nothing in

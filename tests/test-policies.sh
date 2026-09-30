@@ -72,4 +72,30 @@ check 2 "delete refused"            $AR ${A}delete_records_for_table "{$B}" "is 
 check 2 "schema change refused"     $AR ${A}create_field "{$B}" "is not in the allow list"
 check 0 "read allowed"              $AR ${A}list_records_for_table "{$B}"
 
+echo "-- HubSpot"
+HS=capabilities/crm/tools/hubspot/guard.yaml; H=mcp__claude_ai_HubSpot__
+TC='{"objectType":"tasks","properties":{"sp_status":"%s"}}'
+TU='{"objectType":"tasks","objectId":101,"properties":{%s}}'
+CU='{"objectType":"companies","objectId":202,"properties":{"sp_do_not_contact":%s}}'
+check 0 "create task at draft"      $HS ${H}manage_crm_objects "{\"createRequest\":{\"objects\":[$(printf "$TC" draft)]}}"
+check 2 "create task at sent"       $HS ${H}manage_crm_objects "{\"createRequest\":{\"objects\":[$(printf "$TC" sent)]}}" "sp_status may only be written as draft on create"
+check 0 "update task to voided"     $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$TU" '"sp_status":"voided","sp_outcome":"dup"')]}}"
+check 2 "update task to approved"   $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$TU" '"sp_status":"approved"')]}}" "sp_status may only be written as voided on update"
+check 2 "both kinds, bad create"    $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$TU" '"sp_status":"voided"')]},\"createRequest\":{\"objects\":[$(printf "$TC" approved)]}}" "draft on create"
+check 0 "both kinds, both fine"     $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$TU" '"sp_status":"voided"')]},\"createRequest\":{\"objects\":[$(printf "$TC" draft)]}}"
+check 0 "dnc set \"true\""          $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$CU" '"true"')]}}"
+check 0 "dnc set true"              $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$CU" true)]}}"
+check 2 "dnc cleared \"false\""     $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$CU" '"false"')]}}" "sp_do_not_contact may only be written as true"
+check 2 "dnc cleared false"         $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$CU" false)]}}"
+check 0 "create lead at New"        $HS ${H}manage_crm_objects '{"createRequest":{"objects":[{"objectType":"companies","properties":{"name":"X","sp_stage":"New"}}]}}'
+check 2 "custom properties refused" $HS ${H}manage_custom_properties '{}' "is not in the allow list"
+check 2 "marketing email refused"   $HS ${H}manage_marketing_email '{}' "is not in the allow list"
+check 2 "delete refused"            $HS ${H}delete_crm_objects '{}' "is denied"
+check 2 "merge refused"             $HS ${H}merge_crm_objects '{}' "is denied"
+check 0 "search allowed"            $HS ${H}search_crm_objects '{"objectType":"TASK"}'
+check 0 "local server name allowed" $HS mcp__HubSpot__search_crm_objects '{"objectType":"COMPANY"}'
+out=$(HUBSPOT_TOKEN=sk-canary-12345 python3 -B capabilities/crm/tools/hubspot/bootstrap.py 2>&1 </dev/null); \
+  printf '%s' "$out" | grep -q 'sk-canary-12345' && _report no "bootstrap echoed the token" || _report ok "bootstrap never prints the token"
+grep -q 'print(.*token' capabilities/crm/tools/hubspot/bootstrap.py && _report no "bootstrap prints a token variable" || _report ok "no print of the token"
+
 finish

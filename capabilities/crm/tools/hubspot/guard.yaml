@@ -1,0 +1,21 @@
+# HubSpot guard policy: every write goes through manage_crm_objects;
+# creates sit under createRequest, updates under updateRequest.
+covers: [draft_only, dnc_one_way, no_delete]
+allow: [get_user_details, get_organization_details, discover_hubspot_schema, search_crm_objects,
+        get_crm_objects, get_properties, search_properties, search_owners, query_crm_data,
+        tool_guidance, manage_crm_objects]
+deny: ["*delete*", "*merge*"]
+writes:
+  - kind: create
+    tools: [manage_crm_objects]
+    at: ["createRequest.objects[].properties"]
+  - kind: update
+    tools: [manage_crm_objects]
+    at: ["updateRequest.objects[].properties"]
+unknown_writes: block
+rules:
+  - field: sp_status
+    create: [draft]
+    update: [voided]
+  - field: sp_do_not_contact
+    update: ["true"]

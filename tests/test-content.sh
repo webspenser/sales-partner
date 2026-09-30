@@ -178,6 +178,19 @@ for op in create_lead get_lead update_stage update_lead log_activity update_acti
   assert_contains "$AT/usage.md" "\`$op\`"
 done
 
+echo "-- HubSpot tool"
+HT="$SP/capabilities/crm/tools/hubspot"
+assert_contains "$HT/usage.md" '## Probe'
+assert_contains "$HT/usage.md" '## Setup'
+assert_contains "$HT/usage.md" 'hub_id:'
+assert_contains "$HT/usage.md" 'CONFIRMATION_WAIVED_FOR_SESSION'
+assert_not_contains "$HT/usage.md" 'Webspenser'
+[ -x "$HT/bootstrap.py" ] && _report ok "hubspot bootstrap.py present and executable" || _report no "hubspot bootstrap.py missing or not executable"
+assert_contains "$HT/bootstrap.py" 'HUBSPOT_TOKEN'
+for op in create_lead get_lead update_stage update_lead log_activity update_activity log_research upsert_contact query_by_stage query_by_score query_activities; do
+  assert_contains "$HT/usage.md" "\`$op\`"
+done
+
 echo "-- email drafts"
 assert_contains "$SP/agent.yaml" 'capabilities: crm, email_drafts'
 assert_not_contains "$SP/AGENT.md" 'delivers it directly'
@@ -211,6 +224,9 @@ for t in $(grep -oE 'gmail:[a-z_]+' "$SP/capabilities/email_drafts/tools/gmail/u
 done
 for t in $(grep -oE 'airtable:[a-z_]+' "$SP/capabilities/crm/tools/airtable/usage.md" | sort -u | cut -d: -f2); do
   in_allow "$SP/capabilities/crm/tools/airtable/guard.yaml" mcp__airtable__ "$t" && _report ok "Airtable $t allowed" || _report no "Airtable $t not in guard.yaml allow"
+done
+for t in $(grep -oE 'hubspot:[a-z_]+' "$SP/capabilities/crm/tools/hubspot/usage.md" | sort -u | cut -d: -f2); do
+  allowed_by "$SP/capabilities/crm/tools/hubspot/guard.yaml" mcp__hubspot__ "$t" && _report ok "HubSpot $t allowed" || _report no "HubSpot $t not in guard.yaml allow"
 done
 assert_contains "$SP/capabilities/crm/tools/airtable/usage.md" 'field_status'
 [ -f "$SP/migrations/3.0.0.md" ] && [ -f "$SP/migrations/4.0.0.md" ] && [ "$(ls "$SP/migrations" | tr '\n' ' ')" = "3.0.0.md 4.0.0.md " ] && _report ok "migrations/ holds 3.0.0.md and 4.0.0.md" || _report no "migrations/ must hold 3.0.0.md and 4.0.0.md"

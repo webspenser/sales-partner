@@ -7,10 +7,13 @@ allow: [whoami, list-*, get-*, search-*, semantic-search-*, run-basic-report,
         create-note, create-task, update-task]
 deny: ["*delete*", "*merge*", create-list, update-list]
 
-create_tools: [add-record-to-list, create-record]
-update_tools: [update-list-entry-by-id, update-list-entry-by-record-id,
-               update-record, upsert-record]
-values_at: [entry_values, values]
+writes:
+  - kind: create
+    tools: [add-record-to-list, create-record]
+    at: [entry_values, values]
+  - kind: update
+    tools: [update-list-entry-by-id, update-list-entry-by-record-id, update-record, upsert-record]
+    at: [entry_values, values]
 unwrap: [option, status, value, title]
 unknown_writes: update
 refuse_keys: [uuid]

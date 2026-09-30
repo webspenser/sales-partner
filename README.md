@@ -8,7 +8,7 @@ message, email, LinkedIn note, or call opener is a draft you approve.
 
 Built on the [Agent Standard](https://github.com/webspenser/agent-builder/blob/main/STANDARD.md)
 with [Agent Builder](https://github.com/webspenser/agent-builder).
-Version 3.0.0.
+Version 4.0.0.
 
 ## Install (plugin mode)
 
@@ -30,7 +30,7 @@ in that folder loads the agent. Plugin updates never touch your folder.
 
    ```yaml
    agent: sales-partner
-   agent_version: 3.0.0
+   agent_version: 4.0.0
    mode: source
    ```
 4. Ask the agent to run its interview (the `interview-business` skill).

@@ -278,12 +278,8 @@ what they find to `bindings/crm.md` in the instance:
    `lead_source_outbound: yes` if `lead_source` exists with an
    `Outbound` option, otherwise `no`.
 
-If step 3 or 4 finds anything missing, offer the schema script. The
-operator sets `ATTIO_API_KEY` in their shell (never in a file; token
-scopes: object_configuration, list_configuration, record_permission,
-list_entry, all read-write) and runs
-`python3 "<package>/capabilities/crm/tools/attio/bootstrap.py"`.
-It only adds what is missing. Then probe again.
+If step 3 or 4 finds anything missing, offer the two choices in `## Setup`.
+Then probe again.
 
 `bindings/crm.md` looks like:
 
@@ -292,3 +288,92 @@ It only adds what is missing. Then probe again.
     companies_object_id: 1da534c1-…
     people_object_id: 77bbcd3e-…
     lead_source_outbound: no
+
+## Setup
+
+The probe needs these objects, lists and attributes to exist. Create them
+yourself in Attio (Choice 1) or run the script (Choice 2). Then probe again.
+
+### Choice 1: create them yourself in Attio
+
+Attribute names below are the title and the API slug (Attio shows the slug
+when you create or edit an attribute). The slug must match exactly.
+
+**People (standard object).** Settings, then Objects, then People, then
+Attributes, then New attribute. Add three:
+
+1. Title `Sales Role`, slug `sp_role`, type Select, options
+   `decision-maker`, `influencer`, `gatekeeper`.
+2. Title `Contact Verified`, slug `sp_verified`, type Checkbox.
+3. Title `Contact Notes`, slug `sp_notes`, type Text.
+
+**Three lists.** Lists, then New list. For each one: parent object
+Companies, access: full access for the workspace. Then add its attributes
+in the list's settings.
+
+List `sales_partner_pipeline` (name `Sales Partner Pipeline`):
+
+| Title | Slug | Type | Options |
+|---|---|---|---|
+| Stage | `stage` | Status | New, Scored, Researched, Approach Drafted, Contacted, Replied, Call Scheduled, Call Held, Following Up, Won, Lost, Disqualified |
+| Stage Changed At | `stage_changed_at` | Timestamp | |
+| Stage Reason | `stage_reason` | Text | |
+| Score | `score` | Number | |
+| Score Breakdown | `score_breakdown` | Text | |
+| Industry | `industry` | Text | |
+| Size | `size` | Text | |
+| Location | `location` | Text | |
+| Address | `address` | Text | |
+| Phone | `phone` | Text | |
+| Email | `email` | Text | |
+| Source | `source` | Text | |
+| Source URL | `source_url` | Text | |
+| Next Action | `next_action` | Text | |
+| Next Action Due | `next_action_due` | Date | |
+| Do Not Contact | `do_not_contact` | Checkbox | |
+| Lead | `lead` | Record reference, allowed object Companies | |
+
+List `sales_partner_research` (name `Sales Partner Research`):
+
+| Title | Slug | Type | Options |
+|---|---|---|---|
+| Type | `type` | Select | news, funding, social, event, hire, listing, web_presence |
+| Summary | `summary` | Text | |
+| Source URL | `source_url` | Text | |
+| Date | `date` | Date | |
+| Hook | `hook` | Text | |
+| Lead | `lead` | Record reference, allowed object Companies | |
+
+List `sales_partner_outreach` (name `Sales Partner Outreach`):
+
+| Title | Slug | Type | Options |
+|---|---|---|---|
+| Channel | `channel` | Select | email, linkedin, call, other |
+| Direction | `direction` | Select | outbound, inbound |
+| Date | `date` | Date | |
+| Summary | `summary` | Text | |
+| Draft Body | `draft_body` | Text | |
+| Status | `status` | Select | draft, approved, sent, voided |
+| Outcome | `outcome` | Text | |
+| Contact | `contact` | Record reference, allowed object People | |
+| Lead | `lead` | Record reference, allowed object Companies | |
+
+Leave every attribute optional (not required, not unique, not multi-select).
+When you are done, tell the agent and it probes again.
+
+### Choice 2: run the script with an API key
+
+`bootstrap.py` creates everything in Choice 1 and only adds what is
+missing; it never deletes or renames anything.
+
+1. In Attio, create an API key (Settings, then Developers) with these
+   scopes, all read-write: `object_configuration`, `list_configuration`,
+   `record_permission`, `list_entry`.
+2. In your own terminal, set the key for that terminal only, and run the
+   script. Never paste the key into the chat or a file:
+
+       export ATTIO_API_KEY=...
+       python3 "<package>/capabilities/crm/tools/attio/bootstrap.py"
+
+   The environment variable the script reads is `ATTIO_API_KEY`.
+3. Tell the agent it is done, and it probes again.

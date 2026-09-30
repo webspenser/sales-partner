@@ -140,14 +140,14 @@ assert_contains "$SP/skills/setup/SKILL.md" '`interview-business`'
 
 echo "-- 1.0.1: hook points at AGENT.md; samples and context ownership"
 assert_contains "$SP/hooks/session-start.sh" 'Read the full instructions now, before anything else'
-assert_contains "$SP/README.md" 'Version 3.0.0.'
+assert_contains "$SP/README.md" 'Version 4.0.0.'
 assert_not_contains "$SP/skills/setup/SKILL.md" '<interview-skill>'
 assert_not_contains "$SP/skills/setup/SKILL.md" '<context-files>'
 assert_contains "$SP/skills/setup/SKILL.md" '`context/business-profile.md`, `context/icp.md`, `context/operating-config.md`'
 assert_contains "$SP/skills/interview-business/SKILL.md" 'into the instance'"'"'s `context/samples/`'
 assert_not_contains "$SP/skills/interview-business/SKILL.md" 'artifacts supplied into `samples/`'
 assert_contains "$SP/subagents/approacher.md" 'the instance'"'"'s `context/samples/` first, then the package'"'"'s `samples/`'
-echo "-- capabilities (Agent Standard 3.0)"
+echo "-- capabilities (Agent Standard 4.0)"
 assert_contains "$SP/capabilities/crm/contract.md" '## Invariants'
 assert_contains "$SP/capabilities/crm/contract.md" '- `draft_only` —'
 assert_contains "$SP/capabilities/crm/contract.md" '- `dnc_one_way` —'
@@ -213,11 +213,11 @@ for t in $(grep -oE 'airtable:[a-z_]+' "$SP/capabilities/crm/tools/airtable/usag
   in_allow "$SP/capabilities/crm/tools/airtable/guard.yaml" mcp__airtable__ "$t" && _report ok "Airtable $t allowed" || _report no "Airtable $t not in guard.yaml allow"
 done
 assert_contains "$SP/capabilities/crm/tools/airtable/usage.md" 'field_status'
-[ -f "$SP/migrations/3.0.0.md" ] && [ "$(ls "$SP/migrations")" = "3.0.0.md" ] && _report ok "migrations/ holds the 3.0.0 note" || _report no "migrations/ must hold the 3.0.0 note"
+[ -f "$SP/migrations/3.0.0.md" ] && [ -f "$SP/migrations/4.0.0.md" ] && [ "$(ls "$SP/migrations" | tr '\n' ' ')" = "3.0.0.md 4.0.0.md " ] && _report ok "migrations/ holds 3.0.0.md and 4.0.0.md" || _report no "migrations/ must hold 3.0.0.md and 4.0.0.md"
 
-echo "-- scheduled runs (Agent Standard 3.0)"
-assert_contains "$SP/agent.yaml" 'standard: "3.0"'
-assert_contains "$SP/agent.yaml" 'version: 3.0.0'
+echo "-- scheduled runs (Agent Standard 4.0)"
+assert_contains "$SP/agent.yaml" 'standard: "4.0"'
+assert_contains "$SP/agent.yaml" 'version: 4.0.0'
 assert_contains "$SP/agent.yaml" 'activity_digest: crm, email_drafts'
 assert_not_contains "$SP/context/operating-config.md" 'schedules:'
 assert_not_contains "$SP/context/operating-config.md" 'timezone:'

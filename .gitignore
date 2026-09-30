@@ -7,9 +7,9 @@
 CLAUDE.md
 GEMINI.md
 AGENTS.md
-!tools/CLAUDE.md
-!tools/GEMINI.md
-!tools/AGENTS.md
+!hosts/CLAUDE.md
+!hosts/GEMINI.md
+!hosts/AGENTS.md
 .claude/
 .gemini/
 

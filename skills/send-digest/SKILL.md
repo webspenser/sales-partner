@@ -170,6 +170,19 @@ a required input is missing, stop and report what is missing.
    from the digest. No window applied — this is every outbound draft
    outstanding right now, however old. Render the section heading with
    that count, e.g. `Awaiting approval (2)`.
+   - **Drafts on DNC leads.** `query_activities` returns each
+     Activity with its linked lead, so check that lead's
+     `Do Not Contact` (no extra read). Mark every draft whose lead is
+     Do Not Contact `⚠ DO NOT SEND — lead is Do Not Contact`, and list
+     those drafts first. This is report-only: write nothing and void
+     nothing — voiding stays with the operator.
+   - **Possible duplicate leads.** Across the leads this run already
+     reads (every lead linked to a draft, plus those returned for
+     Sections 2 to 5), list leads that share a normalized `domain` or
+     E.164 `phone` (normalized as in `capabilities/crm/contract.md`),
+     one line per group, as `Possible duplicate leads`. Include the line
+     only when there are any; omit it otherwise. Neither check changes
+     the count in the heading or the six-section structure.
 3. **Section 2 — Next actions due today.** Call CRM
    `query_by_stage(next_action_due_before: today, stage: omitted)` —
    omitting `stage` so leads at every stage are considered, not one

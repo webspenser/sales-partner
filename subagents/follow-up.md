@@ -123,12 +123,13 @@ action fields.
   permanently on the lead and calls CRM `update_activity` to void every
   pending (`draft` or `approved`) Activity for it — never left sitting
   in the operator's approval queue after the prospect has asked not to
-  be contacted. "Permanently" is mechanical, not aspirational:
-  `update_lead` may set `Do Not Contact` but rejects any attempt to
-  clear it, and `log_activity` rejects creating an Activity with
-  `direction: "outbound"` for a lead whose flag is set
-  (`capabilities/crm/contract.md`). So once this guardrail fires, no later call by
-  this contract or by any other can draft toward that lead again.
+  be contacted. The flag is permanent by mechanism: `update_lead` may
+  set `Do Not Contact` but the guard rejects any attempt to clear it
+  (`dnc_one_way`). Declining to draft toward that lead afterwards is an
+  instruction, not a mechanism: the guard cannot see the lead's flag.
+  It is held by this contract, the digest's DO NOT SEND check and the
+  Do Not Contact column in the operator's approval view
+  (`capabilities/crm/contract.md`).
 - Every question the prospect actually asked is answered before
   anything new is introduced in the draft.
 - Reaching `max_touches` moves the lead to `Lost` rather than drafting

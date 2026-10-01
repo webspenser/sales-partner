@@ -19,6 +19,13 @@ done
 printf '%s\n' 'agent: sales-partner' 'mode: plugin' 'bind_crm: attio' > "$W/attio/instance.yaml"
 out=$(python3 -B "$C" check "$W/attio" 2>&1); rc=$?
 [ "$rc" -eq 1 ] && printf '%s' "$out" | grep -qF 'email_drafts is not bound' && _report ok "digest refused without email binding" || _report no "unbound email (rc=$rc): $out"
+# approach needs only the CRM: schedulable with no email_drafts bound.
+mkdir -p "$W/crmonly"
+printf '%s\n' 'agent: sales-partner' 'mode: plugin' 'bind_crm: attio' > "$W/crmonly/instance.yaml"
+printf '%s\n' 'timezone: America/New_York' 'schedule_approach: "Tuesday 07:00"' > "$W/crmonly/schedules.yaml"
+out=$(python3 -B "$C" check "$W/crmonly" --repo acme/sales 2>&1); rc=$?
+[ "$rc" -eq 0 ] && _report ok "approach passes with only crm bound" || _report no "approach with only crm (rc=$rc): $out"
+grep -qx 'activity_approach: crm' agent.yaml && _report ok "approach declares crm only" || _report no "activity_approach is not exactly crm"
 for a in prospect prepare approach follow-up digest; do
   grep -q "^activity_$a:" agent.yaml && _report ok "activity $a declared" || _report no "activity $a missing"
 done

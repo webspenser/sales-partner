@@ -1,0 +1,7 @@
+# sales-partner agent guard policy: applies to every MCP call inside an
+# instance, whatever the server. Nothing this agent does sends, replies,
+# forwards, publishes or schedules a message; drafts go to the CRM or to
+# Gmail drafts.
+covers: [no_send]
+deny: ["*send*", "*reply*", "*forward*", "*publish*", "*schedule_message*",
+       "*cross_post*", "*posts_create*", "*bulk_upload_posts*", "*execute_write*"]

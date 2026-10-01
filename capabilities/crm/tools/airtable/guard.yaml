@@ -1,6 +1,6 @@
-# Airtable guard policy. Airtable writes name fields by ID, so the Status
-# and Do Not Contact rules need the IDs setup's probe records in
-# bindings/crm.md (field_status, field_do_not_contact).
+# Airtable guard policy. The Airtable connector keys fields by ID, so every
+# written key must be a field ID the probe recorded in bindings/crm.md
+# (bound_keys_only); the rules below match those IDs by field name.
 covers: [draft_only, dnc_one_way, no_delete]
 allow: [list_bases, search_bases, list_tables_for_base, get_table_schema,
         list_records_for_table, search_records, create_records_for_table,
@@ -14,11 +14,10 @@ writes:
     tools: [update_records_for_table]
     at: ["records[].fields"]
 unknown_writes: block
+bound_keys_only: true
 rules:
   - field: Status
-    binding_id: required
     create: [draft]
     update: [voided]
   - field: Do Not Contact
-    binding_id: required
     update: [true]

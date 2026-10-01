@@ -174,6 +174,9 @@ write nothing) exactly where the contract says the operation rejects.
   `stage_changed_at`. Read the Pipeline entry first. If
   `do_not_contact` is already `true`, reject any `fields` that sets it
   to `false`. Otherwise, one `attio:update-list-entry-by-id` call.
+  Write only the fields that change: an update that repeats unchanged
+  fields (for example `do_not_contact: false`) can be refused by the
+  guard.
 - **`log_activity`** — Reject `status` other than `draft`. If
   `direction` is `outbound`, read the Pipeline entry and reject if
   `do_not_contact` is `true`. Then call `attio:add-record-to-list` on

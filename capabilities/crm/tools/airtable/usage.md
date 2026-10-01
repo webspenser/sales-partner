@@ -255,6 +255,21 @@ operation reaches Airtable through these:
 - Updates (`update_lead`, `update_stage`, `update_activity`, and the
   update half of `upsert_contact`) use
   `airtable:update_records_for_table`.
+  Write only the fields that change: an update that repeats unchanged
+  fields (for example `Do Not Contact` unchecked) can be refused by the
+  guard.
+- Every write keys its fields by field ID. Get the table's ID and its
+  fields from `airtable:list_tables_for_base`, and
+  take each field ID from that table: names like `Lead` or `Email` repeat across tables. The
+  `field_` lines in `bindings/crm.md` (see Probe) are the guard's list of
+  IDs a write may use, across all four tables. Before the first Airtable
+  write in a session, if `bindings/crm.md` has no `field_` lines, run the
+  Probe first. If a write is refused with "is not a recorded field ID" or
+  "has not recorded any field IDs", run the Probe again, rewrite the
+  `field_` lines, and retry the write once; if it is refused again, stop
+  and tell the user. In a scheduled run, do not rewrite
+  `bindings/crm.md` (a scheduled run edits no instance files): stop and
+  report that the probe must be re-run in setup's tools step.
 
 ## Views
 
@@ -307,9 +322,11 @@ what they find to `bindings/crm.md` in the instance:
    holds the Leads, Contacts, Research, and Activities tables; ask the
    operator if more than one could. Record `base_id` and `base_name`.
 2. `airtable:list_tables_for_base` on that base — every table and
-   field named in this tool must exist with the listed type. Also
-   record `field_status: <field ID of Activities.Status>` and
-   `field_do_not_contact: <field ID of Leads."Do Not Contact">`.
+   field named in this tool must exist with the listed type. Record
+   every field of the four tables, from that one call, as
+   `field_<name>: <field ID>`: the name lowercased, with spaces and
+   hyphens as underscores (`Do Not Contact` → `field_do_not_contact`).
+   A name used in two tables gets two lines.
 
 Write each `field_` line as a plain line, `field_<name>: <ID>`, with
 nothing else on it: no bullet, no backticks or quotes, no trailing note.
@@ -321,6 +338,10 @@ base_id: appXXXXXXXXXXXXXX
 base_name: Sales
 field_status: fldXXXXXXXXXXXXXX
 field_do_not_contact: fldYYYYYYYYYYYYYY
+field_draft_body: fldZZZZZZZZZZZZZZ
+field_lead: fldAAAAAAAAAAAAAA
+field_lead: fldBBBBBBBBBBBBBB
+…
 ```
 
 `airtable:` means the connected Airtable server's tools, whatever
@@ -336,18 +357,19 @@ holds only the read tools (`list_bases`, `search_bases`,
 `search_records`) and the two record-write tools
 (`create_records_for_table`, `update_records_for_table`); every other
 tool is blocked, and any tool whose name contains `delete` is denied.
-Airtable writes name fields by ID, so the rules are checked against the
-field IDs the probe recorded in `bindings/crm.md`:
+Airtable writes name fields by ID, and every key in a write must be a
+field ID the probe recorded in `bindings/crm.md`; any other key is
+refused ("is not a recorded field ID"). A field added or recreated in
+Airtable gets a new ID, so it is refused until the probe runs again,
+which also means a recreated `Status` can't slip past its rule. With no
+`field_` lines recorded, every write is refused. The rules, checked
+against the recorded IDs:
 
 - `Status` may only be written as `draft` on create and as `voided` on
   update;
-- `Do Not Contact` may only be written as `true`.
-
-Every Airtable write stays blocked until the probe has recorded both
-IDs (`field_status` and `field_do_not_contact`) in `bindings/crm.md`.
-That includes lead creation (`create_lead`) and every other operation
-that writes, not only the ones that touch those two fields. If writes
-are refused, re-run setup's tools step so the probe records the IDs.
+- `Do Not Contact` may only be written as `true`;
+- `Draft Body` may be set on create and never changed after, so an
+  approved draft can't be rewritten.
 
 ## Setup
 

@@ -25,3 +25,5 @@ rules:
     forbid: true
   - field: hs_task_completion_date
     forbid: true
+  - field: hs_task_body
+    forbid: update

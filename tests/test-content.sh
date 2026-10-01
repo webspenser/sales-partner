@@ -247,7 +247,7 @@ done
 assert_contains "$SP/capabilities/crm/tools/airtable/usage.md" 'field_status'
 
 echo "-- scheduled runs"
-assert_contains "$SP/agent.yaml" 'standard: "4.0"'
+assert_contains "$SP/agent.yaml" 'standard: "5.0"'
 assert_contains "$SP/agent.yaml" 'activity_digest: crm, email_drafts'
 assert_contains "$SP/agent.yaml" 'activity_approach: crm'
 assert_not_contains "$SP/agent.yaml" 'activity_approach: crm, email_drafts'
@@ -286,4 +286,20 @@ assert_contains "$SP/subagents/follow-up.md" 'and `Following Up` only'
 assert_contains "$SP/subagents/follow-up.md" 'never with `stage`'
 assert_not_contains "$SP/subagents/follow-up.md" 'query_by_stage(idle_days:'
 assert_contains "$SP/AGENT.md" '`Contacted`/`Replied`/`Following Up` lead idle past cadence'
+echo "-- 5.0.0: void outcome Note, Airtable field IDs, changed fields only"
+HU="$SP/capabilities/crm/tools/hubspot/usage.md"; AU="$SP/capabilities/crm/tools/airtable/usage.md"
+assert_contains "$HU" 'Outcome for task <activity_id>:'
+assert_contains "$HU" 'are outcomes, not Research'
+assert_not_contains "$HU" 'body with Outcome: line'
+assert_not_contains "$HU" 'appends an `Outcome: <outcome>` line'
+assert_contains "$AU" 'every field of the four tables'
+assert_contains "$AU" 'is not a recorded field ID'
+assert_contains "$AU" 'retry the write once'
+assert_not_contains "$AU" 'binding_id'
+assert_not_contains "$AU" 'stays blocked until the probe has recorded both'
+for f in "$SP"/capabilities/crm/tools/*/usage.md; do assert_contains "$f" 'Write only the fields that change'; done
+assert_not_contains "$SP/capabilities/email_drafts/tools/gmail/usage.md" 'add its names to'
+assert_contains "$SP/capabilities/email_drafts/tools/gmail/usage.md" 'matches names by suffix'
+assert_contains "$AU" 'In a scheduled run, do not rewrite'
+assert_contains "$AU" 'take each field ID from that table'
 finish

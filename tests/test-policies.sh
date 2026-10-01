@@ -15,6 +15,36 @@ for p in capabilities/*/tools/*/guard.yaml; do
   python3 -B "$E" --check "$p" >/dev/null && _report ok "$p parses" || _report no "$p does not parse"
 done
 
+echo "-- agent policy"
+AG=guard.yaml
+python3 -B "$E" --check --agent "$AG" >/dev/null 2>&1 && _report ok "agent policy parses" || _report no "agent policy does not parse"
+acheck() { # acheck <rc> <label> <tool_name>
+  local out rc
+  out=$(printf '{"tool_name":"%s","tool_input":{}}' "$3" | python3 -B "$E" --agent "$AG" "sales-partner agent guard policy" 2>&1); rc=$?
+  if [ "$rc" -eq "$1" ]; then _report ok "$2"; else _report no "$2 (rc=$rc): $out"; fi
+}
+for t in mcp__claude_ai_Gmail__send_message mcp__claude_ai_Gmail__reply mcp__claude_ai_Gmail__forward \
+         mcp__claude_ai_Slack__slack_send_message mcp__claude_ai_Slack__slack_schedule_message \
+         mcp__claude_ai_Zernio__posts_publish_now mcp__claude_ai_Zernio__posts_create mcp__claude_ai_Zernio__posts_cross_post \
+         mcp__claude_ai_Zernio__posts_bulk_upload_posts mcp__claude_ai_Loops__execute_write \
+         mcp__claude_ai_Zernio__comments_reply_to_inbox_post mcp__claude_ai_ClickUp__clickup_send_chat_message \
+         mcp__claude_ai_Zernio__call_tool mcp__claude_ai_Zernio__posts_retry mcp__claude_ai_Zernio__posts_retry_all_failed \
+         mcp__claude_ai_Google_Calendar__create_event mcp__claude_ai_Google_Calendar__update_event \
+         mcp__claude_ai_Google_Calendar__respond_to_event; do
+  acheck 2 "denied: $t" "$t"
+done
+for t in mcp__claude_ai_Gmail__create_draft mcp__claude_ai_Gmail__list_drafts mcp__claude_ai_Gmail__search_threads \
+         mcp__claude_ai_Gmail__get_thread mcp__claude_ai_Attio__list-comment-replies mcp__claude_ai_Attio__list-records \
+         mcp__claude_ai_Beehiiv__list_publications mcp__claude_ai_Beehiiv__get_publication \
+         mcp__claude_ai_HubSpot__manage_crm_objects mcp__claude_ai_HubSpot__search_crm_objects \
+         mcp__claude_ai_Airtable__update_records_for_table mcp__claude_ai_Slack__slack_read_channel \
+         mcp__claude_ai_Slack__slack_read_thread mcp__claude_ai_ClickUp__clickup_get_chat_message_replies \
+         mcp__claude_ai_Zernio__posts_list mcp__claude_ai_Loops__execute mcp__claude_ai_Notion__notion-search \
+         mcp__claude_ai_Google_Calendar__list_events mcp__claude_ai_Google_Calendar__get_event \
+         mcp__claude_ai_Google_Calendar__search_events mcp__claude_ai_Zernio__search_tools; do
+  acheck 0 "read or CRM write passes: $t" "$t"
+done
+
 echo "-- Attio"
 AT=capabilities/crm/tools/attio/guard.yaml; P=mcp__claude_ai_Attio__
 L='"list":"sales_partner_outreach","parent_object":"companies","parent_record_id":"00000000-0000-0000-0000-000000000001"'
@@ -44,7 +74,12 @@ check 2 "delete refused"            $AT ${P}delete-comment '{}' "is denied"
 check 2 "merge refused"             $AT ${P}merge-records '{}' "is denied"
 check 2 "unlisted tool refused"     $AT ${P}create-comment '{}' "is not in the allow list"
 check 0 "read tool allowed"         $AT ${P}list-records-in-list '{"list":"sales_partner_outreach"}'
-check 0 "note without values"       $AT ${P}create-note '{"title":"x","content":"y"}'
+check 2 "create-note not allowed"   $AT ${P}create-note '{"title":"x","content":"y"}' "is not in the allow list"
+check 2 "create-task not allowed"   $AT ${P}create-task '{"content":"x"}' "is not in the allow list"
+check 2 "update-task not allowed"   $AT ${P}update-task '{"task_id":"x"}' "is not in the allow list"
+check 0 "create with draft_body"    $AT ${P}add-record-to-list "{$L,\"entry_values\":{\"status\":\"draft\",\"draft_body\":\"Hi\"}}"
+check 2 "draft_body rewritten"      $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"draft_body\":\"new\"}}" "draft_body may not be changed after create"
+check 2 "Draft Body spelled out"    $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"Draft Body\":\"new\"}}" "may not be changed after create"
 out=$(printf '{not json' | python3 -B "$E" "$AT" - x 2>&1); rc=$?
 [ "$rc" -eq 2 ] && _report ok "malformed JSON blocks" || _report no "malformed JSON (rc=$rc)"
 
@@ -57,20 +92,29 @@ check 2 "reply refused"             $GM ${G}reply_to_thread '{}' "is denied"
 check 2 "forward refused"           $GM ${G}forward_message '{}' "is denied"
 check 2 "trash not allowed"         $GM ${G}trash_thread '{}' "is not in the allow list"
 check 2 "new unlisted tool"         $GM ${G}schedule_email '{}' "is not in the allow list"
+check 0 "prefixed create_draft"     $GM mcp__gmail_server__gmail_create_draft '{}'
+check 0 "prefixed search_threads"   $GM mcp__gmail_server__gmail_search_threads '{}'
+check 2 "prefixed send still denied" $GM mcp__gmail_server__gmail_send_message '{}' "is denied"
+check 2 "suffix glob is not a substring" $GM ${G}create_draft_and_send '{}'
 
 echo "-- Airtable"
 AR=capabilities/crm/tools/airtable/guard.yaml; A=mcp__claude_ai_Airtable__
-printf '%s\n' '# CRM binding — Airtable' 'base_id: appAAAAAAAAAAAAAA' 'field_status: fldSSSSSSSSSSSSSS' 'field_do_not_contact: fldDDDDDDDDDDDDDD' > "$W/b.md"
+printf '%s\n' '# CRM binding — Airtable' 'base_id: appAAAAAAAAAAAAAA' 'field_status: fldSSSSSSSSSSSSSS' 'field_do_not_contact: fldDDDDDDDDDDDDDD' \
+  'field_draft_body: fldBBBBBBBBBBBBBB' 'field_lead: fldL1LLLLLLLLLLLLL' 'field_lead: fldL2LLLLLLLLLLLLL' > "$W/b.md"
 B='"baseId":"appAAAAAAAAAAAAAA","tableId":"tblTTTTTTTTTTTTTT"'
 check 0 "create draft by ID"        $AR ${A}create_records_for_table "{$B,\"records\":[{\"fields\":{\"fldSSSSSSSSSSSSSS\":\"draft\"}}]}" "" "$W/b.md"
 check 2 "create approved by ID"     $AR ${A}create_records_for_table "{$B,\"records\":[{\"fields\":{\"fldSSSSSSSSSSSSSS\":\"approved\"}}]}" "Status may only be written as draft on create" "$W/b.md"
-check 2 "update sent by name"       $AR ${A}update_records_for_table "{$B,\"records\":[{\"id\":\"recRRRRRRRRRRRRRR\",\"fields\":{\"Status\":\"sent\"}}]}" "" "$W/b.md"
+check 2 "update sent by name"       $AR ${A}update_records_for_table "{$B,\"records\":[{\"id\":\"recRRRRRRRRRRRRRR\",\"fields\":{\"Status\":\"sent\"}}]}" "Status is not a recorded field ID" "$W/b.md"
+check 2 "unrecorded field ID"       $AR ${A}update_records_for_table "{$B,\"records\":[{\"id\":\"recRRRRRRRRRRRRRR\",\"fields\":{\"fldOOOOOOOOOOOOOO\":\"x\"}}]}" "fldOOOOOOOOOOOOOO is not a recorded field ID" "$W/b.md"
+check 0 "repeated name: both IDs recorded" $AR ${A}create_records_for_table "{$B,\"records\":[{\"fields\":{\"fldL1LLLLLLLLLLLLL\":[\"recA\"]}},{\"fields\":{\"fldL2LLLLLLLLLLLLL\":[\"recB\"]}}]}" "" "$W/b.md"
 check 0 "update voided by ID"       $AR ${A}update_records_for_table "{$B,\"records\":[{\"id\":\"recRRRRRRRRRRRRRR\",\"fields\":{\"fldSSSSSSSSSSSSSS\":\"voided\"}}]}" "" "$W/b.md"
 check 2 "clear DNC by ID"           $AR ${A}update_records_for_table "{$B,\"records\":[{\"id\":\"recRRRRRRRRRRRRRR\",\"fields\":{\"fldDDDDDDDDDDDDDD\":false}}]}" "Do Not Contact may only be written as true" "$W/b.md"
-check 2 "write without field IDs"   $AR ${A}create_records_for_table "{$B,\"records\":[{\"fields\":{\"fldXXXXXXXXXXXXXX\":\"x\"}}]}" "has not recorded field_status"
+check 2 "write without field IDs"   $AR ${A}create_records_for_table "{$B,\"records\":[{\"fields\":{\"fldXXXXXXXXXXXXXX\":\"x\"}}]}" "has not recorded any field IDs"
 check 2 "delete refused"            $AR ${A}delete_records_for_table "{$B}" "is denied"
 check 2 "schema change refused"     $AR ${A}create_field "{$B}" "is not in the allow list"
 check 0 "read allowed"              $AR ${A}list_records_for_table "{$B}"
+check 0 "create draft with body"    $AR ${A}create_records_for_table "{$B,\"records\":[{\"fields\":{\"fldSSSSSSSSSSSSSS\":\"draft\",\"fldBBBBBBBBBBBBBB\":\"Hi\"}}]}" "" "$W/b.md"
+check 2 "Draft Body rewritten"      $AR ${A}update_records_for_table "{$B,\"records\":[{\"id\":\"recRRRRRRRRRRRRRR\",\"fields\":{\"fldBBBBBBBBBBBBBB\":\"new\"}}]}" "Draft Body may not be changed after create" "$W/b.md"
 
 echo "-- HubSpot"
 HS=capabilities/crm/tools/hubspot/guard.yaml; H=mcp__claude_ai_HubSpot__
@@ -80,7 +124,10 @@ CU='{"objectType":"companies","objectId":202,"properties":{"sp_do_not_contact":%
 check 0 "create task NOT_STARTED"   $HS ${H}manage_crm_objects "{\"createRequest\":{\"objects\":[$(printf "$TC" NOT_STARTED)]}}"
 check 2 "create task COMPLETED"     $HS ${H}manage_crm_objects "{\"createRequest\":{\"objects\":[$(printf "$TC" COMPLETED)]}}" "hs_task_status may only be written as NOT_STARTED on create"
 check 2 "create task IN_PROGRESS"   $HS ${H}manage_crm_objects "{\"createRequest\":{\"objects\":[$(printf "$TC" IN_PROGRESS)]}}" "NOT_STARTED on create"
-check 0 "update task DEFERRED"      $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$TU" '"hs_task_status":"DEFERRED","hs_task_body":"Direction: outbound\\nOutcome: dup"')]}}"
+check 0 "update task DEFERRED"      $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$TU" '"hs_task_status":"DEFERRED"')]}}"
+check 2 "void rewrites the body"    $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$TU" '"hs_task_status":"DEFERRED","hs_task_body":"Direction: outbound\\nOutcome: dup"')]}}" "hs_task_body may not be changed after create"
+check 0 "task created with body"    $HS ${H}manage_crm_objects '{"createRequest":{"objects":[{"objectType":"tasks","properties":{"hs_task_status":"NOT_STARTED","hs_task_body":"<p>x</p>"}}]}}'
+check 0 "outcome note created"      $HS ${H}manage_crm_objects '{"createRequest":{"objects":[{"objectType":"notes","properties":{"hs_note_body":"<p>Outcome for task 101: dup</p>","hs_timestamp":"2026-10-01T00:00:00Z"},"associations":[{"targetObjectType":"COMPANY","targetObjectId":202}]}]}}'
 check 2 "update task COMPLETED"     $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$TU" '"hs_task_status":"COMPLETED"')]}}" "hs_task_status may only be written as DEFERRED on update"
 check 2 "update task IN_PROGRESS"   $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$TU" '"hs_task_status":"IN_PROGRESS"')]}}" "DEFERRED on update"
 check 2 "update task WAITING"       $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$TU" '"hs_task_status":"WAITING"')]}}" "DEFERRED on update"

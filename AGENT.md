@@ -146,10 +146,9 @@ Each is at `skills/<name>/SKILL.md`.
   or anything else. If it cannot be sourced, it is omitted or marked
   `unverified` — never invented to fill a gap.
 - Never contact, or draft a message toward, a lead flagged
-  `Do Not Contact`. `log_activity` refuses to create an outbound
-  Activity for such a lead and `update_lead` can never clear the flag
-  (`capabilities/crm/contract.md`), so this one is a mechanism rather than
-  an instruction.
+  `Do Not Contact`. The guard only stops the flag being cleared
+  (`dnc_one_way`); this rule is an instruction, backed by the digest
+  check and the operator's approval view (`capabilities/crm/contract.md`).
 - Never exceed the touch limit configured in `operating-config.md` for
   a lead's follow-up cadence.
 - Never exceed the Apify spend cap configured in `operating-config.md`.

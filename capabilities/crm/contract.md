@@ -22,7 +22,7 @@ behavior only; it names no Airtable table or field.
 | `get_lead` | `lead_id` | full lead record with linked Contacts, Research, Activities | Missing id is an error, not an empty record |
 | `update_stage` | `lead_id, stage, reason` | updated lead, with `stage_changed_at` set to the moment of this call | Rejects any stage outside the enumerated list |
 | `update_lead` | `lead_id, fields` | updated lead | Rejects any attempt to write `stage` through this operation — stage changes go only through `update_stage`. May set `Do Not Contact` to true; rejects any attempt to clear it once true |
-| `log_activity` | `lead_id, contact_id, channel, direction, summary, draft_body, status, outcome` | `activity_id` of the newly created row | Create-only — takes no `activity_id` and never touches an existing row. Accepts only `status: "draft"`; rejects `approved`, `sent`, and `voided` outright and unconditionally. Rejects `direction: "outbound"` for a lead whose `Do Not Contact` is true |
+| `log_activity` | `lead_id, contact_id, channel, direction, summary, draft_body, status, outcome` | `activity_id` of the newly created row | Create-only — takes no `activity_id` and never touches an existing row. Accepts only `status: "draft"`; rejects `approved`, `sent`, and `voided` outright and unconditionally. The agent rejects `direction: "outbound"` for a lead whose `Do Not Contact` is true — an instruction the guard does not enforce |
 | `update_activity` | `activity_id, status, outcome` | updated activity | Accepts only `status: "voided"` — rejects `draft`, `approved`, and `sent` outright and unconditionally, regardless of the record's current status; this is the only status change this operation can ever perform |
 | `log_research` | `lead_id, type, summary, source_url, date, hook` | `research_id` | Rejects a write with an empty `source_url` or an empty `hook` |
 | `upsert_contact` | `lead_id, name, title, email, phone, linkedin_url, role, verified, notes` | `contact_id` | Matches an existing Contact on `email` when present, otherwise on `name` plus `title`, and updates it rather than creating a duplicate; rejects a `role` outside decision-maker / influencer / gatekeeper |
@@ -134,19 +134,17 @@ behavior only; it names no Airtable table or field.
   to an agent can write `approved` or `sent` at all — see the Approval
   invariant below — not because agents are instructed to wait.
 
-  `log_activity` carries a second hard rule alongside its draft-only
-  one, enforced the same way and on every call: **it rejects creating
-  an Activity with `direction: "outbound"` for a lead whose
-  `Do Not Contact` is true.** The check is on the lead the Activity
-  would link to, not on the caller's intent, so it holds regardless of
-  which sub-agent calls it or what it believes about the lead. Inbound
+  `log_activity` carries a second rule alongside its draft-only one,
+  but **it is an instruction, not a mechanism**: the agent must refuse
+  to create an Activity with `direction: "outbound"` for a lead whose
+  `Do Not Contact` is true. The guard checks one call at a time and
+  cannot see the lead's flag, so it does not enforce this. The rule is
+  held by the agent's instructions (`AGENT.md`), the digest's check
+  that flags any outbound draft on a Do Not Contact lead, and the
+  Do Not Contact column in the operator's approval view. What the guard
+  does enforce is `dnc_one_way`: the flag can never be cleared. Inbound
   Activities are unaffected — a reply or a debrief on an opted-out lead
-  is still recordable history — and it is only the creation of new
-  outbound contact that is refused. Paired with `update_lead`'s
-  one-way flag above, this is what turns "never draft a message toward
-  a lead flagged `Do Not Contact`" (`AGENT.md`) from an instruction
-  into a mechanism: the flag cannot be cleared, and while it is set the
-  only operation that can mint an outbound draft refuses to.
+  is still recordable history.
 - **`update_activity`** is the only operation that can change an
   existing Activity after `log_activity` created it, and it exists for
   exactly one purpose: voiding. It takes the `activity_id`
@@ -274,21 +272,20 @@ be breaking before they break it:
   values except as a value `log_activity` and `update_activity` both
   explicitly reject.
 
-The opt-out guarantee sits here too, because it is the same kind of
-guarantee — a property of the operation set, not of an agent's
-behavior:
+The opt-out has one mechanism and one instruction:
 
-- `update_lead` may set `Do Not Contact` to true and can never clear
-  it — a write that would move the flag from true back to false is
-  rejected, and no other operation writes the field at all.
-- `log_activity` rejects creating an Activity with
-  `direction: "outbound"` for a lead whose `Do Not Contact` is true,
-  and it is the only operation that can create an Activity.
-- **Therefore: no sequence of the eleven operations in this contract
-  produces an outbound draft for a do-not-contact lead.** Provable the
-  same way as the `sent` invariant above — the only path to a new
-  outbound Activity is `log_activity`, it refuses while the flag is
-  set, and nothing available to an agent can unset the flag.
+- **Mechanism (`dnc_one_way`).** `update_lead` may set `Do Not Contact`
+  to true and can never clear it — a write that would move the flag
+  from true back to false is rejected, and no other operation writes
+  the field at all.
+- **Instruction, not a mechanism.** `log_activity` must not create an
+  Activity with `direction: "outbound"` for a lead whose
+  `Do Not Contact` is true. The guard cannot see the lead's flag when
+  it checks a single call, so this is not enforced, and re-creating a
+  lead can also get around it. It is held by the agent's instructions,
+  the digest check (outbound drafts on Do Not Contact leads, and
+  duplicate leads) and the Do Not Contact column in the operator's
+  approval view.
 
 Any change that gives an operation a new way to write `Status` on an
 Activity — a new argument, a relaxed check, a new operation — must be
@@ -296,11 +293,10 @@ checked against this invariant before it ships. If the change would
 let any of the eleven operations write `approved` or `sent`, the
 invariant is broken and the guardrail "nothing sends without operator
 approval" (`AGENT.md`) stops being a mechanism and goes back to being
-an unenforced instruction. The same test applies to the opt-out half:
-any change that would let an operation clear `Do Not Contact`, or let
-`log_activity` create an outbound Activity for a lead carrying it,
-breaks that invariant and demotes "never draft a message toward a lead
-flagged `Do Not Contact`" to an instruction as well.
+an unenforced instruction. The same test applies to `dnc_one_way`:
+any change that would let an operation clear `Do Not Contact` breaks
+that invariant. "Never draft a message toward a lead flagged
+`Do Not Contact`" is already an instruction, not a mechanism.
 
 ## Invariants
 

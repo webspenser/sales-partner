@@ -249,6 +249,11 @@ assert_contains "$SP/capabilities/crm/tools/airtable/usage.md" 'field_status'
 echo "-- scheduled runs"
 assert_contains "$SP/agent.yaml" 'standard: "4.0"'
 assert_contains "$SP/agent.yaml" 'activity_digest: crm, email_drafts'
+assert_contains "$SP/agent.yaml" 'activity_approach: crm'
+assert_not_contains "$SP/agent.yaml" 'activity_approach: crm, email_drafts'
+assert_contains "$SP/skills/send-digest/SKILL.md" 'DO NOT SEND — lead is Do Not Contact'
+assert_contains "$SP/skills/send-digest/SKILL.md" 'Possible duplicate leads'
+assert_contains "$SP/AGENT.md" 'this rule is an instruction'
 assert_not_contains "$SP/context/operating-config.md" 'schedules:'
 assert_not_contains "$SP/context/operating-config.md" 'timezone:'
 assert_not_contains "$SP/context/operating-config.md" 'cron + headless CLI'
@@ -259,7 +264,7 @@ assert_contains "$SP/AGENT.md" 'schedules.yaml'
 assert_contains "$SP/AGENT.md" 'unattended'
 [ -f "$SP/skills/schedule/SKILL.md" ] && _report ok "schedule skill present" || _report no "schedule skill missing"
 
-echo "-- 4.0.3: AGENT.md inline size, exact Stalled rule"
+echo "-- 4.0.4: AGENT.md inline size, exact Stalled rule"
 [ "$(wc -c < "$SP/AGENT.md" | tr -d ' ')" -le 9000 ] && _report ok "AGENT.md fits the 9000-byte inline limit" || _report no "AGENT.md is over 9000 bytes; the hook will not inline it"
 assert_contains "$SP/capabilities/crm/contract.md" '## Stage transitions'
 assert_contains "$SP/capabilities/crm/contract.md" '| `Approach Drafted` | Approacher logs the first-touch Activity at `status: draft` |'

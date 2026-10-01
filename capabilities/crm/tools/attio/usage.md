@@ -223,7 +223,7 @@ the lead's Created Time.
 ## Approval invariant under Attio
 
 Attio's `update-list-entry-by-id` can write any value to any
-attribute, so the contract's guarantees are enforced by mechanism:
+attribute, so the contract's guarantees are enforced by mechanism (approval and `dnc_one_way` only):
 
 1. **`guard.yaml` in this folder**, enforced by the agent's guard policy
    engine before every Attio call inside an instance (the agent's
@@ -251,7 +251,10 @@ views.
   grouped by `stage`.
 - **Awaiting Approval** — on `sales_partner_outreach`: a table filtered
   on `status` is `draft` **and** `direction` is `outbound`, sorted by
-  `date`. This is the whole review queue. To approve a draft, edit
+  `date`. Show the lead's Do Not Contact flag in this view: add the
+  `do_not_contact` attribute of the linked Pipeline entry as a visible
+  column, so a draft on an opted-out lead is obvious before you
+  approve it. This is the whole review queue. To approve a draft, edit
   `draft_body` if needed, set `status` to `approved`, send it yourself,
   then set it to `sent`.
 - **Research Queue** — on `sales_partner_pipeline`: filtered on `stage`

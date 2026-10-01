@@ -82,11 +82,13 @@ record. `update_stage` likewise remains the only operation that
 **`Do Not Contact` is a one-way flag.** `update_lead` may check it and
 rejects any write that would uncheck it once checked; no other
 operation writes the field at all, so nothing an agent can call
-restores contactability. And `log_activity` rejects creating an
-Activity with `Direction = outbound` for a Lead whose `Do Not Contact`
-is checked, so an opted-out Lead cannot acquire a new outbound draft
-through any operation this tool maps — the same guard-policy
-enforcement as the approval guarantee, applied to the opt-out.
+restores contactability; the guard enforces this (`dnc_one_way`). The
+rule that `log_activity` must not create an Activity with
+`Direction = outbound` for a Lead whose `Do Not Contact` is checked is
+an instruction, not a mechanism: the guard checks one call at a time
+and cannot see the Lead's flag. It is held by the agent's instructions,
+the digest check and the Do Not Contact column in the **Awaiting
+Approval** view below.
 
 ### Contacts
 
@@ -162,6 +164,7 @@ convention.
 | `Outcome` | text |
 | `Lead` | link to Leads |
 | `Contact` | link to Contacts |
+| `Lead Do Not Contact` | lookup of `Do Not Contact` from `Lead`; set up by hand, never written |
 
 **Design principle: drafts are Activities, not a separate table.** A
 draft outreach message is an Activities row with `Status = draft` and
@@ -206,9 +209,9 @@ can never reach `sent` after the prospect has asked not to be
 contacted. Voiding handles the messages already queued; the matching
 rule on the creation side is that **`log_activity` refuses to create an
 Activity with `Direction = outbound` for a Lead whose `Do Not Contact`
-is checked** — so once the flag is set, no new outbound draft can be
-minted for that Lead either, and because `update_lead` can never
-uncheck the flag, that refusal is permanent. Inbound Activities are
+is checked**. That rule is an instruction the guard does not enforce;
+because `update_lead` can never uncheck the flag (`dnc_one_way`), it
+holds for as long as the agent follows it. Inbound Activities are
 unaffected: a reply or a call debrief on an opted-out Lead is still
 recordable history.
 
@@ -277,7 +280,10 @@ disagree about what counts as "awaiting approval," "due today," or
   `Direction = outbound` half of the filter is what keeps inbound
   replies and call debriefs, which also land at `Status = draft`, out
   of a queue that exists specifically for decisions the operator still
-  has to make.
+  has to make. Show the Lead's `Do Not Contact` as a column: add a
+  lookup field on Activities that pulls `Do Not Contact` from the
+  linked Lead, and make it visible in this view, so a draft on an
+  opted-out Lead is obvious before you approve it.
 - **Research Queue** — Leads where `Stage = Scored`, sorted by Score
   descending. What the Preparer works through next, highest-score
   first.
@@ -413,6 +419,7 @@ verbatim, so match the spelling and capitalization exactly.
    | `Outcome` | Single line text | |
    | `Lead` | Link to another record | table `Leads` |
    | `Contact` | Link to another record | table `Contacts` |
+   | `Lead Do Not Contact` | Lookup | `Do Not Contact` from `Lead`; for the Awaiting Approval view, never written |
 
 6. Create the four views from the Views section above (Awaiting Approval,
    Research Queue, Due Today, Stalled). They are for you, not for the agent.

@@ -355,7 +355,7 @@ Created Time.
 ## Approval invariant under HubSpot
 
 `manage_crm_objects` can write any value to any property, so the
-contract's guarantees are enforced by mechanism:
+contract's guarantees are enforced by mechanism (approval and `dnc_one_way` only):
 
 1. **`guard.yaml` in this folder**, enforced by the agent's guard
    policy engine before every HubSpot call inside an instance:
@@ -391,7 +391,10 @@ Create these once in HubSpot. The connector can't create views.
 
 - **Awaiting Approval** — the approval queue. A Tasks view filtered on
   status is Not started **and** priority is High (outbound), sorted by
-  due date. To approve a draft, edit the task notes if needed and move
+  due date. A Tasks view can't show a company property, so before
+  approving a draft, open the associated company and check
+  `Do Not Contact` (`sp_do_not_contact`); the digest's
+  `⚠ DO NOT SEND` marker covers this case too. To approve a draft, edit the task notes if needed and move
   it to In progress (or Waiting); send it yourself, then mark it
   Completed. Deferred tasks are voided drafts. If you change a task's
   priority by hand, it only moves between views; nothing is sent.

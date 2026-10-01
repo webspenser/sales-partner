@@ -73,11 +73,13 @@ tone: "[three adjectives from the interview]"
   phone opener (`skills/write-call-opener/SKILL.md`) for a lead with a
   sourced phone number; the operator places the call. A call counts as
   one touch toward `max_touches`.
-- **`follow_up_cadence_days`** — the number of idle days after which a
-  `Contacted`, `Replied`, `Call Scheduled`, `Call Held`, or
-  `Following Up` lead is considered stalled (idle age per
-  `query_by_stage` in `capabilities/crm/contract.md`)
-  and due for a follow-up draft or a nudge; also the interval the
+- **`follow_up_cadence_days`** — the idle days (idle age per
+  `query_by_stage` in `capabilities/crm/contract.md`) after which a
+  lead at `Contacted`, `Replied`, `Call Scheduled`, `Call Held`, or
+  `Following Up` counts as stalled in the digest. A follow-up draft is
+  due only for a stalled lead at `Contacted`, `Replied`, or
+  `Following Up`; `Call Scheduled` and `Call Held` belong to the
+  sales-call-specialist. It is also the interval the
   **Stalled** view of the bound CRM tool (for Airtable, `capabilities/crm/tools/airtable/usage.md`) is built against.
 - **`max_touches`** — the total outbound touch limit per lead across the
   whole pipeline. Reaching it without a positive outcome moves the lead

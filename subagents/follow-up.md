@@ -20,11 +20,15 @@ read rather than waiting to be told:
   only those that carry an `Outcome`. `query_activities` is a read
   operation, so listing it changes nothing about this contract's
   no-send property.
-- **A lead idle longer than `follow_up_cadence_days`** (from
-  `operating-config.md`) since its last Activity — found via CRM
-  `query_by_stage(idle_days: follow_up_cadence_days)`, the same
-  idle-age rule `send-digest`'s Stalled section uses, rather than this
-  contract scanning every stage's leads for staleness on its own.
+- **A `Contacted`, `Replied` or `Following Up` lead idle longer than
+  `follow_up_cadence_days`** (from `operating-config.md`) — found via
+  one CRM `query_by_stage(stage: <s>, idle_days:
+  follow_up_cadence_days)` call per stage, for `Contacted`, `Replied`
+  and `Following Up` only, with the results merged; never with `stage`
+  omitted. Idle age is the contract's `max(last Activity date, Stage
+  Changed At)` rule. Pre-outreach and terminal leads are never picked
+  up, and `Call Scheduled` / `Call Held` belong to the
+  sales-call-specialist, not to this contract.
 
 ## Inputs
 - The lead's last Activity — `Summary`, `Outcome`, and prior
@@ -107,7 +111,10 @@ other role is invoked directly.
 
 ## Inline fallback
 Runs as the fifth sequential phase on a host without sub-agent dispatch:
-pull idle or outcome-logged leads directly from the CRM, draft the next
+pull outcome-logged leads, and idle leads via one `query_by_stage(stage:
+<s>, idle_days: follow_up_cadence_days)` call per stage for
+`Contacted`, `Replied` and `Following Up` only (never with `stage`
+omitted), directly from the CRM, draft the next
 touch or close out the lead in the same context, and set the next
 action fields.
 

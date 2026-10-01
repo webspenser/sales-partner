@@ -234,9 +234,10 @@ a required input is missing, stop and report what is missing.
    once for each of those five stages — never with `stage` omitted —
    and merge the results. The same CRM data always gives the same
    count. List each returned lead, its `Stage`, and the date of its
-   last Activity. No anchor window applied — staleness is measured
-   against *now*, every run, independent of when the last digest
-   fired. Render the section heading with the count of leads
+   last Activity, or `no Activity (stage changed <Stage Changed At>)`
+   for a lead with no Activity. No anchor window applied — staleness
+   is measured against *now*, every run, independent of when the last
+   digest fired. Render the section heading with the count of leads
    returned, e.g. `Stalled (2)`.
 6. **Section 5 — Movement.** Call `query_by_stage` once for each stage
    that signals movement worth reporting — at minimum `Won`, `Lost`,

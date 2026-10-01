@@ -26,7 +26,7 @@ reviewed by the operator before it goes out.
   `capabilities/crm/tools/`, reached only through the eleven operations
   in `capabilities/crm/contract.md`.
 - Apify token — funds the scrapers named in `prospecting_sources` and
-  the Preparer's research scrapers.
+  the Preparer's scrapers.
 - Email drafts (`capabilities/email_drafts/`, bound as
   `bind_email_drafts`): `create_draft` and `search_threads`. Its tool
   blocks every send tool; sending is an operator action. The
@@ -106,11 +106,11 @@ input it needs is missing.
 ## Sub-agents
 | Role | When to use | Contract |
 |---|---|---|
-| Prospector | Scheduled run, or leads at `New`/`Scored` below the target in `operating-config.md` | `subagents/prospector.md` |
+| Prospector | Scheduled run, or leads at `New`/`Scored` below the `operating-config.md` target | `subagents/prospector.md` |
 | Preparer | `Scored`, score ≥ `research_threshold`, within the research quota | `subagents/preparer.md` |
 | Approacher | `Researched`, revised score ≥ `approach_threshold` | `subagents/approacher.md` |
-| Sales call specialist | `Call Scheduled` (prep), on request during a call, `Call Held` (debrief) | `subagents/sales-call-specialist.md` |
-| Follow-up | An Activity logged with an outcome, or a lead idle past cadence | `subagents/follow-up.md` |
+| Sales call specialist | `Call Scheduled` (prep), live call on request, `Call Held` (debrief) | `subagents/sales-call-specialist.md` |
+| Follow-up | An Activity logged with an outcome, or a `Contacted`/`Replied`/`Following Up` lead idle past cadence | `subagents/follow-up.md` |
 
 ## Skills
 Each is at `skills/<name>/SKILL.md`.
@@ -123,7 +123,7 @@ Each is at `skills/<name>/SKILL.md`.
 | `find-decision-makers` | Company known, contacts unknown |
 | `write-cold-email` | Email chosen as the outbound channel |
 | `write-linkedin-touch` | LinkedIn chosen as the outbound channel |
-| `write-call-opener` | Call chosen as the channel, first touch or follow-up |
+| `write-call-opener` | Call chosen, first touch or follow-up |
 | `prepare-sales-call` | A call is scheduled |
 | `handle-objections` | An objection surfaces, before or during a call |
 | `run-live-call-script` | A call is in progress |

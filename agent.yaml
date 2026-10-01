@@ -1,5 +1,5 @@
 name: sales-partner
-version: 4.0.0
+version: 4.0.1
 description: Interviews a business, then runs a five-stage lead pipeline — prospect, research, approach, sales call, follow-up — over a CRM
 standard: "4.0"
 capabilities: crm, email_drafts

@@ -140,7 +140,8 @@ assert_contains "$SP/skills/setup/SKILL.md" '`interview-business`'
 
 echo "-- 1.0.1: hook points at AGENT.md; samples and context ownership"
 assert_contains "$SP/hooks/session-start.sh" 'Read the full instructions now, before anything else'
-assert_contains "$SP/README.md" 'Version 4.0.0.'
+SP_VERSION=$(sed -n 's/^version: //p' "$SP/agent.yaml" | head -n 1)
+assert_contains "$SP/README.md" "Version $SP_VERSION."
 assert_not_contains "$SP/skills/setup/SKILL.md" '<interview-skill>'
 assert_not_contains "$SP/skills/setup/SKILL.md" '<context-files>'
 assert_contains "$SP/skills/setup/SKILL.md" '`context/business-profile.md`, `context/icp.md`, `context/operating-config.md`'
@@ -195,13 +196,16 @@ if grep -rnE 'export [A-Z_]*(TOKEN|KEY)=' "$SP/capabilities" "$SP/skills" "$SP/R
 [ "$(grep -cF 'apply the `sp_stage` check' "$HT/usage.md")" -ge 3 ] && _report ok "create_lead: domain, phone and address matches all apply the sp_stage check" || _report no "create_lead: a match step skips the sp_stage check"
 assert_contains "$HT/usage.md" 'Never overwrite a native field that already has a value'
 assert_contains "$HT/usage.md" 'only when the search showed its current'
-u=$(grep -E '^\| `sp_channel` \| Channel \|' "$HT/usage.md" | awk -F'|' '{print $5}' | tr -d ' ')
+u=$(awk '/^### Choice 1/,/^### Choice 2/' "$HT/usage.md" | grep -oE '^\| `sp_[a-z_]+`' | tr -d '|` ' | sort | tr '\n' ,)
 b=$(python3 -B -c "
 import importlib.util,sys
 sp=importlib.util.spec_from_file_location('b','$HT/bootstrap.py'); m=importlib.util.module_from_spec(sp); sp.loader.exec_module(m)
-props=[p for obj in m.PROPERTIES.values() for p in obj if p['name']=='sp_channel']
-print(','.join(o['value'] for o in props[0]['options']))")
-[ "$u" = "email,linkedin,call,other" ] && [ "$b" = "$u" ] && _report ok "sp_channel options identical in usage.md and bootstrap.py, with other" || _report no "sp_channel options: usage.md=$u bootstrap.py=$b"
+print(sorted(m.PROPERTIES)==['companies','contacts'] and ''.join(n+',' for n in sorted(p['name'] for o in m.PROPERTIES.values() for p in o)) or 'unexpected objects: '+','.join(m.PROPERTIES))")
+[ -n "$u" ] && [ "$b" = "$u" ] && _report ok "Setup tables and bootstrap.py create the same properties, companies and contacts only" || _report no "Setup vs bootstrap.py: usage.md=$u bootstrap.py=$b"
+assert_contains "$HT/usage.md" "Tasks need no custom fields; drafts use HubSpot's built-in task status."
+assert_contains "$HT/guard.yaml" 'field: hs_task_status'
+if grep -nE 'sp_(status|channel|direction|summary|outcome)' "$HT/usage.md" "$HT/bootstrap.py" "$HT/guard.yaml" | grep -q .; then
+  _report no "the HubSpot tool still mentions a custom task field"; else _report ok "no custom task fields in the HubSpot tool"; fi
 
 echo "-- email drafts"
 assert_contains "$SP/agent.yaml" 'capabilities: crm, email_drafts'
@@ -244,7 +248,6 @@ assert_contains "$SP/capabilities/crm/tools/airtable/usage.md" 'field_status'
 
 echo "-- scheduled runs"
 assert_contains "$SP/agent.yaml" 'standard: "4.0"'
-assert_contains "$SP/agent.yaml" 'version: 4.0.0'
 assert_contains "$SP/agent.yaml" 'activity_digest: crm, email_drafts'
 assert_not_contains "$SP/context/operating-config.md" 'schedules:'
 assert_not_contains "$SP/context/operating-config.md" 'timezone:'

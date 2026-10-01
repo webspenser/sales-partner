@@ -74,15 +74,30 @@ check 0 "read allowed"              $AR ${A}list_records_for_table "{$B}"
 
 echo "-- HubSpot"
 HS=capabilities/crm/tools/hubspot/guard.yaml; H=mcp__claude_ai_HubSpot__
-TC='{"objectType":"tasks","properties":{"sp_status":"%s"}}'
+TC='{"objectType":"tasks","properties":{"hs_task_status":"%s"}}'
 TU='{"objectType":"tasks","objectId":101,"properties":{%s}}'
 CU='{"objectType":"companies","objectId":202,"properties":{"sp_do_not_contact":%s}}'
-check 0 "create task at draft"      $HS ${H}manage_crm_objects "{\"createRequest\":{\"objects\":[$(printf "$TC" draft)]}}"
-check 2 "create task at sent"       $HS ${H}manage_crm_objects "{\"createRequest\":{\"objects\":[$(printf "$TC" sent)]}}" "sp_status may only be written as draft on create"
-check 0 "update task to voided"     $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$TU" '"sp_status":"voided","sp_outcome":"dup"')]}}"
-check 2 "update task to approved"   $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$TU" '"sp_status":"approved"')]}}" "sp_status may only be written as voided on update"
-check 2 "both kinds, bad create"    $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$TU" '"sp_status":"voided"')]},\"createRequest\":{\"objects\":[$(printf "$TC" approved)]}}" "draft on create"
-check 0 "both kinds, both fine"     $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$TU" '"sp_status":"voided"')]},\"createRequest\":{\"objects\":[$(printf "$TC" draft)]}}"
+check 0 "create task NOT_STARTED"   $HS ${H}manage_crm_objects "{\"createRequest\":{\"objects\":[$(printf "$TC" NOT_STARTED)]}}"
+check 2 "create task COMPLETED"     $HS ${H}manage_crm_objects "{\"createRequest\":{\"objects\":[$(printf "$TC" COMPLETED)]}}" "hs_task_status may only be written as NOT_STARTED on create"
+check 2 "create task IN_PROGRESS"   $HS ${H}manage_crm_objects "{\"createRequest\":{\"objects\":[$(printf "$TC" IN_PROGRESS)]}}" "NOT_STARTED on create"
+check 0 "update task DEFERRED"      $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$TU" '"hs_task_status":"DEFERRED","hs_task_body":"Direction: outbound\\nOutcome: dup"')]}}"
+check 2 "update task COMPLETED"     $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$TU" '"hs_task_status":"COMPLETED"')]}}" "hs_task_status may only be written as DEFERRED on update"
+check 2 "update task IN_PROGRESS"   $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$TU" '"hs_task_status":"IN_PROGRESS"')]}}" "DEFERRED on update"
+check 2 "update task WAITING"       $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$TU" '"hs_task_status":"WAITING"')]}}" "DEFERRED on update"
+check 2 "create task WAITING"       $HS ${H}manage_crm_objects "{\"createRequest\":{\"objects\":[$(printf "$TC" WAITING)]}}" "NOT_STARTED on create"
+check 2 "create task DEFERRED"      $HS ${H}manage_crm_objects "{\"createRequest\":{\"objects\":[$(printf "$TC" DEFERRED)]}}" "NOT_STARTED on create"
+check 2 "update task NOT_STARTED"   $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$TU" '"hs_task_status":"NOT_STARTED"')]}}" "DEFERRED on update"
+DONE=61bafb31-e7fa-46ed-aaa9-1322438d6e67
+check 2 "update stage to Completed" $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$TU" "\"hs_pipeline_stage\":\"$DONE\"")]}}" "hs_pipeline_stage may not be written"
+check 2 "create at Completed stage, NOT_STARTED status" $HS ${H}manage_crm_objects "{\"createRequest\":{\"objects\":[{\"objectType\":\"tasks\",\"properties\":{\"hs_task_status\":\"NOT_STARTED\",\"hs_pipeline_stage\":\"$DONE\"}}]}}" "hs_pipeline_stage may not be written"
+check 2 "hs_pipeline blocked"       $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$TU" '"hs_pipeline":"3d314325-1b2a-4225-9388-375f49c57ec3"')]}}" "hs_pipeline may not be written"
+check 2 "hs_task_completion_date blocked" $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$TU" '"hs_task_completion_date":"2026-09-30T00:00:00Z"')]}}" "hs_task_completion_date may not be written"
+check 0 "create outbound draft, priority HIGH" $HS ${H}manage_crm_objects '{"createRequest":{"objects":[{"objectType":"tasks","properties":{"hs_task_status":"NOT_STARTED","hs_task_priority":"HIGH","hs_task_type":"EMAIL"}}]}}'
+check 0 "create task, no status"    $HS ${H}manage_crm_objects '{"createRequest":{"objects":[{"objectType":"tasks","properties":{"hs_task_subject":"x","hs_task_type":"EMAIL"}}]}}'
+check 2 "both kinds, bad create"    $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$TU" '"hs_task_status":"DEFERRED"')]},\"createRequest\":{\"objects\":[$(printf "$TC" COMPLETED)]}}" "NOT_STARTED on create"
+check 0 "both kinds, both fine"     $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$TU" '"hs_task_status":"DEFERRED"')]},\"createRequest\":{\"objects\":[$(printf "$TC" NOT_STARTED)]}}"
+# The engine compares case-insensitively; HubSpot itself would reject the lowercase value.
+check 0 "create not_started lower"  $HS ${H}manage_crm_objects "{\"createRequest\":{\"objects\":[$(printf "$TC" not_started)]}}"
 check 0 "dnc set \"true\""          $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$CU" '"true"')]}}"
 check 0 "dnc set true"              $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$CU" true)]}}"
 check 2 "dnc cleared \"false\""     $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$CU" '"false"')]}}" "sp_do_not_contact may only be written as true"

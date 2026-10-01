@@ -64,14 +64,6 @@ PROPERTIES = {
         prop("sp_verified", "Contact verified", "bool", "booleancheckbox", YESNO),
         prop("sp_notes", "Contact notes", "string", "textarea"),
     ],
-    "tasks": [
-        prop("sp_status", "Outreach status", "enumeration", "select",
-             opts(["draft", "approved", "sent", "voided"])),
-        prop("sp_channel", "Channel", "enumeration", "select", opts(["email", "linkedin", "call", "other"])),
-        prop("sp_direction", "Direction", "enumeration", "select", opts(["outbound", "inbound"])),
-        prop("sp_summary", "Summary", "string", "textarea"),
-        prop("sp_outcome", "Outcome", "string", "textarea"),
-    ],
 }
 
 

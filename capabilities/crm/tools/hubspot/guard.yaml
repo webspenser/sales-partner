@@ -14,8 +14,14 @@ writes:
     at: ["updateRequest.objects[].properties"]
 unknown_writes: block
 rules:
-  - field: sp_status
-    create: [draft]
-    update: [voided]
+  - field: hs_task_status
+    create: [NOT_STARTED]
+    update: [DEFERRED]
   - field: sp_do_not_contact
     update: ["true"]
+  - field: hs_pipeline_stage
+    forbid: true
+  - field: hs_pipeline
+    forbid: true
+  - field: hs_task_completion_date
+    forbid: true

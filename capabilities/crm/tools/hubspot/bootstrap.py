@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Create the HubSpot properties usage.md describes (see its ## Setup).
 
-Idempotent: every property group, property, and dropdown option is created
+Runs in two passes. Pass 1 only reads: it compares every existing property's
+type with the definition and stops, writing nothing, if any differ. Pass 2
+creates what is missing. Idempotent: every property group, property, and dropdown option is created
 only if missing. Nothing is ever deleted or renamed.
 
 Reads HUBSPOT_TOKEN (a private app access token) from the environment. Set it
@@ -50,7 +52,6 @@ PROPERTIES = {
         prop("sp_score_breakdown", "Score breakdown", "string", "textarea"),
         prop("sp_industry", "Industry (Sales Partner)", "string", "text"),
         prop("sp_size", "Size", "string", "text"),
-        prop("sp_location", "Location", "string", "text"),
         prop("sp_source", "Source", "string", "text"),
         prop("sp_source_url", "Source URL", "string", "text"),
         prop("sp_email", "General inbox", "string", "text"),
@@ -90,33 +91,58 @@ def call(token, method, path, body=None):
         raise Stop(f"cannot reach HubSpot: {err.reason}")
 
 
-def ensure(token, obj):
+LABELS = {"companies": "Company properties", "contacts": "Contact properties"}
+
+
+def check_group(token, obj):
+    """Return True if the group is missing (pass 2 creates it)."""
     status, _ = call(token, "GET", f"/{obj}/groups/{GROUP}")
     if status == 404:
+        return True
+    if status >= 300:
+        raise Stop(f"{obj}: cannot read property groups: HTTP {status} (check the token's scopes: {', '.join(SCOPES)})")
+    return False
+
+
+def check(token, obj):
+    """Pass 1, read-only. Returns (missing property defs, enum props with missing options, problems)."""
+    missing, to_patch, problems = [], [], []
+    for p in PROPERTIES[obj]:
+        status, have = call(token, "GET", f"/{obj}/{p['name']}")
+        if status == 404:
+            missing.append(p)
+        elif status >= 300:
+            raise Stop(f"{obj}.{p['name']}: cannot read it: HTTP {status} {have.get('message', '')}")
+        elif (have.get("type"), have.get("fieldType")) != (p["type"], p["fieldType"]):
+            problems.append(
+                f"{obj}.{p['name']} exists as {have.get('type')}/{have.get('fieldType')} but must be "
+                f"{p['type']}/{p['fieldType']}. Delete it in HubSpot (Settings \u2192 Properties \u2192 "
+                f"{LABELS[obj]} \u2192 {p['name']} \u2192 Delete), then run this again.")
+        elif p["type"] == "enumeration":
+            existing = {o.get("value") for o in have.get("options", [])}
+            add = [o for o in p["options"] if o["value"] not in existing]
+            if add:
+                to_patch.append((p, have.get("options", []), add))
+    return missing, to_patch, problems
+
+
+def create(token, obj, group_missing, missing, to_patch):
+    """Pass 2: only runs when pass 1 found no problems."""
+    if group_missing:
         status, body = call(token, "POST", f"/{obj}/groups", {"name": GROUP, "label": "Sales Partner"})
         if status >= 300:
             raise Stop(f"{obj}: cannot create property group {GROUP}: HTTP {status} {body.get('message', '')}")
         print(f"created group {obj}.{GROUP}")
-    elif status >= 300:
-        raise Stop(f"{obj}: cannot read property groups: HTTP {status} (check the token's scopes: {', '.join(SCOPES)})")
-    for p in PROPERTIES[obj]:
-        status, have = call(token, "GET", f"/{obj}/{p['name']}")
-        if status == 404:
-            status, body = call(token, "POST", f"/{obj}", p)
-            if status >= 300:
-                raise Stop(f"{obj}.{p['name']}: HubSpot refused the property: HTTP {status} {body.get('message', '')}")
-            print(f"created {obj}.{p['name']}")
-        elif status >= 300:
-            raise Stop(f"{obj}.{p['name']}: cannot read it: HTTP {status} {have.get('message', '')}")
-        elif "options" in p and p["type"] == "enumeration":
-            existing = {o.get("value") for o in have.get("options", [])}
-            missing = [o for o in p["options"] if o["value"] not in existing]
-            if missing:
-                merged = have.get("options", []) + missing
-                status, body = call(token, "PATCH", f"/{obj}/{p['name']}", {"options": merged})
-                if status >= 300:
-                    raise Stop(f"{obj}.{p['name']}: cannot add options: HTTP {status} {body.get('message', '')}")
-                print(f"added {len(missing)} option(s) to {obj}.{p['name']}")
+    for p in missing:
+        status, body = call(token, "POST", f"/{obj}", p)
+        if status >= 300:
+            raise Stop(f"{obj}.{p['name']}: HubSpot refused the property: HTTP {status} {body.get('message', '')}")
+        print(f"created {obj}.{p['name']}")
+    for p, have_opts, add in to_patch:
+        status, body = call(token, "PATCH", f"/{obj}/{p['name']}", {"options": have_opts + add})
+        if status >= 300:
+            raise Stop(f"{obj}.{p['name']}: cannot add options: HTTP {status} {body.get('message', '')}")
+        print(f"added {len(add)} option(s) to {obj}.{p['name']}")
 
 
 def main():
@@ -129,8 +155,18 @@ def main():
               file=sys.stderr)
         return 2
     try:
-        for obj in PROPERTIES:
-            ensure(token, obj)
+        plan, problems = {}, []
+        for obj in PROPERTIES:  # pass 1: read only
+            group_missing = check_group(token, obj)
+            missing, to_patch, probs = check(token, obj)
+            plan[obj] = (group_missing, missing, to_patch)
+            problems += probs
+        if problems:
+            print("\n".join(problems), file=sys.stderr)
+            print("stopped: nothing was created. Fix the above, then run this again.", file=sys.stderr)
+            return 1
+        for obj, (group_missing, missing, to_patch) in plan.items():  # pass 2: write
+            create(token, obj, group_missing, missing, to_patch)
     except Stop as err:
         print(f"stopped: {err}", file=sys.stderr)
         return 1

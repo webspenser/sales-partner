@@ -140,7 +140,8 @@ assert_contains "$SP/skills/setup/SKILL.md" '`interview-business`'
 
 echo "-- 1.0.1: hook points at AGENT.md; samples and context ownership"
 assert_contains "$SP/hooks/session-start.sh" 'Read the full instructions now, before anything else'
-assert_contains "$SP/README.md" 'Version 4.0.0.'
+SP_VERSION=$(sed -n 's/^version: //p' "$SP/agent.yaml" | head -n 1)
+assert_contains "$SP/README.md" "Version $SP_VERSION."
 assert_not_contains "$SP/skills/setup/SKILL.md" '<interview-skill>'
 assert_not_contains "$SP/skills/setup/SKILL.md" '<context-files>'
 assert_contains "$SP/skills/setup/SKILL.md" '`context/business-profile.md`, `context/icp.md`, `context/operating-config.md`'
@@ -247,7 +248,6 @@ assert_contains "$SP/capabilities/crm/tools/airtable/usage.md" 'field_status'
 
 echo "-- scheduled runs"
 assert_contains "$SP/agent.yaml" 'standard: "4.0"'
-assert_contains "$SP/agent.yaml" 'version: 4.0.0'
 assert_contains "$SP/agent.yaml" 'activity_digest: crm, email_drafts'
 assert_not_contains "$SP/context/operating-config.md" 'schedules:'
 assert_not_contains "$SP/context/operating-config.md" 'timezone:'

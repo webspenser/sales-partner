@@ -19,3 +19,9 @@ rules:
     update: [DEFERRED]
   - field: sp_do_not_contact
     update: ["true"]
+  - field: hs_pipeline_stage
+    forbid: true
+  - field: hs_pipeline
+    forbid: true
+  - field: hs_task_completion_date
+    forbid: true

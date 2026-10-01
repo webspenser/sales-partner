@@ -84,6 +84,15 @@ check 0 "update task DEFERRED"      $HS ${H}manage_crm_objects "{\"updateRequest
 check 2 "update task COMPLETED"     $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$TU" '"hs_task_status":"COMPLETED"')]}}" "hs_task_status may only be written as DEFERRED on update"
 check 2 "update task IN_PROGRESS"   $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$TU" '"hs_task_status":"IN_PROGRESS"')]}}" "DEFERRED on update"
 check 2 "update task WAITING"       $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$TU" '"hs_task_status":"WAITING"')]}}" "DEFERRED on update"
+check 2 "create task WAITING"       $HS ${H}manage_crm_objects "{\"createRequest\":{\"objects\":[$(printf "$TC" WAITING)]}}" "NOT_STARTED on create"
+check 2 "create task DEFERRED"      $HS ${H}manage_crm_objects "{\"createRequest\":{\"objects\":[$(printf "$TC" DEFERRED)]}}" "NOT_STARTED on create"
+check 2 "update task NOT_STARTED"   $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$TU" '"hs_task_status":"NOT_STARTED"')]}}" "DEFERRED on update"
+DONE=61bafb31-e7fa-46ed-aaa9-1322438d6e67
+check 2 "update stage to Completed" $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$TU" "\"hs_pipeline_stage\":\"$DONE\"")]}}" "hs_pipeline_stage may not be written"
+check 2 "create at Completed stage, NOT_STARTED status" $HS ${H}manage_crm_objects "{\"createRequest\":{\"objects\":[{\"objectType\":\"tasks\",\"properties\":{\"hs_task_status\":\"NOT_STARTED\",\"hs_pipeline_stage\":\"$DONE\"}}]}}" "hs_pipeline_stage may not be written"
+check 2 "hs_pipeline blocked"       $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$TU" '"hs_pipeline":"3d314325-1b2a-4225-9388-375f49c57ec3"')]}}" "hs_pipeline may not be written"
+check 2 "hs_task_completion_date blocked" $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$TU" '"hs_task_completion_date":"2026-09-30T00:00:00Z"')]}}" "hs_task_completion_date may not be written"
+check 0 "create outbound draft, priority HIGH" $HS ${H}manage_crm_objects '{"createRequest":{"objects":[{"objectType":"tasks","properties":{"hs_task_status":"NOT_STARTED","hs_task_priority":"HIGH","hs_task_type":"EMAIL"}}]}}'
 check 0 "create task, no status"    $HS ${H}manage_crm_objects '{"createRequest":{"objects":[{"objectType":"tasks","properties":{"hs_task_subject":"x","hs_task_type":"EMAIL"}}]}}'
 check 2 "both kinds, bad create"    $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$TU" '"hs_task_status":"DEFERRED"')]},\"createRequest\":{\"objects\":[$(printf "$TC" COMPLETED)]}}" "NOT_STARTED on create"
 check 0 "both kinds, both fine"     $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$TU" '"hs_task_status":"DEFERRED"')]},\"createRequest\":{\"objects\":[$(printf "$TC" NOT_STARTED)]}}"

@@ -300,4 +300,6 @@ assert_not_contains "$AU" 'stays blocked until the probe has recorded both'
 for f in "$SP"/capabilities/crm/tools/*/usage.md; do assert_contains "$f" 'Write only the fields that change'; done
 assert_not_contains "$SP/capabilities/email_drafts/tools/gmail/usage.md" 'add its names to'
 assert_contains "$SP/capabilities/email_drafts/tools/gmail/usage.md" 'matches names by suffix'
+assert_contains "$AU" 'In a scheduled run, do not rewrite'
+assert_contains "$AU" 'take each field ID from that table'
 finish

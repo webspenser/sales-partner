@@ -27,7 +27,10 @@ for t in mcp__claude_ai_Gmail__send_message mcp__claude_ai_Gmail__reply mcp__cla
          mcp__claude_ai_Slack__slack_send_message mcp__claude_ai_Slack__slack_schedule_message \
          mcp__claude_ai_Zernio__posts_publish_now mcp__claude_ai_Zernio__posts_create mcp__claude_ai_Zernio__posts_cross_post \
          mcp__claude_ai_Zernio__posts_bulk_upload_posts mcp__claude_ai_Loops__execute_write \
-         mcp__claude_ai_Zernio__comments_reply_to_inbox_post mcp__claude_ai_ClickUp__clickup_send_chat_message; do
+         mcp__claude_ai_Zernio__comments_reply_to_inbox_post mcp__claude_ai_ClickUp__clickup_send_chat_message \
+         mcp__claude_ai_Zernio__call_tool mcp__claude_ai_Zernio__posts_retry mcp__claude_ai_Zernio__posts_retry_all_failed \
+         mcp__claude_ai_Google_Calendar__create_event mcp__claude_ai_Google_Calendar__update_event \
+         mcp__claude_ai_Google_Calendar__respond_to_event; do
   acheck 2 "denied: $t" "$t"
 done
 for t in mcp__claude_ai_Gmail__create_draft mcp__claude_ai_Gmail__list_drafts mcp__claude_ai_Gmail__search_threads \
@@ -36,7 +39,9 @@ for t in mcp__claude_ai_Gmail__create_draft mcp__claude_ai_Gmail__list_drafts mc
          mcp__claude_ai_HubSpot__manage_crm_objects mcp__claude_ai_HubSpot__search_crm_objects \
          mcp__claude_ai_Airtable__update_records_for_table mcp__claude_ai_Slack__slack_read_channel \
          mcp__claude_ai_Slack__slack_read_thread mcp__claude_ai_ClickUp__clickup_get_chat_message_replies \
-         mcp__claude_ai_Zernio__posts_list mcp__claude_ai_Loops__execute mcp__claude_ai_Notion__notion-search; do
+         mcp__claude_ai_Zernio__posts_list mcp__claude_ai_Loops__execute mcp__claude_ai_Notion__notion-search \
+         mcp__claude_ai_Google_Calendar__list_events mcp__claude_ai_Google_Calendar__get_event \
+         mcp__claude_ai_Google_Calendar__search_events mcp__claude_ai_Zernio__search_tools; do
   acheck 0 "read or CRM write passes: $t" "$t"
 done
 

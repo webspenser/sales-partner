@@ -258,13 +258,18 @@ operation reaches Airtable through these:
   Write only the fields that change: an update that repeats unchanged
   fields (for example `Do Not Contact` unchecked) can be refused by the
   guard.
-- Every write keys its fields by the IDs in `bindings/crm.md` (see
-  Probe). Before the first Airtable write in a session, if
-  `bindings/crm.md` has no `field_` lines, run the Probe first. If a
-  write is refused with "is not a recorded field ID" or "has not
-  recorded any field IDs", run the Probe again, rewrite the `field_`
-  lines, and retry the write once; if it is refused again, stop and
-  tell the user.
+- Every write keys its fields by field ID. Get the table's ID and its
+  fields from `airtable:list_tables_for_base`, and
+  take each field ID from that table: names like `Lead` or `Email` repeat across tables. The
+  `field_` lines in `bindings/crm.md` (see Probe) are the guard's list of
+  IDs a write may use, across all four tables. Before the first Airtable
+  write in a session, if `bindings/crm.md` has no `field_` lines, run the
+  Probe first. If a write is refused with "is not a recorded field ID" or
+  "has not recorded any field IDs", run the Probe again, rewrite the
+  `field_` lines, and retry the write once; if it is refused again, stop
+  and tell the user. In a scheduled run, do not rewrite
+  `bindings/crm.md` (a scheduled run edits no instance files): stop and
+  report that the probe must be re-run in setup's tools step.
 
 ## Views
 

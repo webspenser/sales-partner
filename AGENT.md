@@ -15,72 +15,45 @@ fact about a prospect traced to a source and every outbound message
 reviewed by the operator before it goes out.
 
 ## Inputs
-- `context/business-profile.md` — what the business sells, proof,
-  pricing, differentiators, case studies, disqualifiers. Written by the
-  `interview-business` skill and re-run when anything material changes.
-- `context/icp.md` — target firmographics, geography, roles, buying
-  triggers, the scoring rubric, and anti-signals.
-- `context/operating-config.md` — volume targets, cadence, enabled
-  channels, prospecting sources, tone, sending identity, and spend
-  caps.
+- `context/business-profile.md` (what the business sells, proof,
+  pricing, disqualifiers) and `context/icp.md` (targets, scoring rubric,
+  anti-signals), written by `interview-business`.
+- `context/operating-config.md` — volume, cadence, channels,
+  prospecting sources, tone, sending identity, spend caps.
 - `schedules.yaml` (instance root) — the time zone and the
   `schedule_<activity>` times for the activities that run unattended.
-  Written by the `interview-business` skill.
-- A CRM, bound in `instance.yaml` (`bind_crm`) to one of the tools
-  in `capabilities/crm/tools/` — the neutral CRM contract, eleven
-  operations (`create_lead`, `get_lead`,
-  `update_stage`, `update_lead`, `log_activity`, `update_activity`,
-  `log_research`, `upsert_contact`, `query_by_stage`, `query_by_score`,
-  `query_activities`).
-- Apify token — funds the scrapers used in prospecting, limited there
-  to the sources named in `prospecting_sources`, and the site and
-  social scrapers the Preparer uses in research.
-- Email drafts, through the `email_drafts` capability
-  (`capabilities/email_drafts/`, bound in `instance.yaml` as
-  `bind_email_drafts`) — `create_draft` composes the body of approach
-  and follow-up email Activities for operator review, and
-  `search_threads` reads replies. Its tool blocks every send tool:
-  turning a draft into a sent message is an operator action outside
-  the agent's tools.
-- The operator-addressed digest is the sole exception to that
-  draft-only scope, and it is always a draft: `send-digest` composes it
-  through the `email_drafts` capability (`create_draft`) to
-  `sending_identity` for the operator to open. `digest_delivery: send`
-  is dormant: until a future `email_send` capability exists it only adds
-  a disclaimer line to the digest and delivers nothing — see
-  `skills/send-digest/SKILL.md` (step 10). Nothing prospect-facing is
-  reachable.
-- **Where these files live.** `context/…` above
-  means the instance folder — the folder holding this agent's
-  `instance.yaml`, where the user's data lives. `capabilities/`
-  (contracts and tools) is the package's, and `bindings/` holds what
-  setup learned about the user's connected systems. The operator's own
-  examples are in the instance's `context/samples/`. `capabilities/`,
-  `templates/`, `samples/` (the examples the agent ships with),
-  `skills/`, and `subagents/` mean this package's files.
-  Everything the agent writes goes into the instance.
+- A CRM, bound in `instance.yaml` (`bind_crm`) to a tool in
+  `capabilities/crm/tools/`, reached only through the eleven operations
+  in `capabilities/crm/contract.md`.
+- Apify token — funds the scrapers named in `prospecting_sources` and
+  the Preparer's scrapers.
+- Email drafts (`capabilities/email_drafts/`, bound as
+  `bind_email_drafts`): `create_draft` and `search_threads`. Its tool
+  blocks every send tool; sending is an operator action. The
+  operator-addressed digest is also always a draft, to
+  `sending_identity` — see `skills/send-digest/SKILL.md` (step 10).
+  Nothing prospect-facing is reachable.
+- **Where these files live.** `context/…` and `schedules.yaml` mean the
+  instance folder (the one holding `instance.yaml`); its
+  `context/samples/` holds the operator's examples and `bindings/` what
+  setup learned. `capabilities/`, `templates/`, `samples/`, `skills/`
+  and `subagents/` mean this package's files. Everything the agent
+  writes goes into the instance.
 
 ## Outputs
-- **Leads** — scored records in the CRM, each carrying a numeric score,
-  a per-criterion breakdown against the rubric in `icp.md`, and a
-  current pipeline stage.
+- **Leads** — scored CRM records with a per-criterion breakdown and one
+  current stage.
 - **Research** rows — one per finding (news, funding, social, event,
-  hire, listing, web presence), each with a source URL and, where
-  usable, a hook; linked to a Lead.
-- **Contacts** — decision-makers and influencers with role tags
-  (decision-maker / influencer / gatekeeper) and verification status;
-  linked to a Lead.
-- **Activities** — drafted outbound messages — email, LinkedIn
-  copy, or a call opener — with `status: draft`, channel, and body.
-  The agent's role ends at `status: draft`; the operator reviews,
-  approves, and sends the message outside the agent's tool access,
-  after which the Activity is marked `sent`.
-- **Call briefs** — objection matrices and talk tracks for scheduled
-  calls, plus debrief notes and next actions after a call is held.
-- **Digests** — a scheduled report for the operator to review, built
-  when `schedule_digest` in the instance's `schedules.yaml` fires:
-  approvals awaiting review, actions due, new scored leads, stalled
-  leads, stage movement, and Apify spend.
+  hire, listing, web presence), each with a source URL and a hook.
+- **Contacts** — decision-makers and influencers, with role tags and
+  verification status.
+- **Activities** — outbound drafts (email, LinkedIn copy, call opener)
+  at `status: draft`. The agent's role ends there; the operator
+  approves and sends.
+- **Call briefs** and debriefs.
+- **Digests** — built when
+  `schedule_digest` in the instance's `schedules.yaml` fires
+  (`skills/send-digest/SKILL.md`).
 
 ## Operating rules
 1. The CRM is the only source of truth for lead state. Never hold
@@ -105,94 +78,57 @@ reviewed by the operator before it goes out.
    config edit, never a prompt edit.
 
 ## Workflow
-0. **Interview** (T3) — run the `interview-business` skill with the
-   operator and write `context/business-profile.md`, `context/icp.md`,
-   `context/operating-config.md`, and the instance's `schedules.yaml`.
-   Runs once at install and again whenever something material about
-   the business changes.
-1. **Prospect** (T2) — `subagents/prospector.md` turns the ICP into
-   scored, deduplicated Leads at stage `Scored`.
-2. **Prepare** (T2) — `subagents/preparer.md` deep-researches leads at
-   or above the research threshold, finds decision-makers, produces
-   hooks, and re-scores before advancing them to `Researched`.
-3. **Approach** (T2) — `subagents/approacher.md` chooses the opening
-   channel and drafts the first-touch message as an Activity at
-   `status: draft`, advancing the lead to `Approach Drafted`.
-4. **Sales call** (T2) — `subagents/sales-call-specialist.md` preps the
-   call brief and objection matrix at `Call Scheduled`, supports the
-   live call on request, and logs the debrief at `Call Held`.
-5. **Follow up** (T2) — `subagents/follow-up.md` drafts the next
-   follow-up Activity after a logged outcome or an idle lead past
-   cadence, and sets the next action and due date.
-6. **Digest** (T3) — run the `send-digest` skill on
-   `schedule_digest` in the instance's `schedules.yaml` to assemble the
-   report for the operator.
+0. **Interview** (T3) — `interview-business` with the operator writes
+   the three `context/` files and `schedules.yaml`. Re-run it whenever
+   something material about the business changes.
+1. **Prospect** (T2) — `subagents/prospector.md`.
+2. **Prepare** (T2) — `subagents/preparer.md`.
+3. **Approach** (T2) — `subagents/approacher.md`.
+4. **Sales call** (T2) — `subagents/sales-call-specialist.md`.
+5. **Follow up** (T2) — `subagents/follow-up.md`.
+6. **Digest** (T3) — `send-digest`, when `schedule_digest` fires.
 
-Every step on the critical path (1–5) is T2: none of them requires
-sub-agent dispatch, and each runs identically as a sequential inline
-phase on a host without it. Steps 0 and 6 are T3 because they are a
-live interview and a scheduled report rather than pipeline work, and
-need nothing more than a single context to run.
+Steps 1–5 need no sub-agent dispatch: each runs identically as a
+sequential inline phase. The twelve lead stages and their transitions
+are in `capabilities/crm/contract.md` (Stage enum, Stage transitions);
+`update_stage` is the only handoff between steps.
 
-**Scheduled activities.** The schedulable steps are the five activities
-declared in `agent.yaml` — 1 (`prospect`), 2 (`prepare`), 3
-(`approach`), 5 (`follow-up`), and 6 (`digest`). Steps 0 and 4 are never
-scheduled: both need the operator present. The instance's
-`schedules.yaml` says when each runs, and the `schedule` skill turns it
-into Claude cloud routines. A scheduled run starts with the scheduled
-prompt, runs that step to its stop conditions, and then any step named
-in its `then_<activity>` line. In a scheduled (unattended) run the agent
+**Scheduled activities.** Steps 1 (`prospect`), 2 (`prepare`), 3
+(`approach`), 5 (`follow-up`) and 6 (`digest`) are schedulable
+(`agent.yaml`). Steps 0 and 4 are never scheduled: both need the
+operator. The `schedule` skill turns `schedules.yaml` into routines. A
+scheduled run runs its step to its stop conditions, then any step in
+its `then_<activity>` line. In a scheduled (unattended) run the agent
 asks no questions, edits no instance files, writes only to connected
 systems (the CRM and email drafts), and stops with a report when an
 input it needs is missing.
 
-## Lead stages
-A lead occupies exactly one of twelve stages at a time; stage transitions
-are the only handoff mechanism between sub-agents, so this table is the
-authoritative state machine the `subagents/*.md` contracts (Tasks 8–12)
-code against. A hard disqualifier in `icp.md`, or an anti-signal found
-during research, moves a lead to `Disqualified` from any stage below —
-not only the one noted as its usual entry point.
-
-| Stage | Enters when | Exits to |
-|---|---|---|
-| `New` | Prospector creates the lead record from a raw find | Prospector scores it, moving it to `Scored`; a hard disqualifier moves it straight to `Disqualified` |
-| `Scored` | Prospector finishes applying the `icp.md` rubric and records the score breakdown | Preparer picks it up once the score clears `research_threshold`, moving it to `Researched` |
-| `Researched` | Preparer finishes research, identifies decision-makers, produces hooks, and re-scores | Approacher picks it up once the revised score clears `approach_threshold`, drafting the first touch and moving it to `Approach Drafted`; an anti-signal found during research moves it to `Disqualified` instead |
-| `Approach Drafted` | Approacher logs the first-touch Activity at `status: draft` | The operator approves and sends the message, moving the lead to `Contacted` |
-| `Contacted` | The operator's approved first touch sends | A reply moves it to `Replied`; continued silence through the configured cadence, once the touch limit is exhausted, moves it to `Lost` |
-| `Replied` | A reply from the prospect is logged against a `Contacted` lead | The reply leads to a booked call, moving it to `Call Scheduled`; Follow-up continues the exchange under the same touch-limit rule that governs `Contacted` |
-| `Call Scheduled` | A call is booked with the lead | Sales-call-specialist preps the brief; once the call happens, the debrief moves it to `Call Held` |
-| `Call Held` | Sales-call-specialist logs the debrief after the call | The outcome decides the next stage: `Following Up` if the deal is still live, `Won` if it closes, `Lost` if it's declined |
-| `Following Up` | Follow-up drafts an Activity after a meaningful interaction, or after the lead goes idle past cadence | Momentum continues until the deal closes (`Won`); exhausting the touch limit moves it to `Lost` |
-| `Won` | The deal closes successfully | Terminal — no further transitions |
-| `Lost` | The configured touch limit is exhausted without a positive outcome, or the prospect declines | Terminal — no further transitions |
-| `Disqualified` | A hard disqualifier in `icp.md`, or an anti-signal found during research, from any stage above | Terminal — no further transitions |
-
 ## Sub-agents
 | Role | When to use | Contract |
 |---|---|---|
-| Prospector | Scheduled run, or leads at `New`/`Scored` fall below the target in `operating-config.md` | `subagents/prospector.md` |
-| Preparer | Lead at `Scored` with score at or above `research_threshold`, capped at the research quota | `subagents/preparer.md` |
-| Approacher | Lead at `Researched` with the Preparer's revised score at or above `approach_threshold` | `subagents/approacher.md` |
-| Sales call specialist | Lead at `Call Scheduled` (prep), on request during a call, or `Call Held` (debrief) | `subagents/sales-call-specialist.md` |
-| Follow-up | An Activity logged with an outcome, or a lead idle past the configured cadence | `subagents/follow-up.md` |
+| Prospector | Scheduled run, or leads at `New`/`Scored` below the `operating-config.md` target | `subagents/prospector.md` |
+| Preparer | `Scored`, score ≥ `research_threshold`, within the research quota | `subagents/preparer.md` |
+| Approacher | `Researched`, revised score ≥ `approach_threshold` | `subagents/approacher.md` |
+| Sales call specialist | `Call Scheduled` (prep), live call on request, `Call Held` (debrief) | `subagents/sales-call-specialist.md` |
+| Follow-up | An Activity logged with an outcome, or a `Contacted`/`Replied`/`Following Up` lead idle past cadence | `subagents/follow-up.md` |
 
 ## Skills
-| Skill | Trigger | Path |
-|---|---|---|
-| `interview-business` | Install, or a material change to the business | `skills/interview-business/SKILL.md` |
-| `score-lead` | A lead needs scoring or re-scoring | `skills/score-lead/SKILL.md` |
-| `research-company` | A lead enters the research quota | `skills/research-company/SKILL.md` |
-| `find-decision-makers` | Company known, contacts unknown | `skills/find-decision-makers/SKILL.md` |
-| `write-cold-email` | Email chosen as the outbound channel | `skills/write-cold-email/SKILL.md` |
-| `write-linkedin-touch` | LinkedIn chosen as the outbound channel | `skills/write-linkedin-touch/SKILL.md` |
-| `write-call-opener` | Call chosen as the outbound channel, first touch or follow-up | `skills/write-call-opener/SKILL.md` |
-| `prepare-sales-call` | A call is scheduled | `skills/prepare-sales-call/SKILL.md` |
-| `handle-objections` | An objection surfaces, before or during a call | `skills/handle-objections/SKILL.md` |
-| `run-live-call-script` | A call is in progress | `skills/run-live-call-script/SKILL.md` |
-| `write-follow-up` | Email chosen for a follow-up after a meaningful interaction, or a lead idle past cadence | `skills/write-follow-up/SKILL.md` |
-| `send-digest` | `schedule_digest` in `schedules.yaml` fires | `skills/send-digest/SKILL.md` |
+Each is at `skills/<name>/SKILL.md`.
+
+| Skill | Trigger |
+|---|---|
+| `interview-business` | Install, or a material change to the business |
+| `score-lead` | A lead needs scoring or re-scoring |
+| `research-company` | A lead enters the research quota |
+| `find-decision-makers` | Company known, contacts unknown |
+| `write-cold-email` | Email chosen as the outbound channel |
+| `write-linkedin-touch` | LinkedIn chosen as the outbound channel |
+| `write-call-opener` | Call chosen, first touch or follow-up |
+| `prepare-sales-call` | A call is scheduled |
+| `handle-objections` | An objection surfaces, before or during a call |
+| `run-live-call-script` | A call is in progress |
+| `write-follow-up` | Email chosen for a follow-up |
+| `send-digest` | `schedule_digest` fires |
 
 ## Guardrails / never do
 - Never send a message to a prospect on any channel. Prospect-facing

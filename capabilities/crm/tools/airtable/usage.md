@@ -43,10 +43,12 @@ the contract — no additional options, no renamed options.
 
 `query_by_stage`'s two optional filters read this table and, for
 `idle_days`, the Activities table too: `next_action_due_before` filters
-on `Next Action Due` directly; `idle_days` filters to Leads whose
-linked Activities' most recent `Date` is older than the given number of
-days (or which have no Activity at all), the same staleness computation
-the **Stalled** view below already performs — the operation and the
+on `Next Action Due` directly; `idle_days` applies the contract's
+`max(...)` rule: a Lead's idle age is now minus the later of its linked
+Activities' most recent `Date` and its `Stage Changed At`. If the lead
+has no Activity, use `Stage Changed At`. A Lead is kept when that idle
+age is greater than the given number of days — the same staleness
+computation the **Stalled** view below performs — the operation and the
 view compute identically, the operation is simply the path a skill or
 sub-agent calls instead of a human opening the view.
 
@@ -282,8 +284,11 @@ disagree about what counts as "awaiting approval," "due today," or
 - **Due Today** — Leads where `Next Action Due` is today or earlier.
   Leads with an overdue or due-today follow-up, across any active
   stage.
-- **Stalled** — Leads with no Activity newer than the configured
-  cadence. Leads that have gone quiet longer than the pipeline's
+- **Stalled** — Leads at `Contacted`, `Replied`, `Call Scheduled`,
+  `Call Held` or `Following Up` whose idle age (now minus the later of
+  the last Activity `Date` and `Stage Changed At`; with no Activity,
+  `Stage Changed At` alone) is greater than the configured cadence.
+  Leads that have gone quiet longer than the pipeline's
   configured touch cadence allows, and need attention (a nudge, a
   follow-up, or a move to `Lost`).
 

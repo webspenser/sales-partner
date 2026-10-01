@@ -204,8 +204,8 @@ behavior only; it names no Airtable table or field.
   either `next_action_due_before` (a date) or `idle_days` (an integer)
   changes what the call means: `stage` becomes optional, and the result
   is filtered to leads whose `Next Action Due` is on or before
-  `next_action_due_before`, or whose most recent Activity is older than
-  `idle_days` days as of the moment of the call, respectively — across
+  `next_action_due_before`, or whose idle age is greater than
+  `idle_days` days, respectively — across
   every stage when `stage` is omitted, or narrowed to one stage when
   both are given together. Omitting `stage` while also omitting both
   filters is rejected rather than silently returning every lead in the
@@ -215,6 +215,13 @@ behavior only; it names no Airtable table or field.
   time, and it is why the operation grew these filters rather than the
   digest reconstructing them from `query_by_stage`'s original one-stage
   form.
+
+  **Idle age** is defined exactly, so the same data always gives the
+  same answer: idle age = now − `max(last Activity date, Stage Changed
+  At)`, where "now" is the moment of the call. A lead with no Activity
+  at all is measured from its `Stage Changed At` alone — it is neither
+  skipped nor treated as infinitely idle. `idle_days` keeps a lead only
+  when its idle age is greater than `idle_days` days.
 - **`query_activities`** is the read counterpart to `log_activity` and
   `update_activity`: it finds Activities directly, by `status`,
   optionally `direction`, and optionally a `[since, until]` window on
@@ -332,6 +339,29 @@ attempt to transition a lead out of them. A hard disqualifier or an
 anti-signal found during research can move a lead to `Disqualified` from
 any of the other nine stages, not only from the stage where
 disqualification is usually checked.
+
+## Stage transitions
+
+Stage transitions are the only handoff mechanism between sub-agents, so
+this table is the authoritative state machine the `subagents/*.md`
+contracts code against. A hard disqualifier in `icp.md`, or an
+anti-signal found during research, moves a lead to `Disqualified` from
+any stage below — not only the one noted as its usual entry point.
+
+| Stage | Enters when | Exits to |
+|---|---|---|
+| `New` | Prospector creates the lead record from a raw find | Prospector scores it, moving it to `Scored`; a hard disqualifier moves it straight to `Disqualified` |
+| `Scored` | Prospector finishes applying the `icp.md` rubric and records the score breakdown | Preparer picks it up once the score clears `research_threshold`, moving it to `Researched` |
+| `Researched` | Preparer finishes research, identifies decision-makers, produces hooks, and re-scores | Approacher picks it up once the revised score clears `approach_threshold`, drafting the first touch and moving it to `Approach Drafted`; an anti-signal found during research moves it to `Disqualified` instead |
+| `Approach Drafted` | Approacher logs the first-touch Activity at `status: draft` | The operator approves and sends the message, moving the lead to `Contacted` |
+| `Contacted` | The operator's approved first touch sends | A reply moves it to `Replied`; continued silence through the configured cadence, once the touch limit is exhausted, moves it to `Lost` |
+| `Replied` | A reply from the prospect is logged against a `Contacted` lead | The reply leads to a booked call, moving it to `Call Scheduled`; Follow-up continues the exchange under the same touch-limit rule that governs `Contacted` |
+| `Call Scheduled` | A call is booked with the lead | Sales-call-specialist preps the brief; once the call happens, the debrief moves it to `Call Held` |
+| `Call Held` | Sales-call-specialist logs the debrief after the call | The outcome decides the next stage: `Following Up` if the deal is still live, `Won` if it closes, `Lost` if it's declined |
+| `Following Up` | Follow-up drafts an Activity after a meaningful interaction, or after the lead goes idle past cadence | Momentum continues until the deal closes (`Won`); exhausting the touch limit moves it to `Lost` |
+| `Won` | The deal closes successfully | Terminal — no further transitions |
+| `Lost` | The configured touch limit is exhausted without a positive outcome, or the prospect declines | Terminal — no further transitions |
+| `Disqualified` | A hard disqualifier in `icp.md`, or an anti-signal found during research, from any stage above | Terminal — no further transitions |
 
 ## `update_stage` is the only handoff mechanism
 

@@ -85,7 +85,8 @@ a recent ownership change; a surge or drop in reviews.
 ## Anti-signals
 
 Hard disqualifiers. Any match sends the lead straight to `Disqualified`
-from any stage, per `AGENT.md`'s lead state machine — this list is
+from any stage, per the lead state machine in
+`capabilities/crm/contract.md` (Stage transitions) — this list is
 checked mechanically, not weighed against other criteria the way the
 scoring rubric below is.
 

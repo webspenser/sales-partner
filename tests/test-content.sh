@@ -258,4 +258,22 @@ assert_contains "$SP/skills/send-digest/SKILL.md" 'schedule_digest'
 assert_contains "$SP/AGENT.md" 'schedules.yaml'
 assert_contains "$SP/AGENT.md" 'unattended'
 [ -f "$SP/skills/schedule/SKILL.md" ] && _report ok "schedule skill present" || _report no "schedule skill missing"
+
+echo "-- 4.0.3: AGENT.md inline size, exact Stalled rule"
+[ "$(wc -c < "$SP/AGENT.md" | tr -d ' ')" -le 9000 ] && _report ok "AGENT.md fits the 9000-byte inline limit" || _report no "AGENT.md is over 9000 bytes; the hook will not inline it"
+assert_contains "$SP/capabilities/crm/contract.md" '## Stage transitions'
+assert_contains "$SP/capabilities/crm/contract.md" '| `Approach Drafted` | Approacher logs the first-touch Activity at `status: draft` |'
+assert_contains "$SP/AGENT.md" '`capabilities/crm/contract.md` (Stage enum, Stage transitions)'
+assert_contains "$SP/context/icp.md" '`capabilities/crm/contract.md` (Stage transitions)'
+assert_contains "$SP/capabilities/crm/contract.md" 'idle age = now − `max(last Activity date, Stage Changed'
+assert_contains "$SP/capabilities/crm/contract.md" 'at all is measured from its `Stage Changed At` alone'
+D="$SP/skills/send-digest/SKILL.md"
+assert_contains "$D" '`Contacted`, `Replied`, `Call Scheduled`, `Call Held` or'
+assert_contains "$D" 'Pre-outreach stages (`New`, `Scored`, `Researched`, `Approach'
+assert_contains "$D" 'The same CRM data always gives the same'
+assert_contains "$D" 'once for each of those five stages'
+assert_not_contains "$D" 'every active stage'
+assert_contains "$SP/capabilities/crm/tools/airtable/usage.md" 'has no Activity, use `Stage Changed At`'
+assert_contains "$SP/capabilities/crm/tools/attio/usage.md" '`stage_changed_at`. If the lead has no'
+assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'If the lead has no Task'
 finish

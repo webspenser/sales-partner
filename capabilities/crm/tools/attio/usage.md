@@ -204,8 +204,10 @@ write nothing) exactly where the contract says the operation rejects.
   given), plus `next_action_due` lte the date for
   `next_action_due_before`. For `idle_days`: for each candidate lead,
   read its Outreach entries (filtered on `lead`, sorted by `date`
-  desc, limit 1) and keep the lead if it has none or the newest is
-  older than `idle_days`. Page with `offset` until the results run out.
+  desc, limit 1). Its idle age is now minus the later of that newest
+  `date` and the lead's `stage_changed_at`. If the lead has no
+  Activity, use `stage_changed_at`. Keep the lead if its idle age is
+  greater than `idle_days`. Page with `offset` until the results run out.
 - **`query_by_score`** — `attio:list-records-in-list` on
   `sales_partner_pipeline`, filtered on `score` gte `min_score` (and
   `stage` eq when given), sorted by `score` desc.

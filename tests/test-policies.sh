@@ -109,8 +109,31 @@ check 2 "delete refused"            $HS ${H}delete_crm_objects '{}' "is denied"
 check 2 "merge refused"             $HS ${H}merge_crm_objects '{}' "is denied"
 check 0 "search allowed"            $HS ${H}search_crm_objects '{"objectType":"TASK"}'
 check 0 "local server name allowed" $HS mcp__HubSpot__search_crm_objects '{"objectType":"COMPANY"}'
-out=$(HUBSPOT_TOKEN=sk-canary-12345 python3 -B capabilities/crm/tools/hubspot/bootstrap.py 2>&1 </dev/null); \
-  printf '%s' "$out" | grep -q 'sk-canary-12345' && _report no "bootstrap echoed the token" || _report ok "bootstrap never prints the token"
+# Token canary, offline: call is faked to fail (a 401, then a raised Stop); all output is captured.
+canary=$(python3 -B - <<'PY' 2>&1
+import importlib.util, io, os, contextlib
+sp = importlib.util.spec_from_file_location("b", "capabilities/crm/tools/hubspot/bootstrap.py")
+b = importlib.util.module_from_spec(sp); sp.loader.exec_module(b)
+os.environ["HUBSPOT_TOKEN"] = "sk-canary-12345"
+
+def unauthorized(token, method, path, body=None):
+    return 401, {"message": "Authentication credentials not found."}
+
+def unreachable(token, method, path, body=None):
+    raise b.Stop("cannot reach HubSpot: offline")
+
+for name, fake in (("401", unauthorized), ("stop", unreachable)):
+    b.call = fake
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
+        rc = b.main()
+    print(f"[{name}] rc={rc}")
+    print(buf.getvalue())
+PY
+)
+printf '%s' "$canary" | grep -qF '[401] rc=1' && printf '%s' "$canary" | grep -qF '[stop] rc=1' \
+  && _report ok "bootstrap canary: a failing call stops with exit 1, offline" || _report no "bootstrap canary did not run as expected ($canary)"
+printf '%s' "$canary" | grep -q 'sk-canary-12345' && _report no "bootstrap echoed the token" || _report ok "bootstrap never prints the token"
 grep -q 'print(.*token' capabilities/crm/tools/hubspot/bootstrap.py && _report no "bootstrap prints a token variable" || _report ok "no print of the token"
 
 # bootstrap.py: pass 1 checks existing property types offline (call is faked; no network)
@@ -157,10 +180,32 @@ print("C", rc == 0 and w == [("POST", "/companies")])
 rc, text, w = run({"/contacts/sp_role": {"type": "enumeration", "fieldType": "select",
                    "options": [{"value": "decision-maker"}, {"value": "extra"}]}})
 print("D", rc == 0 and [m for m, _ in w] == ["PATCH"])
+
+# E: a realistic HubSpot GET payload for every property: extra fields, real type/fieldType pairs.
+META = {"archivable": True, "readOnlyDefinition": False, "readOnlyValue": False}
+def realistic(d):
+    p = {"updatedAt": "2026-09-01T12:00:00.000Z", "createdAt": "2026-09-01T12:00:00.000Z",
+         "name": d["name"], "label": d["label"], "type": d["type"], "fieldType": d["fieldType"],
+         "description": "", "groupName": "sales_partner", "options": [],
+         "createdUserId": "1234567", "updatedUserId": "1234567", "displayOrder": -1,
+         "calculated": False, "externalOptions": False, "archived": False,
+         "hasUniqueValue": False, "hidden": False, "formField": True,
+         "dataSensitivity": "non_sensitive", "modificationMetadata": META}
+    for i, o in enumerate(d.get("options", [])):
+        p["options"].append({"label": o["label"], "value": o["value"], "description": "",
+                             "displayOrder": i, "hidden": False})
+    return p
+pairs = {(p["type"], p["fieldType"]) for ps in b.PROPERTIES.values() for p in ps}
+real = {f"/{o}/{p['name']}": realistic(p) for o, ps in b.PROPERTIES.items() for p in ps}
+rc, text, w = run(real)
+print("E", rc == 0 and not w and pairs == {("enumeration", "select"), ("datetime", "date"),
+      ("string", "textarea"), ("number", "number"), ("string", "text"), ("date", "date"),
+      ("bool", "booleancheckbox")})
 PY
 )
 for c in A:"mismatched type blocks with a clear message and no writes" B:"correct types pass with no writes" \
-         C:"a missing property is created" D:"missing enum options are patched, extras kept"; do
+         C:"a missing property is created" D:"missing enum options are patched, extras kept" \
+         E:"a realistic HubSpot property payload passes with no writes"; do
   k=${c%%:*}; echo "$bt" | grep -qx "$k True" && _report ok "bootstrap $k: ${c#*:}" || _report no "bootstrap $k: ${c#*:} ($bt)"
 done
 

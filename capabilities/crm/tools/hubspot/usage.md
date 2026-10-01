@@ -317,8 +317,11 @@ Reject a call with no `stage` and neither filter. Then
 the date (for `next_action_due_before`). With no stage, add
 `sp_stage` `HAS_PROPERTY` so only pipeline companies return. For
 `idle_days`: for each candidate, search `TASK` with `associatedWith`
-that company, sorted by `hs_timestamp` `DESCENDING`, `limit: 1`; keep
-the lead if it has no Task or the newest is older than `idle_days`.
+that company, sorted by `hs_timestamp` `DESCENDING`, `limit: 1`. The
+lead's idle age is now minus the later of that Task's `hs_timestamp`
+and the company's `sp_stage_changed_at`. If the lead has no Task (no
+Activity), use `sp_stage_changed_at`. Keep the lead if its idle age is
+greater than `idle_days`.
 Page with `offset` until the results run out; apply `limit` last.
 
 ### `query_by_score`

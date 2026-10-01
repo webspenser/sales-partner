@@ -74,7 +74,9 @@ tone: "[three adjectives from the interview]"
   sourced phone number; the operator places the call. A call counts as
   one touch toward `max_touches`.
 - **`follow_up_cadence_days`** — the number of idle days after which a
-  `Contacted`, `Replied`, or `Following Up` lead is considered stalled
+  `Contacted`, `Replied`, `Call Scheduled`, `Call Held`, or
+  `Following Up` lead is considered stalled (idle age per
+  `query_by_stage` in `capabilities/crm/contract.md`)
   and due for a follow-up draft or a nudge; also the interval the
   **Stalled** view of the bound CRM tool (for Airtable, `capabilities/crm/tools/airtable/usage.md`) is built against.
 - **`max_touches`** — the total outbound touch limit per lead across the

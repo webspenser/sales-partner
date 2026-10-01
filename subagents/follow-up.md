@@ -23,7 +23,7 @@ read rather than waiting to be told:
 - **A lead idle longer than `follow_up_cadence_days`** (from
   `operating-config.md`) since its last Activity — found via CRM
   `query_by_stage(idle_days: follow_up_cadence_days)`, the same
-  idle-lookup `send-digest`'s Stalled section uses, rather than this
+  idle-age rule `send-digest`'s Stalled section uses, rather than this
   contract scanning every stage's leads for staleness on its own.
 
 ## Inputs

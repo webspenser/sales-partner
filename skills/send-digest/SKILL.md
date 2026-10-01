@@ -129,8 +129,8 @@ marker. The reads it does use, named precisely:
   per the contract), called once per stage a scored lead can currently
   occupy, results filtered client-side to the `(anchor, nominal_time]`
   window on Created Time — Section 3, New leads scored.
-- CRM **`query_by_stage`** with its `idle_days` filter (`stage`
-  omitted) — Section 4, Stalled.
+- CRM **`query_by_stage`** with its `idle_days` filter, called once
+  per stalled-eligible stage and merged — Section 4, Stalled.
 - CRM **`query_by_stage`**, called once per stage of interest, results
   filtered client-side to the `(anchor, nominal_time]` window on
   `Stage Changed At` — Section 5, Movement.
@@ -220,14 +220,24 @@ a required input is missing, stop and report what is missing.
    "what changed since last digest." A lead that answers both
    questions still gets exactly one line in each, never two lines in
    either.
-5. **Section 4 — Stalled.** Call CRM
-   `query_by_stage(idle_days: follow_up_cadence_days, stage: omitted)`
-   — `follow_up_cadence_days` from `operating-config.md`, `stage`
-   omitted so every active stage is considered. List each returned
-   lead, its `Stage`, and the date of its last Activity. No anchor
-   window applied — staleness is measured against *now*, every run,
-   independent of when the last digest fired. Render the section
-   heading with the count of leads returned, e.g. `Stalled (2)`.
+5. **Section 4 — Stalled.** A lead is stalled when it is at
+   `Contacted`, `Replied`, `Call Scheduled`, `Call Held` or
+   `Following Up` and its idle age is greater than
+   `follow_up_cadence_days` (from `operating-config.md`). Idle age is
+   the contract's definition: now − `max(last Activity date, Stage
+   Changed At)`, so a lead with no Activity is measured from its
+   `Stage Changed At` (`capabilities/crm/contract.md`, `query_by_stage`).
+   Pre-outreach stages (`New`, `Scored`, `Researched`, `Approach
+   Drafted`) and terminal stages (`Won`, `Lost`, `Disqualified`) are
+   never stalled. Call CRM
+   `query_by_stage(stage: <stage>, idle_days: follow_up_cadence_days)`
+   once for each of those five stages — never with `stage` omitted —
+   and merge the results. The same CRM data always gives the same
+   count. List each returned lead, its `Stage`, and the date of its
+   last Activity. No anchor window applied — staleness is measured
+   against *now*, every run, independent of when the last digest
+   fired. Render the section heading with the count of leads
+   returned, e.g. `Stalled (2)`.
 6. **Section 5 — Movement.** Call `query_by_stage` once for each stage
    that signals movement worth reporting — at minimum `Won`, `Lost`,
    and `Disqualified`, plus any of `Contacted`, `Replied`, `Call

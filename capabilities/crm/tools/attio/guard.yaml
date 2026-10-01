@@ -3,8 +3,7 @@ covers: [draft_only, dnc_one_way, no_delete]
 
 allow: [whoami, list-*, get-*, search-*, semantic-search-*, run-basic-report,
         add-record-to-list, create-record, upsert-record, update-record,
-        update-list-entry-by-id, update-list-entry-by-record-id,
-        create-note, create-task, update-task]
+        update-list-entry-by-id, update-list-entry-by-record-id]
 deny: ["*delete*", "*merge*", create-list, update-list]
 
 writes:
@@ -24,3 +23,5 @@ rules:
     update: [voided]
   - field: do_not_contact
     update: [true]
+  - field: draft_body
+    forbid: update

@@ -69,7 +69,12 @@ check 2 "delete refused"            $AT ${P}delete-comment '{}' "is denied"
 check 2 "merge refused"             $AT ${P}merge-records '{}' "is denied"
 check 2 "unlisted tool refused"     $AT ${P}create-comment '{}' "is not in the allow list"
 check 0 "read tool allowed"         $AT ${P}list-records-in-list '{"list":"sales_partner_outreach"}'
-check 0 "note without values"       $AT ${P}create-note '{"title":"x","content":"y"}'
+check 2 "create-note not allowed"   $AT ${P}create-note '{"title":"x","content":"y"}' "is not in the allow list"
+check 2 "create-task not allowed"   $AT ${P}create-task '{"content":"x"}' "is not in the allow list"
+check 2 "update-task not allowed"   $AT ${P}update-task '{"task_id":"x"}' "is not in the allow list"
+check 0 "create with draft_body"    $AT ${P}add-record-to-list "{$L,\"entry_values\":{\"status\":\"draft\",\"draft_body\":\"Hi\"}}"
+check 2 "draft_body rewritten"      $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"draft_body\":\"new\"}}" "draft_body may not be changed after create"
+check 2 "Draft Body spelled out"    $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"Draft Body\":\"new\"}}" "may not be changed after create"
 out=$(printf '{not json' | python3 -B "$E" "$AT" - x 2>&1); rc=$?
 [ "$rc" -eq 2 ] && _report ok "malformed JSON blocks" || _report no "malformed JSON (rc=$rc)"
 
@@ -82,6 +87,10 @@ check 2 "reply refused"             $GM ${G}reply_to_thread '{}' "is denied"
 check 2 "forward refused"           $GM ${G}forward_message '{}' "is denied"
 check 2 "trash not allowed"         $GM ${G}trash_thread '{}' "is not in the allow list"
 check 2 "new unlisted tool"         $GM ${G}schedule_email '{}' "is not in the allow list"
+check 0 "prefixed create_draft"     $GM mcp__gmail_server__gmail_create_draft '{}'
+check 0 "prefixed search_threads"   $GM mcp__gmail_server__gmail_search_threads '{}'
+check 2 "prefixed send still denied" $GM mcp__gmail_server__gmail_send_message '{}' "is denied"
+check 2 "suffix glob is not a substring" $GM ${G}create_draft_and_send '{}'
 
 echo "-- Airtable"
 AR=capabilities/crm/tools/airtable/guard.yaml; A=mcp__claude_ai_Airtable__
@@ -99,6 +108,8 @@ check 2 "write without field IDs"   $AR ${A}create_records_for_table "{$B,\"reco
 check 2 "delete refused"            $AR ${A}delete_records_for_table "{$B}" "is denied"
 check 2 "schema change refused"     $AR ${A}create_field "{$B}" "is not in the allow list"
 check 0 "read allowed"              $AR ${A}list_records_for_table "{$B}"
+check 0 "create draft with body"    $AR ${A}create_records_for_table "{$B,\"records\":[{\"fields\":{\"fldSSSSSSSSSSSSSS\":\"draft\",\"fldBBBBBBBBBBBBBB\":\"Hi\"}}]}" "" "$W/b.md"
+check 2 "Draft Body rewritten"      $AR ${A}update_records_for_table "{$B,\"records\":[{\"id\":\"recRRRRRRRRRRRRRR\",\"fields\":{\"fldBBBBBBBBBBBBBB\":\"new\"}}]}" "Draft Body may not be changed after create" "$W/b.md"
 
 echo "-- HubSpot"
 HS=capabilities/crm/tools/hubspot/guard.yaml; H=mcp__claude_ai_HubSpot__
@@ -108,7 +119,10 @@ CU='{"objectType":"companies","objectId":202,"properties":{"sp_do_not_contact":%
 check 0 "create task NOT_STARTED"   $HS ${H}manage_crm_objects "{\"createRequest\":{\"objects\":[$(printf "$TC" NOT_STARTED)]}}"
 check 2 "create task COMPLETED"     $HS ${H}manage_crm_objects "{\"createRequest\":{\"objects\":[$(printf "$TC" COMPLETED)]}}" "hs_task_status may only be written as NOT_STARTED on create"
 check 2 "create task IN_PROGRESS"   $HS ${H}manage_crm_objects "{\"createRequest\":{\"objects\":[$(printf "$TC" IN_PROGRESS)]}}" "NOT_STARTED on create"
-check 0 "update task DEFERRED"      $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$TU" '"hs_task_status":"DEFERRED","hs_task_body":"Direction: outbound\\nOutcome: dup"')]}}"
+check 0 "update task DEFERRED"      $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$TU" '"hs_task_status":"DEFERRED"')]}}"
+check 2 "void rewrites the body"    $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$TU" '"hs_task_status":"DEFERRED","hs_task_body":"Direction: outbound\\nOutcome: dup"')]}}" "hs_task_body may not be changed after create"
+check 0 "task created with body"    $HS ${H}manage_crm_objects '{"createRequest":{"objects":[{"objectType":"tasks","properties":{"hs_task_status":"NOT_STARTED","hs_task_body":"<p>x</p>"}}]}}'
+check 0 "outcome note created"      $HS ${H}manage_crm_objects '{"createRequest":{"objects":[{"objectType":"notes","properties":{"hs_note_body":"<p>Outcome for task 101: dup</p>","hs_timestamp":"2026-10-01T00:00:00Z"},"associations":[{"targetObjectType":"COMPANY","targetObjectId":202}]}]}}'
 check 2 "update task COMPLETED"     $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$TU" '"hs_task_status":"COMPLETED"')]}}" "hs_task_status may only be written as DEFERRED on update"
 check 2 "update task IN_PROGRESS"   $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$TU" '"hs_task_status":"IN_PROGRESS"')]}}" "DEFERRED on update"
 check 2 "update task WAITING"       $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$TU" '"hs_task_status":"WAITING"')]}}" "DEFERRED on update"

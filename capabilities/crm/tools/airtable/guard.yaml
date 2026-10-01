@@ -21,3 +21,5 @@ rules:
     update: [voided]
   - field: Do Not Contact
     update: [true]
+  - field: Draft Body
+    forbid: update

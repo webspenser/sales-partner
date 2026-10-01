@@ -164,6 +164,7 @@ convention.
 | `Outcome` | text |
 | `Lead` | link to Leads |
 | `Contact` | link to Contacts |
+| `Lead Do Not Contact` | lookup of `Do Not Contact` from `Lead`; set up by hand, never written |
 
 **Design principle: drafts are Activities, not a separate table.** A
 draft outreach message is an Activities row with `Status = draft` and

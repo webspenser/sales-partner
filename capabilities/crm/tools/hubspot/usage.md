@@ -355,7 +355,7 @@ Created Time.
 ## Approval invariant under HubSpot
 
 `manage_crm_objects` can write any value to any property, so the
-contract's guarantees are enforced by mechanism:
+contract's guarantees are enforced by mechanism (approval and `dnc_one_way` only):
 
 1. **`guard.yaml` in this folder**, enforced by the agent's guard
    policy engine before every HubSpot call inside an instance:

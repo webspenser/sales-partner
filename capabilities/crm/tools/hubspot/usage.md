@@ -55,13 +55,16 @@ group `Sales Partner` (internal name `sales_partner`).
 | `sp_score_breakdown` | multi-line text | `Score Breakdown` |
 | `sp_industry` | text | `Industry` |
 | `sp_size` | text | `Size` |
-| `sp_location` | text | `Location` |
 | `sp_source` | text | `Source` |
 | `sp_source_url` | text | `Source URL` |
 | `sp_email` | text | `Email` (the general inbox only) |
 | `sp_next_action` | text | `Next Action` |
 | `sp_next_action_due` | date | `Next Action Due` |
 | `sp_do_not_contact` | checkbox (`true` / `false`) | `Do Not Contact` |
+
+The contract's `Location` has no custom property. It is the native `city`,
+`state` and `country`, which the tool writes; readers compose the location
+from those three.
 
 `sp_stage` option values are exactly the contract's stage names: `New`,
 `Scored`, `Researched`, `Approach Drafted`, `Contacted`, `Replied`,
@@ -182,7 +185,7 @@ outside the pipeline), adopt it (step 7) and return its ID as `lead_id`.
          "name": "<company>", "domain": "<domain>", "phone": "<E.164>",
          "address": "…", "city": "…", "state": "…", "zip": "…", "country": "…",
          "sp_stage": "New", "sp_stage_changed_at": "<now, ISO 8601 UTC>",
-         "sp_industry": "…", "sp_size": "…", "sp_location": "…",
+         "sp_industry": "…", "sp_size": "…",
          "sp_source": "…", "sp_source_url": "…", "sp_email": "…",
          "sp_score": "…", "sp_score_breakdown": "…"}}]}}
 
@@ -455,7 +458,6 @@ both equal to the text shown.
 | `sp_score_breakdown` | Score breakdown | Multi-line text | |
 | `sp_industry` | Industry (Sales Partner) | Single-line text | |
 | `sp_size` | Size | Single-line text | |
-| `sp_location` | Location | Single-line text | |
 | `sp_source` | Source | Single-line text | |
 | `sp_source_url` | Source URL | Single-line text | |
 | `sp_email` | General inbox | Single-line text | |

@@ -113,4 +113,55 @@ out=$(HUBSPOT_TOKEN=sk-canary-12345 python3 -B capabilities/crm/tools/hubspot/bo
   printf '%s' "$out" | grep -q 'sk-canary-12345' && _report no "bootstrap echoed the token" || _report ok "bootstrap never prints the token"
 grep -q 'print(.*token' capabilities/crm/tools/hubspot/bootstrap.py && _report no "bootstrap prints a token variable" || _report ok "no print of the token"
 
+# bootstrap.py: pass 1 checks existing property types offline (call is faked; no network)
+bt=$(python3 -B - <<'PY' 2>&1
+import importlib.util, io, contextlib
+sp = importlib.util.spec_from_file_location("b", "capabilities/crm/tools/hubspot/bootstrap.py")
+b = importlib.util.module_from_spec(sp); sp.loader.exec_module(b)
+import os
+os.environ["HUBSPOT_TOKEN"] = "t"
+
+def defn(obj, name):
+    return next(p for p in b.PROPERTIES[obj] if p["name"] == name)
+
+def run(over):
+    calls = []
+    def fake(token, method, path, body=None):
+        calls.append((method, path))
+        parts = path.strip("/").split("/")
+        if method == "GET" and len(parts) == 3 and parts[1] == "groups":
+            return 200, {}
+        if method == "GET":
+            have = over.get(path)
+            if have == 404:
+                return 404, {"message": "nf"}
+            if have is not None:
+                return 200, have
+            d = defn(parts[0], parts[1])
+            return 200, {k: d[k] for k in ("type", "fieldType", "options") if k in d}
+        return 200, {}
+    b.call = fake
+    out, err = io.StringIO(), io.StringIO()
+    with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+        rc = b.main()
+    writes = [c for c in calls if c[0] in ("POST", "PATCH")]
+    return rc, out.getvalue() + err.getvalue(), writes
+
+rc, text, w = run({"/companies/sp_stage": {"type": "string", "fieldType": "text"}})
+print("A", rc == 1 and "companies.sp_stage exists as string/text but must be enumeration/select" in text
+      and "Company properties" in text and not w)
+rc, text, w = run({})
+print("B", rc == 0 and not w)
+rc, text, w = run({"/companies/sp_score": 404})
+print("C", rc == 0 and w == [("POST", "/companies")])
+rc, text, w = run({"/contacts/sp_role": {"type": "enumeration", "fieldType": "select",
+                   "options": [{"value": "decision-maker"}, {"value": "extra"}]}})
+print("D", rc == 0 and [m for m, _ in w] == ["PATCH"])
+PY
+)
+for c in A:"mismatched type blocks with a clear message and no writes" B:"correct types pass with no writes" \
+         C:"a missing property is created" D:"missing enum options are patched, extras kept"; do
+  k=${c%%:*}; echo "$bt" | grep -qx "$k True" && _report ok "bootstrap $k: ${c#*:}" || _report no "bootstrap $k: ${c#*:} ($bt)"
+done
+
 finish

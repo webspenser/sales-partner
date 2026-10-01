@@ -100,7 +100,7 @@ Every field is a built-in Task property; Tasks need no custom fields.
 | Property | Contract field |
 |---|---|
 | `hs_task_subject` | `subject`: a short title, `<channel> <direction> — <company>` |
-| `hs_task_body` | rich text: `direction`, `summary` and `outcome` as labelled `<p>` lines, then `draft_body` (below) |
+| `hs_task_body` | rich text: `direction`, `summary` and (when known at create) `outcome` as labelled `<p>` lines, then `draft_body` (below). Set on create only |
 | `hs_timestamp` | the due date / `Date` (set to now on create) |
 | `hs_task_type` | `channel`: `EMAIL` for email, `CALL` for call, `LINKED_IN_MESSAGE` for linkedin (`LINKED_IN_CONNECT` for a connection note), `TODO` for other |
 | `hs_task_status` | `status`, mapped below |
@@ -120,8 +120,10 @@ Every field is a built-in Task property; Tasks need no custom fields.
 
     <p>Direction: outbound</p><p>Summary: <summary></p><p><draft_body></p>
 
-`update_activity` appends an `Outcome: <outcome>` line after `Summary:`.
-An operator's edit in HubSpot may rewrap these lines in other tags, so
+The guard refuses any change to `hs_task_body` after create, so an
+approved draft can't be rewritten. A voided Task's outcome is a Note on
+the lead's Company whose body starts `Outcome for task <activity_id>:`
+(see `update_activity`). An operator's edit in HubSpot may rewrap these lines in other tags, so
 on read strip the HTML tags (treating `</p>`, `<br>` and `</div>` as line
 breaks) before parsing the lines back into `summary` and `outcome`. The
 `Direction:` line is kept for people to read; `direction` itself is read
@@ -214,7 +216,10 @@ outside the pipeline), adopt it (step 7) and return its ID as `lead_id`.
 2. `hubspot:search_crm_objects` on `CONTACT`, `NOTE`, and `TASK`, each
    with `associatedWith: [{"objectType": "companies", "operator": "EQUAL", "objectIdValues": [lead_id]}]`
    and the Schema properties for that object. These are the lead's
-   Contacts, Research, and Activities.
+   Contacts, Research, and Activities. Notes whose body starts
+   `<p>Outcome for task ` are outcomes, not Research: the text after
+   `Outcome for task <activity_id>: ` is that Activity's `outcome` (the
+   newest such Note wins), overriding any `Outcome:` line in its body.
 
 ### `update_stage`
 
@@ -229,6 +234,10 @@ Read the clock right before the call. Never write the reason into
 operator.
 
 ### `update_lead`
+
+Write only the fields that change: an update that repeats unchanged
+fields (for example `sp_do_not_contact` as `false`) can be refused by
+the guard.
 
 Reject if `fields` contains `stage`, `sp_stage`, or
 `sp_stage_changed_at`. Read the company first
@@ -263,15 +272,21 @@ the flag is `"sp_do_not_contact": "true"`.
 
 ### `update_activity`
 
-Reject a `status` other than `voided`. Read the Task
-(`hubspot:get_crm_objects` on `TASK`, property `hs_task_body`), insert
-a `<p>Outcome: <outcome></p>` line after the labelled lines at its top,
-and send the full new body with the status:
+Reject a `status` other than `voided`. Set the Task's status only:
 
     {"updateRequest": {"objects": [{"objectType": "tasks", "objectId": <activity_id>,
-      "properties": {"hs_task_status": "DEFERRED", "hs_task_body": "<body with Outcome: line>"}}]}}
+      "properties": {"hs_task_status": "DEFERRED"}}]}}
 
-This is the only write this tool ever makes to an existing Task.
+When an `outcome` is given, also create a Note on the lead's Company
+(find it as `query_activities` does, from the Task's association):
+
+    {"createRequest": {"objects": [{"objectType": "notes",
+      "properties": {"hs_note_body": "<p>Outcome for task <activity_id>: <outcome></p>",
+                     "hs_timestamp": "<now, ISO 8601 UTC>"},
+      "associations": [{"targetObjectType": "COMPANY", "targetObjectId": <lead_id>}]}]}}
+
+The status change is the only write this tool ever makes to an existing
+Task: the guard refuses any change to `hs_task_body` after create.
 
 ### `log_research`
 

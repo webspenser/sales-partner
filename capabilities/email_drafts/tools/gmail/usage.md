@@ -17,8 +17,9 @@ only the draft and read tools (`create_draft`, `list_drafts`,
 `list_labels`). Any tool whose name contains `send`, `reply` or
 `forward` is denied, and every tool not on the list is blocked, so
 `no_send` holds by mechanism even on a Gmail server that offers
-sending, replying or forwarding. If your Gmail server names these tools
-differently, add its names to `allow`.
+sending, replying or forwarding. The allow list matches names by suffix
+(`*create_draft`), so a Gmail server that prefixes its tool names
+(`gmail_create_draft`) still works.
 
 ## Probe
 

@@ -72,3 +72,39 @@ run or rebuild any workflow, so nothing can route around these four.
    then approve the n8n login; Claude Code: add it as a remote MCP
    server and log in when asked).
 7. Set up the reply relay (`## Reply relay`).
+
+## Reply relay
+
+InvokeIQ reports replies and bounces by webhook only, and the agent has
+no endpoint, so a small n8n workflow receives them and records each one
+in the CRM. The relay only records facts: it never changes the status,
+Do Not Contact, or anything else. The `sync-replies` skill makes every
+decision from what it records.
+
+Shipped for Attio: `relay/attio.n8n.json`. It checks the
+`X-InvokeIQ-Signature` header (HMAC SHA-256 of the raw body with the
+signing secret), keeps only replies (`contact.replied`) and bounces,
+finds the person by email in Attio and adds one entry to
+`sales_partner_outreach` for their company: `channel` `email`,
+`direction` `inbound`, `status` `sent`, `date` the received date,
+`summary` `<category>: <threadSummary>` (a bounce: `bounced`), and the
+sentiment, score, subject, snippet and received time in `draft_body`.
+
+To set it up:
+
+1. Import `relay/attio.n8n.json` into the same n8n as the tools
+   workflow.
+2. Create a **new** Crypto credential holding a long random signing
+   secret and select it on the "HMAC of raw body" node; create a **new**
+   HTTP Bearer credential named `Attio API` with an Attio API key that
+   can read people and write list entries, and select it on both Attio
+   nodes.
+3. **Publish** the workflow. In InvokeIQ, Settings → Webhooks: add the
+   webhook node's Production URL with the same signing secret, for the
+   replied and bounced events.
+
+A relay for another CRM follows the same recipe: verify the signature,
+keep replies and bounces, find the lead by the contact's email, and
+create exactly one inbound email Activity at `sent` with that summary
+and body, through the CRM's own API. Nothing else.
+

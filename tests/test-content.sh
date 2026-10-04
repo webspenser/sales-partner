@@ -420,4 +420,20 @@ assert_contains "$SP/capabilities/crm/tools/attio/usage.md" '`channel` when give
 assert_contains "$SP/capabilities/crm/tools/airtable/usage.md" '`Channel` when given'
 assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" '`channel` when given'
 
+
+echo "-- 6.0.0: Attio reply relay"
+RL="$SP/capabilities/sequences/tools/invokeiq/relay/attio.n8n.json"
+python3 - "$RL" <<'PY' && _report ok "attio relay: webhook, signature check, outreach entry create, no credential ids" || _report no "attio relay structure"
+import json, sys
+d = json.load(open(sys.argv[1])); types = [n["type"] for n in d["nodes"]]
+assert "n8n-nodes-base.webhook" in types and "n8n-nodes-base.crypto" in types
+s = json.dumps(d)
+assert "x-invokeiq-signature" in s and "contact.replied" in s and "api.attio.com" in s and "sales_partner_outreach" in s
+assert not any(n.get("credentials") for n in d["nodes"]) and not any("webhookId" in n for n in d["nodes"])
+PY
+U="$SP/capabilities/sequences/tools/invokeiq/usage.md"
+assert_contains "$U" '## Reply relay'
+assert_contains "$U" 'never changes the status'
+assert_contains "$U" 'relay/attio.n8n.json'
+
 finish

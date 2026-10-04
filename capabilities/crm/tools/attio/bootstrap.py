@@ -23,7 +23,7 @@ import urllib.request
 BASE = "https://api.attio.com/v2"
 
 STAGES = [
-    "New", "Scored", "Researched", "Approach Drafted", "Contacted", "Replied",
+    "New", "Scored", "Researched", "Approach Drafted", "Ready to Send", "Contacted", "Replied",
     "Call Scheduled", "Call Held", "Following Up", "Won", "Lost", "Disqualified",
 ]
 
@@ -84,7 +84,7 @@ LISTS = {
         attr("date", "Date", "date"),
         attr("summary", "Summary", "text"),
         attr("draft_body", "Draft Body", "text"),
-        attr("status", "Status", "select", ["draft", "approved", "sent", "voided"]),
+        attr("status", "Status", "select", ["draft", "sent", "voided"]),
         attr("outcome", "Outcome", "text"),
         attr("contact", "Contact", "record-reference",
              config={"record_reference": {"allowed_objects": ["people"]}}),

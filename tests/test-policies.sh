@@ -57,7 +57,7 @@ check 2 "create voided"             $AT ${P}add-record-to-list "{$L,\"entry_valu
 check 2 "mixed wrapped status"      $AT ${P}add-record-to-list "{$L,\"entry_values\":{\"status\":{\"option\":\"draft\",\"title\":\"approved\"}}}"
 check 0 "create lead, dnc false ok" $AT ${P}add-record-to-list "{$L,\"entry_values\":{\"stage\":\"New\",\"do_not_contact\":false}}"
 check 0 "update voided"             $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"status\":\"voided\",\"outcome\":\"dup\"}}"
-check 2 "update draft"              $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"status\":\"draft\"}}" "status may only be written as voided on update"
+check 2 "update draft"              $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"status\":\"draft\"}}" "status may only be written as sent, voided on update"
 check 2 "update approved by record" $AT ${P}update-list-entry-by-record-id "{$L,\"entry_values\":{\"status\":\"Approved\"}}"
 check 2 "status by option UUID"     $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"status\":\"49e56c99-597b-40b5-9413-162ce1adadfc\"}}"
 check 2 "unknown value shape"       $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"status\":{\"foo\":1}}}" "cannot check this call"
@@ -83,6 +83,13 @@ check 2 "Draft Body spelled out"    $AT ${P}update-list-entry-by-id "{$X,\"entry
 out=$(printf '{not json' | python3 -B "$E" "$AT" - x 2>&1); rc=$?
 [ "$rc" -eq 2 ] && _report ok "malformed JSON blocks" || _report no "malformed JSON (rc=$rc)"
 
+check 2 "agent can't approve a plan"  $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"stage\":\"Ready to Send\"}}" "stage may only be written as"
+check 0 "agent moves to Contacted"    $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"stage\":\"Contacted\"}}"
+check 0 "agent returns a lead to Approach Drafted" $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"stage\":\"Approach Drafted\"}}"
+check 2 "lead created past New"       $AT ${P}add-record-to-list "{$L,\"entry_values\":{\"stage\":\"Scored\"}}" "stage may only be written as New on create"
+check 0 "lead created at New"         $AT ${P}add-record-to-list "{$L,\"entry_values\":{\"stage\":\"New\"}}"
+check 0 "agent marks a touch sent"    $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"status\":\"sent\"}}"
+check 2 "agent can't revive a draft"  $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"status\":\"draft\"}}"
 echo "-- Gmail"
 GM=capabilities/email_drafts/tools/gmail/guard.yaml; G=mcp__claude_ai_Gmail__
 check 0 "create draft"              $GM ${G}create_draft '{"to":"a@b.c","subject":"s","body":"b"}'
@@ -100,7 +107,8 @@ check 2 "suffix glob is not a substring" $GM ${G}create_draft_and_send '{}'
 echo "-- Airtable"
 AR=capabilities/crm/tools/airtable/guard.yaml; A=mcp__claude_ai_Airtable__
 printf '%s\n' '# CRM binding — Airtable' 'base_id: appAAAAAAAAAAAAAA' 'field_status: fldSSSSSSSSSSSSSS' 'field_do_not_contact: fldDDDDDDDDDDDDDD' \
-  'field_draft_body: fldBBBBBBBBBBBBBB' 'field_lead: fldL1LLLLLLLLLLLLL' 'field_lead: fldL2LLLLLLLLLLLLL' > "$W/b.md"
+  'field_draft_body: fldBBBBBBBBBBBBBB' 'field_lead: fldL1LLLLLLLLLLLLL' 'field_lead: fldL2LLLLLLLLLLLLL' \
+  'field_stage: fldSTAGEEEEEEEEEE' > "$W/b.md"
 B='"baseId":"appAAAAAAAAAAAAAA","tableId":"tblTTTTTTTTTTTTTT"'
 check 0 "create draft by ID"        $AR ${A}create_records_for_table "{$B,\"records\":[{\"fields\":{\"fldSSSSSSSSSSSSSS\":\"draft\"}}]}" "" "$W/b.md"
 check 2 "create approved by ID"     $AR ${A}create_records_for_table "{$B,\"records\":[{\"fields\":{\"fldSSSSSSSSSSSSSS\":\"approved\"}}]}" "Status may only be written as draft on create" "$W/b.md"
@@ -116,6 +124,9 @@ check 0 "read allowed"              $AR ${A}list_records_for_table "{$B}"
 check 0 "create draft with body"    $AR ${A}create_records_for_table "{$B,\"records\":[{\"fields\":{\"fldSSSSSSSSSSSSSS\":\"draft\",\"fldBBBBBBBBBBBBBB\":\"Hi\"}}]}" "" "$W/b.md"
 check 2 "Draft Body rewritten"      $AR ${A}update_records_for_table "{$B,\"records\":[{\"id\":\"recRRRRRRRRRRRRRR\",\"fields\":{\"fldBBBBBBBBBBBBBB\":\"new\"}}]}" "Draft Body may not be changed after create" "$W/b.md"
 
+check 2 "agent can't approve a plan"  $AR ${A}update_records_for_table "{$B,\"records\":[{\"id\":\"recRRRRRRRRRRRRRR\",\"fields\":{\"fldSTAGEEEEEEEEEE\":\"Ready to Send\"}}]}" "Stage may only be written as" "$W/b.md"
+check 0 "agent moves to Contacted"    $AR ${A}update_records_for_table "{$B,\"records\":[{\"id\":\"recRRRRRRRRRRRRRR\",\"fields\":{\"fldSTAGEEEEEEEEEE\":\"Contacted\"}}]}" "" "$W/b.md"
+check 0 "agent marks a touch sent"    $AR ${A}update_records_for_table "{$B,\"records\":[{\"id\":\"recRRRRRRRRRRRRRR\",\"fields\":{\"fldSSSSSSSSSSSSSS\":\"sent\"}}]}" "" "$W/b.md"
 echo "-- HubSpot"
 HS=capabilities/crm/tools/hubspot/guard.yaml; H=mcp__claude_ai_HubSpot__
 TC='{"objectType":"tasks","properties":{"hs_task_status":"%s"}}'
@@ -128,7 +139,10 @@ check 0 "update task DEFERRED"      $HS ${H}manage_crm_objects "{\"updateRequest
 check 2 "void rewrites the body"    $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$TU" '"hs_task_status":"DEFERRED","hs_task_body":"Direction: outbound\\nOutcome: dup"')]}}" "hs_task_body may not be changed after create"
 check 0 "task created with body"    $HS ${H}manage_crm_objects '{"createRequest":{"objects":[{"objectType":"tasks","properties":{"hs_task_status":"NOT_STARTED","hs_task_body":"<p>x</p>"}}]}}'
 check 0 "outcome note created"      $HS ${H}manage_crm_objects '{"createRequest":{"objects":[{"objectType":"notes","properties":{"hs_note_body":"<p>Outcome for task 101: dup</p>","hs_timestamp":"2026-10-01T00:00:00Z"},"associations":[{"targetObjectType":"COMPANY","targetObjectId":202}]}]}}'
-check 2 "update task COMPLETED"     $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$TU" '"hs_task_status":"COMPLETED"')]}}" "hs_task_status may only be written as DEFERRED on update"
+check 0 "agent marks a task completed (sent)" $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$TU" '"hs_task_status":"COMPLETED"')]}}"
+check 2 "agent can't approve a plan"  $HS ${H}manage_crm_objects '{"updateRequest":{"objects":[{"objectType":"companies","objectId":202,"properties":{"sp_stage":"Ready to Send"}}]}}' "sp_stage may only be written as"
+check 0 "agent moves to Contacted"    $HS ${H}manage_crm_objects '{"updateRequest":{"objects":[{"objectType":"companies","objectId":202,"properties":{"sp_stage":"Contacted"}}]}}'
+check 2 "lead created past New"       $HS ${H}manage_crm_objects '{"createRequest":{"objects":[{"objectType":"companies","properties":{"name":"X","sp_stage":"Scored"}}]}}' "sp_stage may only be written as New on create"
 check 2 "update task IN_PROGRESS"   $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$TU" '"hs_task_status":"IN_PROGRESS"')]}}" "DEFERRED on update"
 check 2 "update task WAITING"       $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$TU" '"hs_task_status":"WAITING"')]}}" "DEFERRED on update"
 check 2 "create task WAITING"       $HS ${H}manage_crm_objects "{\"createRequest\":{\"objects\":[$(printf "$TC" WAITING)]}}" "NOT_STARTED on create"

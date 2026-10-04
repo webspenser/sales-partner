@@ -51,7 +51,7 @@ for the rest of the CRM.
 | Slug | Type | Contract field |
 |---|---|---|
 | `lead` | record-reference → companies | the lead itself (equals the parent) |
-| `stage` | status — exactly the twelve stages | `Stage` |
+| `stage` | status — exactly the thirteen stages | `Stage` |
 | `stage_changed_at` | timestamp | `Stage Changed At` |
 | `stage_reason` | text | the `reason` from the latest `update_stage` call |
 | `score` | number | `Score` |
@@ -123,12 +123,12 @@ usable angle the Approacher opens with.
 | `date` | date |
 | `summary` | text |
 | `draft_body` | text |
-| `status` | select: draft, approved, sent, voided |
+| `status` | select: draft, sent, voided |
 | `outcome` | text |
 
-Drafts are Outreach entries at `status = draft`. There is no separate
-drafts list, for the same reason the Airtable tool gives: the
-approval queue must stay a single view.
+Drafts are Outreach entries at `status = draft`, one per channel, each
+with its `date`. There is no separate drafts list: the operator reviews
+a lead's whole plan from the lead (see **Review** below).
 
 ## Operations
 
@@ -164,7 +164,7 @@ write nothing) exactly where the contract says the operation rejects.
   come from `attio:list-records` on `people`, filtered on `company` eq
   the same reference. If there is no company or no Pipeline entry,
   that is an error, not an empty record.
-- **`update_stage`** — Reject a `stage` outside the twelve. Find the
+- **`update_stage`** — Reject a `stage` outside the thirteen. Find the
   Pipeline entry by `lead`, then call `attio:update-list-entry-by-id`
   with `stage`, `stage_changed_at` = now (read the clock right before
   the call), and `stage_reason` = `reason`, **all in the same call**.
@@ -184,10 +184,10 @@ write nothing) exactly where the contract says the operation rejects.
   `parent_record_id` = `lead_id`, `lead` = the same company, `status` =
   `draft`, `date` = today, and the other fields. Return the new
   `entry_id` as `activity_id`. Never update an existing entry here.
-- **`update_activity`** — Reject `status` other than `voided`. Call
-  `attio:update-list-entry-by-id` on `sales_partner_outreach` with
-  `status: voided` and `outcome`. This is the only write this tool
-  ever makes to an existing Outreach entry.
+- **`update_activity`** — Reject `status` other than `sent` or `voided`.
+  Call `attio:update-list-entry-by-id` on `sales_partner_outreach` with
+  `status` and `outcome` only (never `draft_body`). This is the only
+  write this tool ever makes to an existing Outreach entry.
 - **`log_research`** — Reject an empty `source_url` or `hook`, or a
   `type` outside the seven values. Then `attio:add-record-to-list` on
   `sales_partner_research` with `allow_duplicates: true` and `lead` set.
@@ -235,15 +235,20 @@ attribute, so the contract's guarantees are enforced by mechanism (approval and 
      this tool uses are callable; any other Attio tool is blocked;
    - `delete` and `merge` tools, and list configuration changes
      (`create-list`, `update-list`), are always denied;
-   - `status` may only be written as `draft` on create and `voided` on
-     update;
+   - `status` may only be written as `draft` on create and `sent` or
+     `voided` on update;
+   - `stage` may only be written as `New` on create, and never as
+     `Ready to Send`: only the operator approves a plan;
+   - `draft_body` can't be changed after create;
    - `do_not_contact` may only be updated to `true`;
    - attribute keys given as IDs instead of slugs are refused.
 
    The operator's own edits in the Attio app never pass through it, so
-   approving and sending stay operator-only.
-2. **Nothing can send.** Email goes through the `email_drafts`
-   capability, whose tool blocks send tools.
+   approving a plan (moving the lead to `Ready to Send`) stays
+   operator-only.
+2. **Nothing sends from the CRM.** Email goes out only through `enroll`
+   (the `sequences` capability) after the operator's approval, or as a
+   Gmail draft the operator sends.
 
 ## Views (the operator's interface)
 
@@ -252,14 +257,19 @@ views.
 
 - **Pipeline board** — on `sales_partner_pipeline`: a Kanban view
   grouped by `stage`.
-- **Awaiting Approval** — on `sales_partner_outreach`: a table filtered
-  on `status` is `draft` **and** `direction` is `outbound`, sorted by
-  `date`. Show the lead's Do Not Contact flag in this view: add the
-  `do_not_contact` attribute of the linked Pipeline entry as a visible
-  column, so a draft on an opted-out lead is obvious before you
-  approve it. This is the whole review queue. To approve a draft, edit
-  `draft_body` if needed, set `status` to `approved`, send it yourself,
-  then set it to `sent`.
+- **Review** — on `sales_partner_pipeline`: filtered on `stage` is
+  `Approach Drafted`. Open a lead to see its draft Outreach entries (one
+  per channel, each with its `date`) and show `do_not_contact`, so a plan
+  for an opted-out lead is obvious. Edit a draft's `draft_body` or
+  `date`, set any draft you don't want to `voided`, then move the lead
+  to `Ready to Send`: that approves the whole plan.
+- **Ready to Send** — on `sales_partner_pipeline`: filtered on `stage`
+  is `Ready to Send`. The next `enroll` run picks these up; move a lead
+  back to `Approach Drafted` before then to cancel.
+- **My touches** — on `sales_partner_outreach`: filtered on `status` is
+  `draft`, `direction` is `outbound` and `channel` is `linkedin` or
+  `call`, sorted by `date`. These wait for you on their dates; set
+  `status` to `sent` when you've done one.
 - **Research Queue** — on `sales_partner_pipeline`: filtered on `stage`
   is `Scored`, sorted by `score`, highest first.
 - **Due Today** — on `sales_partner_pipeline`: filtered on
@@ -280,7 +290,7 @@ what they find to `bindings/crm.md` in the instance:
 3. `attio:list-list-attribute-definitions` on `sales_partner_pipeline`,
    `sales_partner_research`, and `sales_partner_outreach` — every slug
    in the Schema tables above must exist, and `stage` must hold the
-   twelve stages.
+   thirteen stages.
 4. `attio:list-attribute-definitions` on `people` — `sp_role`,
    `sp_verified`, and `sp_notes` must exist. Record
    `lead_source_outbound: yes` if `lead_source` exists with an
@@ -323,7 +333,7 @@ List `sales_partner_pipeline` (name `Sales Partner Pipeline`):
 
 | Title | Slug | Type | Options |
 |---|---|---|---|
-| Stage | `stage` | Status | New, Scored, Researched, Approach Drafted, Contacted, Replied, Call Scheduled, Call Held, Following Up, Won, Lost, Disqualified |
+| Stage | `stage` | Status | New, Scored, Researched, Approach Drafted, Ready to Send, Contacted, Replied, Call Scheduled, Call Held, Following Up, Won, Lost, Disqualified |
 | Stage Changed At | `stage_changed_at` | Timestamp | |
 | Stage Reason | `stage_reason` | Text | |
 | Score | `score` | Number | |
@@ -361,7 +371,7 @@ List `sales_partner_outreach` (name `Sales Partner Outreach`):
 | Date | `date` | Date | |
 | Summary | `summary` | Text | |
 | Draft Body | `draft_body` | Text | |
-| Status | `status` | Select | draft, approved, sent, voided |
+| Status | `status` | Select | draft, sent, voided |
 | Outcome | `outcome` | Text | |
 | Contact | `contact` | Record reference, allowed object People | |
 | Lead | `lead` | Record reference, allowed object Companies | |

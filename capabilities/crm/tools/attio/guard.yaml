@@ -20,7 +20,11 @@ refuse_keys: [uuid]
 rules:
   - field: status
     create: [draft]
-    update: [voided]
+    update: [sent, voided]
+  - field: stage
+    create: [New]
+    update: [New, Scored, Researched, "Approach Drafted", Contacted, Replied, "Call Scheduled",
+             "Call Held", "Following Up", Won, Lost, Disqualified]
   - field: do_not_contact
     update: [true]
   - field: draft_body

@@ -16,7 +16,11 @@ unknown_writes: block
 rules:
   - field: hs_task_status
     create: [NOT_STARTED]
-    update: [DEFERRED]
+    update: [COMPLETED, DEFERRED]
+  - field: sp_stage
+    create: [New]
+    update: [New, Scored, Researched, "Approach Drafted", Contacted, Replied, "Call Scheduled",
+             "Call Held", "Following Up", Won, Lost, Disqualified]
   - field: sp_do_not_contact
     update: ["true"]
   - field: hs_pipeline_stage

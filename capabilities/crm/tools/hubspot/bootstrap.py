@@ -24,7 +24,7 @@ SCOPES = ["crm.schemas.companies.read", "crm.schemas.companies.write",
           "crm.schemas.contacts.read", "crm.schemas.contacts.write",
           "crm.objects.companies.read", "crm.objects.contacts.read"]
 
-STAGES = ["New", "Scored", "Researched", "Approach Drafted", "Contacted", "Replied",
+STAGES = ["New", "Scored", "Researched", "Approach Drafted", "Ready to Send", "Contacted", "Replied",
           "Call Scheduled", "Call Held", "Following Up", "Won", "Lost", "Disqualified"]
 
 

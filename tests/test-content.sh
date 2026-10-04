@@ -314,4 +314,21 @@ assert_not_contains "$K" '`approved`'
 assert_not_contains "$SP/AGENT.md" 'twelve lead stages'
 assert_contains "$SP/AGENT.md" 'thirteen lead stages'
 assert_not_contains "$SP/evals/cases.md" 'approved'
+
+echo "-- 6.0.0: CRM tools"
+assert_contains "$SP/capabilities/crm/tools/attio/usage.md" 'Ready to Send'
+assert_not_contains "$SP/capabilities/crm/tools/attio/usage.md" '`approved`'
+assert_not_contains "$SP/capabilities/crm/tools/attio/usage.md" 'Awaiting Approval'
+assert_not_contains "$SP/capabilities/crm/tools/attio/usage.md" 'twelve'
+assert_contains "$SP/capabilities/crm/tools/airtable/usage.md" 'Ready to Send'
+assert_not_contains "$SP/capabilities/crm/tools/airtable/usage.md" '`approved`'
+assert_not_contains "$SP/capabilities/crm/tools/airtable/usage.md" 'Awaiting Approval'
+assert_not_contains "$SP/capabilities/crm/tools/airtable/usage.md" 'twelve'
+assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'Ready to Send'
+assert_not_contains "$SP/capabilities/crm/tools/hubspot/usage.md" '`approved`'
+assert_not_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'Awaiting Approval'
+assert_not_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'twelve'
+grep -q '"Ready to Send"' "$SP/capabilities/crm/tools/attio/bootstrap.py" && _report ok "attio bootstrap has Ready to Send" || _report no "attio bootstrap lacks Ready to Send"
+grep -q '"Ready to Send"' "$SP/capabilities/crm/tools/hubspot/bootstrap.py" && _report ok "hubspot bootstrap has Ready to Send" || _report no "hubspot bootstrap lacks Ready to Send"
+assert_not_contains "$SP/capabilities/crm/tools/attio/bootstrap.py" '"approved"'
 finish

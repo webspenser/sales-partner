@@ -16,7 +16,7 @@ their prefix (for example `mcp__claude_ai_HubSpot__search_crm_objects`).
 ## Data model
 
 Every lead is a HubSpot **Company**, with a custom `sp_stage` dropdown
-holding the twelve stages. People at the lead are **Contacts**
+holding the thirteen stages. People at the lead are **Contacts**
 associated with that company. Each research finding is a **Note**
 associated with the company. Each outreach draft or logged interaction
 (an Activity) is a **Task** associated with the company and, when there
@@ -48,7 +48,7 @@ group `Sales Partner` (internal name `sales_partner`).
 | `domain` | native | `domain` (bare, no `https://` or `www.`) |
 | `phone` | native, written as E.164 | `phone` |
 | `address`, `city`, `state`, `zip`, `country` | native | `address`, as sourced, split into its parts |
-| `sp_stage` | dropdown, the twelve stages | `Stage` |
+| `sp_stage` | dropdown, the thirteen stages | `Stage` |
 | `sp_stage_changed_at` | datetime | `Stage Changed At` |
 | `sp_stage_reason` | multi-line text | the `reason` from the latest `update_stage` |
 | `sp_score` | number | `Score` |
@@ -67,7 +67,7 @@ The contract's `Location` has no custom property. It is the native `city`,
 from those three.
 
 `sp_stage` option values are exactly the contract's stage names: `New`,
-`Scored`, `Researched`, `Approach Drafted`, `Contacted`, `Replied`,
+`Scored`, `Researched`, `Approach Drafted`, `Ready to Send`, `Contacted`, `Replied`,
 `Call Scheduled`, `Call Held`, `Following Up`, `Won`, `Lost`,
 `Disqualified`.
 
@@ -111,17 +111,20 @@ Every field is a built-in Task property; Tasks need no custom fields.
 | Contract `status` | `hs_task_status` | Who sets it |
 |---|---|---|
 | `draft` | `NOT_STARTED` | the agent, on create only (omitting the field also yields `NOT_STARTED`) |
-| `approved` | `IN_PROGRESS` or `WAITING` | the operator only |
-| `sent` | `COMPLETED` | the operator only |
-| `voided` | `DEFERRED` | the agent, the only status it may update to |
+| `sent` | `COMPLETED` | the agent after `enroll`, or the operator after a LinkedIn or call touch |
+| `voided` | `DEFERRED` | the agent or the operator |
+
+`IN_PROGRESS` and `WAITING` are not contract statuses: a Task the
+operator moves there is read as `draft`. The plan is approved on the
+Company, by moving `sp_stage` to `Ready to Send`.
 
 `hs_task_body` is rich text, so it starts with labelled lines, one
 `<p>` each (as Research Notes do), then the draft:
 
     <p>Direction: outbound</p><p>Summary: <summary></p><p><draft_body></p>
 
-The guard refuses any change to `hs_task_body` after create, so an
-approved draft can't be rewritten. A voided Task's outcome is a Note on
+The guard refuses any change to `hs_task_body` after create, so a draft
+can't be rewritten after the operator approved the plan. A voided Task's outcome is a Note on
 the lead's Company whose body starts `Outcome for task <activity_id>:`
 (see `update_activity`). An operator's edit in HubSpot may rewrap these lines in other tags, so
 on read strip the HTML tags (treating `</p>`, `<br>` and `</div>` as line
@@ -129,9 +132,10 @@ breaks) before parsing the lines back into `summary` and `outcome`. The
 `Direction:` line is kept for people to read; `direction` itself is read
 from `hs_task_priority`.
 
-Outbound drafts are Tasks with status Not started and priority High.
-There is no separate drafts object: the approval queue must stay a
-single view.
+Outbound drafts are Tasks with status Not started and priority High,
+one per channel, each with its due date. There is no separate drafts
+object: the operator reviews a lead's whole plan from its Company (see
+**Review** below).
 
 ## Calling the connector
 
@@ -223,7 +227,7 @@ outside the pipeline), adopt it (step 7) and return its ID as `lead_id`.
 
 ### `update_stage`
 
-Reject a `stage` outside the twelve. Then one call, with all three
+Reject a `stage` outside the thirteen. Then one call, with all three
 properties **in the same update**:
 
     {"updateRequest": {"objects": [{"objectType": "companies", "objectId": <lead_id>, "properties": {
@@ -272,10 +276,11 @@ the flag is `"sp_do_not_contact": "true"`.
 
 ### `update_activity`
 
-Reject a `status` other than `voided`. Set the Task's status only:
+Reject a `status` other than `sent` or `voided`. Set the Task's status
+only, `COMPLETED` for `sent` or `DEFERRED` for `voided`:
 
     {"updateRequest": {"objects": [{"objectType": "tasks", "objectId": <activity_id>,
-      "properties": {"hs_task_status": "DEFERRED"}}]}}
+      "properties": {"hs_task_status": "<COMPLETED|DEFERRED>"}}]}}
 
 When an `outcome` is given, also create a Note on the lead's Company
 (find it as `query_activities` does, from the Task's association):
@@ -347,12 +352,11 @@ Page with `offset` until the results run out; apply `limit` last.
 
 ### `query_activities`
 
-Reject a `status` outside draft / approved / sent / voided, or a
+Reject a `status` outside draft / sent / voided, or a
 `direction` other than outbound / inbound. Then
 `hubspot:search_crm_objects` on `TASK`, mapping the contract status to
-status filters: `draft` → `hs_task_status` `EQ` `NOT_STARTED`;
-`approved` → `hs_task_status` `IN` with
-`"values": ["IN_PROGRESS", "WAITING"]`;
+status filters: `draft` → `hs_task_status` `IN` with
+`"values": ["NOT_STARTED", "IN_PROGRESS", "WAITING"]`;
 `sent` → `EQ` `COMPLETED`; `voided` → `EQ` `DEFERRED`. When
 `direction` is given, add `hs_task_priority` `EQ` `HIGH` (outbound) or
 `NONE` (inbound) to the same filter group. Add
@@ -387,7 +391,9 @@ contract's guarantees are enforced by mechanism (approval and `dnc_one_way` only
      accepts only those two request shapes, so there is no other place
      for values to sit;
    - `hs_task_status` may only be created as `NOT_STARTED` and updated
-     to `DEFERRED` (`draft_only`). Creating a Task with no status also
+     to `COMPLETED` or `DEFERRED` (`draft_only`);
+   - `sp_stage` may only be created as `New`, and never written as
+     `Ready to Send`: only the operator approves a plan. Creating a Task with no status also
      yields `NOT_STARTED`. The Task Pipeline's stages mirror the
      statuses, so `hs_pipeline_stage`, `hs_pipeline` and
      `hs_task_completion_date` are forbidden to the agent outright
@@ -395,24 +401,28 @@ contract's guarantees are enforced by mechanism (approval and `dnc_one_way` only
    - `sp_do_not_contact` may only be updated to `true` (`dnc_one_way`).
 
    The operator's own edits in HubSpot never pass through it, so
-   approving and sending stay operator-only.
-2. **Nothing can send.** Email goes through the `email_drafts`
-   capability, whose tool blocks send tools. HubSpot's email and
-   marketing tools are not on the allow list.
+   approving a plan stays operator-only.
+2. **Nothing sends from the CRM.** Email goes out only through `enroll`
+   (the `sequences` capability) after the operator's approval, or as a
+   Gmail draft the operator sends. HubSpot's email and marketing tools
+   are not on the allow list.
 
 ## Views (the operator's interface)
 
 Create these once in HubSpot. The connector can't create views.
 
-- **Awaiting Approval** — the approval queue. A Tasks view filtered on
-  status is Not started **and** priority is High (outbound), sorted by
-  due date. A Tasks view can't show a company property, so before
-  approving a draft, open the associated company and check
-  `Do Not Contact` (`sp_do_not_contact`); the digest's
-  `⚠ DO NOT SEND` marker covers this case too. To approve a draft, edit the task notes if needed and move
-  it to In progress (or Waiting); send it yourself, then mark it
-  Completed. Deferred tasks are voided drafts. If you change a task's
-  priority by hand, it only moves between views; nothing is sent.
+- **Review** — Companies filtered on `sp_stage` is `Approach Drafted`.
+  Open a company to see its plan: one Not started Task per channel, each
+  with its due date, and `Do Not Contact` (`sp_do_not_contact`). Edit a
+  task's notes or due date, mark any task you don't want Deferred, then
+  move the company to `Ready to Send`: that approves the whole plan.
+- **Ready to Send** — Companies filtered on `sp_stage` is
+  `Ready to Send`. The next `enroll` run picks these up; move a company
+  back to `Approach Drafted` before then to cancel.
+- **My touches** — Tasks filtered on status Not started, priority High
+  and type LinkedIn or Call, sorted by due date. These wait for you on
+  their dates; mark a task Completed when you've done it. Deferred tasks
+  are voided drafts.
 - **Pipeline** — a Companies view grouped (or a board) by
   `Sales Partner stage` (`sp_stage`), filtered on `sp_stage` is known.
 - **Research Queue** — Companies filtered on `sp_stage` is `Scored`,
@@ -432,11 +442,10 @@ what they find to `bindings/crm.md` in the instance:
    show `write: AVAILABLE`; report any that don't.
 2. `hubspot:get_properties`:
    - on `companies`, `["sp_stage", "sp_stage_changed_at", "sp_do_not_contact"]`:
-     all three exist, and `sp_stage` has the twelve stage options;
+     all three exist, and `sp_stage` has the thirteen stage options;
    - on `contacts`, `["sp_role"]`: it has the three role options;
    - on `tasks`, `["hs_task_status", "hs_task_type", "hs_task_priority"]`:
-     `hs_task_status` has `NOT_STARTED`, `IN_PROGRESS`, `COMPLETED` and
-     `DEFERRED`, `hs_task_type` has `EMAIL`, `CALL` and `TODO`, and
+     `hs_task_status` has `NOT_STARTED`, `COMPLETED` and `DEFERRED`, `hs_task_type` has `EMAIL`, `CALL` and `TODO`, and
      `hs_task_priority` has `HIGH` and `NONE`.
 3. Report every missing property or option by name.
 
@@ -472,7 +481,7 @@ both equal to the text shown.
 
 | Internal name | Label | Field type | Options |
 |---|---|---|---|
-| `sp_stage` | Sales Partner stage | Dropdown select | New, Scored, Researched, Approach Drafted, Contacted, Replied, Call Scheduled, Call Held, Following Up, Won, Lost, Disqualified |
+| `sp_stage` | Sales Partner stage | Dropdown select | New, Scored, Researched, Approach Drafted, Ready to Send, Contacted, Replied, Call Scheduled, Call Held, Following Up, Won, Lost, Disqualified |
 | `sp_stage_changed_at` | Stage changed at | Date and time picker | |
 | `sp_stage_reason` | Stage reason | Multi-line text | |
 | `sp_score` | Score | Number | |

@@ -22,13 +22,13 @@ behavior only; it names no Airtable table or field.
 | `get_lead` | `lead_id` | full lead record with linked Contacts, Research, Activities | Missing id is an error, not an empty record |
 | `update_stage` | `lead_id, stage, reason` | updated lead, with `stage_changed_at` set to the moment of this call | Rejects any stage outside the enumerated list |
 | `update_lead` | `lead_id, fields` | updated lead | Rejects any attempt to write `stage` through this operation — stage changes go only through `update_stage`. May set `Do Not Contact` to true; rejects any attempt to clear it once true |
-| `log_activity` | `lead_id, contact_id, channel, direction, summary, draft_body, status, outcome` | `activity_id` of the newly created row | Create-only — takes no `activity_id` and never touches an existing row. Accepts only `status: "draft"`; rejects `approved`, `sent`, and `voided` outright and unconditionally. The agent rejects `direction: "outbound"` for a lead whose `Do Not Contact` is true — an instruction the guard does not enforce |
-| `update_activity` | `activity_id, status, outcome` | updated activity | Accepts only `status: "voided"` — rejects `draft`, `approved`, and `sent` outright and unconditionally, regardless of the record's current status; this is the only status change this operation can ever perform |
+| `log_activity` | `lead_id, contact_id, channel, direction, summary, draft_body, status, outcome` | `activity_id` of the newly created row | Create-only — takes no `activity_id` and never touches an existing row. Accepts only `status: "draft"`; rejects `sent` and `voided` outright and unconditionally. The agent rejects `direction: "outbound"` for a lead whose `Do Not Contact` is true — an instruction the guard does not enforce |
+| `update_activity` | `activity_id, status, outcome` | updated activity | Accepts only `status: "sent"` or `"voided"` — rejects `draft` outright and unconditionally; never changes the draft's body |
 | `log_research` | `lead_id, type, summary, source_url, date, hook` | `research_id` | Rejects a write with an empty `source_url` or an empty `hook` |
 | `upsert_contact` | `lead_id, name, title, email, phone, linkedin_url, role, verified, notes` | `contact_id` | Matches an existing Contact on `email` when present, otherwise on `name` plus `title`, and updates it rather than creating a duplicate; rejects a `role` outside decision-maker / influencer / gatekeeper |
 | `query_by_stage` | `stage, limit, next_action_due_before, idle_days` | list of leads | Empty list is a valid result; rejects a call where `stage` is omitted and neither `next_action_due_before` nor `idle_days` is given |
 | `query_by_score` | `min_score, stage, limit` | list of leads ordered by score descending | Empty list is a valid result |
-| `query_activities` | `status, direction, since, until, limit` | list of activities, each with its linked Lead | Rejects a `status` outside draft / approved / sent / voided; `direction` is optional and, when given, must be `outbound` or `inbound`; empty list is a valid result |
+| `query_activities` | `status, direction, since, until, limit` | list of activities, each with its linked Lead | Rejects a `status` outside draft / sent / voided; `direction` is optional and, when given, must be `outbound` or `inbound`; empty list is a valid result |
 
 ### Notes on individual operations
 
@@ -80,7 +80,7 @@ behavior only; it names no Airtable table or field.
   not exist is an error, not an empty or partial record — callers must
   not treat "not found" as "no data yet."
 - **`update_stage`** is the only handoff mechanism between sub-agents
-  (see below). It validates `stage` against the twelve-value enum and
+  (see below). It validates `stage` against the thirteen-value enum and
   rejects anything else; it does not accept free-text stages. Every
   call also sets `stage_changed_at` (`Stage Changed At` in the Airtable
   tool) to the moment of the transition, as part of the same write —
@@ -100,7 +100,7 @@ behavior only; it names no Airtable table or field.
   any attempt to write `stage`** through this operation, and it never
   writes `stage_changed_at` either — both belong to `update_stage`
   alone. Keeping the two separate is what lets `update_stage` validate
-  every stage write against the twelve-value enum and remain the sole
+  every stage write against the thirteen-value enum and remain the sole
   handoff mechanism between sub-agents, and what lets
   `stage_changed_at` be read elsewhere (the `send-digest` skill's
   Movement section) as an unambiguous transition timestamp rather than
@@ -121,18 +121,16 @@ behavior only; it names no Airtable table or field.
   never reads or touches an existing Activity row, and every call
   produces a brand-new row, returning that new row's `activity_id`.
   The `status` it accepts is hard-restricted to `"draft"` — a call
-  passing `approved`, `sent`, or `voided` is **rejected outright and
+  passing `sent` or `voided` is **rejected outright and
   unconditionally**. There is no "current status" for a create-only
   operation to check against; the restriction applies to every call,
-  every time, with no conditional path through it. This is where the
-  operator-approval guardrail actually starts: an agent cannot mint an
-  Activity anywhere but `draft`, so it cannot create a row that lands
-  past the **Awaiting Approval** view (the Airtable tool (`tools/airtable/usage.md`)) —
-  that view filters on `Status = draft`, and every Activity this
-  operation produces starts there, visible and waiting. Nothing sends
-  without operator approval because no operation this contract exposes
-  to an agent can write `approved` or `sent` at all — see the Approval
-  invariant below — not because agents are instructed to wait.
+  every time, with no conditional path through it. Every draft this
+  operation produces sits on a lead at `Approach Drafted`, where the
+  operator reviews the whole plan (each tool's **Review** view). Nothing
+  goes out until the operator moves the lead to `Ready to Send`, and no
+  operation this contract exposes to an agent can write that stage — see
+  the Approval invariant below — not because agents are instructed to
+  wait.
 
   `log_activity` carries a second rule alongside its draft-only one,
   but **it is an instruction, not a mechanism**: the agent must refuse
@@ -146,23 +144,21 @@ behavior only; it names no Airtable table or field.
   Activities are unaffected — a reply or a debrief on an opted-out lead
   is still recordable history.
 - **`update_activity`** is the only operation that can change an
-  existing Activity after `log_activity` created it, and it exists for
-  exactly one purpose: voiding. It takes the `activity_id`
-  `log_activity` returned and writes `status` and `outcome` on that
-  row, but the `status` value it accepts is hard-restricted to
-  `"voided"` — a call passing `draft`, `approved`, or `sent` is
-  **rejected outright and unconditionally**, regardless of the
-  record's current status. `log_activity` and `update_activity` are
-  disjoint by design: one only ever creates a new row (and only at
-  `draft`), the other only ever touches an existing one (and only to
-  `voided`) — neither can do the other's job, and between the two of
-  them `approved` and `sent` are never a legal write. Voiding is
-  the only status change any operation in this contract lets an agent
-  perform on an Activity that already exists, and it is a dead end —
-  once `voided`, an Activity can never move again. This is the
+  existing Activity after `log_activity` created it. It takes the
+  `activity_id` `log_activity` returned and writes `status` and
+  `outcome` on that row; the `status` value it accepts is restricted to
+  `"sent"` (the touch went out: the agent enrolled the email, or the
+  operator did the LinkedIn or call touch) or `"voided"` — a call
+  passing `draft` is **rejected outright and unconditionally**. It never
+  changes the draft's body: what the operator approved is what goes
+  out. `log_activity` and `update_activity` are disjoint by design: one
+  only ever creates a new row (and only at `draft`), the other only ever
+  moves an existing one forward. Writing `sent` records a fact; it sends
+  nothing. Both `sent` and `voided` are dead ends — an Activity never
+  moves again after either. This is the
   operation `subagents/follow-up.md`'s opt-out guardrail calls to void
   every pending draft Activity for a lead: it sets each one's `status`
-  to `voided`, the fourth value in the `Status` enum documented in
+  to `voided`, the third value in the `Status` enum documented in
   the Airtable tool's (`tools/airtable/usage.md`) Activities table.
 - **`log_research`** creates one Research row linked to the lead. It
   **rejects a write with an empty `source_url` or an empty `hook`.** A
@@ -198,7 +194,7 @@ behavior only; it names no Airtable table or field.
 - **`query_by_stage`**'s base behavior is unchanged by its two optional
   filters: called with just `stage` (and optionally `limit`), it returns
   exactly what it always returned — every lead at that stage, `stage`
-  required, rejecting anything outside the twelve-value enum. Passing
+  required, rejecting anything outside the thirteen-value enum. Passing
   either `next_action_due_before` (a date) or `idle_days` (an integer)
   changes what the call means: `stage` becomes optional, and the result
   is filtered to leads whose `Next Action Due` is on or before
@@ -209,7 +205,7 @@ behavior only; it names no Airtable table or field.
   filters is rejected rather than silently returning every lead in the
   CRM; at least one of the three must be present. This is what lets
   `send-digest` ask "which leads are due today" or "which leads have
-  gone stale" without a table scan across all twelve stages one at a
+  gone stale" without a table scan across all thirteen stages one at a
   time, and it is why the operation grew these filters rather than the
   digest reconstructing them from `query_by_stage`'s original one-stage
   form.
@@ -226,22 +222,16 @@ behavior only; it names no Airtable table or field.
   `Date` — the read this contract had no operation for until
   `send-digest` needed to find every outbound Activity at
   `status: draft` regardless of which lead it belongs to. `status` is
-  required and validated against the full, four-value `Status` enum
-  (`draft`, `approved`, `sent`, `voided`) — but only two of those four
-  values are ever written by an agent through this contract: `draft`
-  by `log_activity` and `voided` by `update_activity`. `approved` and
-  `sent` are legal `query_activities` filters (so `send-digest` or an
-  audit can still find them), but no operation in this contract writes
-  either one — see the Approval invariant below. `direction`, when
+  required and validated against the three-value `Status` enum
+  (`draft`, `sent`, `voided`): `draft` is written by `log_activity`,
+  `sent` and `voided` by `update_activity`. `direction`, when
   given, must be `outbound` or `inbound`; omitting it returns
   Activities in either direction. This is what lets a caller separate
   outbound drafts genuinely awaiting an operator decision from inbound
   replies and call debriefs that also land at `status: draft` (every
   Activity `log_activity` creates starts there, regardless of
-  direction) but need no approval — the **Awaiting Approval** view
-  (the Airtable tool (`tools/airtable/usage.md`)) filters on both `Status = draft` and
-  `Direction = outbound` for exactly this reason, and `send-digest`'s
-  approval-queue read does the same. `since` and `until` are each
+  direction) but need no approval — `send-digest` filters on both
+  `status: draft` and `direction: outbound` for exactly this reason. `since` and `until` are each
   optional, and omitting one leaves that edge of the window unbounded,
   so omitting both returns every Activity at that status regardless of
   `Date`. Every returned Activity carries its linked Lead, so a caller
@@ -255,22 +245,17 @@ be breaking before they break it:
 
 - An agent can create an Activity only at `status: "draft"`, via
   `log_activity` — no other status is accepted, ever.
-- An agent can move an existing Activity only to `status: "voided"`,
-  via `update_activity` — no other status is accepted, ever, and no
-  other operation can touch an existing Activity's `status` at all.
-- `approved` and `sent` are reachable **only** by the operator acting
-  directly in Airtable — approving a draft in the **Awaiting Approval**
-  view and, separately, sending it — outside every one of the eleven
-  operations in this contract. No combination or sequence of calls
-  available to an agent writes either value. Only the operator's
-  approval action can put a record into `approved`, and only the
-  operator's send action can put one into `sent`.
-- **Therefore: no sequence of the eleven operations in this contract
-  reaches `sent`.** This is provable by construction from the three
-  points above, not asserted by convention — verify it by checking
-  that `sent` appears nowhere in any operation's accepted `status`
-  values except as a value `log_activity` and `update_activity` both
-  explicitly reject.
+- An agent can move an existing Activity only to `status: "sent"` or
+  `"voided"`, via `update_activity`, and never rewrites a draft's body
+  after it was created.
+- An agent never writes the stage `Ready to Send`: only the operator
+  writes `Ready to Send`, by moving the lead once every standing draft
+  and its date are right. That move approves the whole plan; nothing is
+  approved draft by draft.
+- **Therefore no sequence of operations approves a plan: only the
+  operator's move to `Ready to Send` does.** Email goes out only when the
+  `enroll` activity hands an approved email touch to the client's own
+  sequence platform; LinkedIn and call touches are always the operator's.
 
 The opt-out has one mechanism and one instruction:
 
@@ -290,9 +275,10 @@ The opt-out has one mechanism and one instruction:
 Any change that gives an operation a new way to write `Status` on an
 Activity — a new argument, a relaxed check, a new operation — must be
 checked against this invariant before it ships. If the change would
-let any of the eleven operations write `approved` or `sent`, the
-invariant is broken and the guardrail "nothing sends without operator
-approval" (`AGENT.md`) stops being a mechanism and goes back to being
+let any of the eleven operations write the stage `Ready to Send`, or
+rewrite a draft after create, the invariant is broken and the guardrail
+"nothing goes out without operator approval" (`AGENT.md`) stops being a
+mechanism and goes back to being
 an unenforced instruction. The same test applies to `dnc_one_way`:
 any change that would let an operation clear `Do Not Contact` breaks
 that invariant. "Never draft a message toward a lead flagged
@@ -304,14 +290,14 @@ Each tool's `guard.yaml` lists in `covers` the invariants its guard
 policy enforces; an invariant it does not list is instruction-only.
 
 - `draft_only` — the agent creates Activities only at `status: draft`,
-  and the only status it may later write is `voided`; `approved` and
-  `sent` are the operator's alone (see Approval invariant).
+  the only statuses it may later write are `sent` and `voided`, and
+  only the operator writes `Ready to Send` (see Approval invariant).
 - `dnc_one_way` — `Do Not Contact`, once true, is never cleared.
 - `no_delete` — the agent never deletes or merges CRM records.
 
 ## Stage enum
 
-A lead occupies exactly one of these twelve stages at a time. This is
+A lead occupies exactly one of these thirteen stages at a time. This is
 the enum verbatim, in transition order; `update_stage` rejects any value
 outside this list:
 
@@ -320,6 +306,7 @@ New
 Scored
 Researched
 Approach Drafted
+Ready to Send
 Contacted
 Replied
 Call Scheduled
@@ -333,7 +320,7 @@ Disqualified
 `Won`, `Lost`, and `Disqualified` are terminal — no operation should
 attempt to transition a lead out of them. A hard disqualifier or an
 anti-signal found during research can move a lead to `Disqualified` from
-any of the other nine stages, not only from the stage where
+any of the other ten stages, not only from the stage where
 disqualification is usually checked.
 
 ## Stage transitions
@@ -349,8 +336,9 @@ any stage below — not only the one noted as its usual entry point.
 | `New` | Prospector creates the lead record from a raw find | Prospector scores it, moving it to `Scored`; a hard disqualifier moves it straight to `Disqualified` |
 | `Scored` | Prospector finishes applying the `icp.md` rubric and records the score breakdown | Preparer picks it up once the score clears `research_threshold`, moving it to `Researched` |
 | `Researched` | Preparer finishes research, identifies decision-makers, produces hooks, and re-scores | Approacher picks it up once the revised score clears `approach_threshold`, drafting the first touch and moving it to `Approach Drafted`; an anti-signal found during research moves it to `Disqualified` instead |
-| `Approach Drafted` | Approacher logs the first-touch Activity at `status: draft` | The operator approves and sends the message, moving the lead to `Contacted` |
-| `Contacted` | The operator's approved first touch sends | A reply moves it to `Replied`; continued silence through the configured cadence, once the touch limit is exhausted, moves it to `Lost` |
+| `Approach Drafted` | Approacher logs the plan's draft Activities (one per enabled channel, each with its date) at `status: draft` | The operator reviews and edits the drafts, voids any they don't want, then approves the whole plan by moving the lead to `Ready to Send` — nothing is approved draft by draft |
+| `Ready to Send` | The operator moves the lead here once every standing draft and its date are right — only the operator writes `Ready to Send` | `enroll` enrolls the email touch and moves it to `Contacted`; a LinkedIn or call touch the operator marks `sent` also moves it to `Contacted`; the operator moving it back to `Approach Drafted` cancels |
+| `Contacted` | The first touch actually went out, on any channel | A reply moves it to `Replied`; continued silence through the configured cadence, once the touch limit is exhausted, moves it to `Lost` |
 | `Replied` | A reply from the prospect is logged against a `Contacted` lead | The reply leads to a booked call, moving it to `Call Scheduled`; Follow-up continues the exchange under the same touch-limit rule that governs `Contacted` |
 | `Call Scheduled` | A call is booked with the lead | Sales-call-specialist preps the brief; once the call happens, the debrief moves it to `Call Held` |
 | `Call Held` | Sales-call-specialist logs the debrief after the call | The outcome decides the next stage: `Following Up` if the deal is still live, `Won` if it closes, `Lost` if it's declined |

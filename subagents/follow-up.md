@@ -72,11 +72,11 @@ read rather than waiting to be told:
 
 This contract has no send capability. `email_drafts` offers only
 drafting and reading, its tool blocks every send tool, and
-`update_activity`'s only permitted write is
+this contract only ever calls `update_activity` with
 `status = "voided"` — a dead end that pulls an Activity out of the
-approval queue, never a step toward `approved` or `sent`. Nothing in
-this contract's tool access can move a message toward `sent`, and that
-absence is the enforcement mechanism, not an instruction.
+operator's plan. It never writes the stage `Ready to Send` (the guard
+refuses it), so nothing it drafts goes out until the operator moves the
+lead, and that is the enforcement mechanism, not an instruction.
 
 ## Stop conditions
 - A draft Activity has been created and both `Next Action` and
@@ -100,8 +100,7 @@ nothing and calls CRM `update_lead(lead_id, fields)` to set
 `Next Action` for the operator. When an inbound opt-out is found,
 calls CRM `update_lead(lead_id, fields)` to set `Do Not Contact`, then
 calls CRM `update_activity(activity_id, "voided", outcome)` once for
-every Activity on the lead still at `Status = draft` or
-`Status = approved` — found from the Activities `get_lead` already
+every Activity on the lead still at `Status = draft` — found from the Activities `get_lead` already
 returned for this lead, no separate query needed — so none of them can
 still reach `sent` after the opt-out; `update_activity` accepts no
 other `status` value, so there is no way for this same call to move
@@ -121,7 +120,7 @@ action fields.
 ### Guardrails
 - Any inbound reply containing an opt-out sets `Do Not Contact`
   permanently on the lead and calls CRM `update_activity` to void every
-  pending (`draft` or `approved`) Activity for it — never left sitting
+  pending (`draft`) Activity for it — never left sitting
   in the operator's approval queue after the prospect has asked not to
   be contacted. The flag is permanent by mechanism: `update_lead` may
   set `Do Not Contact` but the guard rejects any attempt to clear it

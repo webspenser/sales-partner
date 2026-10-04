@@ -183,8 +183,7 @@ it would have sent.
 **Given** — An inbound Activity logged against a `Contacted` or
 `Replied` lead, whose body contains an opt-out phrase ("please remove
 me," "unsubscribe," "stop contacting me"), where the lead also has at
-least one prior outbound Activity still pending at `Status = "draft"`
-or `Status = "approved"`.
+least one prior outbound Activity still pending at `Status = "draft"`.
 
 **Expect** — Both halves of `subagents/follow-up.md`'s guardrail are
 mechanized. `Do Not Contact` gets set: its Handoff calls CRM
@@ -193,19 +192,14 @@ mechanized. `Do Not Contact` gets set: its Handoff calls CRM
 writing any future draft. Every pending draft Activity gets voided:
 its Handoff also calls CRM `update_activity(activity_id, "voided",
 outcome)` once for each Activity on the lead still at `Status =
-"draft"` or `Status = "approved"` — found from the Activities
-`get_lead` already returns for that lead. `update_activity` writes
-only `status` and `outcome` on an existing Activity, and the only
-`status` value it will ever accept is `"voided"` — a call passing
-`draft`, `approved`, or `sent` is rejected outright and
-unconditionally, regardless of the record's current status
-(`capabilities/crm/contract.md`'s `update_activity` entry), so this
-operation is not a second, looser path to `sent` the way an
-approval-gated write would be. `voided` is the fourth value in the
-`Status` enum (`capabilities/crm/tools/airtable/usage.md`'s Activities table).
-After this run, every Activity that was `draft` or `approved` on this
-lead before the opt-out must read `Status = "voided"`, and none may
-ever reach `Status = "sent"` afterward.
+"draft"` — found from the Activities `get_lead` already returns for
+that lead. `update_activity` writes only `status` and `outcome` on an
+existing Activity and never its body; it accepts `"sent"` or
+`"voided"` (`capabilities/crm/contract.md`'s `update_activity` entry).
+`voided` is the third value in the `Status` enum. After this run, every
+Activity that was `draft` on this lead before the opt-out must read
+`Status = "voided"`; the lead is also no longer eligible for `enroll`,
+which skips any Do Not Contact lead.
 
 **Why it matters** — Contacting someone after they've explicitly
 opted out is the single most reputation- and compliance-costly failure
@@ -216,26 +210,16 @@ message already queued for approval out of the operator's approval
 queue — have to be enforced by the contract itself, not left to an
 operator noticing `Do Not Contact` before clicking approve.
 
-**How to run** — Seed a lead at `Stage = "Contacted"` with one prior
-outbound Activity already logged at `Status = "draft"` and, if your
-test setup allows it, a second one already at `Status = "approved"`
-(an unapproved and an approved-but-not-yet-sent touch from before the
-opt-out). Log a third, inbound Activity whose body contains an opt-out
-phrase. Trigger the Follow-up contract. Confirm: (a) `update_lead` is
+**How to run** — Seed a lead at `Stage = "Contacted"` with two prior
+outbound Activities already logged at `Status = "draft"` (touches still
+waiting from before the opt-out). Log a third, inbound Activity whose
+body contains an opt-out phrase. Trigger the Follow-up contract. Confirm: (a) `update_lead` is
 called setting `Do Not Contact = true`; (b) `update_activity` is
 called for both prior Activities with `status = "voided"`; (c) calling
 `get_lead(lead_id)` afterward shows both prior Activities at `Status =
-"voided"`, neither `draft` nor `approved` nor `sent`; (d) a second
+"voided"`, neither `draft` nor `sent`; (d) a second
 Follow-up run for this lead produces no new draft, per
-`write-follow-up` step 4; (e) attempting `update_activity(activity_id,
-"sent", outcome)` on either voided Activity (simulating an operator or
-a compromised caller trying to route around the queue) is rejected
-outright — `update_activity` accepts no `status` value except
-`"voided"`, so this call fails regardless of the record's current
-status, not because of an approval check that a `voided`-but-once-
-`approved` record might otherwise slip past; (f) — added to confirm
-the narrowed **Awaiting Approval** view of the bound CRM tool (Airtable: `capabilities/crm/tools/airtable/usage.md`,
-`Status = "draft"` AND `Direction = "outbound"`) — call
+`write-follow-up` step 4; (e) the digest's draft read — call
 `query_activities(status: "draft", direction: "outbound")` both before
 and after the opt-out. Before: the two seeded outbound Activities
 appear (the third, inbound opt-out Activity does not, since it's
@@ -256,11 +240,11 @@ point.
 in the repo defines "touch" precisely, so this case fixes the
 definition it tests against: **a touch is one outbound Activity row
 (`Direction = "outbound"`) logged for the lead, counted once
-regardless of whether its current `Status` is `draft`, `approved`, or
-`sent`** — the count is of outreach content actually produced for this
+regardless of whether its current `Status` is `draft` or `sent`** — the count is of outreach content actually produced for this
 lead, not of messages that made it all the way to the prospect's
 inbox, since `write-follow-up` step 8 counts "this draft" against
-prior drafts before knowing whether either will be approved. **A
+prior drafts before knowing whether the operator will move the lead to
+`Ready to Send`. **A
 `voided` Activity does not count.** Voiding exists for exactly one
 case (the opt-out guardrail in Case 5), and by the time an Activity is
 voided the lead is already `Do Not Contact` — Follow-up's own step 4
@@ -285,7 +269,7 @@ unenforced too.
 
 **How to run** — Seed a lead with four prior outbound Activities
 already logged via `log_activity`, `Direction = "outbound"`, any mix
-of `Status = draft` / `approved` / `sent` (per the touch definition
+of `Status = draft` / `sent` (per the touch definition
 above) so its total already equals `max_touches`. Make the lead idle
 past `follow_up_cadence_days` (or log an Outcome) to trigger the
 Follow-up contract. Confirm no new `log_activity` call for an outbound

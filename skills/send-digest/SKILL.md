@@ -352,10 +352,10 @@ summary to the top.
 `AGENT.md`'s guardrail — "nothing sends without operator approval" —
 and `capabilities/crm/contract.md`'s `log_activity` enforcement of it both gate one
 specific thing: **outbound prospect communication**, logged as an
-Activity and walked through `draft` → `approved` → `sent` — or, if an
-inbound opt-out arrives first, diverted from `draft`/`approved`
-straight to the terminal `voided` via `update_activity`, which never
-reaches `sent`. The digest
+Activity at `draft`, approved only when the operator moves the lead to
+`Ready to Send`, then `sent` — or, if an inbound opt-out arrives first,
+diverted from `draft` straight to the terminal `voided` via
+`update_activity`. The digest
 is never logged as an Activity, is never addressed to a prospect, and
 never touches `log_activity` at all — it is a report the agent sends
 to the operator, about the operator's own pipeline. Delivering it by

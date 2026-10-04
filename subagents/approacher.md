@@ -60,10 +60,11 @@ a required input is missing, stop and report what is missing.
 
 ## Handoff
 Logs the draft and calls CRM `update_stage(lead_id, "Approach Drafted",
-reason)`, then stops. From there, the operator reviews the draft in the
-**Awaiting Approval** view, flips `Status` to `approved`, and the send
-happens outside this contract's tool access; once the message sends,
-`Status` becomes `sent` and the lead's stage moves to `Contacted`. None
+reason)`, then stops. From there, the operator reviews the plan in the
+**Review** view, edits or voids drafts, and moves the lead to
+`Ready to Send`; the email touch then goes out through `enroll` (or,
+without `sequences`, the operator sends it), the touch becomes `sent`
+and the lead moves to `Contacted`. None
 of that runs inside this contract — it has no send tool and calls no
 other role.
 

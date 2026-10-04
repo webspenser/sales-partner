@@ -267,7 +267,7 @@ assert_contains "$SP/AGENT.md" 'unattended'
 echo "-- 4.0.4: AGENT.md inline size, exact Stalled rule"
 [ "$(wc -c < "$SP/AGENT.md" | tr -d ' ')" -le 9000 ] && _report ok "AGENT.md fits the 9000-byte inline limit" || _report no "AGENT.md is over 9000 bytes; the hook will not inline it"
 assert_contains "$SP/capabilities/crm/contract.md" '## Stage transitions'
-assert_contains "$SP/capabilities/crm/contract.md" '| `Approach Drafted` | Approacher logs the first-touch Activity at `status: draft` |'
+assert_contains "$SP/capabilities/crm/contract.md" 'draft Activities (one per enabled channel, each with its date) at `status: draft`'
 assert_contains "$SP/AGENT.md" '`capabilities/crm/contract.md` (Stage enum, Stage transitions)'
 assert_contains "$SP/context/icp.md" '`capabilities/crm/contract.md` (Stage transitions)'
 assert_contains "$SP/capabilities/crm/contract.md" 'idle age = now − `max(last Activity date, Stage Changed'
@@ -302,4 +302,16 @@ assert_not_contains "$SP/capabilities/email_drafts/tools/gmail/usage.md" 'add it
 assert_contains "$SP/capabilities/email_drafts/tools/gmail/usage.md" 'matches names by suffix'
 assert_contains "$AU" 'In a scheduled run, do not rewrite'
 assert_contains "$AU" 'take each field ID from that table'
+
+echo "-- 6.0.0: Ready to Send and sent"
+K="$SP/capabilities/crm/contract.md"
+python3 -c "import sys; t=open('$K').read(); sys.exit(0 if 'Approach Drafted\nReady to Send\nContacted' in t else 1)" && _report ok "stage order has Ready to Send" || _report no "stage order lacks Ready to Send"
+assert_contains "$K" 'A lead occupies exactly one of these thirteen stages'
+assert_contains "$K" '| `Ready to Send` |'
+assert_contains "$K" 'only the operator writes `Ready to Send`'
+assert_contains "$K" 'the only statuses it may later write are `sent` and `voided`'
+assert_not_contains "$K" '`approved`'
+assert_not_contains "$SP/AGENT.md" 'twelve lead stages'
+assert_contains "$SP/AGENT.md" 'thirteen lead stages'
+assert_not_contains "$SP/evals/cases.md" 'approved'
 finish

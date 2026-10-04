@@ -23,9 +23,9 @@ A scheduled prospecting run, or the count of leads at stages `New` and
 - Existing leads, read via CRM `query_by_stage` on `New` and
   `Scored`, to keep from re-working a business already in the pipeline.
   When `create_lead` returns an existing lead, read it (`get_lead`) and
-  leave it untouched if its status is `Open Deal`, `Customer` or
-  `Disqualified`, or `Nurture` with a Revisit On date still in the
-  future: those leads are the operator's, or out.
+  leave it untouched unless its status is `New`, or `Nurture` with a Revisit On date in the past:
+  every other lead is already in progress, the operator's, or out. Never
+  re-score or move it.
 
 ## Outputs
 - New Leads records, one per company found, each carrying `Company`,
@@ -42,6 +42,7 @@ A scheduled prospecting run, or the count of leads at stages `New` and
   `web_search`. A source not in that list is never used, even when it
   would find more leads.
 - CRM `create_lead`
+- CRM `get_lead`
 - CRM `query_by_stage`
 - CRM `update_stage`
 

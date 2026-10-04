@@ -179,7 +179,9 @@ a required input is missing, stop and report what is missing.
    has waited (now − `Stage Changed At`) and, applying `enroll`'s checks
    read-only (`skills/enroll/SKILL.md`), the first one it would fail —
    for example `no email address`, `country not allowed`, `missing
-   variable: icebreaker` — or `next enroll run`. Heading with the count.
+   variable: icebreaker`, `waiting until <date>`, `only LinkedIn or
+   call touches left`, `email already enrolled for this contact` — or
+   `next enroll run`. Heading with the count.
 4. **Section 3 — Next actions due today.** Call CRM
    `query_by_stage(next_action_due_before: today, stage: omitted)` —
    omitting `stage` so leads at every stage are considered, not one

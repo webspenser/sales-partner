@@ -213,16 +213,16 @@ picked up by a following `enroll` run.
 
 ## Case 6: A lead the operator owns is never re-approached
 
-**Given** — Three existing leads the Prospector will find again: one
-at `Open Deal`, one at `Customer`, one at `Nurture` with **Revisit On**
-three months away. A fourth at `Nurture` has a Revisit On date in the
-past.
+**Given** — Existing leads the Prospector will find again: one at
+`Open Deal`, one at `Customer`, one at `Nurture` with **Revisit On**
+three months away, one at `Contacted` and one at `Ready to Send`. A
+last one at `Nurture` has a Revisit On date in the past.
 
 **Expect** — `subagents/prospector.md`: `create_lead` returns each
 existing lead's id and writes nothing; the Prospector reads it with
-`get_lead` and leaves the first three untouched — no `update_stage`, no
-re-score, no research. The fourth may be re-scored, because its revisit
-date has passed.
+`get_lead` and leaves every one untouched — no `update_stage`, no
+re-score, no research — except the last, which may be re-scored because
+its revisit date has passed.
 
 **Why it matters** — Open deals, customers and parked leads are the
 operator's relationships; an agent that re-approaches them embarrasses
@@ -230,9 +230,9 @@ the business. Statuses `Open Deal`, `Nurture` and `Customer` are also
 guarded: the agent can't write them, so it can't take a lead back from
 the operator by accident either.
 
-**How to run** — Seed the four leads with domains the Prospector's
+**How to run** — Seed the six leads with domains the Prospector's
 source will return. Run the Prospector. Confirm no `update_stage` call
-names any of the first three, and their status is unchanged
+names any of the first five, and their status is unchanged
 afterwards.
 
 ---

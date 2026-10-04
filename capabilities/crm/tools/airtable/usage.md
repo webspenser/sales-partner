@@ -255,8 +255,9 @@ disagree about what counts as "in review," "due today," or "stalled."
   `enroll` run picks these up; move a lead back to `Approach Drafted`
   before then to cancel.
 - **My touches** — Activities where `Status = draft`,
-  `Direction = outbound` and `Channel` is `linkedin` or `call`, sorted
-  by Date. These wait for you on their dates; set `Status` to `sent`
+  `Direction = outbound`, `Channel` is `linkedin` or `call`, and
+  `Lead Stage` is `Ready to Send` or `Contacted` (a lookup of `Stage` from
+  `Lead`, set up by hand), sorted by Date. These wait for you on their dates; set `Status` to `sent`
   when you've done one.
 - **Research Queue** — Leads where `Stage = Scored`, sorted by Score
   descending. What the Preparer works through next, highest-score
@@ -398,6 +399,7 @@ verbatim, so match the spelling and capitalization exactly.
    | `Lead` | Link to another record | table `Leads` |
    | `Contact` | Link to another record | table `Contacts` |
    | `Lead Do Not Contact` | Lookup | `Do Not Contact` from `Lead`; for the Review and My touches views, never written |
+   | `Lead Stage` | Lookup | `Stage` from `Lead`; for the My touches view, never written |
 
 6. Create the views from the Views section above (Review, Ready to Send,
    My touches, Research Queue, Due Today, Nurture). They are for you, not for the agent.

@@ -18,15 +18,19 @@ instruction-level rule (`enroll_ready_only`). Follow every check below.
 1. CRM `query_by_stage("Ready to Send")`. Nothing returned: report
    "no leads waiting" and stop.
 2. For each lead, CRM `get_lead`. Decide what it is waiting for:
-   - **Email touch to enroll:** the lead has no email Activity at `sent`
-     and a standing email Activity at `draft`.
-     A voided email draft is not an email touch.
+   - **Email touch to enroll:** a standing email Activity at `draft`
+     whose contact has no outbound email Activity at `sent` to the same contact
+     (enrolling the same contact twice would rewrite its fields
+     mid-sequence). A voided email draft is not an email touch. Enroll it
+     only when its date is today or earlier; otherwise report "waiting
+     until <date>".
    - **Operator touch already done:** no standing email draft, and a
      LinkedIn or call Activity the operator marked `sent` →
      `update_stage(lead, "Contacted", "first touch sent by the operator")`
      and go to the next lead.
-   - Otherwise (only future LinkedIn or call drafts): leave it; the
-     operator does those on their dates.
+   - Otherwise leave it, and report why: "waiting until <date>", "only
+     LinkedIn or call touches left for the operator", or "email already
+     enrolled for this contact".
 3. Check the lead before enrolling. Skip it, with the reason in the
    report, if any check fails; never enroll with a blank field:
    - `Do Not Contact` is false;

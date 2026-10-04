@@ -100,12 +100,10 @@ canada_consent_basis: ""
   whatever hooks it has found; see `subagents/preparer.md`'s `Stop
   conditions`.
 - **`sending_identity`** — the `"[name] <[email]>"` the drafted email
-  Activities are written from. Filled in by the interview; the agent
-  never sends a prospect-facing message from this identity itself —
-  every Activity stops at
-  `status: draft` and only the operator's approval and send action puts
-  a message on the wire, per the `log_activity` guardrail in
-  `capabilities/crm/contract.md`.
+  Activities are written from, and the digest's address. Filled in by
+  the interview; the agent never sends a prospect-facing message from
+  this identity — email to prospects goes out only through the
+  operator's sequence platform after approval.
 - **`callback_phone`** — the operator's own number the voicemail in a
   call opener gives for callbacks. Filled in by the interview when
   `call` is in `enabled_channels`; never a prospect-facing send
@@ -122,12 +120,12 @@ writes. The `schedule` skill turns them into Claude cloud routines, only
 for activities whose capabilities are all covered by guard policies.
 
 Nothing in this file, and nothing any key here configures, sends a
-message to a prospect on its own. Nothing sends without operator approval — that
-guardrail is enforced in the CRM contract, not merely stated here:
+message to a prospect on its own. Nothing goes out without the
+operator's approval, and only the operator approves a plan, by moving
+the lead to `Ready to Send` — the guard refuses that status to the agent.
 `log_activity` creates an Activity at `status: draft` only, and
-`update_activity` can move an existing Activity only to
-`status: voided`; `approved` and `sent` are reachable only by the
-operator acting outside the agent's tool access. See
+`update_activity` moves it to `sent` (after `enroll`, or after the
+operator's own touch) or `voided`. See
 `capabilities/crm/contract.md`'s Approval invariant for the full, provable rule —
 this file states the outcome, not the mechanics, precisely so it
 cannot drift out of sync with them again.

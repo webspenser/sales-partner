@@ -335,7 +335,7 @@ assert_not_contains "$K" 'Following Up'
 assert_not_contains "$K" '`Replied`'
 assert_not_contains "$K" '`Won`'
 assert_not_contains "$K" '`Lost`'
-assert_contains "$SP/subagents/prospector.md" 'Open Deal'
+assert_contains "$SP/subagents/prospector.md" 'unless its status is `New`'
 assert_contains "$SP/subagents/prospector.md" 'Revisit On'
 assert_contains "$SP/capabilities/crm/tools/attio/usage.md" 'Engaged'
 assert_contains "$SP/capabilities/crm/tools/attio/usage.md" 'revisit_on'
@@ -372,7 +372,6 @@ EN="$SP/skills/enroll/SKILL.md"
 assert_contains "$EN" 'name: enroll'
 assert_contains "$EN" 'query_by_stage("Ready to Send")'
 assert_contains "$EN" 'a standing email Activity at `draft`'
-assert_contains "$EN" 'no email Activity at `sent`'
 assert_contains "$EN" 'every name in `variables:`'
 assert_contains "$EN" 'allowed_countries'
 assert_contains "$EN" 'canada_consent_basis'
@@ -458,5 +457,46 @@ assert_contains "$IV" 'touch_spacing_days'
 assert_contains "$IV" 'separate sending domain'
 assert_contains "$SP/skills/setup/SKILL.md" 'accept_instruction_only: enroll_ready_only'
 assert_contains "$SP/README.md" 'lead generation and outbound'
+
+
+echo "-- 6.0.0: final review fixes"
+PR="$SP/subagents/prospector.md"
+assert_contains "$PR" 'leave it untouched unless its status is `New`, or `Nurture` with a Revisit On date in the past'
+assert_contains "$PR" '- CRM `get_lead`'
+EN="$SP/skills/enroll/SKILL.md"
+assert_contains "$EN" 'no outbound email Activity at `sent` to the same contact'
+assert_contains "$EN" 'its date is today or earlier'
+assert_contains "$EN" 'waiting until'
+SR="$SP/skills/sync-replies/SKILL.md"
+assert_contains "$SR" 'two schedule intervals back'
+assert_contains "$SR" 'only when the bounce is dated on or after the lead'"'"'s `Stage Changed At`'
+assert_contains "$SR" 'outcome: "replied"'
+assert_contains "$SP/capabilities/crm/tools/airtable/usage.md" '`Lead Stage` is `Ready to Send` or `Contacted`'
+assert_contains "$SP/capabilities/crm/tools/attio/usage.md" 'only for leads at `Ready to Send` or `Contacted`'
+assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'only for leads at `Ready to Send` or `Contacted`'
+IU="$SP/capabilities/sequences/tools/invokeiq/usage.md"
+assert_contains "$IU" 'campaign_<band>: <id>'
+assert_contains "$SP/capabilities/sequences/contract.md" '| `get_campaigns` | — | every campaign in the workspace'
+python3 - "$SP/capabilities/sequences/tools/invokeiq/workflow.n8n.json" <<'PY' && _report ok "enroll_contact fails on an unknown band or an unset campaign" || _report no "enroll_contact band guard"
+import json, sys
+d = json.load(open(sys.argv[1]))
+n = next(x for x in d["nodes"] if x["name"] == "enroll_contact")
+v = next(p["value"] for p in n["parameters"]["bodyParameters"]["parameters"] if p["name"] == "campaignId")
+assert "throw" in v and "unknown band" in v and "startsWith('<')" in v
+PY
+python3 - "$SP/capabilities/sequences/tools/invokeiq/relay/attio.n8n.json" <<'PY' && _report ok "relay links the contact" || _report no "relay contact link"
+import json, sys
+d = json.load(open(sys.argv[1]))
+n = next(x for x in d["nodes"] if x["name"] == "Add inbound Outreach entry")
+assert "contact: [{ target_object: 'people'" in n["parameters"]["jsonBody"]
+PY
+assert_not_contains "$SP/context/operating-config.md" '`approved`'
+assert_contains "$SP/context/operating-config.md" 'only the operator approves a plan'
+AP="$SP/subagents/approacher.md"
+assert_not_contains "$AP" 'One opening touch per lead'
+assert_contains "$AP" 'drafts the lead'"'"'s first-outreach plan'
+assert_contains "$AP" 'redraft'
+E="$SP/evals/cases.md"
+assert_contains "$E" 'at `Contacted` and one at `Ready to Send`'
 
 finish

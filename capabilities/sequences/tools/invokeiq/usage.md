@@ -12,8 +12,7 @@ n8n credential; the agent and the instance never hold it.
 - **`get_workspace`** — `invokeiq:get_workspace` (no arguments). Returns
   InvokeIQ's workspace id, API usage and monthly limit.
 - **`get_campaigns`** — `invokeiq:get_campaigns` (no arguments). Returns
-  the workspace's campaigns with their status. Show the operator which
-  campaign each band in the workflow's map points to.
+  every campaign in the workspace with its status.
 - **`enroll_contact`** — `invokeiq:enroll_contact` with `band` (a key of
   `sequence_bands` in `operating-config.md`, such as `high`), `email`,
   `firstName`, `lastName` and `variables` (the personalization lines as
@@ -21,8 +20,9 @@ n8n credential; the agent and the instance never hold it.
   the band to its campaign ID and posts to InvokeIQ's
   `POST /api/v1/contacts`, which upserts: calling it again for an
   enrolled contact silently changes its fields mid-sequence, so enroll
-  a lead once (the `enroll` skill checks for an earlier `sent` email
-  touch). An unknown band fails. Returns the InvokeIQ contact id.
+  a contact once (the `enroll` skill checks for an earlier `sent` email
+  touch). An unknown band, or a band whose campaign ID was never set in
+  the workflow, fails the call outright. Returns the InvokeIQ contact id.
 - **`suppress`** — `invokeiq:suppress` with `emails` (a list) and
   `reason`. Adds the addresses to InvokeIQ's workspace suppression list
   (`POST /api/v1/suppression`) so they never receive cold outreach.
@@ -36,8 +36,10 @@ Setup runs these read-only calls when binding this tool, and writes
 what they find to `bindings/sequences.md` in the instance:
 
 1. `invokeiq:get_workspace` — record `workspace: <id>`.
-2. `invokeiq:get_campaigns` — show the operator each band's campaign;
-   warn if one is not active.
+2. `invokeiq:get_campaigns` — for each band in `sequence_bands`, record
+   `campaign_<band>: <id>` (the same IDs set in the workflow's map, Setup
+   step 4) and check that campaign exists and is active; warn
+   otherwise.
 
 The interview records `variables: <name>, <name>` (the custom fields
 the campaigns' templates use, such as `icebreaker, company`) in the same

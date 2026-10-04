@@ -10,7 +10,7 @@ sends the emails; the agent never writes or sends them itself.
 | Operation | Arguments | Returns | On failure |
 |---|---|---|---|
 | `get_workspace` | — | workspace id, quota used and limit; read-only | Reports the platform's error |
-| `get_campaigns` | — | the band campaigns (band, id, name, status); read-only | Empty list means no band is mapped |
+| `get_campaigns` | — | every campaign in the workspace (id, name, status); read-only | Empty list is a valid result |
 | `enroll_contact` | `band, email, first_name, last_name, variables` | the platform's contact id | Rejects an unknown `band` or an empty `email`; calling it again for an enrolled contact updates its fields mid-sequence, so callers enroll a lead once |
 | `suppress` | `emails, reason` | ok | Rejects an empty `emails` list |
 

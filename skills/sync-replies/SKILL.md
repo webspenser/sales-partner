@@ -12,19 +12,24 @@ changes nothing the second time.
 
 ## Procedure
 
-1. Window: since the previous scheduled run of this activity (one
-   schedule interval back from this run's scheduled time), or the last 7
-   days when run by hand. Call CRM
+1. Window: two schedule intervals back from this run's scheduled time
+   (the overlap catches anything a skipped or late run missed; repeats
+   are harmless), or the last 7 days when run by hand. Call CRM
    `query_activities(status: "sent", direction: "inbound", channel: "email", since: <window start>, until: <now>)`.
 2. For each Activity, `get_lead` on its lead, then:
-   - **Bounce** (summary `bounced`): if the lead is at `Contacted`,
+   - **Bounce** (summary `bounced`): if the lead is at `Contacted`, and
+     only when the bounce is dated on or after the lead's `Stage Changed At` (an
+     older bounce belongs to an earlier attempt),
      `update_stage(lead, "Approach Drafted", "email bounced — pick
      another contact or channel")`. A bounce is not a touch, and the
      Approacher never reuses that address.
    - **Reply**: if the lead is at `Contacted`, move it
      `Contacted` → `Engaged` (`update_stage(lead, "Engaged", "replied by
-     email")`). At any other status, change nothing: from `Engaged` on,
-     the lead is the operator's.
+     email")`) and void the plan's remaining draft touches
+     (`update_activity(status: "voided", outcome: "replied")`), so no
+     scripted LinkedIn or call touch follows a reply. At any other
+     status, change nothing: from `Engaged` on, the lead is the
+     operator's.
    - **Opt-out** (a category such as `unsubscribe` or `not_interested`
      with removal wording, or wording such as "remove me", "stop",
      "unsubscribe", "don't contact"):

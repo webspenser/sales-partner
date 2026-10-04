@@ -6,7 +6,10 @@
       "name": "MCP Server Trigger",
       "type": "@n8n/n8n-nodes-langchain.mcpTrigger",
       "typeVersion": 2.1,
-      "position": [128, 112],
+      "position": [
+        128,
+        112
+      ],
       "parameters": {
         "authentication": "n8nOAuth2",
         "path": "webspenser-invokeiq",
@@ -18,7 +21,10 @@
       "name": "get_workspace",
       "type": "n8n-nodes-base.httpRequestTool",
       "typeVersion": 4.5,
-      "position": [0, 336],
+      "position": [
+        0,
+        336
+      ],
       "parameters": {
         "authentication": "genericCredentialType",
         "genericAuthType": "httpBearerAuth",
@@ -32,7 +38,10 @@
       "name": "get_campaigns",
       "type": "n8n-nodes-base.httpRequestTool",
       "typeVersion": 4.5,
-      "position": [128, 336],
+      "position": [
+        128,
+        336
+      ],
       "parameters": {
         "authentication": "genericCredentialType",
         "genericAuthType": "httpBearerAuth",
@@ -46,7 +55,10 @@
       "name": "enroll_contact",
       "type": "n8n-nodes-base.httpRequestTool",
       "typeVersion": 4.5,
-      "position": [256, 336],
+      "position": [
+        256,
+        336
+      ],
       "parameters": {
         "authentication": "genericCredentialType",
         "genericAuthType": "httpBearerAuth",
@@ -58,11 +70,26 @@
         "specifyBody": "keypair",
         "bodyParameters": {
           "parameters": [
-            {"name": "campaignId", "value": "={{ ({ high: '<HIGH_CAMPAIGN_ID>', mid: '<MID_CAMPAIGN_ID>' })[$fromAI('band', 'Score band of the lead, for example high or mid', 'string')] }}"},
-            {"name": "email", "value": "={{ $fromAI('email', 'The contact email address') }}"},
-            {"name": "firstName", "value": "={{ $fromAI('firstName', 'The contact first name') }}"},
-            {"name": "lastName", "value": "={{ $fromAI('lastName', 'The contact last name') }}"},
-            {"name": "customFields", "value": "={{ $fromAI('variables', 'Personalization fields as a JSON object, one key per template variable', 'json') }}"}
+            {
+              "name": "campaignId",
+              "value": "={{ ((band) => { const map = { high: '<HIGH_CAMPAIGN_ID>', mid: '<MID_CAMPAIGN_ID>' }; const id = map[band]; if (!id) { throw new Error('unknown band ' + band); } if (id.startsWith('<')) { throw new Error('campaign for band ' + band + ' is not set in the workflow'); } return id; })($fromAI('band', 'Score band of the lead, for example high or mid', 'string')) }}"
+            },
+            {
+              "name": "email",
+              "value": "={{ $fromAI('email', 'The contact email address') }}"
+            },
+            {
+              "name": "firstName",
+              "value": "={{ $fromAI('firstName', 'The contact first name') }}"
+            },
+            {
+              "name": "lastName",
+              "value": "={{ $fromAI('lastName', 'The contact last name') }}"
+            },
+            {
+              "name": "customFields",
+              "value": "={{ $fromAI('variables', 'Personalization fields as a JSON object, one key per template variable', 'json') }}"
+            }
           ]
         }
       }
@@ -72,7 +99,10 @@
       "name": "suppress",
       "type": "n8n-nodes-base.httpRequestTool",
       "typeVersion": 4.5,
-      "position": [384, 336],
+      "position": [
+        384,
+        336
+      ],
       "parameters": {
         "authentication": "genericCredentialType",
         "genericAuthType": "httpBearerAuth",
@@ -84,18 +114,66 @@
         "specifyBody": "keypair",
         "bodyParameters": {
           "parameters": [
-            {"name": "emails", "value": "={{ $fromAI('emails', 'List of email addresses to suppress', 'json') }}"},
-            {"name": "reason", "value": "={{ $fromAI('reason', 'Why they are suppressed, for example opt-out reply') }}"}
+            {
+              "name": "emails",
+              "value": "={{ $fromAI('emails', 'List of email addresses to suppress', 'json') }}"
+            },
+            {
+              "name": "reason",
+              "value": "={{ $fromAI('reason', 'Why they are suppressed, for example opt-out reply') }}"
+            }
           ]
         }
       }
     }
   ],
   "connections": {
-    "get_workspace": {"ai_tool": [[{"node": "MCP Server Trigger", "type": "ai_tool", "index": 0}]]},
-    "get_campaigns": {"ai_tool": [[{"node": "MCP Server Trigger", "type": "ai_tool", "index": 0}]]},
-    "enroll_contact": {"ai_tool": [[{"node": "MCP Server Trigger", "type": "ai_tool", "index": 0}]]},
-    "suppress": {"ai_tool": [[{"node": "MCP Server Trigger", "type": "ai_tool", "index": 0}]]}
+    "get_workspace": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_campaigns": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "enroll_contact": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "suppress": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
   },
-  "settings": {"executionOrder": "v1"}
+  "settings": {
+    "executionOrder": "v1"
+  }
 }

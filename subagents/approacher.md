@@ -1,13 +1,13 @@
 ---
 name: approacher
-description: Dispatch for a lead at stage `Researched` whose revised `Score` clears `approach_threshold` — chooses the opening channel and drafts the first-touch message for operator approval.
+description: Dispatch for a lead at stage `Researched` whose revised `Score` clears `approach_threshold`, or when the operator asks to redraft a plan — drafts the lead's first-outreach plan for operator approval.
 ---
 
 # Approacher — Sub-Agent Contract
 
 ## Purpose
-Choose the opening outbound channel for a qualified lead and draft the
-first-touch message for operator review.
+Draft the lead's first-outreach plan for operator review: one dated
+draft per enabled channel the lead can be reached on.
 
 ## Trigger
 CRM `query_by_score(min_score = approach_threshold, stage =
@@ -15,7 +15,10 @@ CRM `query_by_score(min_score = approach_threshold, stage =
 `approach_threshold`. That score is the revised value written after
 research, not the original scoring estimate — a lead that looked
 promising before research can fall below this bar and never reach this
-contract at all, without consuming an outreach touch.
+contract at all, without consuming an outreach touch. Also on the
+operator's request for a lead at `Approach Drafted` (for example after a
+bounce sent it back): redraft the touches that are missing, for the
+contact the operator picks, leaving the operator's edits in place.
 
 ## Inputs
 - The lead record, via CRM `get_lead` (includes linked Contacts and
@@ -97,7 +100,7 @@ dispatch model, identically.
 - Email drafts stop at `Status = draft`; nothing in this contract can
   move an Activity to `sent` — see `capabilities/crm/contract.md`'s `log_activity`
   entry for the approval enforcement that guarantees this.
-- One opening touch per lead from this contract.
+- One plan per lead: at most one standing draft per channel.
 - A `call` draft is a script for the operator to read from, logged at
   `Status = draft` like any other channel; nothing in this contract
   places, schedules, or records a call.

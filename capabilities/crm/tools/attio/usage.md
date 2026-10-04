@@ -269,7 +269,9 @@ views.
   back to `Approach Drafted` before then to cancel.
 - **My touches** — on `sales_partner_outreach`: filtered on `status` is
   `draft`, `direction` is `outbound` and `channel` is `linkedin` or
-  `call`, sorted by `date`. These wait for you on their dates; set
+  `call`, sorted by `date`. Attio can't filter by the parent lead's
+  stage, so act on a touch only for leads at `Ready to Send` or `Contacted`
+  (open the lead first). These wait for you on their dates; set
   `status` to `sent` when you've done one.
 - **Research Queue** — on `sales_partner_pipeline`: filtered on `stage`
   is `Scored`, sorted by `score`, highest first.

@@ -9,3 +9,4 @@ activity_prospect: crm
 activity_prepare: crm
 activity_approach: crm
 activity_digest: crm, email_drafts
+activity_enroll: crm, sequences

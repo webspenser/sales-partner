@@ -33,4 +33,13 @@ for f in subagents/prospector.md subagents/preparer.md; do
   grep -qF "web search only; Apify connectors are" "$f" && grep -qF "attached to routines." "$f" \
     && _report ok "$f: scheduled runs use web search only" || _report no "$f: no web-search-only rule for scheduled runs"
 done
+# enroll needs the sequences binding and the operator's acceptance of enroll_ready_only.
+mkdir -p "$W/enr"
+printf '%s\n' 'agent: sales-partner' 'mode: plugin' 'bind_crm: attio' 'bind_sequences: invokeiq' 'accept_instruction_only: enroll_ready_only' > "$W/enr/instance.yaml"
+printf '%s\n' 'timezone: America/New_York' 'schedule_enroll: "daily 10:00"' > "$W/enr/schedules.yaml"
+out=$(python3 -B "$C" check "$W/enr" --repo acme/sales 2>&1); rc=$?
+[ "$rc" -eq 0 ] && printf '%s' "$out" | grep -qF 'ACCEPTED (instruction-only): sequences: enroll_ready_only' && _report ok "enroll passes with the accepted invariant shown" || _report no "enroll gate (rc=$rc): $out"
+sed -i.bak '/accept_instruction_only/d' "$W/enr/instance.yaml"
+out=$(python3 -B "$C" check "$W/enr" --repo acme/sales 2>&1); rc=$?
+[ "$rc" -eq 1 ] && printf '%s' "$out" | grep -qF 'sequences: invariant enroll_ready_only is not covered' && _report ok "enroll refused without acceptance" || _report no "enroll without acceptance (rc=$rc): $out"
 finish

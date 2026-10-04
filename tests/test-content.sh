@@ -366,4 +366,24 @@ assert_not_contains "$SP/templates/digest.md" 'Stalled'
 if grep -rlE "sales-call-specialist|Sales-call-specialist|write-follow-up|handle-objections|prepare-sales-call|run-live-call-script|subagents/follow-up" "$SP/AGENT.md" "$SP/skills" "$SP/subagents" "$SP/capabilities" "$SP/context" "$SP/templates" "$SP/evals" | grep -q .; then _report no "references to removed pieces remain"; else _report ok "no references to removed pieces"; fi
 assert_contains "$SP/agent.yaml" 'finds, qualifies and researches leads'
 
+
+echo "-- 6.0.0: enroll"
+EN="$SP/skills/enroll/SKILL.md"
+assert_contains "$EN" 'name: enroll'
+assert_contains "$EN" 'query_by_stage("Ready to Send")'
+assert_contains "$EN" 'a standing email Activity at `draft`'
+assert_contains "$EN" 'no email Activity at `sent`'
+assert_contains "$EN" 'every name in `variables:`'
+assert_contains "$EN" 'allowed_countries'
+assert_contains "$EN" 'canada_consent_basis'
+assert_contains "$EN" 'eu_uk_legitimate_interest'
+assert_contains "$EN" 'enroll_contact'
+assert_contains "$EN" 'update_activity(status: "sent"'
+assert_contains "$EN" 'update_stage(lead, "Contacted"'
+assert_contains "$EN" 'voided email draft is not an email touch'
+assert_contains "$EN" 'pause the contact in InvokeIQ'
+assert_contains "$EN" 'stop and report'
+assert_contains "$EN" 'never enroll with a blank field'
+grep -qx 'activity_enroll: crm, sequences' "$SP/agent.yaml" && _report ok "enroll activity declared" || _report no "activity_enroll missing"
+
 finish

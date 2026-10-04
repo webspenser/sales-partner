@@ -86,7 +86,7 @@ a recent ownership change; a surge or drop in reviews.
 
 Hard disqualifiers. Any match sends the lead straight to `Disqualified`
 from any stage, per the lead state machine in
-`capabilities/crm/contract.md` (Stage transitions) — this list is
+`capabilities/crm/contract.md` (Lead status transitions) — this list is
 checked mechanically, not weighed against other criteria the way the
 scoring rubric below is.
 

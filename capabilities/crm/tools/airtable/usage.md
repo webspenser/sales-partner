@@ -24,10 +24,11 @@ or reword any of them when implementing this tool.
 | `Source URL` | url |
 | `Score` | number 0–100 |
 | `Score Breakdown` | long text |
-| `Stage` | single select — the thirteen stages (see the contract) |
+| `Stage` | single select — the eleven statuses (see the contract) |
 | `Stage Changed At` | datetime |
 | `Next Action` | text |
 | `Next Action Due` | date |
+| `Revisit On` | date — set by the operator for `Nurture`; the agent reads it, never writes it |
 | `Do Not Contact` | checkbox |
 
 `create_lead` dedupes on `Domain`, then on `Phone`, then on `Company`
@@ -38,7 +39,7 @@ address; failing that, the country of `service_area.center` in
 `icp.md`; failing both, it is compared as written, digits only, and is
 never given a guessed country code. None of the three is a unique
 column, because each may be empty on a given lead. `Stage` options
-must be exactly the thirteen values from the stage enum in
+must be exactly the eleven values from the lead status list in
 the contract — no additional options, no renamed options.
 
 `query_by_stage`'s two optional filters read this table and, for
@@ -47,10 +48,7 @@ on `Next Action Due` directly; `idle_days` applies the contract's
 `max(...)` rule: a Lead's idle age is now minus the later of its linked
 Activities' most recent `Date` and its `Stage Changed At`. If the lead
 has no Activity, use `Stage Changed At`. A Lead is kept when that idle
-age is greater than the given number of days — the same staleness
-computation the **Stalled** view below performs — the operation and the
-view compute identically, the operation is simply the path a skill or
-sub-agent calls instead of a human opening the view.
+age is greater than the given number of days.
 
 `get_lead` reads one Leads record by its record id and follows the
 links to its Contacts, Research, and Activities rows. `query_by_score`
@@ -263,15 +261,9 @@ disagree about what counts as "in review," "due today," or "stalled."
   descending. What the Preparer works through next, highest-score
   first.
 - **Due Today** — Leads where `Next Action Due` is today or earlier.
-  Leads with an overdue or due-today follow-up, across any active
-  stage.
-- **Stalled** — Leads at `Contacted`, `Replied`, `Call Scheduled`,
-  `Call Held` or `Following Up` whose idle age (now minus the later of
-  the last Activity `Date` and `Stage Changed At`; with no Activity,
-  `Stage Changed At` alone) is greater than the configured cadence.
-  Leads that have gone quiet longer than the pipeline's
-  configured touch cadence allows, and need attention (a nudge, a
-  follow-up, or a move to `Lost`).
+- **Nurture** — Leads where `Stage = Nurture`, sorted by `Revisit On`,
+  soonest first. Leads you parked to come back to; the agent leaves them
+  alone until that date.
 
 ## Probe
 
@@ -357,10 +349,11 @@ verbatim, so match the spelling and capitalization exactly.
    | `Source URL` | URL | |
    | `Score` | Number | integer, 0 to 100 |
    | `Score Breakdown` | Long text | |
-   | `Stage` | Single select | exactly the thirteen stages: New, Scored, Researched, Approach Drafted, Ready to Send, Contacted, Replied, Call Scheduled, Call Held, Following Up, Won, Lost, Disqualified |
+   | `Stage` | Single select | exactly the eleven statuses: New, Scored, Researched, Approach Drafted, Ready to Send, Contacted, Engaged, Open Deal, Nurture, Customer, Disqualified |
    | `Stage Changed At` | Date and time | |
    | `Next Action` | Single line text | |
    | `Next Action Due` | Date | |
+   | `Revisit On` | Date | |
    | `Do Not Contact` | Checkbox | |
 
    Leave `Industry` and `Size` options empty or set them from the bands in
@@ -406,4 +399,4 @@ verbatim, so match the spelling and capitalization exactly.
    | `Lead Do Not Contact` | Lookup | `Do Not Contact` from `Lead`; for the Review and My touches views, never written |
 
 6. Create the views from the Views section above (Review, Ready to Send,
-   My touches, Research Queue, Due Today, Stalled). They are for you, not for the agent.
+   My touches, Research Queue, Due Today, Nurture). They are for you, not for the agent.

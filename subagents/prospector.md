@@ -21,7 +21,11 @@ A scheduled prospecting run, or the count of leads at stages `New` and
 - `context/operating-config.md` — `leads_per_week`,
   `prospecting_sources`, `apify_spend_cap_usd_per_week`
 - Existing leads, read via CRM `query_by_stage` on `New` and
-  `Scored`, to keep from re-working a business already in the pipeline
+  `Scored`, to keep from re-working a business already in the pipeline.
+  When `create_lead` returns an existing lead, read it (`get_lead`) and
+  leave it untouched if its status is `Open Deal`, `Customer` or
+  `Disqualified`, or `Nurture` with a Revisit On date still in the
+  future: those leads are the operator's, or out.
 
 ## Outputs
 - New Leads records, one per company found, each carrying `Company`,

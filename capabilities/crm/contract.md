@@ -80,7 +80,7 @@ behavior only; it names no Airtable table or field.
   not exist is an error, not an empty or partial record — callers must
   not treat "not found" as "no data yet."
 - **`update_stage`** is the only handoff mechanism between sub-agents
-  (see below). It validates `stage` against the thirteen-value enum and
+  (see below). It validates `stage` against the eleven-value status list and
   rejects anything else; it does not accept free-text stages. Every
   call also sets `stage_changed_at` (`Stage Changed At` in the Airtable
   tool) to the moment of the transition, as part of the same write —
@@ -100,7 +100,7 @@ behavior only; it names no Airtable table or field.
   any attempt to write `stage`** through this operation, and it never
   writes `stage_changed_at` either — both belong to `update_stage`
   alone. Keeping the two separate is what lets `update_stage` validate
-  every stage write against the thirteen-value enum and remain the sole
+  every stage write against the eleven-value status list and remain the sole
   handoff mechanism between sub-agents, and what lets
   `stage_changed_at` be read elsewhere (the `send-digest` skill's
   Movement section) as an unambiguous transition timestamp rather than
@@ -194,7 +194,7 @@ behavior only; it names no Airtable table or field.
 - **`query_by_stage`**'s base behavior is unchanged by its two optional
   filters: called with just `stage` (and optionally `limit`), it returns
   exactly what it always returned — every lead at that stage, `stage`
-  required, rejecting anything outside the thirteen-value enum. Passing
+  required, rejecting anything outside the eleven-value status list. Passing
   either `next_action_due_before` (a date) or `idle_days` (an integer)
   changes what the call means: `stage` becomes optional, and the result
   is filtered to leads whose `Next Action Due` is on or before
@@ -205,7 +205,7 @@ behavior only; it names no Airtable table or field.
   filters is rejected rather than silently returning every lead in the
   CRM; at least one of the three must be present. This is what lets
   `send-digest` ask "which leads are due today" or "which leads have
-  gone stale" without a table scan across all thirteen stages one at a
+  gone stale" without a table scan across all eleven statuses one at a
   time, and it is why the operation grew these filters rather than the
   digest reconstructing them from `query_by_stage`'s original one-stage
   form.
@@ -295,11 +295,12 @@ policy enforces; an invariant it does not list is instruction-only.
 - `dnc_one_way` — `Do Not Contact`, once true, is never cleared.
 - `no_delete` — the agent never deletes or merges CRM records.
 
-## Stage enum
+## Lead status
 
-A lead occupies exactly one of these thirteen stages at a time. This is
-the enum verbatim, in transition order; `update_stage` rejects any value
-outside this list:
+A lead holds exactly one of these eleven statuses at a time (the lead
+is the company). The operation is still `update_stage` and the field `stage`; the
+values are the lead's status, verbatim, in order. `update_stage` rejects
+any value outside this list:
 
 ```
 New
@@ -308,44 +309,44 @@ Researched
 Approach Drafted
 Ready to Send
 Contacted
-Replied
-Call Scheduled
-Call Held
-Following Up
-Won
-Lost
+Engaged
+Open Deal
+Nurture
+Customer
 Disqualified
 ```
 
-`Won`, `Lost`, and `Disqualified` are terminal — no operation should
-attempt to transition a lead out of them. A hard disqualifier or an
-anti-signal found during research can move a lead to `Disqualified` from
-any of the other ten stages, not only from the stage where
-disqualification is usually checked.
+Statuses describe the lead, not a deal: when a real opportunity exists
+(for example a proposal), the operator tracks it on the CRM's own deal
+object, with its own stages. The agent writes only `Scored`,
+`Researched`, `Approach Drafted`, `Contacted`, `Engaged` and
+`Disqualified` (plus `New` on create); `Ready to Send`, `Open Deal`,
+`Nurture` and `Customer` are the operator's alone, and every tool's
+guard policy refuses them. **The agent's job ends at `Engaged`.** For
+`Nurture`, the operator sets the lead's **Revisit On** date; the agent
+reads it and leaves the lead alone until then. `Do Not Contact` is a
+separate one-way flag, not a status.
 
-## Stage transitions
+## Lead status transitions
 
-Stage transitions are the only handoff mechanism between sub-agents, so
-this table is the authoritative state machine the `subagents/*.md`
-contracts code against. A hard disqualifier in `icp.md`, or an
-anti-signal found during research, moves a lead to `Disqualified` from
-any stage below — not only the one noted as its usual entry point.
+Status changes are the only handoff between sub-agents, so this table
+is the state machine the `subagents/*.md` contracts code against. A hard
+disqualifier in `icp.md`, or an anti-signal found during research, moves
+a lead to `Disqualified` from any status the agent works on.
 
-| Stage | Enters when | Exits to |
+| Status | Enters when | Exits to |
 |---|---|---|
 | `New` | Prospector creates the lead record from a raw find | Prospector scores it, moving it to `Scored`; a hard disqualifier moves it straight to `Disqualified` |
 | `Scored` | Prospector finishes applying the `icp.md` rubric and records the score breakdown | Preparer picks it up once the score clears `research_threshold`, moving it to `Researched` |
-| `Researched` | Preparer finishes research, identifies decision-makers, produces hooks, and re-scores | Approacher picks it up once the revised score clears `approach_threshold`, drafting the first touch and moving it to `Approach Drafted`; an anti-signal found during research moves it to `Disqualified` instead |
+| `Researched` | Preparer finishes research, identifies decision-makers, produces hooks, and re-scores | Approacher picks it up once the revised score clears `approach_threshold`, drafting the plan and moving it to `Approach Drafted`; an anti-signal found during research moves it to `Disqualified` instead |
 | `Approach Drafted` | Approacher logs the plan's draft Activities (one per enabled channel, each with its date) at `status: draft` | The operator reviews and edits the drafts, voids any they don't want, then approves the whole plan by moving the lead to `Ready to Send` — nothing is approved draft by draft |
 | `Ready to Send` | The operator moves the lead here once every standing draft and its date are right — only the operator writes `Ready to Send` | `enroll` enrolls the email touch and moves it to `Contacted`; a LinkedIn or call touch the operator marks `sent` also moves it to `Contacted`; the operator moving it back to `Approach Drafted` cancels |
-| `Contacted` | The first touch actually went out, on any channel | A reply moves it to `Replied`; continued silence through the configured cadence, once the touch limit is exhausted, moves it to `Lost` |
-| `Replied` | A reply from the prospect is logged against a `Contacted` lead | The reply leads to a booked call, moving it to `Call Scheduled`; Follow-up continues the exchange under the same touch-limit rule that governs `Contacted` |
-| `Call Scheduled` | A call is booked with the lead | Sales-call-specialist preps the brief; once the call happens, the debrief moves it to `Call Held` |
-| `Call Held` | Sales-call-specialist logs the debrief after the call | The outcome decides the next stage: `Following Up` if the deal is still live, `Won` if it closes, `Lost` if it's declined |
-| `Following Up` | Follow-up drafts an Activity after a meaningful interaction, or after the lead goes idle past cadence | Momentum continues until the deal closes (`Won`); exhausting the touch limit moves it to `Lost` |
-| `Won` | The deal closes successfully | Terminal — no further transitions |
-| `Lost` | The configured touch limit is exhausted without a positive outcome, or the prospect declines | Terminal — no further transitions |
-| `Disqualified` | A hard disqualifier in `icp.md`, or an anti-signal found during research, from any stage above | Terminal — no further transitions |
+| `Contacted` | The first touch actually went out, on any channel | A reply on any channel moves it to `Engaged`; a bounced email returns it to `Approach Drafted` |
+| `Engaged` | The prospect replied — the agent's job ends here | The operator decides: `Open Deal`, `Nurture` or `Customer` |
+| `Open Deal` | The operator created a deal for the lead | The operator, from the deal's outcome |
+| `Nurture` | The operator parks the lead, with a Revisit On date | The operator; the Prospector leaves it alone until Revisit On |
+| `Customer` | The operator won business with the lead | — |
+| `Disqualified` | A hard disqualifier in `icp.md`, or an anti-signal found during research | Terminal for the agent |
 
 ## `update_stage` is the only handoff mechanism
 

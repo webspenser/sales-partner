@@ -89,8 +89,8 @@ reviewed by the operator before it goes out.
 6. **Digest** (T3) — `send-digest`, when `schedule_digest` fires.
 
 Steps 1–5 need no sub-agent dispatch: each runs identically as a
-sequential inline phase. The thirteen lead stages and their transitions
-are in `capabilities/crm/contract.md` (Stage enum, Stage transitions);
+sequential inline phase. The lead statuses and their transitions
+are in `capabilities/crm/contract.md` (Lead status, Lead status transitions);
 `update_stage` is the only handoff between steps.
 
 **Scheduled activities.** Steps 1 (`prospect`), 2 (`prepare`), 3

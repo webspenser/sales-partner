@@ -19,8 +19,7 @@ rules:
     update: [COMPLETED, DEFERRED]
   - field: sp_stage
     create: [New]
-    update: [New, Scored, Researched, "Approach Drafted", Contacted, Replied, "Call Scheduled",
-             "Call Held", "Following Up", Won, Lost, Disqualified]
+    update: [Scored, Researched, "Approach Drafted", Contacted, Engaged, Disqualified]
   - field: sp_do_not_contact
     update: ["true"]
   - field: hs_pipeline_stage

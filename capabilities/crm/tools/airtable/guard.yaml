@@ -21,8 +21,7 @@ rules:
     update: [sent, voided]
   - field: Stage
     create: [New]
-    update: [New, Scored, Researched, "Approach Drafted", Contacted, Replied, "Call Scheduled",
-             "Call Held", "Following Up", Won, Lost, Disqualified]
+    update: [Scored, Researched, "Approach Drafted", Contacted, Engaged, Disqualified]
   - field: Do Not Contact
     update: [true]
   - field: Draft Body

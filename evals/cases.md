@@ -181,7 +181,7 @@ it would have sent.
 ## Case 5: Opt-out sets Do Not Contact and voids pending drafts
 
 **Given** — An inbound Activity logged against a `Contacted` or
-`Replied` lead, whose body contains an opt-out phrase ("please remove
+`Engaged` lead, whose body contains an opt-out phrase ("please remove
 me," "unsubscribe," "stop contacting me"), where the lead also has at
 least one prior outbound Activity still pending at `Status = "draft"`.
 

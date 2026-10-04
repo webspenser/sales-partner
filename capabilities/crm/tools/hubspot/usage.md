@@ -16,7 +16,7 @@ their prefix (for example `mcp__claude_ai_HubSpot__search_crm_objects`).
 ## Data model
 
 Every lead is a HubSpot **Company**, with a custom `sp_stage` dropdown
-holding the thirteen stages. People at the lead are **Contacts**
+holding the eleven statuses. People at the lead are **Contacts**
 associated with that company. Each research finding is a **Note**
 associated with the company. Each outreach draft or logged interaction
 (an Activity) is a **Task** associated with the company and, when there
@@ -48,7 +48,7 @@ group `Sales Partner` (internal name `sales_partner`).
 | `domain` | native | `domain` (bare, no `https://` or `www.`) |
 | `phone` | native, written as E.164 | `phone` |
 | `address`, `city`, `state`, `zip`, `country` | native | `address`, as sourced, split into its parts |
-| `sp_stage` | dropdown, the thirteen stages | `Stage` |
+| `sp_stage` | dropdown, the eleven statuses | `Stage` |
 | `sp_stage_changed_at` | datetime | `Stage Changed At` |
 | `sp_stage_reason` | multi-line text | the `reason` from the latest `update_stage` |
 | `sp_score` | number | `Score` |
@@ -60,6 +60,7 @@ group `Sales Partner` (internal name `sales_partner`).
 | `sp_email` | text | `Email` (the general inbox only) |
 | `sp_next_action` | text | `Next Action` |
 | `sp_next_action_due` | date | `Next Action Due` |
+| `sp_revisit_on` | date | `Revisit On` — set by the operator for `Nurture`; the agent reads it, never writes it |
 | `sp_do_not_contact` | checkbox (`true` / `false`) | `Do Not Contact` |
 
 The contract's `Location` has no custom property. It is the native `city`,
@@ -67,9 +68,8 @@ The contract's `Location` has no custom property. It is the native `city`,
 from those three.
 
 `sp_stage` option values are exactly the contract's stage names: `New`,
-`Scored`, `Researched`, `Approach Drafted`, `Ready to Send`, `Contacted`, `Replied`,
-`Call Scheduled`, `Call Held`, `Following Up`, `Won`, `Lost`,
-`Disqualified`.
+`Scored`, `Researched`, `Approach Drafted`, `Ready to Send`, `Contacted`, `Engaged`,
+`Open Deal`, `Nurture`, `Customer`, `Disqualified`.
 
 ### Contact — the Contacts table
 
@@ -227,7 +227,7 @@ outside the pipeline), adopt it (step 7) and return its ID as `lead_id`.
 
 ### `update_stage`
 
-Reject a `stage` outside the thirteen. Then one call, with all three
+Reject a `stage` outside the eleven. Then one call, with all three
 properties **in the same update**:
 
     {"updateRequest": {"objects": [{"objectType": "companies", "objectId": <lead_id>, "properties": {
@@ -429,8 +429,9 @@ Create these once in HubSpot. The connector can't create views.
   sorted by `Score`, highest first.
 - **Due Today** — Companies filtered on `Next action due` on or before
   today.
-- **Stalled** — the digest's Stalled section, which uses
-  `query_by_stage` with `idle_days`, is the source of truth.
+- **Nurture** — Companies filtered on `sp_stage` is `Nurture`, sorted
+  by `Revisit on`, soonest first. Leads you parked to come back to; the
+  agent leaves them alone until that date.
 
 ## Probe
 
@@ -442,7 +443,7 @@ what they find to `bindings/crm.md` in the instance:
    show `write: AVAILABLE`; report any that don't.
 2. `hubspot:get_properties`:
    - on `companies`, `["sp_stage", "sp_stage_changed_at", "sp_do_not_contact"]`:
-     all three exist, and `sp_stage` has the thirteen stage options;
+     all three exist, and `sp_stage` has the eleven status options;
    - on `contacts`, `["sp_role"]`: it has the three role options;
    - on `tasks`, `["hs_task_status", "hs_task_type", "hs_task_priority"]`:
      `hs_task_status` has `NOT_STARTED`, `COMPLETED` and `DEFERRED`, `hs_task_type` has `EMAIL`, `CALL` and `TODO`, and
@@ -481,7 +482,7 @@ both equal to the text shown.
 
 | Internal name | Label | Field type | Options |
 |---|---|---|---|
-| `sp_stage` | Sales Partner stage | Dropdown select | New, Scored, Researched, Approach Drafted, Ready to Send, Contacted, Replied, Call Scheduled, Call Held, Following Up, Won, Lost, Disqualified |
+| `sp_stage` | Sales Partner stage | Dropdown select | New, Scored, Researched, Approach Drafted, Ready to Send, Contacted, Engaged, Open Deal, Nurture, Customer, Disqualified |
 | `sp_stage_changed_at` | Stage changed at | Date and time picker | |
 | `sp_stage_reason` | Stage reason | Multi-line text | |
 | `sp_score` | Score | Number | |
@@ -493,6 +494,7 @@ both equal to the text shown.
 | `sp_email` | General inbox | Single-line text | |
 | `sp_next_action` | Next action | Single-line text | |
 | `sp_next_action_due` | Next action due | Date picker | |
+| `sp_revisit_on` | Revisit on | Date picker | |
 | `sp_do_not_contact` | Do not contact | Single checkbox | Yes = `true`, No = `false` |
 
 **Contacts**

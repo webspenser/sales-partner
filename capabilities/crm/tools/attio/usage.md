@@ -51,7 +51,7 @@ for the rest of the CRM.
 | Slug | Type | Contract field |
 |---|---|---|
 | `lead` | record-reference → companies | the lead itself (equals the parent) |
-| `stage` | status — exactly the thirteen stages | `Stage` |
+| `stage` | status — exactly the eleven statuses | `Stage` |
 | `stage_changed_at` | timestamp | `Stage Changed At` |
 | `stage_reason` | text | the `reason` from the latest `update_stage` call |
 | `score` | number | `Score` |
@@ -66,6 +66,7 @@ for the rest of the CRM.
 | `source_url` | text | `Source URL` |
 | `next_action` | text | `Next Action` |
 | `next_action_due` | date | `Next Action Due` |
+| `revisit_on` | date | `Revisit On` — set by the operator for `Nurture`; the agent reads it, never writes it |
 | `do_not_contact` | checkbox | `Do Not Contact` |
 
 `industry` and `size` are text rather than select. Their values come
@@ -164,7 +165,7 @@ write nothing) exactly where the contract says the operation rejects.
   come from `attio:list-records` on `people`, filtered on `company` eq
   the same reference. If there is no company or no Pipeline entry,
   that is an error, not an empty record.
-- **`update_stage`** — Reject a `stage` outside the thirteen. Find the
+- **`update_stage`** — Reject a `stage` outside the eleven. Find the
   Pipeline entry by `lead`, then call `attio:update-list-entry-by-id`
   with `stage`, `stage_changed_at` = now (read the clock right before
   the call), and `stage_reason` = `reason`, **all in the same call**.
@@ -274,10 +275,9 @@ views.
   is `Scored`, sorted by `score`, highest first.
 - **Due Today** — on `sales_partner_pipeline`: filtered on
   `next_action_due` on or before today.
-- **Stalled** — Attio can't filter one list by the dates in another, so
-  there is no saved view for this. The digest's Stalled section, which
-  uses `query_by_stage` with `idle_days`, is the source of truth for
-  stalled leads.
+- **Nurture** — on `sales_partner_pipeline`: filtered on `stage` is
+  `Nurture`, sorted by `revisit_on`, soonest first. Leads you parked to
+  come back to; the agent leaves them alone until that date.
 
 ## Probe
 
@@ -290,7 +290,7 @@ what they find to `bindings/crm.md` in the instance:
 3. `attio:list-list-attribute-definitions` on `sales_partner_pipeline`,
    `sales_partner_research`, and `sales_partner_outreach` — every slug
    in the Schema tables above must exist, and `stage` must hold the
-   thirteen stages.
+   eleven statuses.
 4. `attio:list-attribute-definitions` on `people` — `sp_role`,
    `sp_verified`, and `sp_notes` must exist. Record
    `lead_source_outbound: yes` if `lead_source` exists with an
@@ -333,7 +333,7 @@ List `sales_partner_pipeline` (name `Sales Partner Pipeline`):
 
 | Title | Slug | Type | Options |
 |---|---|---|---|
-| Stage | `stage` | Status | New, Scored, Researched, Approach Drafted, Ready to Send, Contacted, Replied, Call Scheduled, Call Held, Following Up, Won, Lost, Disqualified |
+| Stage | `stage` | Status | New, Scored, Researched, Approach Drafted, Ready to Send, Contacted, Engaged, Open Deal, Nurture, Customer, Disqualified |
 | Stage Changed At | `stage_changed_at` | Timestamp | |
 | Stage Reason | `stage_reason` | Text | |
 | Score | `score` | Number | |
@@ -348,6 +348,7 @@ List `sales_partner_pipeline` (name `Sales Partner Pipeline`):
 | Source URL | `source_url` | Text | |
 | Next Action | `next_action` | Text | |
 | Next Action Due | `next_action_due` | Date | |
+| Revisit On | `revisit_on` | Date | |
 | Do Not Contact | `do_not_contact` | Checkbox | |
 | Lead | `lead` | Record reference, allowed object Companies | |
 

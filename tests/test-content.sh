@@ -266,10 +266,10 @@ assert_contains "$SP/AGENT.md" 'unattended'
 
 echo "-- 4.0.4: AGENT.md inline size, exact Stalled rule"
 [ "$(wc -c < "$SP/AGENT.md" | tr -d ' ')" -le 9000 ] && _report ok "AGENT.md fits the 9000-byte inline limit" || _report no "AGENT.md is over 9000 bytes; the hook will not inline it"
-assert_contains "$SP/capabilities/crm/contract.md" '## Stage transitions'
+assert_contains "$SP/capabilities/crm/contract.md" '## Lead status transitions'
 assert_contains "$SP/capabilities/crm/contract.md" 'draft Activities (one per enabled channel, each with its date) at `status: draft`'
-assert_contains "$SP/AGENT.md" '`capabilities/crm/contract.md` (Stage enum, Stage transitions)'
-assert_contains "$SP/context/icp.md" '`capabilities/crm/contract.md` (Stage transitions)'
+assert_contains "$SP/AGENT.md" '`capabilities/crm/contract.md` (Lead status, Lead status transitions)'
+assert_contains "$SP/context/icp.md" '`capabilities/crm/contract.md` (Lead status transitions)'
 assert_contains "$SP/capabilities/crm/contract.md" 'idle age = now − `max(last Activity date, Stage Changed'
 assert_contains "$SP/capabilities/crm/contract.md" 'at all is measured from its `Stage Changed At` alone'
 D="$SP/skills/send-digest/SKILL.md"
@@ -306,13 +306,12 @@ assert_contains "$AU" 'take each field ID from that table'
 echo "-- 6.0.0: Ready to Send and sent"
 K="$SP/capabilities/crm/contract.md"
 python3 -c "import sys; t=open('$K').read(); sys.exit(0 if 'Approach Drafted\nReady to Send\nContacted' in t else 1)" && _report ok "stage order has Ready to Send" || _report no "stage order lacks Ready to Send"
-assert_contains "$K" 'A lead occupies exactly one of these thirteen stages'
 assert_contains "$K" '| `Ready to Send` |'
 assert_contains "$K" 'only the operator writes `Ready to Send`'
 assert_contains "$K" 'the only statuses it may later write are `sent` and `voided`'
 assert_not_contains "$K" '`approved`'
 assert_not_contains "$SP/AGENT.md" 'twelve lead stages'
-assert_contains "$SP/AGENT.md" 'thirteen lead stages'
+assert_contains "$SP/AGENT.md" 'The lead statuses and their transitions'
 assert_not_contains "$SP/evals/cases.md" 'approved'
 
 echo "-- 6.0.0: CRM tools"
@@ -345,4 +344,33 @@ assert_contains "$SP/subagents/approacher.md" 'never an address with a `bounced`
 assert_contains "$SP/subagents/approacher.md" 'one draft per enabled channel'
 assert_contains "$SP/skills/write-cold-email/SKILL.md" '## With sequences'
 assert_contains "$SP/templates/cold-email.md" 'icebreaker:'
+
+echo "-- 6.0.0: lead status"
+K="$SP/capabilities/crm/contract.md"
+python3 -c "import sys; t=open('$K').read(); sys.exit(0 if 'Ready to Send\nContacted\nEngaged\nOpen Deal\nNurture\nCustomer\nDisqualified' in t else 1)" && _report ok "status order" || _report no "status order"
+assert_contains "$K" 'A lead holds exactly one of these eleven statuses'
+assert_contains "$K" 'Revisit On'
+assert_not_contains "$K" 'Call Scheduled'
+assert_not_contains "$K" 'Call Held'
+assert_not_contains "$K" 'Following Up'
+assert_not_contains "$K" '`Replied`'
+assert_not_contains "$K" '`Won`'
+assert_not_contains "$K" '`Lost`'
+assert_contains "$SP/subagents/prospector.md" 'Open Deal'
+assert_contains "$SP/subagents/prospector.md" 'Revisit On'
+assert_contains "$SP/capabilities/crm/tools/attio/usage.md" 'Engaged'
+assert_contains "$SP/capabilities/crm/tools/attio/usage.md" 'revisit_on'
+assert_not_contains "$SP/capabilities/crm/tools/attio/usage.md" 'Call Scheduled'
+assert_not_contains "$SP/capabilities/crm/tools/attio/usage.md" 'thirteen'
+assert_contains "$SP/capabilities/crm/tools/airtable/usage.md" 'Engaged'
+assert_contains "$SP/capabilities/crm/tools/airtable/usage.md" 'Revisit On'
+assert_not_contains "$SP/capabilities/crm/tools/airtable/usage.md" 'Call Scheduled'
+assert_not_contains "$SP/capabilities/crm/tools/airtable/usage.md" 'thirteen'
+assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'Engaged'
+assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'sp_revisit_on'
+assert_not_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'Call Scheduled'
+assert_not_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'thirteen'
+grep -q '"Engaged"' "$SP/capabilities/crm/tools/attio/bootstrap.py" && grep -q 'revisit_on' "$SP/capabilities/crm/tools/attio/bootstrap.py" && ! grep -q '"Call Scheduled"' "$SP/capabilities/crm/tools/attio/bootstrap.py" && _report ok "attio bootstrap: eleven statuses, revisit_on" || _report no "attio bootstrap statuses"
+grep -q '"Engaged"' "$SP/capabilities/crm/tools/hubspot/bootstrap.py" && grep -q 'sp_revisit_on' "$SP/capabilities/crm/tools/hubspot/bootstrap.py" && ! grep -q '"Call Scheduled"' "$SP/capabilities/crm/tools/hubspot/bootstrap.py" && _report ok "hubspot bootstrap: eleven statuses, sp_revisit_on" || _report no "hubspot bootstrap statuses"
+
 finish

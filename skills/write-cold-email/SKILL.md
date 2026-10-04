@@ -71,6 +71,24 @@ how well-written it otherwise reads:
     channel="email", direction="outbound", draft_body=..., status=
     "draft")` — this skill never sets `status` to anything but `draft`.
 
+## With sequences
+
+When `sequences` is bound, the client's own sequence platform holds the
+email copy, and this skill writes only the personalization it merges
+in. Read `variables:` from `bindings/sequences.md` (for example
+`icebreaker, company`) and write one `name: value` line per name, in
+that order, every line present and no others:
+
+    icebreaker: Saw you opened a second clinic in Westfield last month.
+    company: Northside Dental
+
+Each value follows steps 2–6 and 10 above: the hook, stated directly,
+in the business's voice, every fact traced to the research or
+`business-profile.md`. Keep each value to one sentence. Log it with
+CRM `log_activity(lead_id, contact_id, channel="email",
+direction="outbound", summary="band: <band>", draft_body=<the lines>,
+status="draft")`.
+
 ## Worked example
 
 **Fennimore Health**, using the Series A hiring hook from

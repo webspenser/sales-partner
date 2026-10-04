@@ -35,6 +35,11 @@ research_budget_per_lead_minutes: 8
 sending_identity: "[name] <[email]>"
 callback_phone: "[phone]"
 tone: "[three adjectives from the interview]"
+touch_spacing_days: 3
+sequence_bands: {high: 80, mid: 65}
+allowed_countries: [US]
+eu_uk_legitimate_interest: ""
+canada_consent_basis: ""
 ```
 
 ## What each key gates
@@ -142,3 +147,25 @@ operator acting outside the agent's tool access. See
 `capabilities/crm/contract.md`'s Approval invariant for the full, provable rule —
 this file states the outcome, not the mechanics, precisely so it
 cannot drift out of sync with them again.
+- **`touch_spacing_days`** — the days between one touch in a lead's plan
+  and the next (email first, then each other enabled channel). The
+  Approacher sets each draft's date this way; the operator can change
+  any date before moving the lead to `Ready to Send`. Default `3`.
+- **`sequence_bands`** — score bands for email enrollment, each a band
+  name and the minimum revised score for it, checked highest first (a
+  lead at 84 with `{high: 80, mid: 65}` is `high`). A lead below every
+  band gets no email touch. Each band maps to one InvokeIQ campaign
+  (set in the InvokeIQ tool's workflow). Used only when `sequences` is
+  bound.
+- **`allowed_countries`** — the countries (ISO codes, such as `US`) whose
+  leads `enroll` may put into a sequence. Default `[US]`. A lead with no
+  known country is never enrolled. Cold email law differs by country:
+  `CA` is treated as not allowed unless `canada_consent_basis` records
+  the operator's consent basis, and any EU/EEA country or `GB` is
+  treated as not allowed unless `eu_uk_legitimate_interest` records the
+  operator's legitimate-interest note.
+- **`eu_uk_legitimate_interest`** — the operator's written
+  legitimate-interest note for contacting EU/EEA and UK businesses.
+  Empty by default.
+- **`canada_consent_basis`** — the operator's written consent basis for
+  contacting Canadian businesses (CASL). Empty by default.

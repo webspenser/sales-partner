@@ -331,4 +331,18 @@ assert_not_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'twelve'
 grep -q '"Ready to Send"' "$SP/capabilities/crm/tools/attio/bootstrap.py" && _report ok "attio bootstrap has Ready to Send" || _report no "attio bootstrap lacks Ready to Send"
 grep -q '"Ready to Send"' "$SP/capabilities/crm/tools/hubspot/bootstrap.py" && _report ok "hubspot bootstrap has Ready to Send" || _report no "hubspot bootstrap lacks Ready to Send"
 assert_not_contains "$SP/capabilities/crm/tools/attio/bootstrap.py" '"approved"'
+
+echo "-- 6.0.0: personalization and config"
+OC="$SP/context/operating-config.md"
+assert_contains "$OC" 'sequence_bands'
+assert_contains "$OC" 'allowed_countries: [US]'
+assert_contains "$OC" 'eu_uk_legitimate_interest'
+assert_contains "$OC" 'canada_consent_basis'
+assert_contains "$OC" 'touch_spacing_days: 3'
+assert_contains "$SP/subagents/approacher.md" 'one `name: value` line per name in `variables:`'
+assert_contains "$SP/subagents/approacher.md" 'touch_spacing_days'
+assert_contains "$SP/subagents/approacher.md" 'never an address with a `bounced` Activity'
+assert_contains "$SP/subagents/approacher.md" 'one draft per enabled channel'
+assert_contains "$SP/skills/write-cold-email/SKILL.md" '## With sequences'
+assert_contains "$SP/templates/cold-email.md" 'icebreaker:'
 finish

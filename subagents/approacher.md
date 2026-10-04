@@ -23,7 +23,9 @@ contract at all, without consuming an outreach touch.
 - `context/business-profile.md` — proof points and differentiators to
   ground the draft
 - `context/operating-config.md` — `enabled_channels`, `tone`,
-  `sending_identity`, `callback_phone`
+  `sending_identity`, `callback_phone`, `touch_spacing_days`,
+  `sequence_bands`
+- `bindings/sequences.md` — `variables:`, when `sequences` is bound
 - `templates/` — blank channel templates (cold email, LinkedIn
   connection note, LinkedIn DM, cold call opener)
 - Samples — gold-standard filled examples for voice and structure:
@@ -36,9 +38,20 @@ contract at all, without consuming an outreach touch.
   only for a lead with a sourced phone number, on the lead or
   on the chosen Contact; otherwise the next-best enabled
   channel is chosen.
-- A drafted first-touch message logged as an Activities row: `Channel`,
-  `Direction = outbound`, `Draft Body`, `Status = draft`, linked to the
-  lead and the chosen Contact
+- The lead's plan: one draft per enabled channel the lead can be
+  reached on, each logged as an Activities row (`Channel`,
+  `Direction = outbound`, `Draft Body`, `Status = draft`, a date) linked
+  to the lead and the chosen Contact. Dates: email first (today), then
+  each other channel `touch_spacing_days` after the previous one.
+- With `sequences` bound, the email draft is the personalization,
+  one `name: value` line per name in `variables:` (`bindings/sequences.md`),
+  every line present and no others, written from the research, with
+  the lead's band (`sequence_bands`, revised score, highest band first)
+  in the summary as `band: <name>`. A lead below every band gets no
+  email draft. Without `sequences`, the email draft is a full cold
+  email (`write-cold-email`).
+- Contacts: never an address with a `bounced` Activity; pick another
+  contact or leave email out of the plan.
 - `Stage = Approach Drafted`
 
 ## Tools allowed
@@ -53,7 +66,8 @@ This contract has no send capability. That is the enforcement mechanism,
 not an instruction.
 
 ## Stop conditions
-- One draft Activity has been logged for the lead
+- The lead's plan is logged: one draft per enabled channel it can be
+  reached on
 
 In a scheduled (unattended) run, never ask the operator a question; if
 a required input is missing, stop and report what is missing.

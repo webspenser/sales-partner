@@ -13,3 +13,11 @@ Subject: [subject line — under 6 words, never a question]
 [single ask]
 
 [sending_identity]
+
+<!--
+  With sequences bound, the email draft is only the personalization the
+  client's sequence merges in, one line per name in `variables:`:
+
+  icebreaker: [the hook, one sentence]
+  company: [company name as the prospect writes it]
+-->

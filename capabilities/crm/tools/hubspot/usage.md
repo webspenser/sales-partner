@@ -359,7 +359,10 @@ status filters: `draft` → `hs_task_status` `IN` with
 `"values": ["NOT_STARTED", "IN_PROGRESS", "WAITING"]`;
 `sent` → `EQ` `COMPLETED`; `voided` → `EQ` `DEFERRED`. When
 `direction` is given, add `hs_task_priority` `EQ` `HIGH` (outbound) or
-`NONE` (inbound) to the same filter group. Add
+`NONE` (inbound) to the same filter group. Add `channel` when given as
+`hs_task_type` `EQ` `EMAIL` (email), `CALL` (call), `IN` with
+`["LINKED_IN_MESSAGE", "LINKED_IN_CONNECT"]` (linkedin) or `TODO`
+(other). Add
 `hs_timestamp` `GTE` `since` and `hs_timestamp` `LTE` `until` when
 given, request `hs_task_body` and `hs_task_priority`, and sort by
 `hs_timestamp`. Read each Task's `direction` from `hs_task_priority`

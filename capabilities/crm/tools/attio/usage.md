@@ -217,7 +217,7 @@ write nothing) exactly where the contract says the operation rejects.
   `stage` eq when given), sorted by `score` desc.
 - **`query_activities`** — `attio:list-records-in-list` on
   `sales_partner_outreach`, filtered on `status` (and `direction`, and
-  `date` gte `since` / lte `until`). Each entry's `lead` gives the
+  `channel` when given, and `date` gte `since` / lte `until`). Each entry's `lead` gives the
   company without a second call.
 
 Every list entry carries Attio's own `created_at`. `send-digest`'s

@@ -386,4 +386,38 @@ assert_contains "$EN" 'stop and report'
 assert_contains "$EN" 'never enroll with a blank field'
 grep -qx 'activity_enroll: crm, sequences' "$SP/agent.yaml" && _report ok "enroll activity declared" || _report no "activity_enroll missing"
 
+
+echo "-- 6.0.0: sync-replies, digest, channel filter"
+SR="$SP/skills/sync-replies/SKILL.md"
+assert_contains "$SR" 'name: sync-replies'
+assert_contains "$SR" 'query_activities(status: "sent", direction: "inbound", channel: "email"'
+assert_contains "$SR" '`Contacted` → `Engaged`'
+assert_contains "$SR" 'update_lead(lead, {"Do Not Contact": true})'
+assert_contains "$SR" 'suppress('
+assert_contains "$SR" '`bounced`'
+assert_contains "$SR" 'Approach Drafted'
+assert_contains "$SR" 'idempotent'
+assert_contains "$SR" 'void'
+grep -qx 'activity_sync-replies: crm, sequences' "$SP/agent.yaml" && _report ok "sync-replies declared" || _report no "activity_sync-replies missing"
+D="$SP/skills/send-digest/SKILL.md"
+assert_contains "$D" '**Section 1 — Review.**'
+assert_contains "$D" '**Section 2 — Ready to Send.**'
+assert_contains "$D" '**Section 6 — Enrolled.**'
+assert_contains "$D" '**Section 7 — Replies.**'
+assert_contains "$D" 'Link-click unsubscribes are handled by InvokeIQ and are not visible here.'
+assert_not_contains "$D" 'Awaiting approval'
+assert_not_contains "$D" 'Call Scheduled'
+assert_not_contains "$D" 'six sections'
+T="$SP/templates/digest.md"
+assert_contains "$T" '## Review ([count])'
+assert_contains "$T" '## Ready to Send ([count])'
+assert_contains "$T" '## Enrolled ([count])'
+assert_contains "$T" '## Replies ([count])'
+assert_not_contains "$T" 'Won:'
+K="$SP/capabilities/crm/contract.md"
+assert_contains "$K" '| `query_activities` | `status, direction, channel, since, until, limit` |'
+assert_contains "$SP/capabilities/crm/tools/attio/usage.md" '`channel` when given'
+assert_contains "$SP/capabilities/crm/tools/airtable/usage.md" '`Channel` when given'
+assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" '`channel` when given'
+
 finish

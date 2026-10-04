@@ -28,7 +28,7 @@ behavior only; it names no Airtable table or field.
 | `upsert_contact` | `lead_id, name, title, email, phone, linkedin_url, role, verified, notes` | `contact_id` | Matches an existing Contact on `email` when present, otherwise on `name` plus `title`, and updates it rather than creating a duplicate; rejects a `role` outside decision-maker / influencer / gatekeeper |
 | `query_by_stage` | `stage, limit, next_action_due_before, idle_days` | list of leads | Empty list is a valid result; rejects a call where `stage` is omitted and neither `next_action_due_before` nor `idle_days` is given |
 | `query_by_score` | `min_score, stage, limit` | list of leads ordered by score descending | Empty list is a valid result |
-| `query_activities` | `status, direction, since, until, limit` | list of activities, each with its linked Lead | Rejects a `status` outside draft / sent / voided; `direction` is optional and, when given, must be `outbound` or `inbound`; empty list is a valid result |
+| `query_activities` | `status, direction, channel, since, until, limit` | list of activities, each with its linked Lead | Rejects a `status` outside draft / sent / voided; `direction` is optional and, when given, must be `outbound` or `inbound`; empty list is a valid result |
 
 ### Notes on individual operations
 
@@ -218,8 +218,8 @@ behavior only; it names no Airtable table or field.
   when its idle age is greater than `idle_days` days.
 - **`query_activities`** is the read counterpart to `log_activity` and
   `update_activity`: it finds Activities directly, by `status`,
-  optionally `direction`, and optionally a `[since, until]` window on
-  `Date` — the read this contract had no operation for until
+  optionally `direction`, optionally `channel` (email, linkedin, call,
+  other), and optionally a `[since, until]` window on `Date` — the read this contract had no operation for until
   `send-digest` needed to find every outbound Activity at
   `status: draft` regardless of which lead it belongs to. `status` is
   required and validated against the three-value `Status` enum

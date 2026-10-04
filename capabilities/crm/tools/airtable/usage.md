@@ -191,7 +191,8 @@ reply or a call debrief on an opted-out Lead is still recordable
 history.
 
 `query_activities` reads this table, filtered by `Status`, optionally
-`Direction`, and optionally a `[since, until]` window on `Date`. This
+`Direction`, optionally `Channel` when given, and optionally a
+`[since, until]` window on `Date`. This
 is the operation `send-digest` uses to find every outbound Activity at
 `Status = draft`, and it returns each Activity with its linked `Lead`,
 so a caller gets the company without a second call. Pass

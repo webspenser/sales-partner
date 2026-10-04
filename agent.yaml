@@ -10,3 +10,4 @@ activity_prepare: crm
 activity_approach: crm
 activity_digest: crm, email_drafts
 activity_enroll: crm, sequences
+activity_sync-replies: crm, sequences

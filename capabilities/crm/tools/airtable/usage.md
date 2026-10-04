@@ -179,7 +179,7 @@ only touches an existing row and accepts only `status: "sent"` or
 `"voided"`**, writing `Status` and `Outcome` and never `Draft Body`. The
 plan itself is approved only when the operator moves the lead to
 `Ready to Send`; no operation writes that stage, and the guard policy
-(below) refuses it. `voided` is used by `subagents/follow-up.md`'s
+(below) refuses it. `voided` is used by `skills/sync-replies/SKILL.md`'s
 opt-out guardrail, which voids every pending draft for a lead the moment
 an inbound opt-out is logged. The matching rule on the creation side is
 that **`log_activity` refuses to create an Activity with

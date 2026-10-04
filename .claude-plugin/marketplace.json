@@ -2,6 +2,6 @@
   "name": "sales-partner",
   "owner": { "name": "Webspenser" },
   "plugins": [
-    { "name": "sales-partner", "source": "./", "description": "Interviews a business, then runs a five-stage lead pipeline — prospect, research, approach, sales call, follow-up — over a CRM" }
+    { "name": "sales-partner", "source": "./", "description": "Interviews a business, then finds, qualifies and researches leads that fit its ideal customer and runs first outreach: email through the client's sequence platform, LinkedIn and calls drafted for the owner" }
   ]
 }

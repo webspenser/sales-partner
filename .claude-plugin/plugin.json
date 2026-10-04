@@ -1,15 +1,13 @@
 {
   "name": "sales-partner",
   "version": "6.0.0",
-  "description": "Interviews a business, then runs a five-stage lead pipeline — prospect, research, approach, sales call, follow-up — over a CRM",
+  "description": "Interviews a business, then finds, qualifies and researches leads that fit its ideal customer and runs first outreach: email through the client's sequence platform, LinkedIn and calls drafted for the owner",
   "author": { "name": "Webspenser" },
   "repository": "https://github.com/webspenser/sales-partner",
   "license": "Apache-2.0",
   "agents": [
     "./subagents/approacher.md",
-    "./subagents/follow-up.md",
     "./subagents/preparer.md",
-    "./subagents/prospector.md",
-    "./subagents/sales-call-specialist.md"
+    "./subagents/prospector.md"
   ]
 }

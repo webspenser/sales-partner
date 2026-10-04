@@ -20,10 +20,6 @@
 
 1. [company — score — one-line rationale, or "None"]
 
-## Stalled ([count])
-
-- [company — Stage — date of last Activity, or "None"]
-
 ## Movement ([count])
 
 - [company: → Stage (date, reason if recorded), or "None"]

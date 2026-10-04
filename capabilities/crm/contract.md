@@ -1,8 +1,8 @@
 # CRM contract
 
 Provider-neutral contract for the sales-partner agent's data layer. Every
-sub-agent (Prospector, Preparer, Approacher, Sales-call-specialist,
-Follow-up) reads and writes the CRM only through the eleven operations
+sub-agent (Prospector, Preparer, Approacher) and skill reads and writes
+the CRM only through the eleven operations
 below. No sub-agent talks to a provider's API directly, and no sub-agent
 invokes another sub-agent directly — **`update_stage` is the only
 handoff mechanism between sub-agents.** A sub-agent's job is done when it
@@ -156,7 +156,7 @@ behavior only; it names no Airtable table or field.
   moves an existing one forward. Writing `sent` records a fact; it sends
   nothing. Both `sent` and `voided` are dead ends — an Activity never
   moves again after either. This is the
-  operation `subagents/follow-up.md`'s opt-out guardrail calls to void
+  operation `skills/sync-replies/SKILL.md`'s opt-out handling calls to void
   every pending draft Activity for a lead: it sets each one's `status`
   to `voided`, the third value in the `Status` enum documented in
   the Airtable tool's (`tools/airtable/usage.md`) Activities table.

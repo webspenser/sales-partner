@@ -1,10 +1,11 @@
 # Sales Partner
 
-A sales partner for one business. It interviews you to learn your
-business and your ideal customer, then runs a five-stage lead pipeline —
-prospect, research, approach, sales call, follow-up — over your CRM. It
-researches on its own but never contacts anyone: every outbound
-message, email, LinkedIn note, or call opener is a draft you approve.
+A lead generation and outbound partner for one business. It interviews
+you to learn your business and your ideal customer, then finds,
+qualifies and researches leads that fit, and drafts a first-outreach
+plan for each. When you approve a plan, the email goes out through your
+own sequence platform (InvokeIQ); LinkedIn and call touches are drafted
+for you to do. Its job ends when a lead replies.
 
 Built on the [Agent Standard](https://github.com/webspenser/agent-builder/blob/main/STANDARD.md)
 with [Agent Builder](https://github.com/webspenser/agent-builder).

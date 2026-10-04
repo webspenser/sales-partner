@@ -98,14 +98,6 @@ assert_contains "$I" 'the service area center and radius'
 assert_contains "$I" 'which events signal a prospect is newly in-market'
 assert_contains "$I" 'Target roles, Buying triggers, Anti-signals'
 
-echo "-- follow-up channel (I5)"
-F="$SP/subagents/follow-up.md"
-assert_contains "$F" 'chosen from `enabled_channels`'
-assert_contains "$F" '`skills/write-call-opener/SKILL.md`'
-assert_contains "$F" 'no enabled channel has a sourced route'
-assert_not_contains "$F" '`Channel = email`,'
-assert_contains "$SP/skills/write-follow-up/SKILL.md" 'the email path'
-
 echo "-- evals widened (I6)"
 assert_contains "$E" '`100×0.10=10`'
 assert_contains "$E" 'same normalized company and address'
@@ -120,7 +112,6 @@ assert_contains "$SP/context/icp.md" 'a sourced direct phone number'
 assert_contains "$SP/skills/find-decision-makers/SKILL.md" 'public business registries'
 assert_contains "$SP/skills/find-decision-makers/SKILL.md" 'an owner is written with `role: decision-maker`'
 assert_contains "$SP/AGENT.md" 'a phone number, an address, a distance'
-assert_contains "$SP/context/operating-config.md" '`write-follow-up`, and `write-call-opener`'
 assert_contains "$SP/subagents/approacher.md" '`callback_phone`'
 assert_contains "$SP/subagents/prospector.md" 'Existing leads, read via CRM'
 assert_contains "$SP/subagents/prospector.md" 'Every source listed in `prospecting_sources` is exhausted'
@@ -220,8 +211,6 @@ done
 assert_contains "$SP/skills/setup/SKILL.md" '**Tools.**'
 assert_contains "$SP/skills/setup/SKILL.md" 'whether the tool'"'"'s guard policy covers it'
 assert_contains "$SP/skills/send-digest/SKILL.md" 'cannot send; delivered as a draft'
-assert_contains "$SP/subagents/follow-up.md" '`email_drafts` — `create_draft`'
-assert_not_contains "$SP/subagents/follow-up.md" '- Gmail — draft only'
 
 allowed_by() { # allowed_by <policy> <prefix> <tool>
   printf '{"tool_name":"%s%s","tool_input":{}}' "$2" "$3" | python3 -B "$SP/hooks/guard_policy.py" "$1" - x >/dev/null 2>&1
@@ -264,7 +253,7 @@ assert_contains "$SP/AGENT.md" 'schedules.yaml'
 assert_contains "$SP/AGENT.md" 'unattended'
 [ -f "$SP/skills/schedule/SKILL.md" ] && _report ok "schedule skill present" || _report no "schedule skill missing"
 
-echo "-- 4.0.4: AGENT.md inline size, exact Stalled rule"
+echo "-- 4.0.4: AGENT.md inline size, idle rule"
 [ "$(wc -c < "$SP/AGENT.md" | tr -d ' ')" -le 9000 ] && _report ok "AGENT.md fits the 9000-byte inline limit" || _report no "AGENT.md is over 9000 bytes; the hook will not inline it"
 assert_contains "$SP/capabilities/crm/contract.md" '## Lead status transitions'
 assert_contains "$SP/capabilities/crm/contract.md" 'draft Activities (one per enabled channel, each with its date) at `status: draft`'
@@ -273,19 +262,9 @@ assert_contains "$SP/context/icp.md" '`capabilities/crm/contract.md` (Lead statu
 assert_contains "$SP/capabilities/crm/contract.md" 'idle age = now − `max(last Activity date, Stage Changed'
 assert_contains "$SP/capabilities/crm/contract.md" 'at all is measured from its `Stage Changed At` alone'
 D="$SP/skills/send-digest/SKILL.md"
-assert_contains "$D" '`Contacted`, `Replied`, `Call Scheduled`, `Call Held` or'
-assert_contains "$D" 'Pre-outreach stages (`New`, `Scored`, `Researched`, `Approach'
-assert_contains "$D" 'The same CRM data always gives the same'
-assert_contains "$D" 'once for each of those five stages'
-assert_not_contains "$D" 'every active stage'
 assert_contains "$SP/capabilities/crm/tools/airtable/usage.md" 'has no Activity, use `Stage Changed At`'
 assert_contains "$SP/capabilities/crm/tools/attio/usage.md" '`stage_changed_at`. If the lead has no'
 assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'If the lead has no Task'
-assert_contains "$SP/subagents/follow-up.md" 'call per stage, for `Contacted`, `Replied`'
-assert_contains "$SP/subagents/follow-up.md" 'and `Following Up` only'
-assert_contains "$SP/subagents/follow-up.md" 'never with `stage`'
-assert_not_contains "$SP/subagents/follow-up.md" 'query_by_stage(idle_days:'
-assert_contains "$SP/AGENT.md" '`Contacted`/`Replied`/`Following Up` lead idle past cadence'
 echo "-- 5.0.0: void outcome Note, Airtable field IDs, changed fields only"
 HU="$SP/capabilities/crm/tools/hubspot/usage.md"; AU="$SP/capabilities/crm/tools/airtable/usage.md"
 assert_contains "$HU" 'Outcome for task <activity_id>:'
@@ -372,5 +351,19 @@ assert_not_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'Call Schedule
 assert_not_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'thirteen'
 grep -q '"Engaged"' "$SP/capabilities/crm/tools/attio/bootstrap.py" && grep -q 'revisit_on' "$SP/capabilities/crm/tools/attio/bootstrap.py" && ! grep -q '"Call Scheduled"' "$SP/capabilities/crm/tools/attio/bootstrap.py" && _report ok "attio bootstrap: eleven statuses, revisit_on" || _report no "attio bootstrap statuses"
 grep -q '"Engaged"' "$SP/capabilities/crm/tools/hubspot/bootstrap.py" && grep -q 'sp_revisit_on' "$SP/capabilities/crm/tools/hubspot/bootstrap.py" && ! grep -q '"Call Scheduled"' "$SP/capabilities/crm/tools/hubspot/bootstrap.py" && _report ok "hubspot bootstrap: eleven statuses, sp_revisit_on" || _report no "hubspot bootstrap statuses"
+
+
+echo "-- 6.0.0: call and follow-up stages removed"
+for f in subagents/sales-call-specialist.md subagents/follow-up.md skills/prepare-sales-call skills/run-live-call-script skills/handle-objections skills/write-follow-up templates/call-brief.md templates/objection-matrix.md templates/follow-up-email.md; do
+  [ ! -e "./$f" ] && _report ok "removed: $f" || _report no "still present: $f"  # ./ so the referenced-files check skips it
+done
+! grep -q '^activity_follow-up' "$SP/agent.yaml" && _report ok "no follow-up activity" || _report no "activity_follow-up still declared"
+assert_not_contains "$SP/context/operating-config.md" 'max_touches'
+assert_not_contains "$SP/context/operating-config.md" 'follow_up_cadence_days'
+assert_not_contains "$SP/skills/interview-business/SKILL.md" 'max_touches'
+assert_not_contains "$SP/skills/send-digest/SKILL.md" 'Stalled'
+assert_not_contains "$SP/templates/digest.md" 'Stalled'
+if grep -rlE "sales-call-specialist|Sales-call-specialist|write-follow-up|handle-objections|prepare-sales-call|run-live-call-script|subagents/follow-up" "$SP/AGENT.md" "$SP/skills" "$SP/subagents" "$SP/capabilities" "$SP/context" "$SP/templates" "$SP/evals" | grep -q .; then _report no "references to removed pieces remain"; else _report ok "no references to removed pieces"; fi
+assert_contains "$SP/agent.yaml" 'finds, qualifies and researches leads'
 
 finish

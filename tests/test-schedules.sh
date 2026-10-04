@@ -9,7 +9,7 @@ inst() { # inst <dir> <crm provider>
   mkdir -p "$1"
   printf '%s\n' 'agent: sales-partner' 'mode: plugin' "bind_crm: $2" 'bind_email_drafts: gmail' > "$1/instance.yaml"
   printf '%s\n' 'timezone: America/New_York' 'schedule_prospect: "Monday 07:00"' 'then_prospect: prepare' \
-    'schedule_approach: "Tuesday 07:00"' 'schedule_follow-up: "daily 09:00"' 'schedule_digest: "Monday 08:00"' > "$1/schedules.yaml"
+    'schedule_approach: "Tuesday 07:00"' 'schedule_digest: "Monday 08:00"' > "$1/schedules.yaml"
 }
 for crm in attio airtable hubspot; do
   inst "$W/$crm" "$crm"
@@ -26,7 +26,7 @@ printf '%s\n' 'timezone: America/New_York' 'schedule_approach: "Tuesday 07:00"' 
 out=$(python3 -B "$C" check "$W/crmonly" --repo acme/sales 2>&1); rc=$?
 [ "$rc" -eq 0 ] && _report ok "approach passes with only crm bound" || _report no "approach with only crm (rc=$rc): $out"
 grep -qx 'activity_approach: crm' agent.yaml && _report ok "approach declares crm only" || _report no "activity_approach is not exactly crm"
-for a in prospect prepare approach follow-up digest; do
+for a in prospect prepare approach digest; do
   grep -q "^activity_$a:" agent.yaml && _report ok "activity $a declared" || _report no "activity $a missing"
 done
 for f in subagents/prospector.md subagents/preparer.md; do

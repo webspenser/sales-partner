@@ -178,130 +178,81 @@ it would have sent.
 
 ---
 
-## Case 5: Opt-out sets Do Not Contact and voids pending drafts
+## Case 5: Opt-out sets Do Not Contact, voids pending drafts, suppresses
 
-**Given** — An inbound Activity logged against a `Contacted` or
-`Engaged` lead, whose body contains an opt-out phrase ("please remove
+**Given** — An inbound email Activity (written by the reply relay) on a
+`Contacted` lead whose summary or body is an opt-out ("please remove
 me," "unsubscribe," "stop contacting me"), where the lead also has at
-least one prior outbound Activity still pending at `Status = "draft"`.
+least one outbound Activity still pending at `Status = "draft"` (for
+example a LinkedIn touch waiting for its date).
 
-**Expect** — Both halves of `subagents/follow-up.md`'s guardrail are
-mechanized. `Do Not Contact` gets set: its Handoff calls CRM
-`update_lead(lead_id, fields)` to set `Do Not Contact`, and
-`skills/write-follow-up/SKILL.md` step 4 checks that field before
-writing any future draft. Every pending draft Activity gets voided:
-its Handoff also calls CRM `update_activity(activity_id, "voided",
-outcome)` once for each Activity on the lead still at `Status =
-"draft"` — found from the Activities `get_lead` already returns for
-that lead. `update_activity` writes only `status` and `outcome` on an
-existing Activity and never its body; it accepts `"sent"` or
-`"voided"` (`capabilities/crm/contract.md`'s `update_activity` entry).
-`voided` is the third value in the `Status` enum. After this run, every
-Activity that was `draft` on this lead before the opt-out must read
-`Status = "voided"`; the lead is also no longer eligible for `enroll`,
-which skips any Do Not Contact lead.
+**Expect** — `skills/sync-replies/SKILL.md` handles it: CRM
+`update_lead(lead_id, {"Do Not Contact": true})`, then
+`update_activity(activity_id, "voided", outcome)` once for each draft
+Activity on the lead (found from `get_lead`), then `suppress([email],
+"opt-out reply")`. `update_activity` writes only `status` and
+`outcome`, never the body. After the run every draft that was pending
+reads `voided`, the lead is `Engaged`, and it is no longer eligible for
+`enroll`, which skips any Do Not Contact lead.
 
-**Why it matters** — Contacting someone after they've explicitly
-opted out is the single most reputation- and compliance-costly failure
-in this pipeline — a real person, a real inbox, a real complaint. This
-is the one guardrail in the agent carrying legal weight, which is why
-both halves — not just flagging the lead, but actively pulling every
-message already queued for approval out of the operator's approval
-queue — have to be enforced by the contract itself, not left to an
-operator noticing `Do Not Contact` before clicking approve.
+**Why it matters** — Contacting someone after they've explicitly opted
+out is the most reputation- and compliance-costly failure in this
+pipeline. The flag can't be cleared afterwards (`dnc_one_way`), and
+suppression stops the sequence platform too.
 
-**How to run** — Seed a lead at `Stage = "Contacted"` with two prior
-outbound Activities already logged at `Status = "draft"` (touches still
-waiting from before the opt-out). Log a third, inbound Activity whose
-body contains an opt-out phrase. Trigger the Follow-up contract. Confirm: (a) `update_lead` is
-called setting `Do Not Contact = true`; (b) `update_activity` is
-called for both prior Activities with `status = "voided"`; (c) calling
-`get_lead(lead_id)` afterward shows both prior Activities at `Status =
-"voided"`, neither `draft` nor `sent`; (d) a second
-Follow-up run for this lead produces no new draft, per
-`write-follow-up` step 4; (e) the digest's draft read — call
-`query_activities(status: "draft", direction: "outbound")` both before
-and after the opt-out. Before: the two seeded outbound Activities
-appear (the third, inbound opt-out Activity does not, since it's
-`Direction = "inbound"` even though it's also `status: "draft"`).
-After: neither of the two prior outbound Activities appears any more
-(both are `voided`, not `draft`), and the inbound Activity still never
-appears, for the same `Direction` reason as before — the queue this
-case exercises now shows exactly the outbound decisions an operator
-needs to make, before and after, with no inbound noise at either
-point.
+**How to run** — Seed a lead at `Contacted` with one draft LinkedIn
+Activity and an inbound email Activity whose summary is
+`not_interested: please remove me from your list`. Run `sync-replies`.
+Confirm (a) `update_lead` sets `Do Not Contact = true`; (b) the
+LinkedIn draft reads `voided`; (c) `suppress` is called with the
+contact's address; (d) a second `sync-replies` run changes nothing and
+calls `suppress` at most once more (idempotent); (e) the lead is not
+picked up by a following `enroll` run.
 
 ---
 
-## Case 6: Reaching `max_touches` marks the lead Lost, not another draft
+## Case 6: A lead the operator owns is never re-approached
 
-**Given** — A lead whose total outbound touch count already equals
-`max_touches` (default `4`, in `context/operating-config.md`). Nothing
-in the repo defines "touch" precisely, so this case fixes the
-definition it tests against: **a touch is one outbound Activity row
-(`Direction = "outbound"`) logged for the lead, counted once
-regardless of whether its current `Status` is `draft` or `sent`** — the count is of outreach content actually produced for this
-lead, not of messages that made it all the way to the prospect's
-inbox, since `write-follow-up` step 8 counts "this draft" against
-prior drafts before knowing whether the operator will move the lead to
-`Ready to Send`. **A
-`voided` Activity does not count.** Voiding exists for exactly one
-case (the opt-out guardrail in Case 5), and by the time an Activity is
-voided the lead is already `Do Not Contact` — Follow-up's own step 4
-already refuses to draft anything further for it regardless of touch
-count, so a voided Activity can never be the thing that pushes a lead
-over `max_touches`, and counting it would double-penalize a lead for
-content that was correctly stopped rather than sent.
+**Given** — Three existing leads the Prospector will find again: one
+at `Open Deal`, one at `Customer`, one at `Nurture` with **Revisit On**
+three months away. A fourth at `Nurture` has a Revisit On date in the
+past.
 
-**Expect** — `skills/write-follow-up/SKILL.md` step 8: "Count this
-draft against `max_touches`... If logging this draft would put the
-lead's total touch count at or over `max_touches`, do not draft it —
-call CRM `update_stage(lead_id, "Lost", reason)` instead."
-`subagents/follow-up.md`'s Outputs and Handoff sections restate the
-same rule: "If `max_touches` is reached instead: no new draft; `Stage
-= Lost`."
+**Expect** — `subagents/prospector.md`: `create_lead` returns each
+existing lead's id and writes nothing; the Prospector reads it with
+`get_lead` and leaves the first three untouched — no `update_stage`, no
+re-score, no research. The fourth may be re-scored, because its revisit
+date has passed.
 
-**Why it matters** — Touch limits exist so the pipeline doesn't wear
-out a prospect's patience or make the business look desperate. Silently
-exceeding the configured cap after this rule breaks would mean every
-other cadence and volume control in `operating-config.md` is
-unenforced too.
+**Why it matters** — Open deals, customers and parked leads are the
+operator's relationships; an agent that re-approaches them embarrasses
+the business. Statuses `Open Deal`, `Nurture` and `Customer` are also
+guarded: the agent can't write them, so it can't take a lead back from
+the operator by accident either.
 
-**How to run** — Seed a lead with four prior outbound Activities
-already logged via `log_activity`, `Direction = "outbound"`, any mix
-of `Status = draft` / `sent` (per the touch definition
-above) so its total already equals `max_touches`. Make the lead idle
-past `follow_up_cadence_days` (or log an Outcome) to trigger the
-Follow-up contract. Confirm no new `log_activity` call for an outbound
-draft occurs, and confirm `update_stage(lead_id, "Lost", reason)` is
-called instead. As a companion check on the definition itself: seed a
-second lead with three outbound Activities plus one additional
-outbound Activity that was voided via `update_activity` (four Activity
-rows total, three live), and confirm the Follow-up contract *does*
-draft a fifth touch for it — the voided one must not have counted.
+**How to run** — Seed the four leads with domains the Prospector's
+source will return. Run the Prospector. Confirm no `update_stage` call
+names any of the first three, and their status is unchanged
+afterwards.
 
 ---
 
 ## Case 7: A claim absent from `business-profile.md` is omitted, not inferred
 
-**Given** — An inbound Activity asking two things at once: (1) a
-pricing question with a specific dollar figure outside the range
-stated in `context/business-profile.md`'s Pricing section, and (2)
-whether the business holds a named certification (pick one concrete
-string, e.g. `"SOC 2"`) that appears nowhere in
-`context/business-profile.md`.
+**Given** — A researched lead whose Research rows mention (1) a budget
+figure outside the range stated in `context/business-profile.md`'s
+Pricing section and (2) that the prospect requires a named
+certification (pick one concrete string, e.g. `"SOC 2"`) that appears
+nowhere in `context/business-profile.md`.
 
 **Expect** — `AGENT.md`'s Operating rule 4: "Every claim about the
 business — capability, pricing, proof, case study — traces to
 `context/business-profile.md`. Nothing is invented to fill a gap."
-`subagents/sales-call-specialist.md`'s guardrails: "No invented
-capabilities, metrics, or references, ever, including under pressure
-to answer an objection." `business-profile.md`'s own opening line: "If
-it is not written here, the agent does not say it."
-`skills/write-follow-up/SKILL.md`'s worked example shows the concrete
-behavior for pricing specifically: "a question this skill cannot
-answer from that file (e.g. a number outside the stated range) gets
-escalated to the operator instead of guessed at." Reduced to a
+`skills/write-cold-email/SKILL.md` step 10: "Re-read every factual
+claim against `business-profile.md` one more time. Anything that
+doesn't trace to a specific section gets cut." `business-profile.md`'s
+own opening line: "If it is not written here, the agent does not say
+it." Reduced to a
 mechanical verdict: the resulting `Draft Body` contains the chosen
 certification string (`"SOC 2"`) **zero times**, and every
 dollar-denominated numeral it contains falls **inside** the stated
@@ -317,12 +268,9 @@ has to clean up after the fact.
 **How to run** — Fill `context/business-profile.md`'s Pricing section
 with a concrete stated range, e.g. `$8k–$15k`, and confirm the string
 `"SOC 2"` (or whichever certification string you pick) appears nowhere
-in the file. Run `write-follow-up` (or `sales-call-specialist` in live
-mode) on a lead whose last inbound Activity asks: "What's the ballpark
-for something like this, and are you SOC 2 certified?" — a $20,000
-figure mentioned in the question is a good concrete out-of-range
-number to include, since it makes the failure mode ("agrees with the
-prospect's number") checkable too. Take the logged `Draft Body` and
+in the file. Run the Approacher on a lead whose research notes say "budget
+around $20,000; requires SOC 2" — the out-of-range figure makes the
+failure mode ("echoes the prospect's number") checkable too. Take the logged `Draft Body` and
 run two mechanical checks against it, not a reading of its tone: (a)
 `grep -ic "SOC 2" <draft_body>` must return `0`; (b) extract every
 dollar figure in the draft (regex for `\$[\d,]+k?`) and confirm each
@@ -481,13 +429,13 @@ and the run output for the `apollo` stub notice. Every created lead's
 
 **Given** — the instance's `schedules.yaml` has `schedule_prospect`
 with `then_prospect: prepare`. The CRM also holds a
-`Researched` lead above `approach_threshold` and a `Contacted` lead
-idle past `follow_up_cadence_days` — work the Approacher and
-Follow-up would pick up if they ran.
+`Researched` lead above `approach_threshold` and a `Ready to Send`
+lead — work the Approacher and `enroll` would pick up if they ran.
 
 **Expect** — One session runs the Prospector to a stop condition,
-then the Preparer (`AGENT.md`, Scheduled activities). No Approacher or Follow-up activity
-runs: no `log_activity` call, no lead moved to `Approach Drafted`.
+then the Preparer (`AGENT.md`, Scheduled activities). No Approacher or `enroll`
+activity runs: no `log_activity` call, no lead moved to `Approach
+Drafted`, no `enroll_contact` call.
 
 **Why it matters** — A scheduled run that does more than its
 `schedules.yaml` entry declares drafts outreach the operator never scheduled, and spends
@@ -499,8 +447,8 @@ skill prints, "Scheduled run of `prospect`, then `prepare` (unattended)
 ..."). Check the trace: `create_lead` and `update_stage` calls from the
 Prospector, then `log_research` and `update_stage` to `Researched`
 from the Preparer, and zero `log_activity` calls. The seeded
-`Researched` lead is still at `Researched`; the idle lead has no new
-Activity.
+`Researched` lead is still at `Researched`; the `Ready to Send` lead is
+unchanged.
 
 ---
 
@@ -516,16 +464,16 @@ them requires sub-agent dispatch, and each runs identically as a
 sequential inline phase on a host without it."
 
 Run **Case 1** (Prospector), **Case 4** (Approacher), and **Case 6**
-(Follow-up) twice each:
+(Prospector, owner-owned leads) twice each:
 
 1. **Tier 1 — Claude Code, with sub-agent dispatch.** Run each case by
    dispatching the relevant contract as its own sub-agent, the way
-   `AGENT.md`'s Sub-agents table describes (Prospector, Approacher,
-   Follow-up as independent, isolated contexts).
+   `AGENT.md`'s Sub-agents table describes (Prospector and Approacher
+   as independent, isolated contexts).
 2. **Tier 2 — a host without sub-agent dispatch.** Run the same three
    cases in a single context, following each contract's `## Inline
    fallback` section verbatim (`subagents/prospector.md`,
-   `subagents/approacher.md`, `subagents/follow-up.md` each specify
+   and `subagents/approacher.md` each specify
    this): the contract's logic runs as a sequential inline phase in the
    same context rather than as a dispatched sub-agent, with no
    isolation and no parallelism.
@@ -535,8 +483,8 @@ For each of the three cases, record and compare between the two runs:
 - The same CRM operations called, in the same order, with the same
   arguments (`update_stage` to `Disqualified` for Case 1;
   `log_activity` with `Channel = "linkedin"`, `Status = "draft"`, and
-  no send tool for Case 4; `update_stage` to `Lost` with no new draft
-  for Case 6).
+  no send tool for Case 4; no `update_stage` on the owner's leads for
+  Case 6).
 - The same final CRM state for the lead (`Stage`, `Score`, `Score
   Breakdown` presence/absence, Activities logged).
 - No behavior available under tier 1 that is silently missing or

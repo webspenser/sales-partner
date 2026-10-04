@@ -1,6 +1,6 @@
 ---
 name: write-cold-email
-description: Use when email is the chosen channel for a first touch or a follow-up — writes a short, specific message built on a research hook.
+description: Use when email is one of the channels in a lead's first-outreach plan — writes a short, specific message built on a research hook.
 ---
 
 Every rule below is a hard constraint, not a suggestion. A draft that

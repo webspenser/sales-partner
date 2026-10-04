@@ -131,8 +131,6 @@ marker. The reads it does use, named precisely:
   per the contract), called once per stage a scored lead can currently
   occupy, results filtered client-side to the `(anchor, nominal_time]`
   window on Created Time — Section 3, New leads scored.
-- CRM **`query_by_stage`** with its `idle_days` filter, called once
-  per stalled-eligible stage and merged — Section 4, Stalled.
 - CRM **`query_by_stage`**, called once per stage of interest, results
   filtered client-side to the `(anchor, nominal_time]` window on
   `Stage Changed At` — Section 5, Movement.
@@ -142,7 +140,7 @@ marker. The reads it does use, named precisely:
 Every one of the above is a call through `capabilities/crm/contract.md`'s eleven
 provider-neutral operations — none of the six sections reads an
 Airtable view directly. The Airtable tool's (`capabilities/crm/tools/airtable/usage.md`) four named views
-(Awaiting Approval, Research Queue, Due Today, Stalled) still exist as
+(Review, Ready to Send, My touches, Research Queue, Due Today, Nurture) still exist as
 a convenience for the operator looking at Airtable by hand, and are
 defined to compute exactly what the operations above return, but this
 skill does not depend on them: swap the tool for a different CRM
@@ -236,25 +234,6 @@ a required input is missing, stop and report what is missing.
    "what changed since last digest." A lead that answers both
    questions still gets exactly one line in each, never two lines in
    either.
-5. **Section 4 — Stalled.** A lead is stalled when it is at
-   `Contacted`, `Replied`, `Call Scheduled`, `Call Held` or
-   `Following Up` and its idle age is greater than
-   `follow_up_cadence_days` (from `operating-config.md`). Idle age is
-   the contract's definition: now − `max(last Activity date, Stage
-   Changed At)`, so a lead with no Activity is measured from its
-   `Stage Changed At` (`capabilities/crm/contract.md`, `query_by_stage`).
-   Pre-outreach stages (`New`, `Scored`, `Researched`, `Approach
-   Drafted`) and terminal stages (`Won`, `Lost`, `Disqualified`) are
-   never stalled. Call CRM
-   `query_by_stage(stage: <stage>, idle_days: follow_up_cadence_days)`
-   once for each of those five stages — never with `stage` omitted —
-   and merge the results. The same CRM data always gives the same
-   count. List each returned lead, its `Stage`, and the date of its
-   last Activity, or `no Activity (stage changed <Stage Changed At>)`
-   for a lead with no Activity. No anchor window applied — staleness
-   is measured against *now*, every run, independent of when the last
-   digest fired. Render the section heading with the count of leads
-   returned, e.g. `Stalled (2)`.
 6. **Section 5 — Movement.** Call `query_by_stage` once for each stage
    that signals movement worth reporting — at minimum `Won`, `Lost`,
    and `Disqualified`, plus any of `Contacted`, `Replied`, `Call
@@ -406,10 +385,6 @@ matches the wall clock exactly this week. Anchor: Monday, 2026-08-24,
 3. Harrow Analytics — 71.0 — decision-maker reachable: VP Data identified with a verified LinkedIn profile
 4. Bellcrest Health — 65.0 — on target list: healthtech, 80 employees
 5. Quill Systems — 60.0 — geography: primary market, San Francisco
-
-## Stalled (2)
-- Thornfield Media — Contacted — last Activity 2026-08-22 (9 days, cadence is 4)
-- Meridian Robotics — Replied — last Activity 2026-08-20 (11 days, cadence is 4)
 
 ## Movement (5)
 - Harrow Analytics: Scored → Researched (2026-08-30)

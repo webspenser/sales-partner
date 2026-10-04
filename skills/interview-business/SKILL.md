@@ -60,8 +60,8 @@ because a human has to answer it in their own words.
    leads per week should the pipeline target; which sourcing tools may
    it use (map listings for local businesses, company sites, web
    search); which channels should it use; which activities should
-   run on a schedule (prospecting, research, approach drafting,
-   follow-up drafting, the digest — the shipped default is prospecting
+   run on a schedule (prospecting, research, approach drafting, the
+   digest — the shipped default is prospecting
    then research on Monday at 07:00 and the digest on Monday at 08:00),
    and for each one the weekday and time, or daily, plus your time zone
    as an IANA name such as `America/New_York` (tell them scheduled
@@ -81,7 +81,7 @@ because a human has to answer it in their own words.
    `instance.yaml`), which holds the schedule answers: `timezone` (the
    IANA name), one `schedule_<activity>: "<Weekday|daily> HH:MM"` line
    for each activity the operator wants on a schedule (`<activity>` is
-   `prospect`, `prepare`, `approach`, `follow-up`, or `digest`), and
+   `prospect`, `prepare`, `approach`, or `digest`), and
    `then_prospect: prepare` when research should follow prospecting in
    the same run. The shipped default is `schedule_prospect: "Monday
    07:00"`, `then_prospect: prepare`, and `schedule_digest: "Monday

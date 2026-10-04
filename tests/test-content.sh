@@ -214,7 +214,7 @@ assert_contains "$SP/capabilities/email_drafts/contract.md" '- `no_send` —'
 assert_contains "$SP/capabilities/email_drafts/tools/gmail/guard.yaml" 'covers: [no_send]'
 assert_contains "$SP/capabilities/crm/tools/attio/guard.yaml" 'covers: [draft_only, dnc_one_way, no_delete]'
 for y in "$SP"/capabilities/*/tools/*/identity.yaml; do
-  assert_pass bash -c "[ \"\$(grep -c . '$y')\" = 3 ] && grep -q '^capability: ' '$y' && grep -q '^provider: ' '$y' && grep -q '^server_match: ' '$y'"
+  assert_pass bash -c "{ [ \"\$(grep -c . '$y')\" = 3 ] || { [ \"\$(grep -c . '$y')\" = 4 ] && grep -qx 'wrapper: n8n' '$y'; }; } && grep -q '^capability: ' '$y' && grep -q '^provider: ' '$y' && grep -q '^server_match: ' '$y'"
 done
 [ ! -e "$AT/guard.py" ] && _report ok "guard.py removed" || _report no "guard.py still present"
 assert_contains "$SP/skills/setup/SKILL.md" '**Tools.**'

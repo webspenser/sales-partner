@@ -1,0 +1,3 @@
+# InvokeIQ through the "Webspenser · InvokeIQ" n8n workflow: four tools, nothing else.
+covers: [no_send, campaigns_bound_only, no_campaign_control]
+allow: [get_workspace, get_campaigns, enroll_contact, suppress]

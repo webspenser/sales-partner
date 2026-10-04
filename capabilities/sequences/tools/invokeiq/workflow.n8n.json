@@ -1,0 +1,101 @@
+{
+  "name": "Webspenser · InvokeIQ",
+  "nodes": [
+    {
+      "id": "c45faa2b-cbfd-409f-b76c-c34eb574d535",
+      "name": "MCP Server Trigger",
+      "type": "@n8n/n8n-nodes-langchain.mcpTrigger",
+      "typeVersion": 2.1,
+      "position": [128, 112],
+      "parameters": {
+        "authentication": "n8nOAuth2",
+        "path": "webspenser-invokeiq",
+        "instructions": "InvokeIQ for the Webspenser sales-partner agent: get_workspace, get_campaigns, enroll_contact (one approved lead into its band campaign, once), suppress."
+      }
+    },
+    {
+      "id": "1a5f5fdb-897f-47a9-9326-fcf5580d562f",
+      "name": "get_workspace",
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.5,
+      "position": [0, 336],
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "method": "GET",
+        "url": "https://api.invokeiq.com/api/v1/me",
+        "toolDescription": "Return the InvokeIQ workspace id, API usage and monthly limit. No input."
+      }
+    },
+    {
+      "id": "7cadc79a-8c07-4019-8b48-e4a7c22e5f20",
+      "name": "get_campaigns",
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.5,
+      "position": [128, 336],
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "method": "GET",
+        "url": "https://api.invokeiq.com/api/v1/campaigns",
+        "toolDescription": "List the InvokeIQ campaigns with their status. No input."
+      }
+    },
+    {
+      "id": "29661c07-2fb0-4eb8-9076-abb5b3a35410",
+      "name": "enroll_contact",
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.5,
+      "position": [256, 336],
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "method": "POST",
+        "url": "https://api.invokeiq.com/api/v1/contacts",
+        "toolDescription": "Enroll one approved lead into the InvokeIQ campaign for its score band, with its personalization fields. Enroll a lead only once.",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "keypair",
+        "bodyParameters": {
+          "parameters": [
+            {"name": "campaignId", "value": "={{ ({ high: '<HIGH_CAMPAIGN_ID>', mid: '<MID_CAMPAIGN_ID>' })[$fromAI('band', 'Score band of the lead, for example high or mid', 'string')] }}"},
+            {"name": "email", "value": "={{ $fromAI('email', 'The contact email address') }}"},
+            {"name": "firstName", "value": "={{ $fromAI('firstName', 'The contact first name') }}"},
+            {"name": "lastName", "value": "={{ $fromAI('lastName', 'The contact last name') }}"},
+            {"name": "customFields", "value": "={{ $fromAI('variables', 'Personalization fields as a JSON object, one key per template variable', 'json') }}"}
+          ]
+        }
+      }
+    },
+    {
+      "id": "7d9e5f7e-00be-4a08-847c-6fe5998e6d37",
+      "name": "suppress",
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.5,
+      "position": [384, 336],
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "method": "POST",
+        "url": "https://api.invokeiq.com/api/v1/suppression",
+        "toolDescription": "Add email addresses to the InvokeIQ suppression list so they never receive cold outreach.",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "keypair",
+        "bodyParameters": {
+          "parameters": [
+            {"name": "emails", "value": "={{ $fromAI('emails', 'List of email addresses to suppress', 'json') }}"},
+            {"name": "reason", "value": "={{ $fromAI('reason', 'Why they are suppressed, for example opt-out reply') }}"}
+          ]
+        }
+      }
+    }
+  ],
+  "connections": {
+    "get_workspace": {"ai_tool": [[{"node": "MCP Server Trigger", "type": "ai_tool", "index": 0}]]},
+    "get_campaigns": {"ai_tool": [[{"node": "MCP Server Trigger", "type": "ai_tool", "index": 0}]]},
+    "enroll_contact": {"ai_tool": [[{"node": "MCP Server Trigger", "type": "ai_tool", "index": 0}]]},
+    "suppress": {"ai_tool": [[{"node": "MCP Server Trigger", "type": "ai_tool", "index": 0}]]}
+  },
+  "settings": {"executionOrder": "v1"}
+}

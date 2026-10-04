@@ -2,7 +2,7 @@ name: sales-partner
 version: 6.0.0
 description: Interviews a business, then runs a five-stage lead pipeline — prospect, research, approach, sales call, follow-up — over a CRM
 standard: "6.0"
-capabilities: crm, email_drafts
+capabilities: crm, email_drafts, sequences
 catalog: webspenser
 catalog_repo: webspenser/agent-library
 activity_prospect: crm

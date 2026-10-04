@@ -1,6 +1,6 @@
 {
   "name": "sales-partner",
-  "version": "5.0.0",
+  "version": "6.0.0",
   "description": "Interviews a business, then runs a five-stage lead pipeline — prospect, research, approach, sales call, follow-up — over a CRM",
   "skills": "./skills/",
   "license": "Apache-2.0"

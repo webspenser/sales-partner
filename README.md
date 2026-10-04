@@ -8,7 +8,7 @@ message, email, LinkedIn note, or call opener is a draft you approve.
 
 Built on the [Agent Standard](https://github.com/webspenser/agent-builder/blob/main/STANDARD.md)
 with [Agent Builder](https://github.com/webspenser/agent-builder).
-Version 5.0.0.
+Version 6.0.0.
 
 ## Install (plugin mode)
 

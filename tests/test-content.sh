@@ -247,7 +247,7 @@ done
 assert_contains "$SP/capabilities/crm/tools/airtable/usage.md" 'field_status'
 
 echo "-- scheduled runs"
-assert_contains "$SP/agent.yaml" 'standard: "5.0"'
+assert_contains "$SP/agent.yaml" 'standard: "6.0"'
 assert_contains "$SP/agent.yaml" 'activity_digest: crm, email_drafts'
 assert_contains "$SP/agent.yaml" 'activity_approach: crm'
 assert_not_contains "$SP/agent.yaml" 'activity_approach: crm, email_drafts'

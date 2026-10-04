@@ -1,6 +1,6 @@
 {
   "name": "sales-partner",
-  "version": "5.0.0",
+  "version": "6.0.0",
   "description": "Interviews a business, then runs a five-stage lead pipeline — prospect, research, approach, sales call, follow-up — over a CRM",
   "author": { "name": "Webspenser" },
   "repository": "https://github.com/webspenser/sales-partner",

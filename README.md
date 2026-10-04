@@ -38,9 +38,10 @@ in that folder loads the agent. Plugin updates never touch your folder.
 ## Tools it needs
 
 - A CRM — Attio, Airtable, or HubSpot (`capabilities/crm/tools/`); setup binds it after a read-only check. If a CRM needs fields the probe does not find, setup offers two choices: create them yourself from the tool's `## Setup` steps, or run its `bootstrap.py` with an API key in your own terminal.
-- Apify for scraping and web search; Gmail for drafts.
+- InvokeIQ for cold email (`capabilities/sequences/tools/invokeiq/`), reached through an n8n workflow you import: the agent enrolls approved leads, InvokeIQ sends. A second n8n workflow relays replies and bounces back to the CRM (Attio shipped).
+- Apify for scraping and web search; Gmail for the digest draft.
 
-Each tool's guard policy makes Attio, Airtable, HubSpot, and Gmail unattended-safe.
+Each tool's guard policy makes Attio, Airtable, HubSpot, Gmail and InvokeIQ unattended-safe. Scheduling `enroll` also needs your explicit acceptance that "enroll only Ready to Send leads" is an instruction, not something the guard can check (setup asks).
 
 Connect these in your host (connectors or MCP servers). Credentials
 never go in this repo.

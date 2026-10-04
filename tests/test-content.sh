@@ -436,4 +436,27 @@ assert_contains "$U" '## Reply relay'
 assert_contains "$U" 'never changes the status'
 assert_contains "$U" 'relay/attio.n8n.json'
 
+
+echo "-- 6.0.0: AGENT.md and onboarding"
+A="$SP/AGENT.md"
+wc -c < "$A" | awk '{exit !($1 < 6000)}' && _report ok "AGENT.md under 6000 bytes" || _report no "AGENT.md 6000 bytes or more"
+assert_contains "$A" 'lead generation and outbound'
+assert_contains "$A" '| Enroll |'
+assert_contains "$A" '| Sync replies |'
+assert_contains "$A" 'Engaged'
+assert_contains "$A" 'Open Deal'
+assert_contains "$A" 'Ready to Send'
+assert_contains "$A" 'sequence platform sends'
+assert_not_contains "$A" 'Sales call specialist'
+assert_not_contains "$A" 'Follow-up'
+assert_not_contains "$A" 'max_touches'
+IV="$SP/skills/interview-business/SKILL.md"
+assert_contains "$IV" 'sequence_bands'
+assert_contains "$IV" 'variables:'
+assert_contains "$IV" 'allowed_countries'
+assert_contains "$IV" 'touch_spacing_days'
+assert_contains "$IV" 'separate sending domain'
+assert_contains "$SP/skills/setup/SKILL.md" 'accept_instruction_only: enroll_ready_only'
+assert_contains "$SP/README.md" 'lead generation and outbound'
+
 finish

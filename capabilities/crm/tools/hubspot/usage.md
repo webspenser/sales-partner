@@ -111,7 +111,7 @@ Every field is a built-in Task property; Tasks need no custom fields.
 | Contract `status` | `hs_task_status` | Who sets it |
 |---|---|---|
 | `draft` | `NOT_STARTED` | the agent, on create only (omitting the field also yields `NOT_STARTED`) |
-| `sent` | `COMPLETED` | the agent after `enroll`, or the operator after a LinkedIn or call touch |
+| `sent` | `COMPLETED` | the operator or their automation, after the touch went out — never the agent |
 | `voided` | `DEFERRED` | the agent or the operator |
 
 `IN_PROGRESS` and `WAITING` are not contract statuses: a Task the
@@ -276,11 +276,11 @@ the flag is `"sp_do_not_contact": "true"`.
 
 ### `update_activity`
 
-Reject a `status` other than `sent` or `voided`. Set the Task's status
-only, `COMPLETED` for `sent` or `DEFERRED` for `voided`:
+Reject a `status` other than `voided`. Set the Task's status only, to
+`DEFERRED`:
 
     {"updateRequest": {"objects": [{"objectType": "tasks", "objectId": <activity_id>,
-      "properties": {"hs_task_status": "<COMPLETED|DEFERRED>"}}]}}
+      "properties": {"hs_task_status": "DEFERRED"}}]}}
 
 When an `outcome` is given, also create a Note on the lead's Company
 (find it as `query_activities` does, from the Task's association):
@@ -394,7 +394,7 @@ contract's guarantees are enforced by mechanism (approval and `dnc_one_way` only
      accepts only those two request shapes, so there is no other place
      for values to sit;
    - `hs_task_status` may only be created as `NOT_STARTED` and updated
-     to `COMPLETED` or `DEFERRED` (`draft_only`);
+     to `DEFERRED` (`draft_only`);
    - `sp_stage` may only be created as `New`, and never written as
      `Ready to Send`: only the operator approves a plan. Creating a Task with no status also
      yields `NOT_STARTED`. The Task Pipeline's stages mirror the
@@ -405,10 +405,10 @@ contract's guarantees are enforced by mechanism (approval and `dnc_one_way` only
 
    The operator's own edits in HubSpot never pass through it, so
    approving a plan stays operator-only.
-2. **Nothing sends from the CRM.** Email goes out only through `enroll`
-   (the `sequences` capability) after the operator's approval, or as a
-   Gmail draft the operator sends. HubSpot's email and marketing tools
-   are not on the allow list.
+2. **Nothing sends from the CRM.** The agent sends nothing; after the
+   operator's approval, the owner's workflows or the operator send the
+   first touch. HubSpot's email and marketing tools are not on the allow
+   list.
 
 ## Views (the operator's interface)
 
@@ -420,8 +420,9 @@ Create these once in HubSpot. The connector can't create views.
   task's notes or due date, mark any task you don't want Deferred, then
   move the company to `Ready to Send`: that approves the whole plan.
 - **Ready to Send** — Companies filtered on `sp_stage` is
-  `Ready to Send`. The next `enroll` run picks these up; move a company
-  back to `Approach Drafted` before then to cancel.
+  `Ready to Send`: approved, waiting for your workflow or your own
+  touch. The agent never acts on them; move a company back to `Approach
+  Drafted` to cancel.
 - **My touches** — Tasks filtered on status Not started, priority High
   and type LinkedIn or Call, sorted by due date. A Tasks view can't
   filter by the company's stage, so act on a touch only for leads at `Ready to Send` or `Contacted`

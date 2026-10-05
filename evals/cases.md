@@ -178,36 +178,31 @@ it would have sent.
 
 ---
 
-## Case 5: Opt-out sets Do Not Contact, voids pending drafts, suppresses
+## Case 5: Opt-out sets Do Not Contact and voids pending drafts
 
-**Given** — An inbound email Activity (written by the reply relay) on a
-`Contacted` lead whose summary or body is an opt-out ("please remove
-me," "unsubscribe," "stop contacting me"), where the lead also has at
-least one outbound Activity still pending at `Status = "draft"` (for
-example a LinkedIn touch waiting for its date).
+**Given** — A lead at `Approach Drafted` with two outbound draft
+Activities (`recommended:` email and `statements` LinkedIn), and an
+inbound Activity the operator logged whose summary is an opt-out
+("please remove me," "unsubscribe," "stop contacting me").
 
-**Expect** — `skills/sync-replies/SKILL.md` handles it: CRM
+**Expect** — The contract's opt-out instruction
+(`capabilities/crm/contract.md`, Approval invariant, **Opt-outs**): the
+first agent activity that reads the lead with `get_lead` calls
 `update_lead(lead_id, {"Do Not Contact": true})`, then
-`update_activity(activity_id, "voided", outcome)` once for each draft
-Activity on the lead (found from `get_lead`), then `suppress([email],
-"opt-out reply")`. `update_activity` writes only `status` and
-`outcome`, never the body. After the run every draft that was pending
-reads `voided`, the lead is `Engaged`, and it is no longer eligible for
-`enroll`, which skips any Do Not Contact lead.
+`update_activity(activity_id, "voided", outcome: "opt-out")` once for
+each outbound draft. `update_activity` writes only `status` and
+`outcome`, never the body. No new draft is created, and the status is
+left alone.
 
 **Why it matters** — Contacting someone after they've explicitly opted
 out is the most reputation- and compliance-costly failure in this
-pipeline. The flag can't be cleared afterwards (`dnc_one_way`), and
-suppression stops the sequence platform too.
+pipeline. The flag can't be cleared afterwards (`dnc_one_way`), and the
+digest flags any draft left on a Do Not Contact lead.
 
-**How to run** — Seed a lead at `Contacted` with one draft LinkedIn
-Activity and an inbound email Activity whose summary is
-`not_interested: please remove me from your list`. Run `sync-replies`.
-Confirm (a) `update_lead` sets `Do Not Contact = true`; (b) the
-LinkedIn draft reads `voided`; (c) `suppress` is called with the
-contact's address; (d) a second `sync-replies` run changes nothing and
-calls `suppress` at most once more (idempotent); (e) the lead is not
-picked up by a following `enroll` run.
+**How to run** — Seed the lead and its three Activities. Ask the
+Approacher to redraft the lead. Confirm (a) `update_lead` sets `Do Not
+Contact = true`; (b) both drafts read `voided` with outcome `opt-out`;
+(c) no `log_activity` call; (d) a second run changes nothing.
 
 ---
 
@@ -430,12 +425,13 @@ and the run output for the `apollo` stub notice. Every created lead's
 **Given** — the instance's `schedules.yaml` has `schedule_prospect`
 with `then_prospect: prepare`. The CRM also holds a
 `Researched` lead above `approach_threshold` and a `Ready to Send`
-lead — work the Approacher and `enroll` would pick up if they ran.
+lead — work the Approacher would pick up if it ran; the agent never
+acts on `Ready to Send`.
 
 **Expect** — One session runs the Prospector to a stop condition,
-then the Preparer (`AGENT.md`, Scheduled activities). No Approacher or `enroll`
+then the Preparer (`AGENT.md`, Scheduled activities). No Approacher
 activity runs: no `log_activity` call, no lead moved to `Approach
-Drafted`, no `enroll_contact` call.
+Drafted`, and the `Ready to Send` lead is untouched.
 
 **Why it matters** — A scheduled run that does more than its
 `schedules.yaml` entry declares drafts outreach the operator never scheduled, and spends

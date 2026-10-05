@@ -287,7 +287,7 @@ K="$SP/capabilities/crm/contract.md"
 python3 -c "import sys; t=open('$K').read(); sys.exit(0 if 'Approach Drafted\nReady to Send\nContacted' in t else 1)" && _report ok "stage order has Ready to Send" || _report no "stage order lacks Ready to Send"
 assert_contains "$K" '| `Ready to Send` |'
 assert_contains "$K" 'only the operator writes `Ready to Send`'
-assert_contains "$K" 'the only statuses it may later write are `sent` and `voided`'
+assert_contains "$K" 'the only status it may later write is `voided`'
 assert_not_contains "$K" '`approved`'
 assert_not_contains "$SP/AGENT.md" 'twelve lead stages'
 assert_contains "$SP/AGENT.md" 'The lead statuses and their transitions'
@@ -448,5 +448,34 @@ assert_not_contains "$SP/README.md" 'InvokeIQ'
 assert_not_contains "$SP/README.md" 'enroll'
 assert_not_contains "$SP/guard.yaml" 'InvokeIQ'
 assert_contains "$SP/guard.yaml" '"*_workflow*"'
+
+echo "-- 6.0.0: the agent stops at Approach Drafted"
+K="$SP/capabilities/crm/contract.md"
+assert_contains "$K" '**The agent'"'"'s job ends at `Approach Drafted`.**'
+assert_contains "$K" '| `update_activity` | `activity_id, status, outcome` | updated activity | Accepts only `status: "voided"`'
+assert_contains "$K" 'the owner'"'"'s automation'
+assert_contains "$K" '**Opt-outs.**'
+assert_contains "$K" 'outcome: "opt-out"'
+assert_not_contains "$K" 'enroll'
+assert_not_contains "$K" 'sync-replies'
+assert_not_contains "$K" 'a bounced email returns it'
+for c in attio airtable hubspot; do
+  G="./capabilities/crm/tools/$c/guard.yaml"
+  grep -qF 'update: [Scored, Researched, "Approach Drafted", Disqualified]' "$G" && _report ok "$c guard: agent statuses end at Approach Drafted" || _report no "$c guard stage update list"
+  U="./capabilities/crm/tools/$c/usage.md"
+  assert_not_contains "$U" 'enroll'
+  assert_not_contains "$U" 'sync-replies'
+  assert_not_contains "$U" 'sequences'
+done
+grep -qF 'update: [voided]' "$SP/capabilities/crm/tools/attio/guard.yaml" && grep -qF 'update: [voided]' "$SP/capabilities/crm/tools/airtable/guard.yaml" && grep -qF 'update: [DEFERRED]' "$SP/capabilities/crm/tools/hubspot/guard.yaml" && _report ok "guards: agent only voids Activities" || _report no "guards: Activity status update list"
+assert_contains "$SP/capabilities/crm/tools/attio/usage.md" '**`update_activity`** — Reject `status` other than `voided`.'
+assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'Reject a `status` other than `voided`.'
+assert_contains "$SP/capabilities/crm/tools/airtable/usage.md" 'accepts only `status: "voided"`'
+assert_contains "$SP/context/operating-config.md" '`update_activity` moves it only to `voided`'
+E="$SP/evals/cases.md"
+assert_contains "$E" '## Case 5: Opt-out sets Do Not Contact and voids pending drafts'
+assert_not_contains "$E" 'enroll'
+assert_not_contains "$E" 'sync-replies'
+assert_not_contains "$E" 'suppress'
 
 finish

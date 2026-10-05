@@ -23,7 +23,7 @@ behavior only; it names no Airtable table or field.
 | `update_stage` | `lead_id, stage, reason` | updated lead, with `stage_changed_at` set to the moment of this call | Rejects any stage outside the enumerated list |
 | `update_lead` | `lead_id, fields` | updated lead | Rejects any attempt to write `stage` through this operation — stage changes go only through `update_stage`. May set `Do Not Contact` to true; rejects any attempt to clear it once true |
 | `log_activity` | `lead_id, contact_id, channel, direction, summary, draft_body, status, outcome` | `activity_id` of the newly created row | Create-only — takes no `activity_id` and never touches an existing row. Accepts only `status: "draft"`; rejects `sent` and `voided` outright and unconditionally. The agent rejects `direction: "outbound"` for a lead whose `Do Not Contact` is true — an instruction the guard does not enforce |
-| `update_activity` | `activity_id, status, outcome` | updated activity | Accepts only `status: "sent"` or `"voided"` — rejects `draft` outright and unconditionally; never changes the draft's body |
+| `update_activity` | `activity_id, status, outcome` | updated activity | Accepts only `status: "voided"` — rejects `draft` and `sent` outright and unconditionally; never changes the draft's body |
 | `log_research` | `lead_id, type, summary, source_url, date, hook` | `research_id` | Rejects a write with an empty `source_url` or an empty `hook` |
 | `upsert_contact` | `lead_id, name, title, email, phone, linkedin_url, role, verified, notes` | `contact_id` | Matches an existing Contact on `email` when present, otherwise on `name` plus `title`, and updates it rather than creating a duplicate; rejects a `role` outside decision-maker / influencer / gatekeeper |
 | `query_by_stage` | `stage, limit, next_action_due_before, idle_days` | list of leads | Empty list is a valid result; rejects a call where `stage` is omitted and neither `next_action_due_before` nor `idle_days` is given |
@@ -146,20 +146,17 @@ behavior only; it names no Airtable table or field.
 - **`update_activity`** is the only operation that can change an
   existing Activity after `log_activity` created it. It takes the
   `activity_id` `log_activity` returned and writes `status` and
-  `outcome` on that row; the `status` value it accepts is restricted to
-  `"sent"` (the touch went out: the agent enrolled the email, or the
-  operator did the LinkedIn or call touch) or `"voided"` — a call
-  passing `draft` is **rejected outright and unconditionally**. It never
-  changes the draft's body: what the operator approved is what goes
-  out. `log_activity` and `update_activity` are disjoint by design: one
-  only ever creates a new row (and only at `draft`), the other only ever
-  moves an existing one forward. Writing `sent` records a fact; it sends
-  nothing. Both `sent` and `voided` are dead ends — an Activity never
-  moves again after either. This is the
-  operation `skills/sync-replies/SKILL.md`'s opt-out handling calls to void
-  every pending draft Activity for a lead: it sets each one's `status`
-  to `voided`, the third value in the `Status` enum documented in
-  the Airtable tool's (`tools/airtable/usage.md`) Activities table.
+  `outcome` on that row; the only `status` value it accepts is
+  `"voided"` — a call passing `draft` or `sent` is **rejected outright
+  and unconditionally**. `sent` (the touch went out) is written by the
+  operator or the owner's automation in the CRM, never by the agent. It
+  never changes the draft's body: what the operator approved is what
+  goes out. `log_activity` and `update_activity` are disjoint by
+  design: one only ever creates a new row (and only at `draft`), the
+  other only ever voids an existing one. Both `sent` and `voided` are
+  dead ends — an Activity never moves again after either. This is the
+  operation the opt-out instruction (Approval invariant, **Opt-outs**)
+  calls to void every pending draft Activity for a lead.
 - **`log_research`** creates one Research row linked to the lead. It
   **rejects a write with an empty `source_url` or an empty `hook`.** A
   Research row without a source is an unverifiable claim; one without a
@@ -245,17 +242,19 @@ be breaking before they break it:
 
 - An agent can create an Activity only at `status: "draft"`, via
   `log_activity` — no other status is accepted, ever.
-- An agent can move an existing Activity only to `status: "sent"` or
-  `"voided"`, via `update_activity`, and never rewrites a draft's body
-  after it was created.
+- An agent can move an existing Activity only to `status: "voided"`,
+  via `update_activity`, and never rewrites a draft's body after it was
+  created.
 - An agent never writes the stage `Ready to Send`: only the operator
-  writes `Ready to Send`, by moving the lead once every standing draft
-  and its date are right. That move approves the whole plan; nothing is
-  approved draft by draft.
-- **Therefore no sequence of operations approves a plan: only the
-  operator's move to `Ready to Send` does.** Email goes out only when the
-  `enroll` activity hands an approved email touch to the client's own
-  sequence platform; LinkedIn and call touches are always the operator's.
+  writes `Ready to Send`, by moving the lead once its drafts are right.
+  That move approves the lead's first touch; nothing is approved draft
+  by draft.
+- **Therefore no sequence of operations approves a lead: only the
+  operator's move to `Ready to Send` does.** What happens next — an
+  email sequence, a LinkedIn message, a call — is the operator's, or the
+  owner's automation, another system or agent acting on that status.
+  The agent sends nothing and never acts on a lead at `Ready to Send`
+  or later.
 
 The opt-out has one mechanism and one instruction:
 
@@ -271,6 +270,15 @@ The opt-out has one mechanism and one instruction:
   the digest check (outbound drafts on Do Not Contact leads, and
   duplicate leads) and the Do Not Contact column in the operator's
   approval view.
+- **Opt-outs.** No skill reads replies; the operator or the owner's
+  automation logs them as inbound Activities. Whenever the agent reads
+  a lead with `get_lead` and finds an inbound Activity recording an
+  opt-out (the prospect asked not to be contacted), it sets
+  `update_lead(lead_id, {"Do Not Contact": true})` and voids every
+  outbound draft Activity on the lead with
+  `update_activity(activity_id, "voided", outcome: "opt-out")`, then
+  stops working that lead. It leaves the status alone. The owner's
+  sending system handles its own suppression list.
 
 Any change that gives an operation a new way to write `Status` on an
 Activity — a new argument, a relaxed check, a new operation — must be
@@ -290,7 +298,7 @@ Each tool's `guard.yaml` lists in `covers` the invariants its guard
 policy enforces; an invariant it does not list is instruction-only.
 
 - `draft_only` — the agent creates Activities only at `status: draft`,
-  the only statuses it may later write are `sent` and `voided`, and
+  the only status it may later write is `voided`, and
   only the operator writes `Ready to Send` (see Approval invariant).
 - `dnc_one_way` — `Do Not Contact`, once true, is never cleared.
 - `no_delete` — the agent never deletes or merges CRM records.
@@ -319,10 +327,12 @@ Disqualified
 Statuses describe the lead, not a deal: when a real opportunity exists
 (for example a proposal), the operator tracks it on the CRM's own deal
 object, with its own stages. The agent writes only `Scored`,
-`Researched`, `Approach Drafted`, `Contacted`, `Engaged` and
-`Disqualified` (plus `New` on create); `Ready to Send`, `Open Deal`,
-`Nurture` and `Customer` are the operator's alone, and every tool's
-guard policy refuses them. **The agent's job ends at `Engaged`.** For
+`Researched`, `Approach Drafted` and `Disqualified` (plus `New` on
+create); `Ready to Send`, `Contacted`, `Engaged`, `Open Deal`,
+`Nurture` and `Customer` are the operator's, or the owner's automation
+acting on the operator's approval, and every tool's guard policy
+refuses them to the agent.
+**The agent's job ends at `Approach Drafted`.** For
 `Nurture`, the operator sets the lead's **Revisit On** date; the agent
 reads it and leaves the lead alone until then. `Do Not Contact` is a
 separate one-way flag, not a status.
@@ -340,9 +350,9 @@ a lead to `Disqualified` from any status the agent works on.
 | `Scored` | Prospector finishes applying the `icp.md` rubric and records the score breakdown | Preparer picks it up once the score clears `research_threshold`, moving it to `Researched` |
 | `Researched` | Preparer finishes research, identifies decision-makers, produces hooks, and re-scores | Approacher picks it up once the revised score clears `approach_threshold`, drafting the plan and moving it to `Approach Drafted`; an anti-signal found during research moves it to `Disqualified` instead |
 | `Approach Drafted` | Approacher logs the plan's draft Activities (one per enabled channel, each with its date) at `status: draft` | The operator reviews and edits the drafts, voids any they don't want, then approves the whole plan by moving the lead to `Ready to Send` — nothing is approved draft by draft |
-| `Ready to Send` | The operator moves the lead here once every standing draft and its date are right — only the operator writes `Ready to Send` | `enroll` enrolls the email touch and moves it to `Contacted`; a LinkedIn or call touch the operator marks `sent` also moves it to `Contacted`; the operator moving it back to `Approach Drafted` cancels |
-| `Contacted` | The first touch actually went out, on any channel | A reply on any channel moves it to `Engaged`; a bounced email returns it to `Approach Drafted` |
-| `Engaged` | The prospect replied — the agent's job ends here | The operator decides: `Open Deal`, `Nurture` or `Customer` |
+| `Ready to Send` | The operator moves the lead here once its drafts are right — only the operator writes `Ready to Send` | The owner's automation, another system or agent, or the operator sends the first touch and moves it to `Contacted`; the operator moving it back to `Approach Drafted` cancels. The agent never acts on it |
+| `Contacted` | The first touch went out, on any channel (set by the operator or the owner's automation) | A reply moves it to `Engaged` (operator or automation) |
+| `Engaged` | The prospect replied | The operator decides: `Open Deal`, `Nurture` or `Customer` |
 | `Open Deal` | The operator created a deal for the lead | The operator, from the deal's outcome |
 | `Nurture` | The operator parks the lead, with a Revisit On date | The operator; the Prospector leaves it alone until Revisit On |
 | `Customer` | The operator won business with the lead | — |

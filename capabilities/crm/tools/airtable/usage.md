@@ -171,17 +171,17 @@ its own `Date`. There is no separate "Drafts" table and none should ever
 be created: the operator reviews a lead's whole plan from the lead (see
 **Review** below), and a split table would break that.
 
-`Status` moves from `draft` to `sent` (the touch went out: `enroll`
-enrolled the email, or the operator did the LinkedIn or call touch) or
-to the terminal `voided`, and never back. **`log_activity` is
-create-only and accepts only `status: "draft"`**; **`update_activity`
-only touches an existing row and accepts only `status: "sent"` or
-`"voided"`**, writing `Status` and `Outcome` and never `Draft Body`. The
+`Status` moves from `draft` to `sent` (the touch went out: set by the
+operator or their automation, never the agent) or to the terminal
+`voided`, and never back. **`log_activity` is create-only and accepts
+only `status: "draft"`**; **`update_activity` only touches an existing
+row and accepts only `status: "voided"`**, writing `Status` and
+`Outcome` and never `Draft Body`. The
 plan itself is approved only when the operator moves the lead to
 `Ready to Send`; no operation writes that stage, and the guard policy
-(below) refuses it. `voided` is used by `skills/sync-replies/SKILL.md`'s
-opt-out guardrail, which voids every pending draft for a lead the moment
-an inbound opt-out is logged. The matching rule on the creation side is
+(below) refuses it. `voided` is used by the contract's opt-out
+instruction, which voids every pending draft for a lead once an inbound
+opt-out is logged. The matching rule on the creation side is
 that **`log_activity` refuses to create an Activity with
 `Direction = outbound` for a Lead whose `Do Not Contact` is checked**.
 That rule is an instruction the guard does not enforce; because
@@ -251,9 +251,9 @@ disagree about what counts as "in review," "due today," or "stalled."
   one draft per channel, each with its `Date`. Edit `Draft Body` or
   `Date`, set any draft you don't want to `voided`, then move the lead
   to `Ready to Send`: that approves the whole plan.
-- **Ready to Send** — Leads where `Stage = Ready to Send`. The next
-  `enroll` run picks these up; move a lead back to `Approach Drafted`
-  before then to cancel.
+- **Ready to Send** — Leads where `Stage = Ready to Send`: approved,
+  waiting for your automation or your own touch. The agent never acts
+  on them; move a lead back to `Approach Drafted` to cancel.
 - **My touches** — Activities where `Status = draft`,
   `Direction = outbound`, `Channel` is `linkedin` or `call`, and
   `Lead Stage` is `Ready to Send` or `Contacted` (a lookup of `Stage` from
@@ -321,7 +321,7 @@ against the recorded IDs:
 
 - `Stage` may only be written as `New` on create, and never as
   `Ready to Send`: only the operator approves a plan;
-- `Status` may only be written as `draft` on create and as `sent` or `voided` on
+- `Status` may only be written as `draft` on create and as `voided` on
   update;
 - `Do Not Contact` may only be written as `true`;
 - `Draft Body` may be set on create and never changed after, so an

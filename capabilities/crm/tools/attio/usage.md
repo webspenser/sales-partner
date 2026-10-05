@@ -185,7 +185,7 @@ write nothing) exactly where the contract says the operation rejects.
   `parent_record_id` = `lead_id`, `lead` = the same company, `status` =
   `draft`, `date` = today, and the other fields. Return the new
   `entry_id` as `activity_id`. Never update an existing entry here.
-- **`update_activity`** — Reject `status` other than `sent` or `voided`.
+- **`update_activity`** — Reject `status` other than `voided`.
   Call `attio:update-list-entry-by-id` on `sales_partner_outreach` with
   `status` and `outcome` only (never `draft_body`). This is the only
   write this tool ever makes to an existing Outreach entry.
@@ -236,8 +236,8 @@ attribute, so the contract's guarantees are enforced by mechanism (approval and 
      this tool uses are callable; any other Attio tool is blocked;
    - `delete` and `merge` tools, and list configuration changes
      (`create-list`, `update-list`), are always denied;
-   - `status` may only be written as `draft` on create and `sent` or
-     `voided` on update;
+   - `status` may only be written as `draft` on create and `voided` on
+     update;
    - `stage` may only be written as `New` on create, and never as
      `Ready to Send`: only the operator approves a plan;
    - `draft_body` can't be changed after create;
@@ -247,9 +247,9 @@ attribute, so the contract's guarantees are enforced by mechanism (approval and 
    The operator's own edits in the Attio app never pass through it, so
    approving a plan (moving the lead to `Ready to Send`) stays
    operator-only.
-2. **Nothing sends from the CRM.** Email goes out only through `enroll`
-   (the `sequences` capability) after the operator's approval, or as a
-   Gmail draft the operator sends.
+2. **Nothing sends from the CRM.** The agent sends nothing; after the
+   operator's approval, the owner's automations or the operator send the
+   first touch.
 
 ## Views (the operator's interface)
 
@@ -265,8 +265,9 @@ views.
   `date`, set any draft you don't want to `voided`, then move the lead
   to `Ready to Send`: that approves the whole plan.
 - **Ready to Send** — on `sales_partner_pipeline`: filtered on `stage`
-  is `Ready to Send`. The next `enroll` run picks these up; move a lead
-  back to `Approach Drafted` before then to cancel.
+  is `Ready to Send`: approved, waiting for your automation or your own
+  touch. The agent never acts on them; move a lead back to `Approach
+  Drafted` to cancel.
 - **My touches** — on `sales_partner_outreach`: filtered on `status` is
   `draft`, `direction` is `outbound` and `channel` is `linkedin` or
   `call`, sorted by `date`. Attio can't filter by the parent lead's

@@ -16,10 +16,10 @@ unknown_writes: block
 rules:
   - field: hs_task_status
     create: [NOT_STARTED]
-    update: [COMPLETED, DEFERRED]
+    update: [DEFERRED]
   - field: sp_stage
     create: [New]
-    update: [Scored, Researched, "Approach Drafted", Contacted, Engaged, Disqualified]
+    update: [Scored, Researched, "Approach Drafted", Disqualified]
   - field: sp_do_not_contact
     update: ["true"]
   - field: hs_pipeline_stage

@@ -18,10 +18,10 @@ bound_keys_only: true
 rules:
   - field: Status
     create: [draft]
-    update: [sent, voided]
+    update: [voided]
   - field: Stage
     create: [New]
-    update: [Scored, Researched, "Approach Drafted", Contacted, Engaged, Disqualified]
+    update: [Scored, Researched, "Approach Drafted", Disqualified]
   - field: Do Not Contact
     update: [true]
   - field: Draft Body

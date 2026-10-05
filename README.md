@@ -72,7 +72,7 @@ and when.
   yourself, with a weekly spending cap you set. Scheduled runs use web
   search only.
 
-**Want it set up for you?** [Webspenser](https://webspenser.com) offers
+**Want it set up for you?** [Webspenser](https://www.webspenser.com/lp/agent-builder) offers
 a one-time, done-for-you setup: we connect your tools, run the
 interview with you, and turn on the schedule. Ongoing management is
 available as part of our AI managed services.

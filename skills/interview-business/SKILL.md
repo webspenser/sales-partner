@@ -71,30 +71,17 @@ because a human has to answer it in their own words.
    outreach sound (three to five adjectives, plus one example sentence
    in that voice). If `call` is among the chosen channels, also ask
    for the operator's own callback number — the one a voicemail in a
-   call opener should give for callbacks. Then the outreach plan: how
-   many days apart the touches in a plan should be (`touch_spacing_days`,
-   default 3); and, when cold email goes through a sequence platform
-   (InvokeIQ), the score bands (`sequence_bands`, for example high from
-   80 and mid from 65) and which campaign each band uses (the operator
-   sets that map in the InvokeIQ workflow), the custom fields the
-   campaigns' templates merge in (recorded as `variables: <name>, <name>`
-   in `bindings/sequences.md`), and which countries leads may be
-   enrolled from (`allowed_countries`, default US; for Canada record the
-   consent basis in `canada_consent_basis`, for the EU/EEA or UK the
-   legitimate-interest note in `eu_uk_legitimate_interest`). Remind them
-   that the sequence platform should send from a
-   separate sending domain, not their main one.
+   call opener should give for callbacks.
 8. Write the answers to `context/operating-config.md`'s keys
    (`leads_per_week`, `prospecting_sources`, `enabled_channels`,
    `apify_spend_cap_usd_per_week`, `tone`, `callback_phone` when `call`
-   was chosen, `touch_spacing_days`, and with a sequence platform
-   `sequence_bands`, `allowed_countries` and its notes), to `context/business-profile.md`'s "Voice"
+   was chosen), to `context/business-profile.md`'s "Voice"
    section (the adjectives plus the example sentence), and to
    `schedules.yaml` at the instance root (the folder holding
    `instance.yaml`), which holds the schedule answers: `timezone` (the
    IANA name), one `schedule_<activity>: "<Weekday|daily> HH:MM"` line
    for each activity the operator wants on a schedule (`<activity>` is
-   `prospect`, `prepare`, `approach`, `enroll`, `sync-replies`, or `digest`), and
+   `prospect`, `prepare`, `approach`, or `digest`), and
    `then_prospect: prepare` when research should follow prospecting in
    the same run. The shipped default is `schedule_prospect: "Monday
    07:00"`, `then_prospect: prepare`, and `schedule_digest: "Monday

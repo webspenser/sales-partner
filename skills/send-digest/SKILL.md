@@ -4,14 +4,14 @@ description: Use when the digest's scheduled run fires (`schedule_digest` in the
 ---
 
 This skill produces a report, not a pipeline action. It reads the CRM
-and Apify usage, renders eight fixed sections in a fixed order, and
+and Apify usage, renders six fixed sections in a fixed order, and
 delivers the result to the operator. It never advances a stage, edits
 a lead field, logs an Activity, or logs Research — see **This skill
 reads; it never writes** below.
 
 ## The "since last digest" anchor
 
-Four of the eight sections — **New leads scored**, **Movement**, **Enrolled** and **Replies** — are
+Two of the six sections — **New leads scored** and **Movement** — are
 windowed on "since last digest." The other four are point-in-time
 snapshots evaluated fresh against *now* and carry no window at all (see
 each section below). Getting the window wrong is the single most
@@ -120,8 +120,7 @@ marker. The reads it does use, named precisely:
 - CRM **`query_by_stage`** on `Approach Drafted` — Section 1, Review —
   and on `Ready to Send` — Section 2, Ready to Send.
 - CRM **`get_lead`**, once for each lead those two calls return (its
-  draft touches, contact phone and Do Not Contact for Review; `enroll`'s
-  checks, read-only, for Ready to Send).
+  draft touches, contact phone and Do Not Contact).
 - CRM **`query_by_stage`** with its `next_action_due_before` filter
   (`stage` omitted, so leads across every stage are considered) —
   Section 3, Next actions due today.
@@ -132,21 +131,17 @@ marker. The reads it does use, named precisely:
 - CRM **`query_by_stage`**, called once per stage of interest, results
   filtered client-side to the `(anchor, nominal_time]` window on
   `Stage Changed At` — Section 5, Movement.
-- CRM **`query_activities`** (`status: "sent"`, `direction: "outbound"`,
-  `channel: "email"`, windowed) — Section 6, Enrolled.
-- CRM **`query_activities`** (`status: "sent"`, `direction: "inbound"`,
-  `channel: "email"`, windowed) — Section 7, Replies.
-- Apify's own usage data — Section 8. This is the one section with no
+- Apify's own usage data — Section 6. This is the one section with no
   CRM read at all; Apify spend is not CRM data and never was.
 
 Every one of the above is a call through `capabilities/crm/contract.md`'s eleven
-provider-neutral operations — none of the eight sections reads an
+provider-neutral operations — none of the six sections reads an
 Airtable view directly. The CRM tools' named views
 (Review, Ready to Send, My touches, Research Queue, Due Today, Nurture) still exist as
 a convenience for the operator looking at Airtable by hand, and are
 defined to compute exactly what the operations above return, but this
 skill does not depend on them: swap the tool for a different CRM
-behind the same contract, and every one of these eight sections still
+behind the same contract, and every one of these six sections still
 works, because none of them named an Airtable-specific view as its read
 path.
 
@@ -159,8 +154,9 @@ a required input is missing, stop and report what is missing.
    both edges — per **The "since last digest" anchor** above.
 2. **Section 1 — Review.** Call CRM `query_by_stage("Approach Drafted")`
    and `get_lead` for each lead: these are plans waiting for the
-   operator. List each lead with its draft touches in date order
-   (channel, date), and for a `call` draft the number to dial (the
+   operator. List each lead with its recommended channel (the draft
+   whose summary starts `recommended:`) and the other channels it has
+   statements for, and for a `call` draft the number to dial (the
    draft's Contact `phone`, otherwise the Lead's `phone`). No window:
    every plan waiting right now, however old. Heading with the count of
    leads, e.g. `Review (3)`.
@@ -174,14 +170,17 @@ a required input is missing, stop and report what is missing.
      duplicate leads (among leads in this digest)`. Include the line only
      when there are any.
 3. **Section 2 — Ready to Send.** Call CRM `query_by_stage("Ready to
-   Send")` and `get_lead` for each: plans the operator approved that
-   the next `enroll` run will pick up. List each lead with how long it
-   has waited (now − `Stage Changed At`) and, applying `enroll`'s checks
-   read-only (`skills/enroll/SKILL.md`), the first one it would fail —
-   for example `no email address`, `country not allowed`, `missing
-   variable: icebreaker`, `waiting until <date>`, `only LinkedIn or
-   call touches left`, `email already enrolled for this contact` — or
-   `next enroll run`. Heading with the count.
+   Send")` and `get_lead` for each: leads the operator approved, now
+   waiting for the owner's hand-off (their CRM automation, another
+   system or agent, or the operator's own touch). List each lead with
+   its recommended channel and how long ago its status last changed
+   (now − `Stage Changed At`). The operator's drag in the CRM does not
+   stamp `Stage Changed At` (only `update_stage` does, unless the
+   owner's automation sets it too), so this is time since the agent
+   drafted the touch, not time since approval; a lead whose status
+   changed more than two digest intervals ago is marked `check the
+   hand-off`. The agent never acts on these leads. Heading with the
+   count.
 4. **Section 3 — Next actions due today.** Call CRM
    `query_by_stage(next_action_due_before: today, stage: omitted)` —
    omitting `stage` so leads at every stage are considered, not one
@@ -233,55 +232,48 @@ a required input is missing, stop and report what is missing.
    questions still gets exactly one line in each, never two lines in
    either.
 6. **Section 5 — Movement.** Call `query_by_stage` once for each status
-   the agent moves leads to — `Researched`, `Approach Drafted`,
-   `Contacted`, `Engaged` and `Disqualified`. For each status's results,
+   the agent moves leads to — `Researched`, `Approach Drafted` and
+   `Disqualified`. For each status's results,
    keep only leads whose `Stage Changed At` falls in the window
    `(anchor, nominal_time]` — strictly after the anchor **and** at or
    before this run's nominal scheduled time — and list them as
    `<Company>: → <Status> (<date>, <reason if one was recorded>)`. Call
-   out `Engaged` and `Disqualified` explicitly, even when empty (write
-   "No replies this week" rather than dropping the line). Because
+   out `Disqualified` explicitly, even when empty (write "None this
+   week" rather than dropping the line). Then add one snapshot line,
+   with no window, counting the leads at each of the owner's statuses
+   right now: `Owner's pipeline now: Contacted N, Engaged N, Open Deal
+   N, Nurture N, Customer N` (one `query_by_stage` per status). Those
+   statuses are set by the operator or their automation, which need not
+   stamp `Stage Changed At`, so the digest reports where leads stand,
+   not when they moved. Because
    `Stage Changed At` is written only by `update_stage`, a lead whose
    `Score` or `Next Action` was edited without its status moving does
    not appear here. Heading with the count of leads that actually
    moved.
-7. **Section 6 — Enrolled.** Call CRM `query_activities(status: "sent",
-   direction: "outbound", channel: "email", since: anchor, until:
-   nominal_time)` and keep Activities whose outcome starts `enrolled
-   in`. List each lead and its band. End the section with: "Moving an
-   enrolled lead back does not stop its sequence — pause the contact in
-   InvokeIQ." Heading with the count.
-8. **Section 7 — Replies.** Call CRM `query_activities(status: "sent",
-   direction: "inbound", channel: "email", since: anchor, until:
-   nominal_time)` — the reply relay's records. List replies (leads now
-   `Engaged`), bounces (summary `bounced`) and opt-outs (leads now Do
-   Not Contact) as three groups. End the section with the standing line:
-   "Link-click unsubscribes are handled by InvokeIQ and are not visible
-   here." Heading with the count of records.
-9. **Section 8 — Spend.** Read Apify's usage total for the current cap
+7. **Section 6 — Spend.** Read Apify's usage total for the current cap
    week — the same weekly boundary the anchor uses, so spend and
    digest windows line up — and compare it to
    `apify_spend_cap_usd_per_week` from `operating-config.md`. Report the
    dollar amount spent, the cap, and the percentage. This section does
    not touch the CRM.
-10. Render all eight sections, in the fixed order above, every run — a
+8. Render all six sections, in the fixed order above, every run — a
    section with nothing to report still gets its heading and an
    explicit "None" (or equivalent), never a silently omitted heading.
    This is the shape `templates/digest.md` defines; until that
    template exists, the section order and content rules above **are**
    the shape.
-11. Resolve the delivery channel: read `digest_channel` from
+9. Resolve the delivery channel: read `digest_channel` from
    `operating-config.md`. If it is `sms` and no Twilio credential is
    configured — true of the shipped default, since SMS is a stubbed
    tool, not yet enabled — switch delivery to email (delivered per
-   step 12: always a draft) and
+   step 10: always a draft) and
    make the digest's first line say so verbatim, e.g. `Delivered by email — SMS
    is configured but no Twilio credential exists yet.` If
    `digest_channel` is `email`, or is `sms` with a working Twilio
    credential, deliver on that channel with no disclaimer line. If
-   step 12's send-fallback line also applies, it goes first, above
+   step 10's send-fallback line also applies, it goes first, above
    this one.
-12. Deliver the rendered digest. **The digest is always a draft,
+10. Deliver the rendered digest. **The digest is always a draft,
     never a send:** create it with `email_drafts`
     `create_draft`, addressed to `sending_identity` (the operator's own
     address from `operating-config.md`), and the operator opens it from
@@ -317,8 +309,8 @@ a required input is missing, stop and report what is missing.
 ## Why the review queue leads
 
 Sections 1 and 2 are queues: every lead in Review needs the operator to
-approve or change its plan, and every lead stuck in Ready to Send needs
-whatever its blocker says. Every other section is reporting. Queues
+approve or change its first touch, and a lead waiting long in Ready to
+Send means the owner's hand-off has not picked it up. Every other section is reporting. Queues
 placed below reporting get scrolled past out of habit, so they lead
 every run, even when empty — see the first Failure mode below.
 
@@ -328,7 +320,8 @@ every run, even when empty — see the first Failure mode below.
 and `capabilities/crm/contract.md`'s `log_activity` enforcement of it both gate one
 specific thing: **outbound prospect communication**, logged as an
 Activity at `draft`, approved only when the operator moves the lead to
-`Ready to Send`, then `sent` — or, if an inbound opt-out arrives first,
+`Ready to Send`, then `sent` by the operator or their automation — or,
+if an inbound opt-out arrives first,
 diverted from `draft` straight to the terminal `voided` via
 `update_activity`. The digest
 is never logged as an Activity, is never addressed to a prospect, and
@@ -368,11 +361,11 @@ matches the wall clock exactly this week. Anchor: Monday, 2026-08-24,
 # Sales Partner Digest — 2026-08-31
 
 ## Review (2)
-- Meridian Robotics — email (2026-09-01), linkedin (2026-09-04) — [link]
-- Thornfield Media — email (2026-09-01) — [link]
+- Meridian Robotics — recommended: email; statements: linkedin — [link]
+- Thornfield Media — recommended: linkedin — [link]
 
 ## Ready to Send (1)
-- Corvid Analytics — waiting 1 day — next enroll run
+- Corvid Analytics — email — waiting 1 day
 
 ## Next actions due today (2)
 - Fennimore Health — Send onboarding proposal — due 2026-08-28 (3 days overdue)
@@ -387,19 +380,10 @@ matches the wall clock exactly this week. Anchor: Monday, 2026-08-24,
 
 ## Movement (3)
 - Harrow Analytics: → Researched (2026-08-30)
-- Bellcrest Health: → Contacted (2026-08-26; email enrolled in the high sequence)
+- Quill Systems: → Approach Drafted (2026-08-29)
 - Ashgrove Systems: → Disqualified (2026-08-27; anti-signal — company size under floor)
-- Engaged: none this week
-
-## Enrolled (1)
-- Bellcrest Health — high
-Moving an enrolled lead back does not stop its sequence — pause the contact in InvokeIQ.
-
-## Replies (1)
-- Replies: Quill Systems (interested: wants a call next week)
-- Bounces: none
-- Opt-outs: none
-Link-click unsubscribes are handled by InvokeIQ and are not visible here.
+- Disqualified: Ashgrove Systems
+- Owner's pipeline now: Contacted 4, Engaged 1, Open Deal 1, Nurture 2, Customer 0
 
 ## Spend
 $18.40 of $25.00/week Apify cap (74%) — $6.60 remaining this cap week

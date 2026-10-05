@@ -1,4 +1,0 @@
-capability: sequences
-provider: invokeiq
-server_match: invokeiq
-wrapper: n8n

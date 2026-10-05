@@ -104,13 +104,7 @@ skill, if this agent has one.
       guarded call.
    4. If the contract has a `no_send` invariant and the tool's
       `guard.yaml` does not list it in `covers`, refuse to bind it and
-      say why. For `sequences`, the guard can't check that a lead is at
-      `Ready to Send` before it is enrolled (`enroll_ready_only`): say
-      so plainly — the agent follows the rule, the digest lists every
-      enrollment, and the operator can pause any contact in the sequence
-      platform — and only if the operator agrees add
-      `accept_instruction_only: enroll_ready_only` to `instance.yaml`.
-      Without it, `enroll` can't be scheduled.
+      say why.
    5. Add `bind_<capability>: <provider>` (or `custom`) to
       `instance.yaml`, replacing an earlier line for that capability.
    6. Source mode only: merge into `.claude/settings.json` a

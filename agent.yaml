@@ -2,12 +2,10 @@ name: sales-partner
 version: 6.0.0
 description: Interviews a business, then finds, qualifies and researches leads that fit its ideal customer and runs first outreach: email through the client's sequence platform, LinkedIn and calls drafted for the owner
 standard: "6.0"
-capabilities: crm, email_drafts, sequences
+capabilities: crm, email_drafts
 catalog: webspenser
 catalog_repo: webspenser/agent-library
 activity_prospect: crm
 activity_prepare: crm
 activity_approach: crm
 activity_digest: crm, email_drafts
-activity_enroll: crm, sequences
-activity_sync-replies: crm, sequences

@@ -48,16 +48,6 @@ done
 for t in execute_workflow test_workflow create_workflow_from_code update_workflow archive_workflow publish_workflow unpublish_workflow restore_workflow_version; do
   acheck 2 "n8n dispatcher denied: $t" "mcp__claude_ai_N8N_Webspenser_Newsletter__$t"
 done
-for t in get_workspace get_campaigns enroll_contact suppress; do acheck 0 "InvokeIQ tool passes the agent policy: $t" "mcp__invokeiq__$t"; done
-
-echo "-- InvokeIQ"
-IQ=capabilities/sequences/tools/invokeiq/guard.yaml
-python3 -B "$E" --check "$IQ" >/dev/null 2>&1 && _report ok "invokeiq guard parses" || _report no "invokeiq guard does not parse"
-check 0 "enroll allowed"   $IQ mcp__invokeiq__enroll_contact '{"band":"high","email":"a@b.c"}'
-check 0 "suppress allowed" $IQ mcp__invokeiq__suppress '{"emails":["a@b.c"],"reason":"opt-out"}'
-check 2 "no campaign creation" $IQ mcp__invokeiq__create_campaign '{}' "is not in the allow list"
-python3 -B hooks/tool_check.py capabilities/sequences/tools/invokeiq capabilities/sequences/contract.md >/dev/null && _report ok "invokeiq tool passes tool_check" || _report no "invokeiq tool fails tool_check"
-
 echo "-- Attio"
 AT=capabilities/crm/tools/attio/guard.yaml; P=mcp__claude_ai_Attio__
 L='"list":"sales_partner_outreach","parent_object":"companies","parent_record_id":"00000000-0000-0000-0000-000000000001"'

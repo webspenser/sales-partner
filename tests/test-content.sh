@@ -312,11 +312,6 @@ assert_not_contains "$SP/capabilities/crm/tools/attio/bootstrap.py" '"approved"'
 
 echo "-- 6.0.0: personalization and config"
 OC="$SP/context/operating-config.md"
-assert_contains "$OC" 'sequence_bands'
-assert_contains "$OC" 'allowed_countries: [US]'
-assert_contains "$OC" 'eu_uk_legitimate_interest'
-assert_contains "$OC" 'canada_consent_basis'
-assert_contains "$OC" 'touch_spacing_days: 3'
 assert_contains "$SP/subagents/approacher.md" 'one `name: value` line per name in `variables:`'
 assert_contains "$SP/subagents/approacher.md" 'touch_spacing_days'
 assert_contains "$SP/subagents/approacher.md" 'never an address with a `bounced` Activity'
@@ -367,73 +362,21 @@ if grep -rlE "sales-call-specialist|Sales-call-specialist|write-follow-up|handle
 assert_contains "$SP/agent.yaml" 'finds, qualifies and researches leads'
 
 
-echo "-- 6.0.0: enroll"
-EN="$SP/skills/enroll/SKILL.md"
-assert_contains "$EN" 'name: enroll'
-assert_contains "$EN" 'query_by_stage("Ready to Send")'
-assert_contains "$EN" 'a standing email Activity at `draft`'
-assert_contains "$EN" 'every name in `variables:`'
-assert_contains "$EN" 'allowed_countries'
-assert_contains "$EN" 'canada_consent_basis'
-assert_contains "$EN" 'eu_uk_legitimate_interest'
-assert_contains "$EN" 'enroll_contact'
-assert_contains "$EN" 'update_activity(status: "sent"'
-assert_contains "$EN" 'update_stage(lead, "Contacted"'
-assert_contains "$EN" 'voided email draft is not an email touch'
-assert_contains "$EN" 'pause the contact in InvokeIQ'
-assert_contains "$EN" 'stop and report'
-assert_contains "$EN" 'never enroll with a blank field'
-grep -qx 'activity_enroll: crm, sequences' "$SP/agent.yaml" && _report ok "enroll activity declared" || _report no "activity_enroll missing"
-
-
-echo "-- 6.0.0: sync-replies, digest, channel filter"
-SR="$SP/skills/sync-replies/SKILL.md"
-assert_contains "$SR" 'name: sync-replies'
-assert_contains "$SR" 'query_activities(status: "sent", direction: "inbound", channel: "email"'
-assert_contains "$SR" '`Contacted` → `Engaged`'
-assert_contains "$SR" 'update_lead(lead, {"Do Not Contact": true})'
-assert_contains "$SR" 'suppress('
-assert_contains "$SR" '`bounced`'
-assert_contains "$SR" 'Approach Drafted'
-assert_contains "$SR" 'idempotent'
-assert_contains "$SR" 'void'
-grep -qx 'activity_sync-replies: crm, sequences' "$SP/agent.yaml" && _report ok "sync-replies declared" || _report no "activity_sync-replies missing"
+echo "-- 6.0.0: digest, channel filter"
 D="$SP/skills/send-digest/SKILL.md"
 assert_contains "$D" '**Section 1 — Review.**'
 assert_contains "$D" '**Section 2 — Ready to Send.**'
-assert_contains "$D" '**Section 6 — Enrolled.**'
-assert_contains "$D" '**Section 7 — Replies.**'
-assert_contains "$D" 'Link-click unsubscribes are handled by InvokeIQ and are not visible here.'
 assert_not_contains "$D" 'Awaiting approval'
 assert_not_contains "$D" 'Call Scheduled'
-assert_not_contains "$D" 'six sections'
 T="$SP/templates/digest.md"
 assert_contains "$T" '## Review ([count])'
 assert_contains "$T" '## Ready to Send ([count])'
-assert_contains "$T" '## Enrolled ([count])'
-assert_contains "$T" '## Replies ([count])'
 assert_not_contains "$T" 'Won:'
 K="$SP/capabilities/crm/contract.md"
 assert_contains "$K" '| `query_activities` | `status, direction, channel, since, until, limit` |'
 assert_contains "$SP/capabilities/crm/tools/attio/usage.md" '`channel` when given'
 assert_contains "$SP/capabilities/crm/tools/airtable/usage.md" '`Channel` when given'
 assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" '`channel` when given'
-
-
-echo "-- 6.0.0: Attio reply relay"
-RL="$SP/capabilities/sequences/tools/invokeiq/relay/attio.n8n.json"
-python3 - "$RL" <<'PY' && _report ok "attio relay: webhook, signature check, outreach entry create, no credential ids" || _report no "attio relay structure"
-import json, sys
-d = json.load(open(sys.argv[1])); types = [n["type"] for n in d["nodes"]]
-assert "n8n-nodes-base.webhook" in types and "n8n-nodes-base.crypto" in types
-s = json.dumps(d)
-assert "x-invokeiq-signature" in s and "contact.replied" in s and "api.attio.com" in s and "sales_partner_outreach" in s
-assert not any(n.get("credentials") for n in d["nodes"]) and not any("webhookId" in n for n in d["nodes"])
-PY
-U="$SP/capabilities/sequences/tools/invokeiq/usage.md"
-assert_contains "$U" '## Reply relay'
-assert_contains "$U" 'never changes the status'
-assert_contains "$U" 'relay/attio.n8n.json'
 
 
 echo "-- 6.0.0: AGENT.md and onboarding"
@@ -450,46 +393,16 @@ assert_not_contains "$A" 'Sales call specialist'
 assert_not_contains "$A" 'Follow-up'
 assert_not_contains "$A" 'max_touches'
 IV="$SP/skills/interview-business/SKILL.md"
-assert_contains "$IV" 'sequence_bands'
-assert_contains "$IV" 'variables:'
-assert_contains "$IV" 'allowed_countries'
-assert_contains "$IV" 'touch_spacing_days'
-assert_contains "$IV" 'separate sending domain'
-assert_contains "$SP/skills/setup/SKILL.md" 'accept_instruction_only: enroll_ready_only'
-assert_contains "$SP/README.md" 'lead generation and outbound'
+assert_contains "$SP/README.md" 'lead generation and personalization'
 
 
 echo "-- 6.0.0: final review fixes"
 PR="$SP/subagents/prospector.md"
 assert_contains "$PR" 'leave it untouched unless its status is `New`, or `Nurture` with a Revisit On date in the past'
 assert_contains "$PR" '- CRM `get_lead`'
-EN="$SP/skills/enroll/SKILL.md"
-assert_contains "$EN" 'no outbound email Activity at `sent` to the same contact'
-assert_contains "$EN" 'its date is today or earlier'
-assert_contains "$EN" 'waiting until'
-SR="$SP/skills/sync-replies/SKILL.md"
-assert_contains "$SR" 'two schedule intervals back'
-assert_contains "$SR" 'only when the bounce is dated on or after the lead'"'"'s `Stage Changed At`'
-assert_contains "$SR" 'outcome: "replied"'
 assert_contains "$SP/capabilities/crm/tools/airtable/usage.md" '`Lead Stage` is `Ready to Send` or `Contacted`'
 assert_contains "$SP/capabilities/crm/tools/attio/usage.md" 'only for leads at `Ready to Send` or `Contacted`'
 assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'only for leads at `Ready to Send` or `Contacted`'
-IU="$SP/capabilities/sequences/tools/invokeiq/usage.md"
-assert_contains "$IU" 'campaign_<band>: <id>'
-assert_contains "$SP/capabilities/sequences/contract.md" '| `get_campaigns` | — | every campaign in the workspace'
-python3 - "$SP/capabilities/sequences/tools/invokeiq/workflow.n8n.json" <<'PY' && _report ok "enroll_contact fails on an unknown band or an unset campaign" || _report no "enroll_contact band guard"
-import json, sys
-d = json.load(open(sys.argv[1]))
-n = next(x for x in d["nodes"] if x["name"] == "enroll_contact")
-v = next(p["value"] for p in n["parameters"]["bodyParameters"]["parameters"] if p["name"] == "campaignId")
-assert "throw" in v and "unknown band" in v and "startsWith('<')" in v
-PY
-python3 - "$SP/capabilities/sequences/tools/invokeiq/relay/attio.n8n.json" <<'PY' && _report ok "relay links the contact" || _report no "relay contact link"
-import json, sys
-d = json.load(open(sys.argv[1]))
-n = next(x for x in d["nodes"] if x["name"] == "Add inbound Outreach entry")
-assert "contact: [{ target_object: 'people'" in n["parameters"]["jsonBody"]
-PY
 assert_not_contains "$SP/context/operating-config.md" '`approved`'
 assert_contains "$SP/context/operating-config.md" 'only the operator approves a plan'
 AP="$SP/subagents/approacher.md"
@@ -498,5 +411,42 @@ assert_contains "$AP" 'drafts the lead'"'"'s first-outreach plan'
 assert_contains "$AP" 'redraft'
 E="$SP/evals/cases.md"
 assert_contains "$E" 'at `Contacted` and one at `Ready to Send`'
+
+echo "-- 6.0.0: lead generation and personalization (sending leaves)"
+for f in capabilities/sequences skills/enroll skills/sync-replies; do
+  [ ! -e "./$f" ] && _report ok "removed: $f" || _report no "still present: $f"  # ./ so the referenced-files check skips it
+done
+grep -qx 'capabilities: crm, email_drafts' "$SP/agent.yaml" && _report ok "capabilities: crm, email_drafts" || _report no "capabilities line still lists more than crm, email_drafts"
+! grep -qE '^activity_(enroll|sync-replies):' "$SP/agent.yaml" && _report ok "no enroll or sync-replies activity" || _report no "enroll or sync-replies still declared"
+OC="$SP/context/operating-config.md"
+IV="$SP/skills/interview-business/SKILL.md"
+for k in sequence_bands allowed_countries eu_uk_legitimate_interest canada_consent_basis touch_spacing_days; do
+  assert_not_contains "$OC" "$k"
+  assert_not_contains "$IV" "$k"
+done
+assert_not_contains "$IV" 'InvokeIQ'
+assert_not_contains "$IV" 'sending domain'
+assert_not_contains "$IV" '`enroll`'
+assert_not_contains "$SP/skills/setup/SKILL.md" 'accept_instruction_only'
+assert_not_contains "$SP/skills/setup/SKILL.md" 'enroll'
+D="$SP/skills/send-digest/SKILL.md"
+T="$SP/templates/digest.md"
+for f in "$D" "$T"; do
+  assert_not_contains "$f" 'Enrolled'
+  assert_not_contains "$f" 'Replies'
+  assert_not_contains "$f" 'InvokeIQ'
+  assert_not_contains "$f" 'enroll'
+done
+assert_contains "$D" 'six fixed sections'
+assert_contains "$D" '**Section 6 — Spend.**'
+assert_contains "$D" 'waiting for the owner'"'"'s hand-off'
+assert_contains "$T" 'Six sections'
+assert_contains "$D" 'not time since approval'
+assert_contains "$D" "Owner's pipeline now"
+assert_contains "$T" "Owner's pipeline now"
+assert_not_contains "$SP/README.md" 'InvokeIQ'
+assert_not_contains "$SP/README.md" 'enroll'
+assert_not_contains "$SP/guard.yaml" 'InvokeIQ'
+assert_contains "$SP/guard.yaml" '"*_workflow*"'
 
 finish

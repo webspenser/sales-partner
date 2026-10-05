@@ -1,3 +1,5 @@
+![Webspenser Sales Partner — lead generation and personalization over your CRM; never sends](assets/banner.png)
+
 # Sales Partner
 
 A lead generation and personalization partner for one business. It

@@ -256,7 +256,7 @@ assert_contains "$SP/AGENT.md" 'unattended'
 echo "-- 4.0.4: AGENT.md inline size, idle rule"
 [ "$(wc -c < "$SP/AGENT.md" | tr -d ' ')" -le 9000 ] && _report ok "AGENT.md fits the 9000-byte inline limit" || _report no "AGENT.md is over 9000 bytes; the hook will not inline it"
 assert_contains "$SP/capabilities/crm/contract.md" '## Lead status transitions'
-assert_contains "$SP/capabilities/crm/contract.md" 'draft Activities (one per enabled channel, each with its date) at `status: draft`'
+assert_contains "$SP/capabilities/crm/contract.md" 'draft Activities (one per enabled channel: the recommended channel'"'"'s full draft and statements, the others'"'"' statements) at `status: draft`'
 assert_contains "$SP/AGENT.md" '`capabilities/crm/contract.md` (Lead status, Lead status transitions)'
 assert_contains "$SP/context/icp.md" '`capabilities/crm/contract.md` (Lead status transitions)'
 assert_contains "$SP/capabilities/crm/contract.md" 'idle age = now − `max(last Activity date, Stage Changed'
@@ -312,12 +312,7 @@ assert_not_contains "$SP/capabilities/crm/tools/attio/bootstrap.py" '"approved"'
 
 echo "-- 6.0.0: personalization and config"
 OC="$SP/context/operating-config.md"
-assert_contains "$SP/subagents/approacher.md" 'one `name: value` line per name in `variables:`'
-assert_contains "$SP/subagents/approacher.md" 'touch_spacing_days'
 assert_contains "$SP/subagents/approacher.md" 'never an address with a `bounced` Activity'
-assert_contains "$SP/subagents/approacher.md" 'one draft per enabled channel'
-assert_contains "$SP/skills/write-cold-email/SKILL.md" '## With sequences'
-assert_contains "$SP/templates/cold-email.md" 'icebreaker:'
 
 echo "-- 6.0.0: lead status"
 K="$SP/capabilities/crm/contract.md"
@@ -407,7 +402,7 @@ assert_not_contains "$SP/context/operating-config.md" '`approved`'
 assert_contains "$SP/context/operating-config.md" 'only the operator approves a plan'
 AP="$SP/subagents/approacher.md"
 assert_not_contains "$AP" 'One opening touch per lead'
-assert_contains "$AP" 'drafts the lead'"'"'s first-outreach plan'
+assert_contains "$AP" 'prepares the lead'"'"'s first touch'
 assert_contains "$AP" 'redraft'
 E="$SP/evals/cases.md"
 assert_contains "$E" 'at `Contacted` and one at `Ready to Send`'
@@ -477,5 +472,37 @@ assert_contains "$E" '## Case 5: Opt-out sets Do Not Contact and voids pending d
 assert_not_contains "$E" 'enroll'
 assert_not_contains "$E" 'sync-replies'
 assert_not_contains "$E" 'suppress'
+
+echo "-- 6.0.0: recommendation and personalized statements"
+AP="$SP/subagents/approacher.md"
+assert_contains "$AP" 'recommended: <one-line reason>'
+assert_contains "$AP" 'summary `statements`'
+assert_contains "$AP" 'one draft Activity per enabled channel'
+assert_contains "$AP" 'the full draft only for the recommended channel'
+assert_contains "$AP" 'templates/personalized-statements.md'
+assert_contains "$AP" 'never an address with a `bounced` Activity'
+assert_not_contains "$AP" 'touch_spacing_days'
+assert_not_contains "$AP" 'sequences'
+assert_not_contains "$AP" 'sequence platform'
+assert_not_contains "$AP" 'variables:'
+assert_not_contains "$AP" 'enroll'
+assert_not_contains "$AP" 'moves to `Contacted`'
+PS="$SP/templates/personalized-statements.md"
+for l in 'opener:' 'relevance:' 'proof:' 'ask:'; do assert_contains "$PS" "$l"; done
+assert_contains "$PS" 'Personalized statements'
+assert_contains "$PS" 'two to four lines'
+for w in write-cold-email write-linkedin-touch write-call-opener; do
+  assert_contains "./skills/$w/SKILL.md" '## Personalized statements'
+  assert_contains "./skills/$w/SKILL.md" 'templates/personalized-statements.md'
+  assert_contains "./skills/$w/SKILL.md" 'summary="statements"'
+done
+assert_not_contains "$SP/skills/write-cold-email/SKILL.md" 'sequences'
+assert_not_contains "$SP/skills/write-cold-email/SKILL.md" 'variables:'
+assert_not_contains "$SP/templates/cold-email.md" 'sequences'
+assert_contains "$SP/skills/write-linkedin-touch/SKILL.md" 'one Activity holding both'
+assert_contains "$SP/capabilities/crm/tools/attio/usage.md" 'the `recommended:` one holds the full draft'
+assert_contains "$SP/capabilities/crm/tools/airtable/usage.md" 'the `recommended:` one holds the full draft'
+assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'the `recommended:` one holds the full draft'
+assert_contains "$SP/evals/cases.md" '## Case 14: The first touch is one recommendation plus statements per channel'
 
 finish

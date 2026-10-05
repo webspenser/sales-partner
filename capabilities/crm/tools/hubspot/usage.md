@@ -415,10 +415,11 @@ contract's guarantees are enforced by mechanism (approval and `dnc_one_way` only
 Create these once in HubSpot. The connector can't create views.
 
 - **Review** — Companies filtered on `sp_stage` is `Approach Drafted`.
-  Open a company to see its plan: one Not started Task per channel, each
-  with its due date, and `Do Not Contact` (`sp_do_not_contact`). Edit a
-  task's notes or due date, mark any task you don't want Deferred, then
-  move the company to `Ready to Send`: that approves the whole plan.
+  Open a company to see its drafts: one Not started Task per channel;
+  the `recommended:` one holds the full draft and its personalized
+  statements, the others `statements` only, and `Do Not Contact`
+  (`sp_do_not_contact`). Mark any task you don't want Deferred, then
+  move the company to `Ready to Send`: that approves the lead.
 - **Ready to Send** — Companies filtered on `sp_stage` is
   `Ready to Send`: approved, waiting for your workflow or your own
   touch. The agent never acts on them; move a company back to `Approach

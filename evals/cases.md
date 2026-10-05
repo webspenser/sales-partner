@@ -448,6 +448,32 @@ unchanged.
 
 ---
 
+## Case 14: The first touch is one recommendation plus statements per channel
+
+**Given** — `enabled_channels: [email, linkedin, call]`. A `Researched`
+lead above `approach_threshold` whose Contact is the owner, with a
+sourced listing phone and a LinkedIn profile but no email address.
+
+**Expect** — `subagents/approacher.md`: exactly two draft Activities —
+`linkedin` and `call` (no email address, so email is not reachable).
+Exactly one summary starts `recommended:` with a one-line reason traced
+to the research; its body is the full draft followed by a Personalized
+statements block. The other's summary is `statements` and its body is
+the block alone (for `call`, the `Call:` line and the block). Each
+block has two to four lines labelled `opener:`, `relevance:`,
+`proof:`, `ask:`, every fact traceable to a Research row or
+`business-profile.md`. The lead moves to `Approach Drafted`.
+
+**Why it matters** — The operator approves one lead, not a stack of
+competing drafts, and their own templates and automations need
+statements they can merge for whichever channel they choose.
+
+**How to run** — Seed the lead. Run the Approacher. Count the
+Activities and their summaries; check each block's labels and trace
+each line to its source.
+
+---
+
 ## Degradation check
 
 This is the only test in the repo of the portability claim the whole

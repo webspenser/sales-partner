@@ -260,10 +260,11 @@ views.
   grouped by `stage`.
 - **Review** — on `sales_partner_pipeline`: filtered on `stage` is
   `Approach Drafted`. Open a lead to see its draft Outreach entries (one
-  per channel, each with its `date`) and show `do_not_contact`, so a plan
-  for an opted-out lead is obvious. Edit a draft's `draft_body` or
-  `date`, set any draft you don't want to `voided`, then move the lead
-  to `Ready to Send`: that approves the whole plan.
+  per channel: the `recommended:` one holds the full draft and its
+  personalized statements, the others `statements` only) and show
+  `do_not_contact`, so drafts for an opted-out lead are obvious. Edit a
+  draft's `draft_body`, set any draft you don't want to `voided`, then
+  move the lead to `Ready to Send`: that approves the lead.
 - **Ready to Send** — on `sales_partner_pipeline`: filtered on `stage`
   is `Ready to Send`: approved, waiting for your automation or your own
   touch. The agent never acts on them; move a lead back to `Approach

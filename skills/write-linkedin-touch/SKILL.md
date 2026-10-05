@@ -1,6 +1,6 @@
 ---
 name: write-linkedin-touch
-description: Use when LinkedIn is the chosen channel — drafts a connection note or a DM for the operator to send by hand.
+description: Use when LinkedIn is one of a lead's reachable channels — drafts the connection note and DM when LinkedIn is the recommended channel, and LinkedIn's personalized statements either way, for the operator to send by hand.
 ---
 
 **This skill never sends. It produces text the operator copies and
@@ -39,24 +39,41 @@ taken on LinkedIn itself.
    punctuation. If it is at or over 300, cut a clause — don't
    abbreviate words to squeeze under the limit; an abbreviated note
    reads as rushed.
-4. Log the connection note via CRM `log_activity(lead_id, contact_id,
-   channel="linkedin", direction="outbound", draft_body=..., status=
-   "draft")`, with a `Summary` noting it is a connection note, not a
-   DM, so the operator knows which one to paste where.
-5. Draft the **DM** as a second, separate draft — only after the
+4. Draft the **DM** as a second, separate piece of copy — only after the
    connection note, and understood as a message the operator sends
    later, once LinkedIn shows the connection accepted, not
    immediately. Open by referencing the hook (it can restate or build
    on the connection note, since the recipient already saw that one),
    write exactly one ask, and include no link.
-6. Count the DM's words. If it is at or over 80, cut a sentence
+5. Count the DM's words. If it is at or over 80, cut a sentence
    whole, the same rule as `write-cold-email` step 9.
-7. Read the draft in your head as a DM, not an email: short lines, no
+6. Read the draft in your head as a DM, not an email: short lines, no
    "Dear," no formal sign-off, no multi-paragraph structure. If it
    reads like something that could have been an email instead, it is
    in the wrong register — see Failure modes.
-8. Log the DM via a second CRM `log_activity` call, same shape as step
-   4, with `Summary` noting it is the DM, sent only after acceptance.
+7. Log one Activity holding both, labelled `Connection note:` and
+   `DM (after acceptance):`, then the Personalized statements block, as
+   **Personalized statements** below says.
+
+## Personalized statements
+
+LinkedIn always gets a Personalized statements block. Write it from the
+same hook and proof this skill uses, following
+`templates/personalized-statements.md`: two to four lines, labelled
+`opener:`, `relevance:`, `proof:`, `ask:`, each one sentence that stands
+on its own, every fact traced to a Research row or
+`business-profile.md`. No link in any line, and the `ask:` line suits a
+DM, not an email.
+
+- **LinkedIn is the recommended channel:** one Activity holding both
+  the connection note and the DM (steps 1–6), a blank line, then the
+  block. Log it with CRM `log_activity(lead_id, contact_id,
+  channel="linkedin", direction="outbound", summary="recommended:
+  <one-line reason>", draft_body=<note + DM + block>, status="draft")`.
+- **LinkedIn is not the recommended channel:** skip the note and DM;
+  the body is the block alone. Log it with CRM `log_activity(lead_id,
+  contact_id, channel="linkedin", direction="outbound",
+  summary="statements", draft_body=<block>, status="draft")`.
 
 ## Worked examples
 

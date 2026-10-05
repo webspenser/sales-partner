@@ -247,10 +247,11 @@ operation returns, so the operator's screen and a skill's query never
 disagree about what counts as "in review," "due today," or "stalled."
 
 - **Review** — Leads where `Stage = Approach Drafted`, with their linked
-  Activities and `Do Not Contact` visible. Open a lead to see its plan:
-  one draft per channel, each with its `Date`. Edit `Draft Body` or
-  `Date`, set any draft you don't want to `voided`, then move the lead
-  to `Ready to Send`: that approves the whole plan.
+  Activities and `Do Not Contact` visible. Open a lead to see its
+  drafts: one per channel; the `recommended:` one holds the full draft
+  and its personalized statements, the others `statements` only. Edit
+  `Draft Body`, set any draft you don't want to `voided`, then move the
+  lead to `Ready to Send`: that approves the lead.
 - **Ready to Send** — Leads where `Stage = Ready to Send`: approved,
   waiting for your automation or your own touch. The agent never acts
   on them; move a lead back to `Approach Drafted` to cancel.

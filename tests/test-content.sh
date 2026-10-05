@@ -550,4 +550,20 @@ LI="$SP/skills/write-linkedin-touch/SKILL.md"
 assert_contains "$LI" '**The chosen Contact has a sourced `linkedin_url`.**'
 assert_contains "$SP/evals/cases.md" '## Case 15: No LinkedIn profile means no LinkedIn draft'
 
+echo "-- 6.0.0: company profile fields"
+K="$SP/capabilities/crm/contract.md"
+assert_contains "$K" '### Company profile fields'
+assert_contains "$K" '`description, company_linkedin_url, facebook_url, instagram_url`'
+assert_contains "$K" 'only when the CRM'"'"'s own field is empty'
+assert_contains "$K" 'A tool with no home for a profile field skips it'
+AU="$SP/capabilities/crm/tools/attio/usage.md"
+assert_contains "$AU" '`primary_location`'
+assert_contains "$AU" '| `company_linkedin_url` | `linkedin` |'
+assert_contains "$AU" 'never overwrite a value Attio'"'"'s enrichment or the operator already set'
+assert_not_contains "$AU" 'The tool writes only `name` and `domains`.'
+assert_contains "$SP/capabilities/crm/tools/airtable/usage.md" 'skips the company profile fields'
+assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'skips the company profile fields'
+assert_contains "$SP/subagents/preparer.md" 'the company profile fields it confirmed'
+assert_contains "$SP/subagents/prospector.md" 'company profile fields the listing shows'
+
 finish

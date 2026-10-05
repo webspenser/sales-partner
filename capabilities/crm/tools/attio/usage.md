@@ -41,10 +41,24 @@ filtering `sales_partner_pipeline` on `lead`.
 
 ### Companies (standard object)
 
-The tool writes only `name` and `domains`. `domains` is unique in
-Attio, which gives dedupe rule 1 (domain) for free. Every pipeline
-field lives on the list entry below, so the company record stays clean
-for the rest of the CRM.
+The tool writes `name` and `domains`, plus the contract's company
+profile fields onto the company's own standard attributes, so the
+company page shows the basics. `domains` is unique in Attio, which gives
+dedupe rule 1 (domain) for free. Every pipeline field lives on the list
+entry below.
+
+| Contract field | Company attribute |
+|---|---|
+| `description` | `description` |
+| `address` | `primary_location` (written as one string, for example `1173 Broadway, Alameda, CA, 94501, US`; Attio parses it) |
+| `company_linkedin_url` | `linkedin` |
+| `facebook_url` | `facebook` |
+| `instagram_url` | `instagram` |
+
+Read the company first (`attio:get-records-by-ids`) and write only the
+attributes that are empty: never overwrite a value Attio's enrichment or the operator already set.
+Phone stays on the Pipeline entry and the Contact: Attio companies have
+no phone attribute.
 
 ### List `sales_partner_pipeline` — the Leads table
 
@@ -158,7 +172,9 @@ write nothing) exactly where the contract says the operation rejects.
      `allow_duplicates: false` and these entry values: `lead` = the
      company, `stage` = `New`, `stage_changed_at` = now (ISO 8601 UTC,
      read right before the call),
-     and the given fields. Return the company `record_id`.
+     and the given fields. Then write any company profile fields given
+     (see Companies above) with `attio:update-record` on `companies`,
+     empty attributes only. Return the company `record_id`.
 - **`get_lead`** — `attio:get-records-by-ids` on `companies`, then
   the Pipeline entry, then Research and Outreach entries, each filtered
   on `lead` eq `{object_id: companies, record_id: lead_id}`. Contacts
@@ -174,7 +190,9 @@ write nothing) exactly where the contract says the operation rejects.
 - **`update_lead`** — Reject if `fields` contains `stage` or
   `stage_changed_at`. Read the Pipeline entry first. If
   `do_not_contact` is already `true`, reject any `fields` that sets it
-  to `false`. Otherwise, one `attio:update-list-entry-by-id` call.
+  to `false`. Otherwise, one `attio:update-list-entry-by-id` call. Company
+  profile fields in `fields` go to the company instead: one
+  `attio:update-record` on `companies`, empty attributes only.
   Write only the fields that change: an update that repeats unchanged
   fields (for example `do_not_contact: false`) can be refused by the
   guard.

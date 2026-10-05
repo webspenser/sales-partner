@@ -77,8 +77,11 @@ Writes each finding with CRM `log_research(lead_id, type, summary,
 source_url, date, hook)` and each person with CRM
 `upsert_contact(lead_id, name, title, email, phone, linkedin_url, role,
 verified, notes)` as research proceeds. Re-runs `score-lead`, then calls CRM
-`update_lead(lead_id, fields)` to write the revised `Score` and the
-appended `Score Breakdown`, then calls CRM `update_stage(lead_id,
+`update_lead(lead_id, fields)` to write the revised `Score`, the
+appended `Score Breakdown`, and the company profile fields it confirmed
+(`description`, `address`, `company_linkedin_url`, `facebook_url`,
+`instagram_url`; see `capabilities/crm/contract.md`, each one sourced),
+then calls CRM `update_stage(lead_id,
 "Researched", reason)` — or `update_stage(lead_id, "Disqualified",
 reason)` if an anti-signal was found — and stops. The stage transition
 is the entire handoff; the next stage's work is picked up independently

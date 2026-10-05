@@ -70,6 +70,7 @@ check 0 "dnc set true"              $AT ${P}update-list-entry-by-id "{$X,\"entry
 check 2 "attribute by ID"           $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"925c1cde-cba6-453e-96f9-5bd8f498d8a3\":\"sent\"}}" "addressed by ID"
 check 2 "upsert with approved"      $AT ${P}upsert-record '{"object":"people","matching_attribute":"email_addresses","values":{"status":"approved"}}'
 check 0 "update person"             $AT ${P}update-record '{"object":"people","record_id":"00000000-0000-0000-0000-000000000003","values":{"sp_role":"influencer"}}'
+check 0 "fill company profile"      $AT ${P}update-record '{"object":"companies","record_id":"00000000-0000-0000-0000-000000000004","values":{"description":"Plumbing and radiant heating in Alameda, CA","primary_location":"1173 Broadway, Alameda, CA, 94501, US","linkedin":"https://www.linkedin.com/company/x"}}'
 check 2 "create-record approved"    $AT ${P}create-record '{"object":"companies","values":{"status":"approved"}}'
 check 2 "create-list refused"       $AT ${P}create-list '{"name":"x"}' "is denied"
 check 2 "update-list refused"       $AT ${P}update-list '{"list":"sales_partner_outreach"}'

@@ -18,7 +18,7 @@ behavior only; it names no Airtable table or field.
 
 | Operation | Arguments | Returns | On failure |
 |---|---|---|---|
-| `create_lead` | `company, location, industry, size, source, source_url`, plus optional `domain, address, phone, email, score, score_breakdown` | `lead_id`, on a record created at `Stage = New` with `Stage Changed At` stamped at creation | A lead matching an existing one by the dedupe order (domain, then phone, then company + address) returns the existing `lead_id` and writes nothing; rejects a call with none of `domain`, `phone`, or `address` |
+| `create_lead` | `company, location, industry, size, source, source_url`, plus optional `domain, address, phone, email, score, score_breakdown` and the company profile fields | `lead_id`, on a record created at `Stage = New` with `Stage Changed At` stamped at creation | A lead matching an existing one by the dedupe order (domain, then phone, then company + address) returns the existing `lead_id` and writes nothing; rejects a call with none of `domain`, `phone`, or `address` |
 | `get_lead` | `lead_id` | full lead record with linked Contacts, Research, Activities | Missing id is an error, not an empty record |
 | `update_stage` | `lead_id, stage, reason` | updated lead, with `stage_changed_at` set to the moment of this call | Rejects any stage outside the enumerated list |
 | `update_lead` | `lead_id, fields` | updated lead | Rejects any attempt to write `stage` through this operation — stage changes go only through `update_stage`. May set `Do Not Contact` to true; rejects any attempt to clear it once true |
@@ -29,6 +29,19 @@ behavior only; it names no Airtable table or field.
 | `query_by_stage` | `stage, limit, next_action_due_before, idle_days` | list of leads | Empty list is a valid result; rejects a call where `stage` is omitted and neither `next_action_due_before` nor `idle_days` is given |
 | `query_by_score` | `min_score, stage, limit` | list of leads ordered by score descending | Empty list is a valid result |
 | `query_activities` | `status, direction, channel, since, until, limit` | list of activities, each with its linked Lead | Rejects a `status` outside draft / sent / voided; `direction` is optional and, when given, must be `outbound` or `inbound`; empty list is a valid result |
+
+### Company profile fields
+
+`description, company_linkedin_url, facebook_url, instagram_url`, plus
+`address`: the basics the operator sees on the company itself.
+`create_lead` and `update_lead` accept them, each optional. Each value
+is sourced: `description` is one line on what the business does and
+where, written from the listing or the research; each URL is a page the
+research found for this business (never a guess from its name). A tool
+writes a profile field only when the CRM's own field is empty: it never
+overwrites what the CRM's enrichment or the operator already set, and
+it never clears one. A tool with no home for a profile field skips it
+and says nothing; that is not a failure.
 
 ### Notes on individual operations
 

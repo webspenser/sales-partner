@@ -158,6 +158,13 @@ object: the operator reviews a lead's whole plan from its Company (see
   results run out. `hubspot:get_crm_objects` takes `objectType`,
   `objectIds` (up to 100 integers) and `properties`.
 
+## Company profile fields
+
+This tool skips the company profile fields (`description`,
+`company_linkedin_url`, `facebook_url`, `instagram_url`) in this release;
+the contract allows that. `address` is still written as the lead's
+address.
+
 ## Operations
 
 Each operation below is a fixed sequence of HubSpot tool calls. Do the

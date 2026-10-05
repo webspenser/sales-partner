@@ -33,7 +33,10 @@ A scheduled prospecting run, or the count of leads at stages `New` and
 - New Leads records, one per company found, each carrying `Company`,
   `Domain` (when it has a website), `Location`, `Address`, `Phone`, `Email`
   (each when sourced), `Industry`, `Size`, `Source`, `Source URL`,
-  `Score`, `Score Breakdown`, and `Stage = Scored`
+  `Score`, `Score Breakdown`, and `Stage = Scored`, plus the
+  company profile fields the listing shows (`description`, and the
+  business's LinkedIn, Facebook or Instagram page when the listing links
+  it; see `capabilities/crm/contract.md`), passed to `create_lead`
 - A lead matching an anti-signal in `icp.md` instead carries
   `Stage = Disqualified`, with the matched anti-signal recorded as the
   reason

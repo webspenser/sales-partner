@@ -5,6 +5,13 @@ four tables, their exact fields and types, and the four views the
 operator works from. Field names below are used verbatim by the
 sub-agent contracts and skills in Tasks 8–12 — do not rename, abbreviate,
 or reword any of them when implementing this tool.
+## Company profile fields
+
+This tool skips the company profile fields (`description`,
+`company_linkedin_url`, `facebook_url`, `instagram_url`) in this release;
+the contract allows that. `address` is still written as the lead's
+address.
+
 
 ## Tables
 

@@ -354,7 +354,7 @@ assert_not_contains "$SP/skills/interview-business/SKILL.md" 'max_touches'
 assert_not_contains "$SP/skills/send-digest/SKILL.md" 'Stalled'
 assert_not_contains "$SP/templates/digest.md" 'Stalled'
 if grep -rlE "sales-call-specialist|Sales-call-specialist|write-follow-up|handle-objections|prepare-sales-call|run-live-call-script|subagents/follow-up" "$SP/AGENT.md" "$SP/skills" "$SP/subagents" "$SP/capabilities" "$SP/context" "$SP/templates" "$SP/evals" | grep -q .; then _report no "references to removed pieces remain"; else _report ok "no references to removed pieces"; fi
-assert_contains "$SP/agent.yaml" 'finds, qualifies and researches leads'
+assert_contains "$SP/agent.yaml" 'finds, scores and researches fresh leads'
 
 
 echo "-- 6.0.0: digest, channel filter"
@@ -377,13 +377,9 @@ assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" '`channel` when gi
 echo "-- 6.0.0: AGENT.md and onboarding"
 A="$SP/AGENT.md"
 wc -c < "$A" | awk '{exit !($1 < 6000)}' && _report ok "AGENT.md under 6000 bytes" || _report no "AGENT.md 6000 bytes or more"
-assert_contains "$A" 'lead generation and outbound'
-assert_contains "$A" '| Enroll |'
-assert_contains "$A" '| Sync replies |'
 assert_contains "$A" 'Engaged'
 assert_contains "$A" 'Open Deal'
 assert_contains "$A" 'Ready to Send'
-assert_contains "$A" 'sequence platform sends'
 assert_not_contains "$A" 'Sales call specialist'
 assert_not_contains "$A" 'Follow-up'
 assert_not_contains "$A" 'max_touches'
@@ -504,5 +500,21 @@ assert_contains "$SP/capabilities/crm/tools/attio/usage.md" 'the `recommended:` 
 assert_contains "$SP/capabilities/crm/tools/airtable/usage.md" 'the `recommended:` one holds the full draft'
 assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'the `recommended:` one holds the full draft'
 assert_contains "$SP/evals/cases.md" '## Case 14: The first touch is one recommendation plus statements per channel'
+
+echo "-- 6.0.0: AGENT.md and manifests describe lead generation and personalization"
+A="$SP/AGENT.md"
+assert_contains "$A" 'lead generation and personalization'
+assert_contains "$A" 'stops at `Approach Drafted`'
+assert_contains "$A" 'never act on a lead at'
+assert_contains "$A" '`recommended:`'
+assert_not_contains "$A" 'enroll'
+assert_not_contains "$A" 'sync-replies'
+assert_not_contains "$A" 'sequence'
+D=$(grep '^description: ' "$SP/agent.yaml" | sed 's/^description: //')
+case "$D" in *"personalized statements"*) _report ok "agent.yaml description names personalized statements" ;; *) _report no "agent.yaml description: $D" ;; esac
+for m in .claude-plugin/plugin.json .codex-plugin/plugin.json gemini-extension.json .claude-plugin/marketplace.json; do
+  grep -qF "$D" "./$m" && _report ok "$m description matches agent.yaml" || _report no "$m description differs from agent.yaml"
+done
+if grep -rlE "enroll|sync-replies|InvokeIQ|invokeiq|sequence_bands|bind_sequences|touch_spacing|enroll_ready_only" "$SP/AGENT.md" "$SP/README.md" "$SP/agent.yaml" "$SP/skills" "$SP/subagents" "$SP/capabilities" "$SP/context" "$SP/templates" "$SP/evals" "$SP/samples" | grep -q .; then _report no "references to sending pieces remain"; else _report ok "no references to sending pieces"; fi
 
 finish

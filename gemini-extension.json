@@ -1,6 +1,6 @@
 {
   "name": "sales-partner",
   "version": "6.0.0",
-  "description": "Interviews a business, then finds, qualifies and researches leads that fit its ideal customer and runs first outreach: email through the client's sequence platform, LinkedIn and calls drafted for the owner",
+  "description": "Interviews a business, then finds, scores and researches fresh leads that fit its ideal customer and prepares each first touch: a recommended channel with a full draft, plus personalized statements for email, LinkedIn and calls",
   "contextFileName": "AGENT.md"
 }

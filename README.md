@@ -1,14 +1,17 @@
 # Sales Partner
 
-A sales partner for one business. It interviews you to learn your
-business and your ideal customer, then runs a five-stage lead pipeline —
-prospect, research, approach, sales call, follow-up — over your CRM. It
-researches on its own but never contacts anyone: every outbound
-message, email, LinkedIn note, or call opener is a draft you approve.
+A lead generation and personalization partner for one business. It
+interviews you to learn your business and your ideal customer, then
+finds, scores and researches fresh leads on a recurring basis and
+prepares the first touch for each: it recommends email, LinkedIn or a
+call, drafts that touch in full, and writes personalized statements for
+every channel you use. It never sends. When you approve a lead in your
+CRM (`Ready to Send`), your own CRM automations, systems or other
+agents take it from there.
 
 Built on the [Agent Standard](https://github.com/webspenser/agent-builder/blob/main/STANDARD.md)
 with [Agent Builder](https://github.com/webspenser/agent-builder).
-Version 5.0.0.
+Version 6.0.0.
 
 ## Install (plugin mode)
 
@@ -37,9 +40,9 @@ in that folder loads the agent. Plugin updates never touch your folder.
 ## Tools it needs
 
 - A CRM — Attio, Airtable, or HubSpot (`capabilities/crm/tools/`); setup binds it after a read-only check. If a CRM needs fields the probe does not find, setup offers two choices: create them yourself from the tool's `## Setup` steps, or run its `bootstrap.py` with an API key in your own terminal.
-- Apify for scraping and web search; Gmail for drafts.
+- Apify for scraping and web search; Gmail for the digest draft.
 
-Each tool's guard policy makes Attio, Airtable, HubSpot, and Gmail unattended-safe.
+Each tool's guard policy makes Attio, Airtable, HubSpot and Gmail unattended-safe.
 
 Connect these in your host (connectors or MCP servers). Credentials
 never go in this repo.

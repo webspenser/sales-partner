@@ -13,3 +13,9 @@ Subject: [subject line — under 6 words, never a question]
 [single ask]
 
 [sending_identity]
+
+<!--
+  Then a blank line and the Personalized statements block
+  (templates/personalized-statements.md). When email is not the
+  recommended channel, the draft is that block alone.
+-->

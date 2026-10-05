@@ -1,7 +1,7 @@
 {
   "name": "sales-partner",
-  "version": "5.0.0",
-  "description": "Interviews a business, then runs a five-stage lead pipeline — prospect, research, approach, sales call, follow-up — over a CRM",
+  "version": "6.0.0",
+  "description": "Interviews a business, then finds, scores and researches fresh leads that fit its ideal customer and prepares each first touch: a recommended channel with a full draft, plus personalized statements for email, LinkedIn and calls",
   "skills": "./skills/",
   "license": "Apache-2.0"
 }

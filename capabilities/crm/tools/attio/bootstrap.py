@@ -23,8 +23,8 @@ import urllib.request
 BASE = "https://api.attio.com/v2"
 
 STAGES = [
-    "New", "Scored", "Researched", "Approach Drafted", "Contacted", "Replied",
-    "Call Scheduled", "Call Held", "Following Up", "Won", "Lost", "Disqualified",
+    "New", "Scored", "Researched", "Approach Drafted", "Ready to Send", "Contacted",
+    "Engaged", "Open Deal", "Nurture", "Customer", "Disqualified",
 ]
 
 PIPELINE = "sales_partner_pipeline"
@@ -60,6 +60,7 @@ LISTS = {
         attr("source_url", "Source URL", "text"),
         attr("next_action", "Next Action", "text"),
         attr("next_action_due", "Next Action Due", "date"),
+        attr("revisit_on", "Revisit On", "date"),
         attr("do_not_contact", "Do Not Contact", "checkbox"),
         attr("lead", "Lead", "record-reference",
              config={"record_reference": {"allowed_objects": ["companies"]}},
@@ -84,7 +85,7 @@ LISTS = {
         attr("date", "Date", "date"),
         attr("summary", "Summary", "text"),
         attr("draft_body", "Draft Body", "text"),
-        attr("status", "Status", "select", ["draft", "approved", "sent", "voided"]),
+        attr("status", "Status", "select", ["draft", "sent", "voided"]),
         attr("outcome", "Outcome", "text"),
         attr("contact", "Contact", "record-reference",
              config={"record_reference": {"allowed_objects": ["people"]}}),

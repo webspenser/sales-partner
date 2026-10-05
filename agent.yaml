@@ -1,12 +1,11 @@
 name: sales-partner
-version: 5.0.0
-description: Interviews a business, then runs a five-stage lead pipeline — prospect, research, approach, sales call, follow-up — over a CRM
-standard: "5.0"
+version: 6.0.0
+description: Interviews a business, then finds, scores and researches fresh leads that fit its ideal customer and prepares each first touch: a recommended channel with a full draft, plus personalized statements for email, LinkedIn and calls
+standard: "6.0"
 capabilities: crm, email_drafts
 catalog: webspenser
 catalog_repo: webspenser/agent-library
 activity_prospect: crm
 activity_prepare: crm
 activity_approach: crm
-activity_follow-up: crm, email_drafts
 activity_digest: crm, email_drafts

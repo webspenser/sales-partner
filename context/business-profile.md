@@ -68,6 +68,6 @@ before it consumes research budget.]
 [Interview: get three to five words the operator would use to describe
 how the business should sound in writing, plus two example sentences
 in that voice — one that could open a cold email, one that could answer
-a tough question on a call. These examples are what the Approacher and
-Sales-call-specialist imitate; a voice description without examples is
+a tough question on a call. These examples are what the Approacher
+imitates; a voice description without examples is
 too abstract to write from.]

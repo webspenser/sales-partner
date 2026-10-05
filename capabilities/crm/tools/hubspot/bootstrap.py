@@ -24,8 +24,8 @@ SCOPES = ["crm.schemas.companies.read", "crm.schemas.companies.write",
           "crm.schemas.contacts.read", "crm.schemas.contacts.write",
           "crm.objects.companies.read", "crm.objects.contacts.read"]
 
-STAGES = ["New", "Scored", "Researched", "Approach Drafted", "Contacted", "Replied",
-          "Call Scheduled", "Call Held", "Following Up", "Won", "Lost", "Disqualified"]
+STAGES = ["New", "Scored", "Researched", "Approach Drafted", "Ready to Send", "Contacted",
+          "Engaged", "Open Deal", "Nurture", "Customer", "Disqualified"]
 
 
 def opts(values):
@@ -57,6 +57,7 @@ PROPERTIES = {
         prop("sp_email", "General inbox", "string", "text"),
         prop("sp_next_action", "Next action", "string", "text"),
         prop("sp_next_action_due", "Next action due", "date", "date"),
+        prop("sp_revisit_on", "Revisit on", "date", "date"),
         prop("sp_do_not_contact", "Do not contact", "bool", "booleancheckbox", YESNO),
     ],
     "contacts": [

@@ -60,8 +60,8 @@ because a human has to answer it in their own words.
    leads per week should the pipeline target; which sourcing tools may
    it use (map listings for local businesses, company sites, web
    search); which channels should it use; which activities should
-   run on a schedule (prospecting, research, approach drafting,
-   follow-up drafting, the digest — the shipped default is prospecting
+   run on a schedule (prospecting, research, approach drafting, the
+   digest — the shipped default is prospecting
    then research on Monday at 07:00 and the digest on Monday at 08:00),
    and for each one the weekday and time, or daily, plus your time zone
    as an IANA name such as `America/New_York` (tell them scheduled
@@ -74,14 +74,14 @@ because a human has to answer it in their own words.
    call opener should give for callbacks.
 8. Write the answers to `context/operating-config.md`'s keys
    (`leads_per_week`, `prospecting_sources`, `enabled_channels`,
-   `apify_spend_cap_usd_per_week`, `tone`, and `callback_phone` when
-   `call` was chosen), to `context/business-profile.md`'s "Voice"
+   `apify_spend_cap_usd_per_week`, `tone`, `callback_phone` when `call`
+   was chosen), to `context/business-profile.md`'s "Voice"
    section (the adjectives plus the example sentence), and to
    `schedules.yaml` at the instance root (the folder holding
    `instance.yaml`), which holds the schedule answers: `timezone` (the
    IANA name), one `schedule_<activity>: "<Weekday|daily> HH:MM"` line
    for each activity the operator wants on a schedule (`<activity>` is
-   `prospect`, `prepare`, `approach`, `follow-up`, or `digest`), and
+   `prospect`, `prepare`, `approach`, or `digest`), and
    `then_prospect: prepare` when research should follow prospecting in
    the same run. The shipped default is `schedule_prospect: "Monday
    07:00"`, `then_prospect: prepare`, and `schedule_digest: "Monday

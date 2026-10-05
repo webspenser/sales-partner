@@ -26,8 +26,6 @@ research_quota_per_week: 10
 research_threshold: 60
 approach_threshold: 70
 enabled_channels: [email, linkedin]
-follow_up_cadence_days: 4
-max_touches: 4
 digest_channel: email
 digest_delivery: draft
 apify_spend_cap_usd_per_week: 25
@@ -63,29 +61,15 @@ tone: "[three adjectives from the interview]"
   Default `70`, applied to the score the Preparer recomputes after
   research — a distinct, later gate from `research_threshold`, not a
   repeat of it. See `icp.md`'s Thresholds section.
-- **`enabled_channels`** — the outbound channels the Approacher and
-  Follow-up may choose between. `linkedin` in this list means LinkedIn
+- **`enabled_channels`** — the outbound channels the Approacher drafts
+  touches for. `linkedin` in this list means LinkedIn
   copy may be **drafted** for the operator to paste by hand — it never
   authorizes any automated LinkedIn action (no automated connection
   requests, messages, or scraping), per `AGENT.md`'s guardrails. A
   channel not in this list is never chosen, regardless of fit.
-  `call` in this list means the Approacher or Follow-up may draft a
-  phone opener (`skills/write-call-opener/SKILL.md`) for a lead with a
-  sourced phone number; the operator places the call. A call counts as
-  one touch toward `max_touches`.
-- **`follow_up_cadence_days`** — the idle days (idle age per
-  `query_by_stage` in `capabilities/crm/contract.md`) after which a
-  lead at `Contacted`, `Replied`, `Call Scheduled`, `Call Held`, or
-  `Following Up` counts as stalled in the digest. A follow-up draft is
-  due only for a stalled lead at `Contacted`, `Replied`, or
-  `Following Up`; `Call Scheduled` and `Call Held` belong to the
-  sales-call-specialist. It is also the interval the
-  **Stalled** view of the bound CRM tool (for Airtable, `capabilities/crm/tools/airtable/usage.md`) is built against.
-- **`max_touches`** — the total outbound touch limit per lead across the
-  whole pipeline. Reaching it without a positive outcome moves the lead
-  to `Lost` instead of drafting again — never exceeded, per
-  `subagents/follow-up.md`'s `Stop conditions` and `AGENT.md`'s
-  guardrails.
+  `call` in this list means the Approacher may draft a phone opener
+  (`skills/write-call-opener/SKILL.md`) for a lead with a sourced phone
+  number; the operator places the call.
 - **`digest_channel`** — the delivery channel for the digest (default
   `email`; SMS is a stubbed tool, not yet enabled).
 - **`digest_delivery`** — whether `send-digest` composes the digest as
@@ -111,20 +95,18 @@ tone: "[three adjectives from the interview]"
   whatever hooks it has found; see `subagents/preparer.md`'s `Stop
   conditions`.
 - **`sending_identity`** — the `"[name] <[email]>"` the drafted email
-  Activities are written from. Filled in by the interview; the agent
-  never sends a prospect-facing message from this identity itself —
-  every Activity stops at
-  `status: draft` and only the operator's approval and send action puts
-  a message on the wire, per the `log_activity` guardrail in
-  `capabilities/crm/contract.md`.
+  Activities are written from, and the digest's address. Filled in by
+  the interview; the agent never sends a prospect-facing message from
+  this identity — email to prospects goes out only through the
+  operator's sequence platform after approval.
 - **`callback_phone`** — the operator's own number the voicemail in a
   call opener gives for callbacks. Filled in by the interview when
   `call` is in `enabled_channels`; never a prospect-facing send
   capability — the agent only writes it into a draft.
 - **`tone`** — three adjectives describing how outbound copy should
   read, filled in by the interview from `business-profile.md`'s Voice
-  section. Read by `write-cold-email`, `write-linkedin-touch`,
-  `write-follow-up`, and `write-call-opener` when drafting.
+  section. Read by `write-cold-email`, `write-linkedin-touch` and
+  `write-call-opener` when drafting.
 
 ## Running on a schedule
 
@@ -133,12 +115,12 @@ writes. The `schedule` skill turns them into Claude cloud routines, only
 for activities whose capabilities are all covered by guard policies.
 
 Nothing in this file, and nothing any key here configures, sends a
-message to a prospect on its own. Nothing sends without operator approval — that
-guardrail is enforced in the CRM contract, not merely stated here:
+message to a prospect on its own. Nothing goes out without the
+operator's approval, and only the operator approves a plan, by moving
+the lead to `Ready to Send` — the guard refuses that status to the agent.
 `log_activity` creates an Activity at `status: draft` only, and
-`update_activity` can move an existing Activity only to
-`status: voided`; `approved` and `sent` are reachable only by the
-operator acting outside the agent's tool access. See
+`update_activity` moves it only to `voided`; `sent` is the operator's
+or their automation's. See
 `capabilities/crm/contract.md`'s Approval invariant for the full, provable rule —
 this file states the outcome, not the mechanics, precisely so it
 cannot drift out of sync with them again.

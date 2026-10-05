@@ -8,9 +8,13 @@
 
 # Sales Partner Digest — [date]
 
-## Awaiting approval ([count])
+## Review ([count])
 
-- [lead/company — channel — draft summary — link; for a call draft, the number to dial — or "None"]
+- [lead/company — recommended: channel; statements: other channels — link; for a call draft, the number to dial — or "None"]
+
+## Ready to Send ([count])
+
+- [lead/company — recommended channel — status changed N days ago ("check the hand-off" past two digest intervals) — or "None"]
 
 ## Next actions due today ([count])
 
@@ -20,16 +24,11 @@
 
 1. [company — score — one-line rationale, or "None"]
 
-## Stalled ([count])
-
-- [company — Stage — date of last Activity, or "None"]
-
 ## Movement ([count])
 
-- [company: → Stage (date, reason if recorded), or "None"]
-- Won: [list or "No wins this week"]
-- Lost: [list or "None"]
-- Disqualified: [list or "None"]
+- [company: → Status (date, reason if recorded), or "None"]
+- Disqualified: [list or "None this week"]
+- Owner's pipeline now: Contacted N, Engaged N, Open Deal N, Nurture N, Customer N
 
 ## Spend
 

@@ -1,6 +1,6 @@
 ---
 name: write-call-opener
-description: Use when call is the chosen channel for a first touch or a follow-up — drafts a short phone opener, gatekeeper line, and voicemail built on a research hook, for the operator to read from.
+description: Use when call is one of a lead's reachable channels — drafts the phone opener, gatekeeper line and voicemail when a call is the recommended channel, and the call's personalized statements either way, for the operator to read from.
 ---
 
 The operator places every call. This skill writes what they read from
@@ -9,7 +9,7 @@ voicemail itself. Hard constraints:
 
 - **The lead has a sourced phone number.** Use the chosen Contact's
   `phone` when present, otherwise the lead's `Phone`. With neither,
-  this skill does not run — the Approacher or Follow-up picks another
+  this skill does not run — the Approacher picks another
   enabled channel.
 - **Opener under 60 words**, spoken aloud in about 20 seconds.
 - **Opens with who is calling in one line, then the hook** — the
@@ -37,9 +37,30 @@ voicemail itself. Hard constraints:
 5. Re-check every claim against `business-profile.md` and every
    prospect fact against the lead's Research rows. Cut anything that
    doesn't trace.
-6. Log via CRM `log_activity(lead_id, contact_id, channel="call",
-   direction="outbound", draft_body=..., status="draft")`. This skill
-   never sets any status but `draft`.
+6. Add the Personalized statements block and log the result as
+   **Personalized statements** below says. This skill never sets any
+   status but `draft`.
+
+## Personalized statements
+
+A call always gets a Personalized statements block. Write it from the
+same hook and proof this skill uses, following
+`templates/personalized-statements.md`: two to four lines, labelled
+`opener:`, `relevance:`, `proof:`, `ask:`, each one sentence that stands
+on its own, every fact traced to a Research row or
+`business-profile.md`. Lines are written to be spoken, and the `ask:`
+line is a question the person can answer on the spot.
+
+- **A call is the recommended channel:** the body is the filled
+  `templates/cold-call-opener.md` (steps 1–5), a blank line, then the
+  block. Log it with CRM `log_activity(lead_id, contact_id,
+  channel="call", direction="outbound", summary="recommended:
+  <one-line reason>", draft_body=<script + block>, status="draft")`.
+- **A call is not the recommended channel:** skip the script; the body
+  is the `Call:` line (who and what number) and the block. Log it with
+  CRM `log_activity(lead_id, contact_id, channel="call",
+  direction="outbound", summary="statements", draft_body=<call line +
+  block>, status="draft")`.
 
 ## Worked example
 

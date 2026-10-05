@@ -6,6 +6,13 @@ operator works from. Field names below are used verbatim by the
 sub-agent contracts and skills in Tasks 8–12 — do not rename, abbreviate,
 or reword any of them when implementing this tool.
 
+## Company profile fields
+
+This tool skips the company profile fields (`description`,
+`company_linkedin_url`, `facebook_url`, `instagram_url`) in this release;
+the contract allows that. `address` is still written as the lead's
+address.
+
 ## Tables
 
 ### Leads
@@ -24,10 +31,11 @@ or reword any of them when implementing this tool.
 | `Source URL` | url |
 | `Score` | number 0–100 |
 | `Score Breakdown` | long text |
-| `Stage` | single select — the twelve stages (see the contract) |
+| `Stage` | single select — the eleven statuses (see the contract) |
 | `Stage Changed At` | datetime |
 | `Next Action` | text |
 | `Next Action Due` | date |
+| `Revisit On` | date — set by the operator for `Nurture`; the agent reads it, never writes it |
 | `Do Not Contact` | checkbox |
 
 `create_lead` dedupes on `Domain`, then on `Phone`, then on `Company`
@@ -38,7 +46,7 @@ address; failing that, the country of `service_area.center` in
 `icp.md`; failing both, it is compared as written, digits only, and is
 never given a guessed country code. None of the three is a unique
 column, because each may be empty on a given lead. `Stage` options
-must be exactly the twelve values from the stage enum in
+must be exactly the eleven values from the lead status list in
 the contract — no additional options, no renamed options.
 
 `query_by_stage`'s two optional filters read this table and, for
@@ -47,10 +55,7 @@ on `Next Action Due` directly; `idle_days` applies the contract's
 `max(...)` rule: a Lead's idle age is now minus the later of its linked
 Activities' most recent `Date` and its `Stage Changed At`. If the lead
 has no Activity, use `Stage Changed At`. A Lead is kept when that idle
-age is greater than the given number of days — the same staleness
-computation the **Stalled** view below performs — the operation and the
-view compute identically, the operation is simply the path a skill or
-sub-agent calls instead of a human opening the view.
+age is greater than the given number of days.
 
 `get_lead` reads one Leads record by its record id and follows the
 links to its Contacts, Research, and Activities rows. `query_by_score`
@@ -87,8 +92,8 @@ rule that `log_activity` must not create an Activity with
 `Direction = outbound` for a Lead whose `Do Not Contact` is checked is
 an instruction, not a mechanism: the guard checks one call at a time
 and cannot see the Lead's flag. It is held by the agent's instructions,
-the digest check and the Do Not Contact column in the **Awaiting
-Approval** view below.
+the digest check and the Do Not Contact column in the **Review** view
+below.
 
 ### Contacts
 
@@ -160,7 +165,7 @@ convention.
 | `Date` | date |
 | `Summary` | long text |
 | `Draft Body` | long text |
-| `Status` | single select: draft, approved, sent, voided |
+| `Status` | single select: draft, sent, voided |
 | `Outcome` | text |
 | `Lead` | link to Leads |
 | `Contact` | link to Contacts |
@@ -168,76 +173,38 @@ convention.
 
 **Design principle: drafts are Activities, not a separate table.** A
 draft outreach message is an Activities row with `Status = draft` and
-its content in `Draft Body`. There is no separate "Drafts" table and
-none should ever be created. Keeping drafts inside Activities means the
-operator's entire approval queue is a single Airtable view (see
-**Awaiting Approval** below) — one place to see every draft, approve it,
-edit `Draft Body` if needed, and watch it move to `approved` and then
-`sent`. A later change that splits drafts into their own table would
-break the review workflow: the approval queue would no longer be one
-view, `log_activity`'s guardrail (below) would no longer have a single
-`Status` field to check, and the operator would lose the single-surface
-review interface this schema is built around. Do not make that change.
+its content in `Draft Body`, linked to its lead, one per channel with
+its own `Date`. There is no separate "Drafts" table and none should ever
+be created: the operator reviews a lead's whole plan from the lead (see
+**Review** below), and a split table would break that.
 
-`Status` only ever moves forward through `draft` → `approved` → `sent`,
-or sideways from `draft` or `approved` to the terminal `voided` — never
-the reverse of either path, and never from `voided` onward to `sent`.
-No operation available to an agent can write `approved` or `sent` at
-all, under any condition: **`log_activity` is create-only — it takes
-no `activity_id` and never touches an existing row — and accepts only
-`status: "draft"` on the row it creates**, rejecting `approved`,
-`sent`, and `voided` outright and unconditionally, on every call, with
-no notion of "current status" to satisfy since there is no existing
-record to check. **`update_activity` only touches an existing row and
-accepts only `status: "voided"`**, rejecting `draft`, `approved`, and
-`sent` outright and unconditionally regardless of that record's
-current status. Between these two operations — the only two that
-write `Status` at all — `approved` and `sent` are never a legal write.
-Those two values are reachable only by the operator acting directly in
-Airtable: approving a draft in the **Awaiting Approval** view below,
-and separately sending it, both outside every one of the eleven
-operations this tool maps (the contract's Approval invariant
-states this as a provable rule, not a convention). This is the
-mechanism that makes "nothing sends without operator approval" true —
-the tool's guard policy (`guard.yaml`, below) refuses any write of
-`approved` or `sent`, so it does not rest on instruction alone.
-`voided` exists for exactly one case today: `subagents/follow-up.md`'s
-opt-out guardrail calls `update_activity` to move every pending
-(`draft` or `approved`) Activity for a lead to `voided` the moment an
-inbound opt-out is logged, so a message already queued for approval
-can never reach `sent` after the prospect has asked not to be
-contacted. Voiding handles the messages already queued; the matching
-rule on the creation side is that **`log_activity` refuses to create an
-Activity with `Direction = outbound` for a Lead whose `Do Not Contact`
-is checked**. That rule is an instruction the guard does not enforce;
-because `update_lead` can never uncheck the flag (`dnc_one_way`), it
-holds for as long as the agent follows it. Inbound Activities are
-unaffected: a reply or a call debrief on an opted-out Lead is still
-recordable history.
+`Status` moves from `draft` to `sent` (the touch went out: set by the
+operator or their automation, never the agent) or to the terminal
+`voided`, and never back. **`log_activity` is create-only and accepts
+only `status: "draft"`**; **`update_activity` only touches an existing
+row and accepts only `status: "voided"`**, writing `Status` and
+`Outcome` and never `Draft Body`. The
+plan itself is approved only when the operator moves the lead to
+`Ready to Send`; no operation writes that stage, and the guard policy
+(below) refuses it. `voided` is used by the contract's opt-out
+instruction, which voids every pending draft for a lead once an inbound
+opt-out is logged. The matching rule on the creation side is
+that **`log_activity` refuses to create an Activity with
+`Direction = outbound` for a Lead whose `Do Not Contact` is checked**.
+That rule is an instruction the guard does not enforce; because
+`update_lead` can never uncheck the flag (`dnc_one_way`), it holds for
+as long as the agent follows it. Inbound Activities are unaffected: a
+reply or a call debrief on an opted-out Lead is still recordable
+history.
 
 `query_activities` reads this table, filtered by `Status`, optionally
-`Direction`, and optionally a `[since, until]` window on `Date`. This
+`Direction`, optionally `Channel` when given, and optionally a
+`[since, until]` window on `Date`. This
 is the operation `send-digest` uses to find every outbound Activity at
-`Status = draft` — the same set the **Awaiting Approval** view below
-renders for a human — and it returns each Activity with its linked
-`Lead`, so a caller gets the company without a second call.
-`query_activities` accepts `voided` as a `Status` value like any
-other, for a caller that specifically wants voided history — but
-nothing in this tool treats a `voided` Activity as awaiting
-anything: the **Awaiting Approval** view below filters on
-`Status = draft` specifically, not "not yet sent," so a voided
-Activity never appears there once `update_activity` has moved it out
-of `draft`. **The view also filters on `Direction = outbound`,** for a
-different reason than `voided` exclusion: `log_activity` creates
-every Activity at `Status = draft` regardless of `Direction` — an
-inbound reply logged for context, or a call debrief logged by the
-Sales-call-specialist, lands at `draft` exactly like an outbound
-approach message does. Without the `Direction` filter, those
-non-decision rows would sit in the same queue as messages genuinely
-awaiting an operator's send decision, diluting the one view this
-schema's entire no-send guarantee depends on a human actually reading.
-`Direction = outbound` narrows the view to only the rows a decision is
-actually needed on.
+`Status = draft`, and it returns each Activity with its linked `Lead`,
+so a caller gets the company without a second call. Pass
+`Direction = outbound` to leave out inbound replies and call debriefs,
+which `log_activity` also creates at `draft`.
 
 ## Tool mapping
 
@@ -284,34 +251,30 @@ swapping the tool (a different CRM behind the same contract) keeps
 every skill working, where reading these views directly would not.
 Each view below is defined to compute exactly what its corresponding
 operation returns, so the operator's screen and a skill's query never
-disagree about what counts as "awaiting approval," "due today," or
-"stalled."
+disagree about what counts as "in review," "due today," or "stalled."
 
-- **Awaiting Approval** — Activities where `Status = draft` **and**
-  `Direction = outbound`, sorted by Date. This view **is** the entire
-  review interface: because drafts live in Activities rather than a
-  separate table, this one view shows every message awaiting operator
-  approval across every lead and every channel — and only that: the
-  `Direction = outbound` half of the filter is what keeps inbound
-  replies and call debriefs, which also land at `Status = draft`, out
-  of a queue that exists specifically for decisions the operator still
-  has to make. Show the Lead's `Do Not Contact` as a column: add a
-  lookup field on Activities that pulls `Do Not Contact` from the
-  linked Lead, and make it visible in this view, so a draft on an
-  opted-out Lead is obvious before you approve it.
+- **Review** — Leads where `Stage = Approach Drafted`, with their linked
+  Activities and `Do Not Contact` visible. Open a lead to see its
+  drafts: one per channel; the `recommended:` one holds the full draft
+  and its personalized statements, the others `statements` only. Edit
+  `Draft Body`, set any draft you don't want to `voided`, then move the
+  lead to `Ready to Send`: that approves the lead.
+- **Ready to Send** — Leads where `Stage = Ready to Send`: approved,
+  waiting for your automation or your own touch. The agent never acts
+  on them; move a lead back to `Approach Drafted` to cancel.
+- **My touches** — Activities where `Status = draft`,
+  `Direction = outbound`, `Channel` is `linkedin` or `call`,
+  `Lead Stage` is `Ready to Send`, and `Summary` starts `recommended:` (`Lead Stage` is a lookup of `Stage` from
+  `Lead`, set up by hand), sorted by Date. `statements` drafts are
+  material for your templates, not touches. Set `Status` to `sent` when
+  you've done one.
 - **Research Queue** — Leads where `Stage = Scored`, sorted by Score
   descending. What the Preparer works through next, highest-score
   first.
 - **Due Today** — Leads where `Next Action Due` is today or earlier.
-  Leads with an overdue or due-today follow-up, across any active
-  stage.
-- **Stalled** — Leads at `Contacted`, `Replied`, `Call Scheduled`,
-  `Call Held` or `Following Up` whose idle age (now minus the later of
-  the last Activity `Date` and `Stage Changed At`; with no Activity,
-  `Stage Changed At` alone) is greater than the configured cadence.
-  Leads that have gone quiet longer than the pipeline's
-  configured touch cadence allows, and need attention (a nudge, a
-  follow-up, or a move to `Lost`).
+- **Nurture** — Leads where `Stage = Nurture`, sorted by `Revisit On`,
+  soonest first. Leads you parked to come back to; the agent leaves them
+  alone until that date.
 
 ## Probe
 
@@ -365,11 +328,13 @@ which also means a recreated `Status` can't slip past its rule. With no
 `field_` lines recorded, every write is refused. The rules, checked
 against the recorded IDs:
 
+- `Stage` may only be written as `New` on create, and never as
+  `Ready to Send`: only the operator approves a plan;
 - `Status` may only be written as `draft` on create and as `voided` on
   update;
 - `Do Not Contact` may only be written as `true`;
 - `Draft Body` may be set on create and never changed after, so an
-  approved draft can't be rewritten.
+  draft can't be rewritten after create.
 
 ## Setup
 
@@ -395,10 +360,11 @@ verbatim, so match the spelling and capitalization exactly.
    | `Source URL` | URL | |
    | `Score` | Number | integer, 0 to 100 |
    | `Score Breakdown` | Long text | |
-   | `Stage` | Single select | exactly the twelve stages: New, Scored, Researched, Approach Drafted, Contacted, Replied, Call Scheduled, Call Held, Following Up, Won, Lost, Disqualified |
+   | `Stage` | Single select | exactly the eleven statuses: New, Scored, Researched, Approach Drafted, Ready to Send, Contacted, Engaged, Open Deal, Nurture, Customer, Disqualified |
    | `Stage Changed At` | Date and time | |
    | `Next Action` | Single line text | |
    | `Next Action Due` | Date | |
+   | `Revisit On` | Date | |
    | `Do Not Contact` | Checkbox | |
 
    Leave `Industry` and `Size` options empty or set them from the bands in
@@ -437,11 +403,12 @@ verbatim, so match the spelling and capitalization exactly.
    | `Date` | Date | |
    | `Summary` | Long text | |
    | `Draft Body` | Long text | |
-   | `Status` | Single select | draft, approved, sent, voided |
+   | `Status` | Single select | draft, sent, voided |
    | `Outcome` | Single line text | |
    | `Lead` | Link to another record | table `Leads` |
    | `Contact` | Link to another record | table `Contacts` |
-   | `Lead Do Not Contact` | Lookup | `Do Not Contact` from `Lead`; for the Awaiting Approval view, never written |
+   | `Lead Do Not Contact` | Lookup | `Do Not Contact` from `Lead`; for the Review and My touches views, never written |
+   | `Lead Stage` | Lookup | `Stage` from `Lead`; for the My touches view, never written |
 
-6. Create the four views from the Views section above (Awaiting Approval,
-   Research Queue, Due Today, Stalled). They are for you, not for the agent.
+6. Create the views from the Views section above (Review, Ready to Send,
+   My touches, Research Queue, Due Today, Nurture). They are for you, not for the agent.

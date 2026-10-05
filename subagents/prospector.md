@@ -21,13 +21,22 @@ A scheduled prospecting run, or the count of leads at stages `New` and
 - `context/operating-config.md` — `leads_per_week`,
   `prospecting_sources`, `apify_spend_cap_usd_per_week`
 - Existing leads, read via CRM `query_by_stage` on `New` and
-  `Scored`, to keep from re-working a business already in the pipeline
+  `Scored`, to keep from re-working a business already in the pipeline.
+  When `create_lead` returns an existing lead, read it (`get_lead`) and
+  leave it untouched unless its status is `New`, or `Nurture` with a Revisit On date in the past:
+  every other lead is already in progress, the operator's, or out. Never
+  re-score or move it — except for a logged opt-out on a lead at `New`
+  or `Scored`, handled per the contract's opt-out instruction
+  (`capabilities/crm/contract.md`, Approval invariant, **Opt-outs**).
 
 ## Outputs
 - New Leads records, one per company found, each carrying `Company`,
   `Domain` (when it has a website), `Location`, `Address`, `Phone`, `Email`
   (each when sourced), `Industry`, `Size`, `Source`, `Source URL`,
-  `Score`, `Score Breakdown`, and `Stage = Scored`
+  `Score`, `Score Breakdown`, and `Stage = Scored`, plus the
+  company profile fields the listing shows (`description`, and the
+  business's LinkedIn, Facebook or Instagram page when the listing links
+  it; see `capabilities/crm/contract.md`), passed to `create_lead`
 - A lead matching an anti-signal in `icp.md` instead carries
   `Stage = Disqualified`, with the matched anti-signal recorded as the
   reason
@@ -38,8 +47,11 @@ A scheduled prospecting run, or the count of leads at stages `New` and
   `web_search`. A source not in that list is never used, even when it
   would find more leads.
 - CRM `create_lead`
+- CRM `get_lead`
 - CRM `query_by_stage`
 - CRM `update_stage`
+- CRM `update_lead` (`Do Not Contact` only, for an opt-out)
+- CRM `update_activity` (`voided` only, for an opt-out)
 
 ## Stop conditions
 - The `leads_per_week` target (from `operating-config.md`) of new

@@ -45,6 +45,9 @@ for t in mcp__claude_ai_Gmail__create_draft mcp__claude_ai_Gmail__list_drafts mc
   acheck 0 "read or CRM write passes: $t" "$t"
 done
 
+for t in execute_workflow test_workflow create_workflow_from_code update_workflow archive_workflow publish_workflow unpublish_workflow restore_workflow_version; do
+  acheck 2 "n8n dispatcher denied: $t" "mcp__claude_ai_N8N_Webspenser_Newsletter__$t"
+done
 echo "-- Attio"
 AT=capabilities/crm/tools/attio/guard.yaml; P=mcp__claude_ai_Attio__
 L='"list":"sales_partner_outreach","parent_object":"companies","parent_record_id":"00000000-0000-0000-0000-000000000001"'
@@ -67,6 +70,7 @@ check 0 "dnc set true"              $AT ${P}update-list-entry-by-id "{$X,\"entry
 check 2 "attribute by ID"           $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"925c1cde-cba6-453e-96f9-5bd8f498d8a3\":\"sent\"}}" "addressed by ID"
 check 2 "upsert with approved"      $AT ${P}upsert-record '{"object":"people","matching_attribute":"email_addresses","values":{"status":"approved"}}'
 check 0 "update person"             $AT ${P}update-record '{"object":"people","record_id":"00000000-0000-0000-0000-000000000003","values":{"sp_role":"influencer"}}'
+check 0 "fill company profile"      $AT ${P}update-record '{"object":"companies","record_id":"00000000-0000-0000-0000-000000000004","values":{"description":"Plumbing and radiant heating in Alameda, CA","primary_location":"1173 Broadway, Alameda, CA, 94501, US","linkedin":"https://www.linkedin.com/company/x"}}'
 check 2 "create-record approved"    $AT ${P}create-record '{"object":"companies","values":{"status":"approved"}}'
 check 2 "create-list refused"       $AT ${P}create-list '{"name":"x"}' "is denied"
 check 2 "update-list refused"       $AT ${P}update-list '{"list":"sales_partner_outreach"}'
@@ -83,6 +87,20 @@ check 2 "Draft Body spelled out"    $AT ${P}update-list-entry-by-id "{$X,\"entry
 out=$(printf '{not json' | python3 -B "$E" "$AT" - x 2>&1); rc=$?
 [ "$rc" -eq 2 ] && _report ok "malformed JSON blocks" || _report no "malformed JSON (rc=$rc)"
 
+check 2 "agent can't approve a plan"  $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"stage\":\"Ready to Send\"}}" "stage may only be written as"
+check 2 "agent can't mark Contacted"  $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"stage\":\"Contacted\"}}" "stage may only be written as"
+check 0 "agent marks Researched"      $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"stage\":\"Researched\"}}"
+check 0 "agent returns a lead to Approach Drafted" $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"stage\":\"Approach Drafted\"}}"
+check 2 "agent can't mark Engaged"    $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"stage\":\"Engaged\"}}" "stage may only be written as"
+check 0 "agent disqualifies"          $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"stage\":\"Disqualified\"}}"
+check 2 "agent can't open a deal"     $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"stage\":\"Open Deal\"}}" "stage may only be written as"
+check 2 "agent can't nurture"         $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"stage\":\"Nurture\"}}" "stage may only be written as"
+check 2 "agent can't mark Customer"   $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"stage\":\"Customer\"}}" "stage may only be written as"
+check 2 "Replied is gone"             $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"stage\":\"Replied\"}}" "stage may only be written as"
+check 2 "lead created past New"       $AT ${P}add-record-to-list "{$L,\"entry_values\":{\"stage\":\"Scored\"}}" "stage may only be written as New on create"
+check 0 "lead created at New"         $AT ${P}add-record-to-list "{$L,\"entry_values\":{\"stage\":\"New\"}}"
+check 2 "agent can't mark a touch sent" $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"status\":\"sent\"}}" "status may only be written as voided on update"
+check 2 "agent can't revive a draft"  $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"status\":\"draft\"}}"
 echo "-- Gmail"
 GM=capabilities/email_drafts/tools/gmail/guard.yaml; G=mcp__claude_ai_Gmail__
 check 0 "create draft"              $GM ${G}create_draft '{"to":"a@b.c","subject":"s","body":"b"}'
@@ -100,7 +118,8 @@ check 2 "suffix glob is not a substring" $GM ${G}create_draft_and_send '{}'
 echo "-- Airtable"
 AR=capabilities/crm/tools/airtable/guard.yaml; A=mcp__claude_ai_Airtable__
 printf '%s\n' '# CRM binding — Airtable' 'base_id: appAAAAAAAAAAAAAA' 'field_status: fldSSSSSSSSSSSSSS' 'field_do_not_contact: fldDDDDDDDDDDDDDD' \
-  'field_draft_body: fldBBBBBBBBBBBBBB' 'field_lead: fldL1LLLLLLLLLLLLL' 'field_lead: fldL2LLLLLLLLLLLLL' > "$W/b.md"
+  'field_draft_body: fldBBBBBBBBBBBBBB' 'field_lead: fldL1LLLLLLLLLLLLL' 'field_lead: fldL2LLLLLLLLLLLLL' \
+  'field_stage: fldSTAGEEEEEEEEEE' > "$W/b.md"
 B='"baseId":"appAAAAAAAAAAAAAA","tableId":"tblTTTTTTTTTTTTTT"'
 check 0 "create draft by ID"        $AR ${A}create_records_for_table "{$B,\"records\":[{\"fields\":{\"fldSSSSSSSSSSSSSS\":\"draft\"}}]}" "" "$W/b.md"
 check 2 "create approved by ID"     $AR ${A}create_records_for_table "{$B,\"records\":[{\"fields\":{\"fldSSSSSSSSSSSSSS\":\"approved\"}}]}" "Status may only be written as draft on create" "$W/b.md"
@@ -116,6 +135,13 @@ check 0 "read allowed"              $AR ${A}list_records_for_table "{$B}"
 check 0 "create draft with body"    $AR ${A}create_records_for_table "{$B,\"records\":[{\"fields\":{\"fldSSSSSSSSSSSSSS\":\"draft\",\"fldBBBBBBBBBBBBBB\":\"Hi\"}}]}" "" "$W/b.md"
 check 2 "Draft Body rewritten"      $AR ${A}update_records_for_table "{$B,\"records\":[{\"id\":\"recRRRRRRRRRRRRRR\",\"fields\":{\"fldBBBBBBBBBBBBBB\":\"new\"}}]}" "Draft Body may not be changed after create" "$W/b.md"
 
+check 2 "agent can't approve a plan"  $AR ${A}update_records_for_table "{$B,\"records\":[{\"id\":\"recRRRRRRRRRRRRRR\",\"fields\":{\"fldSTAGEEEEEEEEEE\":\"Ready to Send\"}}]}" "Stage may only be written as" "$W/b.md"
+check 2 "agent can't mark Contacted"  $AR ${A}update_records_for_table "{$B,\"records\":[{\"id\":\"recRRRRRRRRRRRRRR\",\"fields\":{\"fldSTAGEEEEEEEEEE\":\"Contacted\"}}]}" "Stage may only be written as" "$W/b.md"
+check 0 "agent marks Approach Drafted" $AR ${A}update_records_for_table "{$B,\"records\":[{\"id\":\"recRRRRRRRRRRRRRR\",\"fields\":{\"fldSTAGEEEEEEEEEE\":\"Approach Drafted\"}}]}" "" "$W/b.md"
+check 2 "agent can't mark Engaged"    $AR ${A}update_records_for_table "{$B,\"records\":[{\"id\":\"recRRRRRRRRRRRRRR\",\"fields\":{\"fldSTAGEEEEEEEEEE\":\"Engaged\"}}]}" "Stage may only be written as" "$W/b.md"
+check 2 "agent can't nurture"         $AR ${A}update_records_for_table "{$B,\"records\":[{\"id\":\"recRRRRRRRRRRRRRR\",\"fields\":{\"fldSTAGEEEEEEEEEE\":\"Nurture\"}}]}" "Stage may only be written as" "$W/b.md"
+check 2 "agent can't mark Customer"   $AR ${A}update_records_for_table "{$B,\"records\":[{\"id\":\"recRRRRRRRRRRRRRR\",\"fields\":{\"fldSTAGEEEEEEEEEE\":\"Customer\"}}]}" "Stage may only be written as" "$W/b.md"
+check 2 "agent can't mark a touch sent" $AR ${A}update_records_for_table "{$B,\"records\":[{\"id\":\"recRRRRRRRRRRRRRR\",\"fields\":{\"fldSSSSSSSSSSSSSS\":\"sent\"}}]}" "Status may only be written as voided on update" "$W/b.md"
 echo "-- HubSpot"
 HS=capabilities/crm/tools/hubspot/guard.yaml; H=mcp__claude_ai_HubSpot__
 TC='{"objectType":"tasks","properties":{"hs_task_status":"%s"}}'
@@ -128,7 +154,14 @@ check 0 "update task DEFERRED"      $HS ${H}manage_crm_objects "{\"updateRequest
 check 2 "void rewrites the body"    $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$TU" '"hs_task_status":"DEFERRED","hs_task_body":"Direction: outbound\\nOutcome: dup"')]}}" "hs_task_body may not be changed after create"
 check 0 "task created with body"    $HS ${H}manage_crm_objects '{"createRequest":{"objects":[{"objectType":"tasks","properties":{"hs_task_status":"NOT_STARTED","hs_task_body":"<p>x</p>"}}]}}'
 check 0 "outcome note created"      $HS ${H}manage_crm_objects '{"createRequest":{"objects":[{"objectType":"notes","properties":{"hs_note_body":"<p>Outcome for task 101: dup</p>","hs_timestamp":"2026-10-01T00:00:00Z"},"associations":[{"targetObjectType":"COMPANY","targetObjectId":202}]}]}}'
-check 2 "update task COMPLETED"     $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$TU" '"hs_task_status":"COMPLETED"')]}}" "hs_task_status may only be written as DEFERRED on update"
+check 2 "agent can't complete a task (sent)" $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$TU" '"hs_task_status":"COMPLETED"')]}}" "hs_task_status may only be written as DEFERRED on update"
+check 2 "agent can't approve a plan"  $HS ${H}manage_crm_objects '{"updateRequest":{"objects":[{"objectType":"companies","objectId":202,"properties":{"sp_stage":"Ready to Send"}}]}}' "sp_stage may only be written as"
+check 2 "agent can't mark Contacted"  $HS ${H}manage_crm_objects '{"updateRequest":{"objects":[{"objectType":"companies","objectId":202,"properties":{"sp_stage":"Contacted"}}]}}' "sp_stage may only be written as"
+check 0 "agent disqualifies"          $HS ${H}manage_crm_objects '{"updateRequest":{"objects":[{"objectType":"companies","objectId":202,"properties":{"sp_stage":"Disqualified"}}]}}'
+check 2 "agent can't mark Engaged"    $HS ${H}manage_crm_objects '{"updateRequest":{"objects":[{"objectType":"companies","objectId":202,"properties":{"sp_stage":"Engaged"}}]}}' "sp_stage may only be written as"
+check 2 "agent can't open a deal"     $HS ${H}manage_crm_objects '{"updateRequest":{"objects":[{"objectType":"companies","objectId":202,"properties":{"sp_stage":"Open Deal"}}]}}' "sp_stage may only be written as"
+check 2 "agent can't mark Customer"   $HS ${H}manage_crm_objects '{"updateRequest":{"objects":[{"objectType":"companies","objectId":202,"properties":{"sp_stage":"Customer"}}]}}' "sp_stage may only be written as"
+check 2 "lead created past New"       $HS ${H}manage_crm_objects '{"createRequest":{"objects":[{"objectType":"companies","properties":{"name":"X","sp_stage":"Scored"}}]}}' "sp_stage may only be written as New on create"
 check 2 "update task IN_PROGRESS"   $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$TU" '"hs_task_status":"IN_PROGRESS"')]}}" "DEFERRED on update"
 check 2 "update task WAITING"       $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$TU" '"hs_task_status":"WAITING"')]}}" "DEFERRED on update"
 check 2 "create task WAITING"       $HS ${H}manage_crm_objects "{\"createRequest\":{\"objects\":[$(printf "$TC" WAITING)]}}" "NOT_STARTED on create"

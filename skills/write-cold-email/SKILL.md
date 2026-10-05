@@ -1,6 +1,6 @@
 ---
 name: write-cold-email
-description: Use when email is the chosen channel for a first touch or a follow-up — writes a short, specific message built on a research hook.
+description: Use when email is one of a lead's reachable channels — writes the full cold email when email is the recommended channel, and the email's personalized statements either way.
 ---
 
 Every rule below is a hard constraint, not a suggestion. A draft that
@@ -67,9 +67,28 @@ how well-written it otherwise reads:
    fragments.
 10. Re-read every factual claim against `business-profile.md` one more
     time. Anything that doesn't trace to a specific section gets cut.
-11. Log the result via CRM `log_activity(lead_id, contact_id,
-    channel="email", direction="outbound", draft_body=..., status=
-    "draft")` — this skill never sets `status` to anything but `draft`.
+11. Add the Personalized statements block and log the result as
+    **Personalized statements** below says — this skill never sets
+    `status` to anything but `draft`.
+
+## Personalized statements
+
+Email always gets a Personalized statements block. Write it from the
+same hook and proof this skill uses, following
+`templates/personalized-statements.md`: two to four lines, labelled
+`opener:`, `relevance:`, `proof:`, `ask:`, each one sentence that stands
+on its own, every fact traced to a Research row or
+`business-profile.md`.
+
+- **Email is the recommended channel:** the body is the full email
+  (steps 1–10), a blank line, then the block. Log it with CRM
+  `log_activity(lead_id, contact_id, channel="email",
+  direction="outbound", summary="recommended: <one-line reason>",
+  draft_body=<email + block>, status="draft")`.
+- **Email is not the recommended channel:** skip the full email; the
+  body is the block alone. Log it with CRM `log_activity(lead_id,
+  contact_id, channel="email", direction="outbound",
+  summary="statements", draft_body=<block>, status="draft")`.
 
 ## Worked example
 
@@ -96,6 +115,12 @@ Acme Co, a healthtech client of comparable size."*
 > structuring the team as it scales?
 >
 > Andrew Ho Choy \<andrew@example.com\>
+>
+> Personalized statements
+> opener: Four clinical-ops hires in one week, right after a $9M Series A.
+> relevance: Healthtech teams scaling that fast lose weeks getting new hires productive.
+> proof: Our playbook took Acme Co's onboarding from six weeks to nine days.
+> ask: Worth 15 minutes to compare notes on how you're structuring the team?
 
 Body word count (greeting through the ask, excluding subject and
 sign-off): 68 words — well under the 120-word limit. The opening line

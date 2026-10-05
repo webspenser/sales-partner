@@ -21,6 +21,9 @@ rules:
   - field: status
     create: [draft]
     update: [voided]
+  - field: stage
+    create: [New]
+    update: [Scored, Researched, "Approach Drafted", Disqualified]
   - field: do_not_contact
     update: [true]
   - field: draft_body

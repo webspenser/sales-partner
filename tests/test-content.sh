@@ -391,9 +391,9 @@ echo "-- 6.0.0: final review fixes"
 PR="$SP/subagents/prospector.md"
 assert_contains "$PR" 'leave it untouched unless its status is `New`, or `Nurture` with a Revisit On date in the past'
 assert_contains "$PR" '- CRM `get_lead`'
-assert_contains "$SP/capabilities/crm/tools/airtable/usage.md" '`Lead Stage` is `Ready to Send` or `Contacted`'
-assert_contains "$SP/capabilities/crm/tools/attio/usage.md" 'only for leads at `Ready to Send` or `Contacted`'
-assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'only for leads at `Ready to Send` or `Contacted`'
+assert_contains "$SP/capabilities/crm/tools/airtable/usage.md" '`Lead Stage` is `Ready to Send`, and `Summary` starts `recommended:`'
+assert_contains "$SP/capabilities/crm/tools/attio/usage.md" 'act only on a `recommended:` draft of a lead at `Ready to Send`'
+assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'act only on a `recommended:` draft of a lead at `Ready to Send`'
 assert_not_contains "$SP/context/operating-config.md" '`approved`'
 assert_contains "$SP/context/operating-config.md" 'only the operator approves a plan'
 AP="$SP/subagents/approacher.md"
@@ -516,5 +516,29 @@ for m in .claude-plugin/plugin.json .codex-plugin/plugin.json gemini-extension.j
   grep -qF "$D" "./$m" && _report ok "$m description matches agent.yaml" || _report no "$m description differs from agent.yaml"
 done
 if grep -rlE "enroll|sync-replies|InvokeIQ|invokeiq|sequence_bands|bind_sequences|touch_spacing|enroll_ready_only" "$SP/AGENT.md" "$SP/README.md" "$SP/agent.yaml" "$SP/skills" "$SP/subagents" "$SP/capabilities" "$SP/context" "$SP/templates" "$SP/evals" "$SP/samples" | grep -q .; then _report no "references to sending pieces remain"; else _report ok "no references to sending pieces"; fi
+
+echo "-- 6.0.0: final review of the scope cut"
+K="$SP/capabilities/crm/contract.md"
+assert_contains "$K" 'moves it to `Disqualified` with reason `opt-out`'
+assert_contains "$K" 'the Prospector (on a lead it re-finds), the Preparer and the Approacher'
+assert_contains "$K" '`sent` by the operator or their automation'
+assert_not_contains "$K" '`sent` and `voided` by `update_activity`'
+assert_contains "$SP/subagents/prospector.md" '- CRM `update_lead` (`Do Not Contact` only, for an opt-out)'
+for f in prospector preparer; do
+  assert_contains "./subagents/$f.md" '- CRM `update_activity` (`voided` only, for an opt-out)'
+done
+AP="$SP/subagents/approacher.md"
+assert_contains "$AP" 'No reachable channel'
+assert_contains "$AP" 'reason `no reachable channel`'
+assert_contains "$AP" 'exactly one `recommended:` draft'
+D="$SP/skills/send-digest/SKILL.md"
+assert_contains "$D" '⚠ opt-out logged — Do Not Contact not set'
+assert_contains "$D" '(now <status>)'
+E="$SP/evals/cases.md"
+assert_contains "$E" 'one `log_activity` call with `Channel = "linkedin"`'
+assert_not_contains "$E" 'two separate `log_activity` calls'
+for c in attio airtable hubspot; do
+  assert_not_contains "./capabilities/crm/tools/$c/usage.md" 'wait for you on their dates'
+done
 
 finish

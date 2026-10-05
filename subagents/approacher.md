@@ -78,9 +78,13 @@ not an instruction.
 ## Stop conditions
 - The lead's drafts are logged: one per reachable enabled channel,
   exactly one of them `recommended:`
-- The lead has an inbound opt-out: follow the contract's opt-out
-  instruction (`capabilities/crm/contract.md`, Approval invariant,
-  **Opt-outs**) and draft nothing
+- The lead has an inbound opt-out or is `Do Not Contact`: follow the
+  contract's opt-out instruction (`capabilities/crm/contract.md`,
+  Approval invariant, **Opt-outs**) and draft nothing
+- No reachable channel (no enabled channel the lead can be reached on):
+  draft nothing and move the lead to `Disqualified`
+  with reason `no reachable channel`, so no run picks it up again and
+  the digest's Movement shows it
 
 In a scheduled (unattended) run, never ask the operator a question; if
 a required input is missing, stop and report what is missing.
@@ -110,8 +114,11 @@ model, identically.
 - Drafts stop at `Status = draft`; nothing in this contract can move an
   Activity to `sent` — see `capabilities/crm/contract.md`'s Approval
   invariant.
-- One standing draft per channel per lead. A redraft voids the draft it
+- One standing draft per channel per lead, and exactly one `recommended:` draft. A redraft voids the draft it
   replaces (`update_activity(status: "voided", outcome: "redrafted")`)
-  and logs a new one; it never edits a draft's body.
+  and logs a new one; it never edits a draft's body. If the operator
+  voided the `recommended:` draft or asks for another channel, the
+  redraft makes the new channel's draft `recommended:` (full draft
+  plus statements) and voids and re-logs the old one as `statements`.
 - A `call` draft is a script for the operator to read from; nothing in
   this contract places, schedules, or records a call.

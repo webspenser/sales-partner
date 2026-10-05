@@ -221,7 +221,7 @@ behavior only; it names no Airtable table or field.
   `status: draft` regardless of which lead it belongs to. `status` is
   required and validated against the three-value `Status` enum
   (`draft`, `sent`, `voided`): `draft` is written by `log_activity`,
-  `sent` and `voided` by `update_activity`. `direction`, when
+  `voided` by `update_activity`, and `sent` by the operator or their automation. `direction`, when
   given, must be `outbound` or `inbound`; omitting it returns
   Activities in either direction. This is what lets a caller separate
   outbound drafts genuinely awaiting an operator decision from inbound
@@ -271,14 +271,18 @@ The opt-out has one mechanism and one instruction:
   duplicate leads) and the Do Not Contact column in the operator's
   approval view.
 - **Opt-outs.** No skill reads replies; the operator or the owner's
-  automation logs them as inbound Activities. Whenever the agent reads
-  a lead with `get_lead` and finds an inbound Activity recording an
-  opt-out (the prospect asked not to be contacted), it sets
-  `update_lead(lead_id, {"Do Not Contact": true})` and voids every
+  automation logs them as inbound Activities. When the Prospector (on a lead it re-finds), the Preparer and the Approacher
+  read a lead with `get_lead` and find an inbound Activity recording an
+  opt-out (the prospect asked not to be contacted), or the lead is
+  already `Do Not Contact`: they set
+  `update_lead(lead_id, {"Do Not Contact": true})`, void every
   outbound draft Activity on the lead with
-  `update_activity(activity_id, "voided", outcome: "opt-out")`, then
-  stops working that lead. It leaves the status alone. The owner's
-  sending system handles its own suppression list.
+  `update_activity(activity_id, "voided", outcome: "opt-out")`, and,
+  if the lead is at a status the agent works on (`New`, `Scored`,
+  `Researched`, `Approach Drafted`), moves it to `Disqualified` with reason `opt-out`
+  so no run picks it up again. A lead at `Ready to Send` or later is
+  the owner's: the agent leaves it alone, and the digest flags it. The
+  owner's sending system handles its own suppression list.
 
 Any change that gives an operation a new way to write `Status` on an
 Activity — a new argument, a relaxed check, a new operation — must be

@@ -270,11 +270,13 @@ views.
   touch. The agent never acts on them; move a lead back to `Approach
   Drafted` to cancel.
 - **My touches** — on `sales_partner_outreach`: filtered on `status` is
-  `draft`, `direction` is `outbound` and `channel` is `linkedin` or
-  `call`, sorted by `date`. Attio can't filter by the parent lead's
-  stage, so act on a touch only for leads at `Ready to Send` or `Contacted`
-  (open the lead first). These wait for you on their dates; set
-  `status` to `sent` when you've done one.
+  `draft`, `direction` is `outbound`, `channel` is `linkedin` or
+  `call`, and `summary` starts with `recommended:`, sorted by `date`.
+  Attio can't filter by the parent lead's stage, so open the lead first
+  and act only on a `recommended:` draft of a lead at `Ready to Send`
+  (unless your automation handles it); `statements` drafts are material
+  for your templates, not touches. Set `status` to `sent` when you've
+  done one.
 - **Research Queue** — on `sales_partner_pipeline`: filtered on `stage`
   is `Scored`, sorted by `score`, highest first.
 - **Due Today** — on `sales_partner_pipeline`: filtered on

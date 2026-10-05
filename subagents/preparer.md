@@ -55,7 +55,12 @@ clears `research_threshold`, capped per run at `research_quota_per_week`
 - CRM `log_research`
 - CRM `upsert_contact`
 - CRM `update_lead`
+- CRM `update_activity` (`voided` only, for an opt-out)
 - CRM `update_stage`
+
+Before researching, apply the contract's opt-out instruction
+(`capabilities/crm/contract.md`, Approval invariant, **Opt-outs**) to
+the lead.
 
 ## Stop conditions
 - Two or more usable `Hook` values have been written for the lead

@@ -25,7 +25,9 @@ A scheduled prospecting run, or the count of leads at stages `New` and
   When `create_lead` returns an existing lead, read it (`get_lead`) and
   leave it untouched unless its status is `New`, or `Nurture` with a Revisit On date in the past:
   every other lead is already in progress, the operator's, or out. Never
-  re-score or move it.
+  re-score or move it — except for a logged opt-out on a lead at `New`
+  or `Scored`, handled per the contract's opt-out instruction
+  (`capabilities/crm/contract.md`, Approval invariant, **Opt-outs**).
 
 ## Outputs
 - New Leads records, one per company found, each carrying `Company`,
@@ -45,6 +47,8 @@ A scheduled prospecting run, or the count of leads at stages `New` and
 - CRM `get_lead`
 - CRM `query_by_stage`
 - CRM `update_stage`
+- CRM `update_lead` (`Do Not Contact` only, for an opt-out)
+- CRM `update_activity` (`voided` only, for an opt-out)
 
 ## Stop conditions
 - The `leads_per_week` target (from `operating-config.md`) of new

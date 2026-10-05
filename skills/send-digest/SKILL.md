@@ -163,6 +163,10 @@ a required input is missing, stop and report what is missing.
    - **Plans on DNC leads.** Mark every lead whose `Do Not Contact` is
      true `⚠ DO NOT SEND — lead is Do Not Contact` and list those first.
      Report only: write nothing and void nothing.
+   - **Opt-outs not yet flagged.** Mark every lead (here and in Section
+     2) with an inbound Activity recording an opt-out but `Do Not
+     Contact` still false `⚠ opt-out logged — Do Not Contact not set`,
+     and list it first. Report only: the digest writes nothing.
    - **Possible duplicate leads.** Across the leads this run already
      reads (Sections 1 to 5), list leads that share a normalized
      `domain` or E.164 `phone` (normalized as in
@@ -233,7 +237,12 @@ a required input is missing, stop and report what is missing.
    either.
 6. **Section 5 — Movement.** Call `query_by_stage` once for each status
    the agent moves leads to — `Researched`, `Approach Drafted` and
-   `Disqualified`. For each status's results,
+   `Disqualified` — and once each for `Ready to Send`, `Contacted`,
+   `Engaged`, `Open Deal`, `Nurture` and `Customer`, so a lead the agent
+   drafted and the operator approved within the window still counts.
+   A lead at one of those later statuses keeps the agent's last stamp
+   unless the owner's automation restamps it; list it as
+   `<Company>: → Approach Drafted (now <status>)`. For each status's results,
    keep only leads whose `Stage Changed At` falls in the window
    `(anchor, nominal_time]` — strictly after the anchor **and** at or
    before this run's nominal scheduled time — and list them as

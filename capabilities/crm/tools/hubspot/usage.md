@@ -426,9 +426,11 @@ Create these once in HubSpot. The connector can't create views.
   Drafted` to cancel.
 - **My touches** — Tasks filtered on status Not started, priority High
   and type LinkedIn or Call, sorted by due date. A Tasks view can't
-  filter by the company's stage, so act on a touch only for leads at `Ready to Send` or `Contacted`
-  (open the company first). These wait for you on their dates; mark a task Completed when you've done it. Deferred tasks
-  are voided drafts.
+  filter by the company's stage or the task's summary, so open the
+  company first and act only on a `recommended:` draft of a lead at `Ready to Send`;
+  `statements` tasks are material for your templates, not touches.
+  Mark a task Completed when you've done it. Deferred tasks are voided
+  drafts.
 - **Pipeline** — a Companies view grouped (or a board) by
   `Sales Partner stage` (`sp_stage`), filtered on `sp_stage` is known.
 - **Research Queue** — Companies filtered on `sp_stage` is `Scored`,

@@ -256,10 +256,11 @@ disagree about what counts as "in review," "due today," or "stalled."
   waiting for your automation or your own touch. The agent never acts
   on them; move a lead back to `Approach Drafted` to cancel.
 - **My touches** — Activities where `Status = draft`,
-  `Direction = outbound`, `Channel` is `linkedin` or `call`, and
-  `Lead Stage` is `Ready to Send` or `Contacted` (a lookup of `Stage` from
-  `Lead`, set up by hand), sorted by Date. These wait for you on their dates; set `Status` to `sent`
-  when you've done one.
+  `Direction = outbound`, `Channel` is `linkedin` or `call`,
+  `Lead Stage` is `Ready to Send`, and `Summary` starts `recommended:` (`Lead Stage` is a lookup of `Stage` from
+  `Lead`, set up by hand), sorted by Date. `statements` drafts are
+  material for your templates, not touches. Set `Status` to `sent` when
+  you've done one.
 - **Research Queue** — Leads where `Stage = Scored`, sorted by Score
   descending. What the Preparer works through next, highest-score
   first.

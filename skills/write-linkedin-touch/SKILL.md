@@ -11,6 +11,10 @@ compliant, so no such tool is on its list. The output of this skill is
 always a piece of copy attached to a draft Activity, never an action
 taken on LinkedIn itself.
 
+**The chosen Contact has a sourced `linkedin_url`.** Their own profile,
+found during research; a company page does not count. Without one this
+skill does not run, and the Approacher leaves LinkedIn out.
+
 ## Two output shapes
 
 - **Connection note** — sent with the connection request itself. Hard

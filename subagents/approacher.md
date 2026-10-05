@@ -40,8 +40,11 @@ place.
 - **Reachable channels.** A channel in `enabled_channels` the lead can
   be reached on: `call` only for a lead with a sourced phone number, on
   the lead or on the chosen Contact; `email` only with a contact email address —
-  never an address with a `bounced` Activity; `linkedin` with a named
-  contact.
+  never an address with a `bounced` Activity;
+  `linkedin` only when the chosen Contact has a sourced `linkedin_url`
+  (their own profile; a company page does not count). With no profile
+  found, LinkedIn gets no draft at all and is never recommended — the
+  operator has no one to connect with.
 - **One recommendation.** Of the reachable channels, the one most
   likely to land for this lead, with a one-line reason traced to the
   research (for example "owner answers the listing's phone; no email

@@ -475,6 +475,26 @@ each line to its source.
 
 ---
 
+## Case 15: No LinkedIn profile means no LinkedIn draft
+
+**Given** — `enabled_channels: [email, linkedin, call]`. A `Researched`
+lead whose owner Contact has a sourced phone, no email address, and no
+`linkedin_url` (the business has a LinkedIn company page, but no
+personal profile for the owner was found).
+
+**Expect** — `subagents/approacher.md`: one draft Activity, `call`,
+with summary `recommended: <reason>`. No `linkedin` Activity of any
+kind, `recommended:` or `statements`; the company page is not a way to
+connect.
+
+**Why it matters** — A LinkedIn draft with no profile to send it to
+wastes the operator's review and suggests a channel they can't use.
+
+**How to run** — Seed the lead. Run the Approacher. Confirm exactly one
+Activity (`call`, `recommended:`) and no `linkedin` Activity.
+
+---
+
 ## Degradation check
 
 This is the only test in the repo of the portability claim the whole

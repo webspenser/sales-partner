@@ -541,4 +541,13 @@ for c in attio airtable hubspot; do
   assert_not_contains "./capabilities/crm/tools/$c/usage.md" 'wait for you on their dates'
 done
 
+echo "-- 6.0.0: LinkedIn needs a sourced profile"
+AP="$SP/subagents/approacher.md"
+assert_contains "$AP" '`linkedin` only when the chosen Contact has a sourced `linkedin_url`'
+assert_contains "$AP" 'a company page does not count'
+assert_not_contains "$AP" '`linkedin` with a named'
+LI="$SP/skills/write-linkedin-touch/SKILL.md"
+assert_contains "$LI" '**The chosen Contact has a sourced `linkedin_url`.**'
+assert_contains "$SP/evals/cases.md" '## Case 15: No LinkedIn profile means no LinkedIn draft'
+
 finish

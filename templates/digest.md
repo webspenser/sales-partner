@@ -14,7 +14,7 @@
 
 ## Ready to Send ([count])
 
-- [lead/company — recommended channel — status changed N days ago ("check the hand-off" past two digest intervals) — or "None"]
+- [lead/company — recommended channel — drafted N days ago — or "None"]
 
 ## Next actions due today ([count])
 

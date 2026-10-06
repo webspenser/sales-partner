@@ -116,7 +116,7 @@ for activities whose capabilities are all covered by guard policies.
 
 Nothing in this file, and nothing any key here configures, sends a
 message to a prospect on its own. Nothing goes out without the
-operator's approval, and only the operator approves a plan, by moving
+operator's approval, and only the operator approves a lead, by moving
 the lead to `Ready to Send` — the guard refuses that status to the agent.
 `log_activity` creates an Activity at `status: draft` only, and
 `update_activity` moves it only to `voided`; `sent` is the operator's

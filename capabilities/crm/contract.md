@@ -139,7 +139,7 @@ and says nothing; that is not a failure.
   operation to check against; the restriction applies to every call,
   every time, with no conditional path through it. Every draft this
   operation produces sits on a lead at `Approach Drafted`, where the
-  operator reviews the whole plan (each tool's **Review** view). Nothing
+  operator reviews the lead's drafts (each tool's **Review** view). Nothing
   goes out until the operator moves the lead to `Ready to Send`, and no
   operation this contract exposes to an agent can write that stage — see
   the Approval invariant below — not because agents are instructed to
@@ -229,9 +229,9 @@ and says nothing; that is not a failure.
 - **`query_activities`** is the read counterpart to `log_activity` and
   `update_activity`: it finds Activities directly, by `status`,
   optionally `direction`, optionally `channel` (email, linkedin, call,
-  other), and optionally a `[since, until]` window on `Date` — the read this contract had no operation for until
-  `send-digest` needed to find every outbound Activity at
-  `status: draft` regardless of which lead it belongs to. `status` is
+  other), and optionally a `[since, until]` window on `Date`, so a
+  caller can find every outbound Activity at `status: draft` regardless
+  of which lead it belongs to. `status` is
   required and validated against the three-value `Status` enum
   (`draft`, `sent`, `voided`): `draft` is written by `log_activity`,
   `voided` by `update_activity`, and `sent` by the operator or their automation. `direction`, when
@@ -240,8 +240,8 @@ and says nothing; that is not a failure.
   outbound drafts genuinely awaiting an operator decision from inbound
   replies and call debriefs that also land at `status: draft` (every
   Activity `log_activity` creates starts there, regardless of
-  direction) but need no approval — `send-digest` filters on both
-  `status: draft` and `direction: outbound` for exactly this reason. `since` and `until` are each
+  direction) but need no approval: filter on both `status: draft` and
+  `direction: outbound` for exactly that. `since` and `until` are each
   optional, and omitting one leaves that edge of the window unbounded,
   so omitting both returns every Activity at that status regardless of
   `Date`. Every returned Activity carries its linked Lead, so a caller
@@ -365,7 +365,7 @@ a lead to `Disqualified` from any status the agent works on.
 |---|---|---|
 | `New` | Prospector creates the lead record from a raw find | Prospector scores it, moving it to `Scored`; a hard disqualifier moves it straight to `Disqualified` |
 | `Scored` | Prospector finishes applying the `icp.md` rubric and records the score breakdown | Preparer picks it up once the score clears `research_threshold`, moving it to `Researched` |
-| `Researched` | Preparer finishes research, identifies decision-makers, produces hooks, and re-scores | Approacher picks it up once the revised score clears `approach_threshold`, drafting the plan and moving it to `Approach Drafted`; an anti-signal found during research moves it to `Disqualified` instead |
+| `Researched` | Preparer finishes research, identifies decision-makers, produces hooks, and re-scores | Approacher picks it up once the revised score clears `approach_threshold`, drafting its first touch and moving it to `Approach Drafted`; an anti-signal found during research moves it to `Disqualified` instead |
 | `Approach Drafted` | Approacher logs the lead's draft Activities (one per enabled channel: the recommended channel's full draft and statements, the others' statements) at `status: draft` | The operator reviews and edits the drafts, voids any they don't want, then approves the lead by moving it to `Ready to Send` — nothing is approved draft by draft |
 | `Ready to Send` | The operator moves the lead here once its drafts are right — only the operator writes `Ready to Send` | The owner's automation, another system or agent, or the operator sends the first touch and moves it to `Contacted`; the operator moving it back to `Approach Drafted` cancels. The agent never acts on it |
 | `Contacted` | The first touch went out, on any channel (set by the operator or the owner's automation) | A reply moves it to `Engaged` (operator or automation) |

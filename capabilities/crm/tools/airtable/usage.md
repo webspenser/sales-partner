@@ -175,7 +175,7 @@ convention.
 draft outreach message is an Activities row with `Status = draft` and
 its content in `Draft Body`, linked to its lead, one per channel with
 its own `Date`. There is no separate "Drafts" table and none should ever
-be created: the operator reviews a lead's whole plan from the lead (see
+be created: the operator reviews a lead's drafts from the lead (see
 **Review** below), and a split table would break that.
 
 `Status` moves from `draft` to `sent` (the touch went out: set by the
@@ -184,7 +184,7 @@ operator or their automation, never the agent) or to the terminal
 only `status: "draft"`**; **`update_activity` only touches an existing
 row and accepts only `status: "voided"`**, writing `Status` and
 `Outcome` and never `Draft Body`. The
-plan itself is approved only when the operator moves the lead to
+lead itself is approved only when the operator moves the lead to
 `Ready to Send`; no operation writes that stage, and the guard policy
 (below) refuses it. `voided` is used by the contract's opt-out
 instruction, which voids every pending draft for a lead once an inbound
@@ -243,10 +243,9 @@ operation reaches Airtable through these:
 These four views are required, since they are the operator's interface
 onto the pipeline. They are a convenience for the operator looking at
 Airtable directly — a human-facing surface — not the mechanism any
-skill or sub-agent depends on to read this data: `send-digest`, and any
-future skill with the same needs, reads through `query_activities` and
-`query_by_stage`'s `next_action_due_before` / `idle_days` filters
-instead of these views, precisely so that provider-neutrality holds —
+skill or sub-agent depends on to read this data: `send-digest` reads
+through `query_by_stage` (with its `next_action_due_before` filter) and
+`query_by_score` instead of these views, precisely so that provider-neutrality holds —
 swapping the tool (a different CRM behind the same contract) keeps
 every skill working, where reading these views directly would not.
 Each view below is defined to compute exactly what its corresponding
@@ -329,7 +328,7 @@ which also means a recreated `Status` can't slip past its rule. With no
 against the recorded IDs:
 
 - `Stage` may only be written as `New` on create, and never as
-  `Ready to Send`: only the operator approves a plan;
+  `Ready to Send`: only the operator approves a lead;
 - `Status` may only be written as `draft` on create and as `voided` on
   update;
 - `Do Not Contact` may only be written as `true`;

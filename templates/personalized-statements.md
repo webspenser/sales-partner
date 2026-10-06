@@ -1,12 +1,12 @@
 <!--
   Personalized statements block — filled by write-cold-email,
-  write-linkedin-touch and write-call-opener, one block per enabled
-  channel. The operator (or their automation) merges these lines into
+  write-linkedin-touch and write-call-opener, one block per reachable channel. The operator (or their automation) merges these lines into
   their own templates, so each line must stand on its own.
 
   Rules:
   - two to four lines, each one sentence, in this order, each label at
     most once: opener, relevance, proof, ask;
+    `opener:` and `ask:` are always present;
   - opener: the research hook, stated about them — traces to a Research
     row with a source URL;
   - relevance: why that matters to them — traces to business-profile.md's

@@ -102,7 +102,7 @@ Every field is a built-in Task property; Tasks need no custom fields.
 | `hs_task_subject` | `subject`: a short title, `<channel> <direction> — <company>` |
 | `hs_task_body` | rich text: `direction`, `summary` and (when known at create) `outcome` as labelled `<p>` lines, then `draft_body` (below). Set on create only |
 | `hs_timestamp` | the due date / `Date` (set to now on create) |
-| `hs_task_type` | `channel`: `EMAIL` for email, `CALL` for call, `LINKED_IN_MESSAGE` for linkedin (`LINKED_IN_CONNECT` for a connection note), `TODO` for other |
+| `hs_task_type` | `channel`: `EMAIL` for email, `CALL` for call, `LINKED_IN_MESSAGE` for linkedin (the connection note and DM share one Task), `TODO` for other |
 | `hs_task_status` | `status`, mapped below |
 | `hs_task_priority` | `direction`: `HIGH` for outbound, `NONE` for inbound. This is the source of truth for direction |
 
@@ -115,7 +115,7 @@ Every field is a built-in Task property; Tasks need no custom fields.
 | `voided` | `DEFERRED` | the agent or the operator |
 
 `IN_PROGRESS` and `WAITING` are not contract statuses: a Task the
-operator moves there is read as `draft`. The plan is approved on the
+operator moves there is read as `draft`. The lead is approved on the
 Company, by moving `sp_stage` to `Ready to Send`.
 
 `hs_task_body` is rich text, so it starts with labelled lines, one
@@ -124,7 +124,7 @@ Company, by moving `sp_stage` to `Ready to Send`.
     <p>Direction: outbound</p><p>Summary: <summary></p><p><draft_body></p>
 
 The guard refuses any change to `hs_task_body` after create, so a draft
-can't be rewritten after the operator approved the plan. A voided Task's outcome is a Note on
+can't be rewritten after the operator approved the lead. A voided Task's outcome is a Note on
 the lead's Company whose body starts `Outcome for task <activity_id>:`
 (see `update_activity`). An operator's edit in HubSpot may rewrap these lines in other tags, so
 on read strip the HTML tags (treating `</p>`, `<br>` and `</div>` as line
@@ -134,7 +134,7 @@ from `hs_task_priority`.
 
 Outbound drafts are Tasks with status Not started and priority High,
 one per channel, each with its due date. There is no separate drafts
-object: the operator reviews a lead's whole plan from its Company (see
+object: the operator reviews a lead's drafts from its Company (see
 **Review** below).
 
 ## Calling the connector
@@ -273,7 +273,7 @@ the flag is `"sp_do_not_contact": "true"`.
        {"createRequest": {"objects": [{"objectType": "tasks",
          "properties": {"hs_task_subject": "…",
            "hs_task_body": "<p>Direction: <direction></p><p>Summary: <summary></p><p><draft_body></p>",
-           "hs_timestamp": "<now, ISO 8601 UTC>", "hs_task_type": "<EMAIL|CALL|LINKED_IN_MESSAGE|LINKED_IN_CONNECT|TODO>",
+           "hs_timestamp": "<now, ISO 8601 UTC>", "hs_task_type": "<EMAIL|CALL|LINKED_IN_MESSAGE|TODO>",
            "hs_task_priority": "<HIGH|NONE>", "hs_task_status": "NOT_STARTED"},
          "associations": [{"targetObjectType": "COMPANY", "targetObjectId": <lead_id>},
                           {"targetObjectType": "CONTACT", "targetObjectId": <contact_id>}]}]}}
@@ -403,7 +403,7 @@ contract's guarantees are enforced by mechanism (approval and `dnc_one_way` only
    - `hs_task_status` may only be created as `NOT_STARTED` and updated
      to `DEFERRED` (`draft_only`);
    - `sp_stage` may only be created as `New`, and never written as
-     `Ready to Send`: only the operator approves a plan. Creating a Task with no status also
+     `Ready to Send`: only the operator approves a lead. Creating a Task with no status also
      yields `NOT_STARTED`. The Task Pipeline's stages mirror the
      statuses, so `hs_pipeline_stage`, `hs_pipeline` and
      `hs_task_completion_date` are forbidden to the agent outright
@@ -411,7 +411,7 @@ contract's guarantees are enforced by mechanism (approval and `dnc_one_way` only
    - `sp_do_not_contact` may only be updated to `true` (`dnc_one_way`).
 
    The operator's own edits in HubSpot never pass through it, so
-   approving a plan stays operator-only.
+   approving a lead stays operator-only.
 2. **Nothing sends from the CRM.** The agent sends nothing; after the
    operator's approval, the owner's workflows or the operator send the
    first touch. HubSpot's email and marketing tools are not on the allow

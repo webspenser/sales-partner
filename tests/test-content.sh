@@ -74,7 +74,7 @@ assert_contains "$E" '## Case 9: A lead with no sourced address never scores ins
 assert_contains "$E" '## Case 10: A business with no website is deduped on phone, then name and address'
 assert_contains "$E" '## Case 11: A lead with no sourced phone never gets a call draft'
 assert_contains "$E" '## Case 12: A source outside `prospecting_sources` is never used'
-assert_contains "$E" 'These thirteen refusals'
+assert_contains "$E" 'These refusals are also'
 assert_not_contains "$E" 'These twelve refusals'
 assert_contains "$E" '## Case 13: A scheduled activity runs its `then` steps and nothing else'
 assert_contains docs/superpowers/specs/2026-09-01-sales-partner-agent-design.md '2026-09-24-sales-partner-generalize-prospecting-design.md'
@@ -395,7 +395,7 @@ assert_contains "$SP/capabilities/crm/tools/airtable/usage.md" '`Lead Stage` is 
 assert_contains "$SP/capabilities/crm/tools/attio/usage.md" 'act only on a `recommended:` draft of a lead at `Ready to Send`'
 assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'act only on a `recommended:` draft of a lead at `Ready to Send`'
 assert_not_contains "$SP/context/operating-config.md" '`approved`'
-assert_contains "$SP/context/operating-config.md" 'only the operator approves a plan'
+assert_contains "$SP/context/operating-config.md" 'only the operator approves a lead'
 AP="$SP/subagents/approacher.md"
 assert_not_contains "$AP" 'One opening touch per lead'
 assert_contains "$AP" 'prepares the lead'"'"'s first touch'
@@ -565,5 +565,27 @@ assert_contains "$SP/capabilities/crm/tools/airtable/usage.md" 'skips the compan
 assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'skips the company profile fields'
 assert_contains "$SP/subagents/preparer.md" 'the company profile fields it confirmed'
 assert_contains "$SP/subagents/prospector.md" 'company profile fields the listing shows'
+
+echo "-- 6.0.2: review minors"
+for f in capabilities/crm/contract.md capabilities/crm/tools/attio/usage.md capabilities/crm/tools/airtable/usage.md capabilities/crm/tools/hubspot/usage.md context/operating-config.md skills/send-digest/SKILL.md; do
+  if grep -qiE "approves? a plan|approving a plan|approved the plan|whole plan|plans waiting|every plan waiting|Plans on DNC|The plan is approved|plan itself is approved|drafting the plan" "./$f"; then _report no "plan wording left in $f"; else _report ok "no plan wording in $f"; fi
+done
+D="$SP/skills/send-digest/SKILL.md"
+assert_not_contains "$D" 'check the'
+assert_not_contains "$SP/templates/digest.md" 'check the hand-off'
+assert_contains "$D" 'drafted N days ago'
+assert_not_contains "$SP/capabilities/crm/contract.md" '`send-digest` needed to find'
+assert_not_contains "$SP/capabilities/crm/tools/airtable/usage.md" 'reads through `query_activities`'
+assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" '`LINKED_IN_MESSAGE` for linkedin (the connection note and DM share one Task)'
+assert_not_contains "$SP/capabilities/crm/tools/hubspot/usage.md" '|LINKED_IN_CONNECT|TODO>'
+assert_not_contains "$SP/evals/cases.md" 'thirteen'
+assert_contains "$SP/evals/cases.md" 'Case 14 is a positive check'
+A="$SP/AGENT.md"
+assert_contains "$A" 'except a `Nurture` lead past its Revisit On date'
+assert_contains "$SP/subagents/prospector.md" 'Never re-score or move any other lead'
+PS="$SP/templates/personalized-statements.md"
+assert_contains "$PS" 'one block per reachable channel'
+assert_contains "$PS" '`opener:` and `ask:` are always present'
+assert_contains "$D" 'Report only: the digest writes nothing'
 
 finish

@@ -24,8 +24,8 @@ A scheduled prospecting run, or the count of leads at stages `New` and
   `Scored`, to keep from re-working a business already in the pipeline.
   When `create_lead` returns an existing lead, read it (`get_lead`) and
   leave it untouched unless its status is `New`, or `Nurture` with a Revisit On date in the past:
-  every other lead is already in progress, the operator's, or out. Never
-  re-score or move it — except for a logged opt-out on a lead at `New`
+  every other lead is already in progress, the operator's, or out.
+  Never re-score or move any other lead — except for a logged opt-out on a lead at `New`
   or `Scored`, handled per the contract's opt-out instruction
   (`capabilities/crm/contract.md`, Approval invariant, **Opt-outs**).
 

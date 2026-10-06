@@ -153,14 +153,14 @@ a required input is missing, stop and report what is missing.
 1. Compute the window — the anchor and `nominal_time` that bound it on
    both edges — per **The "since last digest" anchor** above.
 2. **Section 1 — Review.** Call CRM `query_by_stage("Approach Drafted")`
-   and `get_lead` for each lead: these are plans waiting for the
+   and `get_lead` for each lead: these are leads waiting for the
    operator. List each lead with its recommended channel (the draft
    whose summary starts `recommended:`) and the other channels it has
    statements for, and for a `call` draft the number to dial (the
    draft's Contact `phone`, otherwise the Lead's `phone`). No window:
-   every plan waiting right now, however old. Heading with the count of
+   every lead waiting right now, however old. Heading with the count of
    leads, e.g. `Review (3)`.
-   - **Plans on DNC leads.** Mark every lead whose `Do Not Contact` is
+   - **Drafts on DNC leads.** Mark every lead whose `Do Not Contact` is
      true `⚠ DO NOT SEND — lead is Do Not Contact` and list those first.
      Report only: write nothing and void nothing.
    - **Opt-outs not yet flagged.** Mark every lead (here and in Section
@@ -177,14 +177,13 @@ a required input is missing, stop and report what is missing.
    Send")` and `get_lead` for each: leads the operator approved, now
    waiting for the owner's hand-off (their CRM automation, another
    system or agent, or the operator's own touch). List each lead with
-   its recommended channel and how long ago its status last changed
-   (now − `Stage Changed At`). The operator's drag in the CRM does not
-   stamp `Stage Changed At` (only `update_stage` does, unless the
-   owner's automation sets it too), so this is time since the agent
-   drafted the touch, not time since approval; a lead whose status
-   changed more than two digest intervals ago is marked `check the
-   hand-off`. The agent never acts on these leads. Heading with the
-   count.
+   its recommended channel and `drafted N days ago` (now − `Stage
+   Changed At`). The operator's drag in the CRM does not stamp `Stage
+   Changed At` (only `update_stage` does), so this is time since the
+   agent drafted the touch, not time since approval, and the digest
+   raises no alarm on it. If the owner's automation sets `Stage Changed
+   At` when it picks a lead up, the figure becomes time since then. The
+   agent never acts on these leads. Heading with the count.
 4. **Section 3 — Next actions due today.** Call CRM
    `query_by_stage(next_action_due_before: today, stage: omitted)` —
    omitting `stage` so leads at every stage are considered, not one
@@ -374,7 +373,7 @@ matches the wall clock exactly this week. Anchor: Monday, 2026-08-24,
 - Thornfield Media — recommended: linkedin — [link]
 
 ## Ready to Send (1)
-- Corvid Analytics — email — waiting 1 day
+- Corvid Analytics — email — drafted 1 day ago
 
 ## Next actions due today (2)
 - Fennimore Health — Send onboarding proposal — due 2026-08-28 (3 days overdue)

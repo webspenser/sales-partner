@@ -143,7 +143,7 @@ usable angle the Approacher opens with.
 
 Drafts are Outreach entries at `status = draft`, one per channel, each
 with its `date`. There is no separate drafts list: the operator reviews
-a lead's whole plan from the lead (see **Review** below).
+a lead's drafts from the lead (see **Review** below).
 
 ## Operations
 
@@ -257,13 +257,13 @@ attribute, so the contract's guarantees are enforced by mechanism (approval and 
    - `status` may only be written as `draft` on create and `voided` on
      update;
    - `stage` may only be written as `New` on create, and never as
-     `Ready to Send`: only the operator approves a plan;
+     `Ready to Send`: only the operator approves a lead;
    - `draft_body` can't be changed after create;
    - `do_not_contact` may only be updated to `true`;
    - attribute keys given as IDs instead of slugs are refused.
 
    The operator's own edits in the Attio app never pass through it, so
-   approving a plan (moving the lead to `Ready to Send`) stays
+   approving a lead (moving the lead to `Ready to Send`) stays
    operator-only.
 2. **Nothing sends from the CRM.** The agent sends nothing; after the
    operator's approval, the owner's automations or the operator send the

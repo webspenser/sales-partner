@@ -1,13 +1,14 @@
 # Evaluation Cases
 
 These are the only artifact in this folder that can tell a future
-editor when a change has broken the agent. Every case below is
-negative — a thing the agent must refrain from doing — on purpose.
+editor when a change has broken the agent. Nearly every case below is
+negative — a thing the agent must refrain from doing — on purpose;
+Case 14 is a positive check on the shape of the first touch.
 "Finds good leads" or "writes a compelling opener" are not testable
 without a human's judgment call on quality; there is no mechanical
 check for "good." A refusal is binary: either the lead was written as
 `Scored` or it wasn't, either a send tool was called or it wasn't.
-These thirteen refusals are also the failures that actually cost the
+These refusals are also the failures that actually cost the
 business money or reputation — contacting someone who opted out,
 inventing a fact about a prospect or about the business, sending
 without approval, working a duplicate. Nothing else in this repo

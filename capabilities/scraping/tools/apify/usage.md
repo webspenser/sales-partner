@@ -25,7 +25,7 @@ means the connected Apify server's tools, whatever their prefix.
   URL the emails, phones and social links found, each with the page it
   came from.
 - Reads: `apify:get-actor-run` takes `runId` and `waitSecs`;
-  `apify:get-dataset-items` takes `datasetId`, `fields`, `limit` (at most
+  `apify:get-dataset-items` takes `datasetId`, `fields`, `limit` (always pass it; at most
   `max_dataset_items`), `offset`, `clean`, `omit` and `desc`.
 
 Pass every pinned argument on every call, with the bound value: the guard

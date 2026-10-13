@@ -621,6 +621,17 @@ assert_contains "$SP/evals/cases.md" 'A ledger outage never hides a run'
 assert_not_contains "$SP/skills/send-digest/SKILL.md" "Delivery is the skill's only side effect."
 assert_contains "$SP/skills/send-digest/SKILL.md" 'write `run_finished`, then stop'
 assert_contains "$SP/subagents/prospector.md" '`outcome` `ok` and'
+assert_contains "$SP/subagents/prospector.md" 'ledger_status'
+assert_contains "$SP/subagents/prospector.md" '`run_started`'
+assert_contains "$SP/subagents/prospector.md" 'Ledger `ledger_status`, `append_events`'
+assert_contains "$SP/subagents/preparer.md" 'ledger_status'
+assert_contains "$SP/subagents/preparer.md" '`run_started`'
+assert_contains "$SP/subagents/preparer.md" 'Ledger `ledger_status`, `append_events`'
+assert_contains "$SP/subagents/approacher.md" 'ledger_status'
+assert_contains "$SP/subagents/approacher.md" '`run_started`'
+assert_contains "$SP/subagents/approacher.md" 'Ledger `ledger_status`, `append_events`'
+assert_not_contains "$SP/skills/send-digest/SKILL.md" 'This skill reads; it never writes'
+assert_contains "$SP/README.md" 'Upgrading from 7.0'
 wc -c < "$SP/AGENT.md" | awk '{exit !($1 < 6000)}' && _report ok "AGENT.md under 6000 bytes" || _report no "AGENT.md 6000 bytes or more"
 
 finish

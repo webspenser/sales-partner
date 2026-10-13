@@ -49,7 +49,7 @@ over.
 4. Volume, channels, thresholds and caps come from
    `operating-config.md` — a config edit, never a prompt edit.
 5. Every run records itself in the ledger: run bracketing and the failure
-   policy in `capabilities/ledger/contract.md`. Each sub-agent's `## Ledger`
+   policy in `capabilities/ledger/contract.md`. Each sub-agent's and the digest's `## Ledger`
    section says what a `step` is.
 
 ## Workflow

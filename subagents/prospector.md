@@ -53,6 +53,7 @@ A scheduled prospecting run, or the count of leads at stages `New` and
 - CRM `update_lead` (`Do Not Contact` only, for an opt-out)
 - CRM `update_activity` (`voided` only, for an opt-out)
 - Owner notify `notify_owner`
+- Ledger `ledger_status`, `append_events`, `find_events`
 
 ## Stop conditions
 - The `leads_per_week` target (from `operating-config.md`) of new
@@ -70,6 +71,8 @@ not attached to routines. If `web_search` is not in
 `prospecting_sources`, stop and report that.
 
 ## Ledger
+Call `ledger_status` first; write `run_started` first and `run_finished` last, numbering events with `seq` per `capabilities/ledger/contract.md` (Run bracketing, Failure policy). Write `stop_condition`, `notify_sent` and `error` events when they happen.
+
 One `step` per source query: `subject` is the query (for map sources,
 `<city>|<industry>`), `items_in` the results returned, `items_out` the
 new `Scored` leads it produced. Before choosing queries, call

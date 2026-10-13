@@ -58,6 +58,7 @@ clears `research_threshold`, capped per run at `research_quota_per_week`
 - CRM `update_activity` (`voided` only, for an opt-out)
 - CRM `update_stage`
 - Owner notify `notify_owner`
+- Ledger `ledger_status`, `append_events`
 
 Before researching, apply the contract's opt-out instruction
 (`capabilities/crm/contract.md`, Approval invariant, **Opt-outs**) to
@@ -75,6 +76,8 @@ scheduled run, research with web search only; Apify connectors are not
 attached to routines.
 
 ## Ledger
+Call `ledger_status` first; write `run_started` first and `run_finished` last, numbering events with `seq` per `capabilities/ledger/contract.md` (Run bracketing, Failure policy). Write `stop_condition`, `notify_sent` and `error` events when they happen.
+
 One `step` per lead researched: `subject` is the CRM lead id,
 `items_in` the findings logged, `items_out` the hooks written.
 

@@ -75,6 +75,7 @@ place.
 - Read access to `templates/`
 - Read access to `context/samples/` and `samples/`
 - Owner notify `notify_owner`
+- Ledger `ledger_status`, `append_events`
 
 This contract has no send capability. That is the enforcement mechanism,
 not an instruction.
@@ -95,6 +96,8 @@ a required input is missing, call `notify_owner(kind: error)` with
 what is missing, then stop and report it.
 
 ## Ledger
+Call `ledger_status` first; write `run_started` first and `run_finished` last, numbering events with `seq` per `capabilities/ledger/contract.md` (Run bracketing, Failure policy). Write `stop_condition`, `notify_sent` and `error` events when they happen.
+
 One `step` per lead drafted: `subject` is the CRM lead id, `items_in`
 the reachable channels, `items_out` the drafts logged.
 

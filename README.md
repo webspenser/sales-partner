@@ -128,6 +128,10 @@ Scheduled runs: after setup, run `/sales-partner:schedule`. Scheduled
 prospecting and research use web search only: Apify is never attached
 to a routine, because no guard policy covers it.
 
+Upgrading from 7.0: re-run setup's tools step to bind the ledger, commit
+and push `bindings/ledger.md`, then re-run `/sales-partner:schedule`.
+Until then, scheduled activities stop with an error notification.
+
 ## Developing
 
     tests/run-all.sh                                   # content checks

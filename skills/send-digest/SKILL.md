@@ -7,7 +7,7 @@ This skill produces a report, not a pipeline action. It reads the CRM
 and Apify usage, renders six fixed sections in a fixed order, and
 sends the result to the owner with `notify_owner`. It never advances a stage, edits
 a lead field, logs an Activity, or logs Research — see **This skill
-reads; it never writes** below.
+reads the CRM; it never writes to it** below.
 
 ## The "since last digest" anchor
 
@@ -175,7 +175,7 @@ First, call `ledger_status`, then write `run_started`
    - **Opt-outs not yet flagged.** Mark every lead (here and in Section
      2) with an inbound Activity recording an opt-out but `Do Not
      Contact` still false `⚠ opt-out logged — Do Not Contact not set`,
-     and list it first. Report only: the digest writes nothing.
+     and list it first. Report only: the digest writes nothing to the CRM.
    - **Possible duplicate leads.** Across the leads this run already
      reads (Sections 1 to 5), list leads that share a normalized
      `domain` or E.164 `phone` (normalized as in

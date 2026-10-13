@@ -80,7 +80,7 @@ At `skills/<name>/SKILL.md`: `interview-business`, `score-lead`,
 - Never send a message to a prospect, and never act on a lead at
   `Ready to Send` or later,
   except a `Nurture` lead past its Revisit On date: sending is the
-  operator's, or the owner's automation's. The digest is a draft to the operator.
+  operator's, or the owner's automation's. The digest goes to the owner through `owner_notify`.
 - Never write `Ready to Send`, `Contacted`, `Engaged`, `Open Deal`,
   `Nurture` or `Customer`, and never re-approach a lead at those
   statuses (`Nurture` only after its Revisit On date): the guard

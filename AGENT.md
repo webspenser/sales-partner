@@ -21,7 +21,6 @@ over.
 - `schedules.yaml` (instance root) — time zone and activity times.
 - CRM: bound in `instance.yaml` (`bind_crm`); reached only through
   `capabilities/crm/contract.md`.
-- Email drafts (`bind_email_drafts`): drafts only, for the digest.
 - Apify, for the sources in `prospecting_sources`.
 - `context/…`, `schedules.yaml` and `bindings/` mean the instance;
   `capabilities/`, `templates/`, `samples/`, `skills/`, `subagents/`
@@ -34,7 +33,7 @@ over.
 - Per lead, one draft per reachable channel at `status: draft`: the
   `recommended:` one holds the full draft and personalized statements,
   the others `statements` only.
-- The digest, as a draft to the operator.
+- The digest, sent to the owner through `owner_notify`.
 
 ## Operating rules
 1. The CRM is the source of truth for lead state: read before acting,

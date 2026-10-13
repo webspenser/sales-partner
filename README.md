@@ -27,7 +27,7 @@ and when.
   message in full, and gives you short personalized lines for your
   other channels: an opener, why it matters to them, a proof point
   from your own results, and one simple ask.
-- **A weekly summary** in your Gmail drafts: what's waiting for your
+- **A weekly summary** sent to you: what's waiting for your
   review, what's approved, what moved, and what research tools cost.
 
 ## How it works
@@ -65,7 +65,6 @@ and when.
 ## What you need
 
 - A CRM: **Attio** or **HubSpot** (or bring your own).
-- **Gmail**, for the weekly summary (it only creates drafts).
 - **Claude Code** on a paid Claude plan, which runs the agent and its
   weekly schedule.
 - Optional: **Apify**, for richer map and website data when you run it
@@ -110,9 +109,9 @@ Version 6.0.2.
 ## Tools it needs
 
 - A CRM — Attio or HubSpot (`capabilities/crm/tools/`); setup binds it after a read-only check. If a CRM needs fields the probe does not find, setup offers two choices: create them yourself from the tool's `## Setup` steps, or run its `bootstrap.py` with an API key in your own terminal.
-- Apify for scraping and web search; Gmail for the digest draft.
+- Apify for scraping and web search.
 
-Each tool's guard policy makes Attio, HubSpot and Gmail unattended-safe.
+Each tool's guard policy makes Attio and HubSpot unattended-safe.
 
 Connect these in your host (connectors or MCP servers). Credentials
 never go in this repo.

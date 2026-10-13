@@ -269,49 +269,8 @@ a required input is missing, stop and report what is missing.
    This is the shape `templates/digest.md` defines; until that
    template exists, the section order and content rules above **are**
    the shape.
-9. Resolve the delivery channel: read `digest_channel` from
-   `operating-config.md`. If it is `sms` and no Twilio credential is
-   configured — true of the shipped default, since SMS is a stubbed
-   tool, not yet enabled — switch delivery to email (delivered per
-   step 10: always a draft) and
-   make the digest's first line say so verbatim, e.g. `Delivered by email — SMS
-   is configured but no Twilio credential exists yet.` If
-   `digest_channel` is `email`, or is `sms` with a working Twilio
-   credential, deliver on that channel with no disclaimer line. If
-   step 10's send-fallback line also applies, it goes first, above
-   this one.
-10. Deliver the rendered digest. **The digest is always a draft,
-    never a send:** create it with `email_drafts`
-    `create_draft`, addressed to `sending_identity` (the operator's own
-    address from `operating-config.md`), and the operator opens it from
-    their own drafts. Delivering it this way needs no send capability
-    at all, and the agent holds none: the email tool's guard policy
-    denies every send tool.
-
-    `digest_delivery` shipped as `draft`. If it is set to `send`, the
-    only difference is a disclaimer: compose the draft exactly as for
-    `draft` and put this line first, above the `#` heading:
-    "digest_delivery is send, but this agent's email tool
-    cannot send; delivered as a draft." The setting cannot be honored,
-    and you must not look for another way to send.
-
-    The opt-in is dormant, not removed. Direct send would need a future
-    `email_send` capability bound in the instance; only if one is bound
-    may `digest_delivery: send` deliver directly. **Enabling it would
-    grant a send capability that is not scoped to the operator's own
-    address.** Gmail has no per-recipient send scope: a credential that
-    can send this digest to `sending_identity` can send mail to anyone,
-    prospects included. The guardrails would still forbid using it that
-    way, but with the opt-in on, "the agent cannot reach a prospect"
-    stops being true by construction and goes back to being an
-    instruction, which is why the default is `draft`, and why turning
-    it on is the operator's decision to make in config, never the
-    agent's to make at runtime. See **Approval scope** below for why
-    delivering this one report to this one recipient needs no separate
-    approval step.
-
-    Delivery, as a draft, is the skill's only side effect. Stop — no
-    CRM write of any kind follows.
+9. Deliver the rendered digest. Delivery is added with the `owner_notify` capability.
+   Stop — no CRM write of any kind follows.
 
 ## Why the review queue leads
 
@@ -332,37 +291,20 @@ if an inbound opt-out arrives first,
 diverted from `draft` straight to the terminal `voided` via
 `update_activity`. The digest
 is never logged as an Activity, is never addressed to a prospect, and
-never touches `log_activity` at all — it is a report the agent sends
-to the operator, about the operator's own pipeline. Delivering it by
-email is not a violation of that guardrail; it is a different act
-entirely, on a different channel scope than the draft-only Gmail
-access `AGENT.md`'s Inputs describes for composing prospect-facing
-Activities. Do not read this skill's email delivery as an argument
-that any other agent output no longer needs approval — it applies to
-this one report, addressed to this one recipient, precisely because
-that recipient is the person the approval gate exists to protect, not
-someone the approval gate exists to protect *from*.
-
-The question is narrower still: the digest
-is composed as a draft via `email_drafts` `create_draft` to
-`sending_identity` and the operator opens it, so this skill delivers
-its one report using exactly the draft-only access `AGENT.md`'s
-Inputs already describes, holding no send capability whatsoever. The
-reasoning above would license a `digest_delivery: send` opt-in once an
-`email_send` capability exists; it is not a claim that the opt-in is
-free. Turning it on would add a send scope Gmail cannot narrow to a
-single recipient, so the operator who enables it would grant a
-capability that could technically reach a prospect — an
-instruction-enforced boundary where a withheld-capability one stood
-before. Until then the opt-in is dormant; grant it deliberately or not
-at all.
+never touches `log_activity` at all — it is a report for the
+operator, about the operator's own pipeline. Delivering it is not a
+violation of that guardrail; it is a different act entirely. Do not
+read this skill's delivery as an argument that any other agent output
+no longer needs approval — it applies to this one report, addressed to
+the operator, precisely because that recipient is the person the
+approval gate exists to protect, not someone the approval gate exists
+to protect *from*.
 
 ## Worked example
 
 Run fires Monday, 2026-08-31, 08:00 — the nominal scheduled time
 matches the wall clock exactly this week. Anchor: Monday, 2026-08-24,
-08:00 (one cadence interval, 7 days, earlier). `digest_channel: email`
-(the shipped default — no fallback disclaimer needed this run).
+08:00 (one cadence interval, 7 days, earlier).
 
 ```
 # Sales Partner Digest — 2026-08-31
@@ -429,16 +371,6 @@ after the anchor" with no upper bound, this run (executing at 11:00)
 would have caught Vantage Fleet too, and next week's on-time run would
 report it again — the double-report Finding 1 describes.
 
-Composed as a draft via `email_drafts` `create_draft` to `sending_identity` (e.g. `Andrew Ho Choy
-<andrew@example.com>`) — the shipped `digest_delivery: draft` default —
-for the operator to open. Had `digest_channel` instead been `sms` with
-no Twilio credential configured, the same body would still be delivered
-by email, with this line prepended above the `#` heading:
-
-```
-Delivered by email — SMS is configured but no Twilio credential exists yet.
-```
-
 ## Failure modes
 
 - **Burying an empty review queue under the reporting.** Sections 1 and
@@ -470,17 +402,3 @@ Delivered by email — SMS is configured but no Twilio credential exists yet.
   like the anchor bounds it on the lower edge — is what closes this,
   and it is mandatory for New leads scored and Movement on every run,
   not only the runs a reviewer happens to notice ran late.
-- **Flipping `digest_delivery` to `send` for convenience.** Saving
-  the operator the click of opening a draft is not a reason to hand
-  the agent an unscoped send capability. Direct send would be a
-  deliberate operator decision recorded in `operating-config.md`, and
-  in this release direct send is not available at all. This skill never
-  enables it on its own, infers it from a preference, or treats it as
-  the obvious default once it has run a few times cleanly.
-- **Silently falling back to email without saying so.** The fallback
-  from `sms` to `email` when no Twilio credential exists is not itself
-  a failure — it's the only sane behavior with a stubbed tool. The
-  failure is delivering that fallback digest with no disclaimer line,
-  leaving the operator to assume SMS delivery is live when it never
-  ran. Step 9's disclaimer line is mandatory whenever the fallback
-  fires, never optional or paraphrased away.

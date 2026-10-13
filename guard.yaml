@@ -1,7 +1,7 @@
 # sales-partner agent guard policy: applies to every MCP call inside an
 # instance, whatever the server. Nothing this agent does sends, replies,
 # forwards, publishes or schedules a message, or writes calendar events
-# (which email invites); drafts go to the CRM or to Gmail drafts.
+# (which email invites); drafts go to the CRM.
 # call_tool: a generic dispatcher (Zernio) would hide any tool behind it.
 # *_workflow*: n8n's instance-level tools run or rebuild any workflow, a
 # dispatcher that could reach a workflow which sends.

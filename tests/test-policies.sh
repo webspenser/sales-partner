@@ -33,8 +33,7 @@ for t in mcp__claude_ai_Gmail__send_message mcp__claude_ai_Gmail__reply mcp__cla
          mcp__claude_ai_Google_Calendar__respond_to_event; do
   acheck 2 "denied: $t" "$t"
 done
-for t in mcp__claude_ai_Gmail__create_draft mcp__claude_ai_Gmail__list_drafts mcp__claude_ai_Gmail__search_threads \
-         mcp__claude_ai_Gmail__get_thread mcp__claude_ai_Attio__list-comment-replies mcp__claude_ai_Attio__list-records \
+for t in mcp__claude_ai_Attio__list-comment-replies mcp__claude_ai_Attio__list-records \
          mcp__claude_ai_Beehiiv__list_publications mcp__claude_ai_Beehiiv__get_publication \
          mcp__claude_ai_HubSpot__manage_crm_objects mcp__claude_ai_HubSpot__search_crm_objects \
          mcp__claude_ai_Slack__slack_read_channel \
@@ -102,20 +101,6 @@ check 2 "lead created past New"       $AT ${P}add-record-to-list "{$L,\"entry_va
 check 0 "lead created at New"         $AT ${P}add-record-to-list "{$L,\"entry_values\":{\"stage\":\"New\"}}"
 check 2 "agent can't mark a touch sent" $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"status\":\"sent\"}}" "status may only be written as voided on update"
 check 2 "agent can't revive a draft"  $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"status\":\"draft\"}}"
-echo "-- Gmail"
-GM=capabilities/email_drafts/tools/gmail/guard.yaml; G=mcp__claude_ai_Gmail__
-check 0 "create draft"              $GM ${G}create_draft '{"to":"a@b.c","subject":"s","body":"b"}'
-check 0 "search threads"            $GM ${G}search_threads '{"query":"x"}'
-check 2 "send refused"              $GM ${G}send_message '{}' "is denied"
-check 2 "reply refused"             $GM ${G}reply_to_thread '{}' "is denied"
-check 2 "forward refused"           $GM ${G}forward_message '{}' "is denied"
-check 2 "trash not allowed"         $GM ${G}trash_thread '{}' "is not in the allow list"
-check 2 "new unlisted tool"         $GM ${G}schedule_email '{}' "is not in the allow list"
-check 0 "prefixed create_draft"     $GM mcp__gmail_server__gmail_create_draft '{}'
-check 0 "prefixed search_threads"   $GM mcp__gmail_server__gmail_search_threads '{}'
-check 2 "prefixed send still denied" $GM mcp__gmail_server__gmail_send_message '{}' "is denied"
-check 2 "suffix glob is not a substring" $GM ${G}create_draft_and_send '{}'
-
 echo "-- HubSpot"
 HS=capabilities/crm/tools/hubspot/guard.yaml; H=mcp__claude_ai_HubSpot__
 TC='{"objectType":"tasks","properties":{"hs_task_status":"%s"}}'

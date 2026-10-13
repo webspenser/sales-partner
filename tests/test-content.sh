@@ -189,11 +189,8 @@ assert_contains "$HT/guard.yaml" 'field: hs_task_status'
 if grep -nE 'sp_(status|channel|direction|summary|outcome)' "$HT/usage.md" "$HT/bootstrap.py" "$HT/guard.yaml" | grep -q .; then
   _report no "the HubSpot tool still mentions a custom task field"; else _report ok "no custom task fields in the HubSpot tool"; fi
 
-echo "-- email drafts"
-assert_contains "$SP/agent.yaml" 'capabilities: crm, email_drafts'
+echo "-- tool guard policies"
 assert_not_contains "$SP/AGENT.md" 'delivers it directly'
-assert_contains "$SP/capabilities/email_drafts/contract.md" '- `no_external_send` —'
-assert_contains "$SP/capabilities/email_drafts/tools/gmail/guard.yaml" 'covers: [no_external_send]'
 assert_contains "$SP/capabilities/crm/tools/attio/guard.yaml" 'covers: [draft_only, dnc_one_way, no_delete]'
 for y in "$SP"/capabilities/*/tools/*/identity.yaml; do
   assert_pass bash -c "{ [ \"\$(grep -c . '$y')\" = 3 ] || { [ \"\$(grep -c . '$y')\" = 4 ] && grep -qx 'wrapper: n8n' '$y'; }; } && grep -q '^capability: ' '$y' && grep -q '^provider: ' '$y' && grep -q '^server_match: ' '$y'"
@@ -201,7 +198,6 @@ done
 [ ! -e "$AT/guard.py" ] && _report ok "guard.py removed" || _report no "guard.py still present"
 assert_contains "$SP/skills/setup/SKILL.md" '**Tools.**'
 assert_contains "$SP/skills/setup/SKILL.md" 'whether the tool'"'"'s guard policy covers it'
-assert_contains "$SP/skills/send-digest/SKILL.md" 'cannot send; delivered as a draft'
 
 allowed_by() { # allowed_by <policy> <prefix> <tool>
   printf '{"tool_name":"%s%s","tool_input":{}}' "$2" "$3" | python3 -B "$SP/hooks/guard_policy.py" "$1" - x >/dev/null 2>&1
@@ -215,17 +211,13 @@ in_allow() { # in_allow <policy> <prefix> <tool>: listed and not denied; a write
 for t in $(grep -oE 'attio:[a-z-]+' "$SP/capabilities/crm/tools/attio/usage.md" | sort -u | cut -d: -f2); do
   allowed_by "$SP/capabilities/crm/tools/attio/guard.yaml" mcp__attio__ "$t" && _report ok "Attio $t allowed" || _report no "Attio $t not in guard.yaml allow"
 done
-for t in $(grep -oE 'gmail:[a-z_]+' "$SP/capabilities/email_drafts/tools/gmail/usage.md" | sort -u | cut -d: -f2); do
-  allowed_by "$SP/capabilities/email_drafts/tools/gmail/guard.yaml" mcp__gmail__ "$t" && _report ok "Gmail $t allowed" || _report no "Gmail $t not in guard.yaml allow"
-done
 for t in $(grep -oE 'hubspot:[a-z_]+' "$SP/capabilities/crm/tools/hubspot/usage.md" | sort -u | cut -d: -f2); do
   allowed_by "$SP/capabilities/crm/tools/hubspot/guard.yaml" mcp__hubspot__ "$t" && _report ok "HubSpot $t allowed" || _report no "HubSpot $t not in guard.yaml allow"
 done
 
 echo "-- scheduled runs"
-assert_contains "$SP/agent.yaml" 'activity_digest: crm, email_drafts'
+assert_contains "$SP/agent.yaml" 'activity_digest: crm'
 assert_contains "$SP/agent.yaml" 'activity_approach: crm'
-assert_not_contains "$SP/agent.yaml" 'activity_approach: crm, email_drafts'
 assert_contains "$SP/skills/send-digest/SKILL.md" 'DO NOT SEND — lead is Do Not Contact'
 assert_contains "$SP/skills/send-digest/SKILL.md" 'Possible duplicate leads'
 assert_contains "$SP/AGENT.md" 'this rule is an instruction'
@@ -257,8 +249,6 @@ assert_contains "$HU" 'are outcomes, not Research'
 assert_not_contains "$HU" 'body with Outcome: line'
 assert_not_contains "$HU" 'appends an `Outcome: <outcome>` line'
 for f in "$SP"/capabilities/crm/tools/*/usage.md; do assert_contains "$f" 'Write only the fields that change'; done
-assert_not_contains "$SP/capabilities/email_drafts/tools/gmail/usage.md" 'add its names to'
-assert_contains "$SP/capabilities/email_drafts/tools/gmail/usage.md" 'matches names by suffix'
 
 echo "-- 6.0.0: Ready to Send and sent"
 K="$SP/capabilities/crm/contract.md"
@@ -375,7 +365,6 @@ echo "-- 6.0.0: lead generation and personalization (sending leaves)"
 for f in capabilities/sequences skills/enroll skills/sync-replies; do
   [ ! -e "./$f" ] && _report ok "removed: $f" || _report no "still present: $f"  # ./ so the referenced-files check skips it
 done
-grep -qx 'capabilities: crm, email_drafts' "$SP/agent.yaml" && _report ok "capabilities: crm, email_drafts" || _report no "capabilities line still lists more than crm, email_drafts"
 ! grep -qE '^activity_(enroll|sync-replies):' "$SP/agent.yaml" && _report ok "no enroll or sync-replies activity" || _report no "enroll or sync-replies still declared"
 OC="$SP/context/operating-config.md"
 IV="$SP/skills/interview-business/SKILL.md"
@@ -558,5 +547,15 @@ for f in README.md capabilities/crm/contract.md capabilities/crm/tools/attio/usa
   assert_not_contains "./$f" "Airtable"
 done
 assert_contains "$SP/agent.yaml" 'standard: "7.0"'
+assert_contains "$SP/agent.yaml" 'capabilities: crm'
+
+echo "-- 7.0: no email_drafts"
+[ ! -e "./capabilities/email_drafts" ] && _report ok "email_drafts removed" || _report no "email_drafts still present"
+for f in agent.yaml AGENT.md README.md context/operating-config.md skills/send-digest/SKILL.md skills/interview-business/SKILL.md skills/setup/SKILL.md; do
+  assert_not_contains "./$f" "email_drafts"
+  assert_not_contains "./$f" "digest_delivery"
+  assert_not_contains "./$f" "digest_channel"
+done
+assert_contains "$SP/context/operating-config.md" 'sending_identity:'
 
 finish

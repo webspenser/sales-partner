@@ -109,14 +109,13 @@ window per section:
   leads in Movement that never moved. `Stage Changed At` only ever
   moves when the stage actually does.
 
-## This skill reads; it never writes
+## This skill reads the CRM; it never writes to it
 
 Its only side effects are delivering the finished digest and recording
-the run in the ledger. It
-never calls `create_lead`, `update_stage`, `update_lead`,
-`log_activity`, `log_research`, or `upsert_contact` — no stage moves,
-no field edits, no Activity or Research row, not even a "digest sent"
-marker. The reads it does use, named precisely:
+the run in the ledger. It never calls `create_lead`, `update_stage`,
+`update_lead`, `log_activity`, `log_research`, or `upsert_contact` — no
+stage moves, no field edits, no Activity or Research row, not even a
+"digest sent" marker in the CRM. The reads it does use, named precisely:
 
 - CRM **`query_by_stage`** on `Approach Drafted` — Section 1, Review —
   and on `Ready to Send` — Section 2, Ready to Send.
@@ -156,6 +155,9 @@ writes are the digest's only writes besides delivery; it still never
 writes to the CRM.
 
 ## Procedure
+
+First, call `ledger_status`, then write `run_started`
+(`capabilities/ledger/contract.md`, Run bracketing).
 
 1. Compute the window — the anchor and `nominal_time` that bound it on
    both edges — per **The "since last digest" anchor** above.
@@ -280,8 +282,9 @@ writes to the CRM.
 9. Deliver the rendered digest with `notify_owner(kind: digest)`: the
    subject is `Digest <date>`, the body is the rendered digest. The
    recipient is the owner pinned at setup; this skill never chooses
-   one. Delivery is the skill's only side effect. Stop — no further
-   reads, no writes.
+   one. Delivery is the skill's only side effect besides its ledger writes.
+   Record the `step`, write `run_finished`, then stop: no CRM write of
+   any kind.
 
 ## Why the review queue leads
 

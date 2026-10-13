@@ -618,6 +618,9 @@ assert_contains "$SP/skills/send-digest/SKILL.md" '## Ledger'
 assert_contains "$SP/README.md" 'You can see everything it did.'
 assert_contains "$SP/README.md" 'Team plan'
 assert_contains "$SP/evals/cases.md" 'A ledger outage never hides a run'
+assert_not_contains "$SP/skills/send-digest/SKILL.md" "Delivery is the skill's only side effect."
+assert_contains "$SP/skills/send-digest/SKILL.md" 'write `run_finished`, then stop'
+assert_contains "$SP/subagents/prospector.md" '`outcome` `ok` and'
 wc -c < "$SP/AGENT.md" | awk '{exit !($1 < 6000)}' && _report ok "AGENT.md under 6000 bytes" || _report no "AGENT.md 6000 bytes or more"
 
 finish

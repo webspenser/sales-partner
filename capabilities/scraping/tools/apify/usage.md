@@ -5,37 +5,34 @@ Maps scraper for local businesses, and the contact-info scraper for
 emails, phones and social links on a business's website. `apify:` below
 means the connected Apify server's tools, whatever their prefix.
 
-- `find_businesses` — `apify:compass--crawler-google-places` with one
-  search term (`searchStringsArray`, a single string), the location as
-  structured `city` + `state` + `countryCode` (never `locationQuery`: the
-  probe showed "Alameda, CA, USA" resolving to Alameda County, and every
-  result came from Livermore), and `maxCrawledPlacesPerSearch` = the
-  `max_places_per_search` binding. One search term per call.
-- `find_contacts` — `apify:vdrmota--contact-info-scraper` with at most 10
-  website URLs in `startUrls` (`[{"url": …}]`), `maxRequestsPerStartUrl` =
-  `max_pages_per_site`, `maxDepth` = `max_crawl_depth` and `maxRequests` =
-  `max_pages_per_call`. Return per URL the emails, phones and social
-  links found, each with the page it came from.
+- `find_businesses` — `apify:compass--crawler-google-places`. Allowed
+  arguments, and no others:
+  - `searchStringsArray` — exactly one search term (`["HVAC contractor"]`);
+  - `city`, `state`, `countryCode` — the location, structured. Never use
+    `locationQuery`: the probe showed "Alameda, CA, USA" resolving to
+    Alameda County, and every result came from Livermore;
+  - `maxCrawledPlacesPerSearch` = the `max_places_per_search` binding;
+  - `language`, `waitSecs` (pass 45).
+- `find_contacts` — `apify:vdrmota--contact-info-scraper`. Allowed
+  arguments, and no others:
+  - `startUrls` — at most 10 website URLs, each exactly `{"url": "https://…"}`
+    and nothing else on the object;
+  - `maxRequestsPerStartUrl` = `max_pages_per_site`, `maxDepth` =
+    `max_crawl_depth`, `maxRequests` = `max_pages_per_call`;
+  - `mergeContacts`, `sameDomain`, `considerChildFrames`, `waitSecs` (pass 45).
+
+  Do not pass `proxyConfig`: the actor's proxy defaults apply. Return per
+  URL the emails, phones and social links found, each with the page it
+  came from.
+- Reads: `apify:get-actor-run` takes `runId` and `waitSecs`;
+  `apify:get-dataset-items` takes `datasetId`, `fields`, `limit` (at most
+  `max_dataset_items`), `offset`, `clean`, `omit` and `desc`.
 
 Pass every pinned argument on every call, with the bound value: the guard
-refuses a call that leaves one out or raises it. Never call any other
-Apify tool.
-
-**Arguments to omit.** The guard refuses a call that carries any of
-these, with any value, even `false`: leave the argument out entirely.
-Paid add-ons: `scrapeContacts`, `maximumLeadsEnrichmentRecords`,
-`leadsEnrichmentDepartments`, `verifyLeadsEnrichmentEmails`, `maxReviews`,
-`maxImages`, `maxQuestions`, `scrapePlaceDetailPage`,
-`enableCompetitorAnalysis`, `maxCompetitorsToAnalyze`, `includeWebResults`,
-`scrapeDirectories`, `scrapeOrderOnline`, `scrapeTableReservationProvider`,
-`scrapeSocialMediaProfiles`, `scrapeImageAuthors`,
-`scrapeReviewsPersonalData`, `useBrowser`. Filters and other ways to name
-places: `reviewsFilterString`, `reviewsOrigin`, `reviewsSort`,
-`reviewsStartDate`, `categoryFilterWords`, `placeMinimumStars`,
-`searchMatching`, `skipClosedPlaces`, `website`, `allPlacesNoSearchAction`,
-`placeIds`, `customGeolocation`. Also never pass `startUrls` to the Maps
-actor (it belongs to the contact scraper only). `sameDomain` cannot be
-pinned; leave it at its default.
+refuses a call that leaves one out or raises it, one that carries any
+argument not listed above (even with a `false` or empty value; leave it
+out entirely), and one whose lists run past `max_search_terms` search
+terms or `max_sites_per_call` URLs. Never call any other Apify tool.
 
 ## Results
 
@@ -75,7 +72,10 @@ operator recalibrates them from Apify Console.
    - `max_pages_per_site` — pages the contact scraper reads per website (default 3);
    - `max_crawl_depth` — link depth on each website (default 1);
    - `max_pages_per_call` — pages the contact scraper reads in one call,
-     across all its websites (default 30: 10 websites × 3 pages).
+     across all its websites (default 30: 10 websites × 3 pages);
+   - `max_search_terms` — search terms per Maps call (default 1);
+   - `max_sites_per_call` — website URLs per contact call (default 10);
+   - `max_dataset_items` — items per `get-dataset-items` read (default 100).
 
 ## Probe
 

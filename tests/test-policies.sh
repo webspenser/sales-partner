@@ -108,56 +108,42 @@ SM=
 echo "-- scraping (apify)"
 AG2=capabilities/scraping/tools/apify/guard.yaml; P=mcp__claude_ai_Apify__; SM=apify
 MAPS=compass--crawler-google-places; CONTACTS=vdrmota--contact-info-scraper
-printf '%s\n' 'max_places_per_search: 60' 'max_pages_per_site: 3' 'max_crawl_depth: 1' 'max_pages_per_call: 30' > "$W/scraping.md"
-MAPS_OK='{"maxCrawledPlacesPerSearch":60,"searchStringsArray":["HVAC contractor"],"city":"Alameda","state":"CA","countryCode":"us"}'
-CT='"startUrls":[{"url":"https://example.com"}],"maxRequestsPerStartUrl":3,"maxDepth":1,"maxRequests":30'
+printf '%s\n' 'max_places_per_search: 60' 'max_pages_per_site: 3' 'max_crawl_depth: 1' 'max_pages_per_call: 30' \
+  'max_search_terms: 1' 'max_sites_per_call: 10' 'max_dataset_items: 100' > "$W/scraping.md"
+MAPS_OK='{"maxCrawledPlacesPerSearch":60,"searchStringsArray":["HVAC contractor"],"city":"Alameda","state":"CA","countryCode":"us","language":"en","waitSecs":45}'
+CT='"maxRequestsPerStartUrl":3,"maxDepth":1,"maxRequests":30'
+U1='{"url":"https://example.com"}'
 check 0 "maps in limit"            $AG2 ${P}$MAPS "$MAPS_OK" "" "$W/scraping.md"
 check 2 "maps over limit"          $AG2 ${P}$MAPS '{"maxCrawledPlacesPerSearch":5000}' "5000 is not a pinned value (max_places_per_search)" "$W/scraping.md"
 check 2 "maps limit omitted"       $AG2 ${P}$MAPS '{"searchStringsArray":["x"]}' "names no pinned value" "$W/scraping.md"
-check 0 "contacts in limit"        $AG2 ${P}$CONTACTS "{$CT}" "" "$W/scraping.md"
+check 2 "maps two search terms"    $AG2 ${P}$MAPS '{"maxCrawledPlacesPerSearch":60,"searchStringsArray":["a","b"]}' "exceeds max_search_terms" "$W/scraping.md"
+for a in locationQuery startUrls placeIds customGeolocation scrapeContacts maxReviews scrapePlaceDetailPage website; do
+  check 2 "maps may not use $a"    $AG2 ${P}$MAPS "{\"maxCrawledPlacesPerSearch\":60,\"$a\":\"x\"}" "may not use" "$W/scraping.md"
+done
+check 2 "maps false add-on"        $AG2 ${P}$MAPS '{"maxCrawledPlacesPerSearch":60,"scrapeContacts":false}' "may not use" "$W/scraping.md"
+check 0 "contacts in limit"        $AG2 ${P}$CONTACTS "{\"startUrls\":[$U1],$CT,\"sameDomain\":true,\"mergeContacts\":true,\"considerChildFrames\":false,\"waitSecs\":45}" "" "$W/scraping.md"
 check 2 "contacts pages raised"    $AG2 ${P}$CONTACTS '{"startUrls":[{"url":"https://example.com"}],"maxRequestsPerStartUrl":50,"maxDepth":1,"maxRequests":30}' "is not a pinned value (max_pages_per_site)" "$W/scraping.md"
 check 2 "contacts depth raised"    $AG2 ${P}$CONTACTS '{"startUrls":[{"url":"https://example.com"}],"maxRequestsPerStartUrl":3,"maxDepth":5,"maxRequests":30}' "is not a pinned value (max_crawl_depth)" "$W/scraping.md"
 check 2 "contacts depth omitted"   $AG2 ${P}$CONTACTS '{"startUrls":[{"url":"https://example.com"}],"maxRequestsPerStartUrl":3,"maxRequests":30}' "names no pinned value" "$W/scraping.md"
 check 2 "contacts calls unbounded" $AG2 ${P}$CONTACTS '{"startUrls":[{"url":"https://example.com"}],"maxRequestsPerStartUrl":3,"maxDepth":1,"maxRequests":9999999}' "is not a pinned value (max_pages_per_call)" "$W/scraping.md"
 check 2 "contacts call cap omitted" $AG2 ${P}$CONTACTS '{"startUrls":[{"url":"https://example.com"}],"maxRequestsPerStartUrl":3,"maxDepth":1}' "names no pinned value" "$W/scraping.md"
+URLS11=$(python3 -c 'import json;print(json.dumps([{"url":"https://e%d.com"%i} for i in range(11)]))')
+check 2 "contacts 11 URLs"         $AG2 ${P}$CONTACTS "{\"startUrls\":$URLS11,$CT}" "exceeds max_sites_per_call" "$W/scraping.md"
+check 2 "contacts proxyConfig"     $AG2 ${P}$CONTACTS "{\"startUrls\":[$U1],$CT,\"proxyConfig\":{\"useApifyProxy\":true,\"apifyProxyGroups\":[\"RESIDENTIAL\"]}}" "may not use" "$W/scraping.md"
+for a in useBrowser waitUntil maximumLeadsEnrichmentRecords scrapeSocialMediaProfiles; do
+  check 2 "contacts may not use $a" $AG2 ${P}$CONTACTS "{\"startUrls\":[$U1],$CT,\"$a\":\"x\"}" "may not use" "$W/scraping.md"
+done
+check 2 "start URL requestsFromUrl" $AG2 ${P}$CONTACTS "{\"startUrls\":[{\"url\":\"https://example.com\",\"requestsFromUrl\":\"https://x.test/list.txt\"}],$CT}" "may not use" "$W/scraping.md"
+check 2 "start URL method"         $AG2 ${P}$CONTACTS "{\"startUrls\":[{\"url\":\"https://example.com\",\"method\":\"POST\"}],$CT}" "may not use" "$W/scraping.md"
+check 2 "start URL headers"        $AG2 ${P}$CONTACTS "{\"startUrls\":[{\"url\":\"https://example.com\",\"headers\":{}}],$CT}" "may not use" "$W/scraping.md"
+check 2 "start URL payload"        $AG2 ${P}$CONTACTS "{\"startUrls\":[{\"url\":\"https://example.com\",\"payload\":\"x\"}],$CT}" "may not use" "$W/scraping.md"
+check 2 "start URL userData"       $AG2 ${P}$CONTACTS "{\"startUrls\":[{\"url\":\"https://example.com\",\"userData\":{}}],$CT}" "may not use" "$W/scraping.md"
 check 2 "no bindings blocked"      $AG2 ${P}$MAPS "$MAPS_OK" "no max_places_per_search line"
-check 0 "run status read passes"   $AG2 ${P}get-actor-run '{"runId":"r1"}' "" "$W/scraping.md"
-check 0 "dataset read passes"      $AG2 ${P}get-dataset-items '{"datasetId":"d1","fields":"title,phone"}' "" "$W/scraping.md"
-check 2 "refused (maps): scrapeContacts" $AG2 ${P}$MAPS "{\"maxCrawledPlacesPerSearch\":60,\"scrapeContacts\":true}" "may not use" "$W/scraping.md"
-check 2 "refused (maps): maximumLeadsEnrichmentRecords" $AG2 ${P}$MAPS "{\"maxCrawledPlacesPerSearch\":60,\"maximumLeadsEnrichmentRecords\":true}" "may not use" "$W/scraping.md"
-check 2 "refused (maps): leadsEnrichmentDepartments" $AG2 ${P}$MAPS "{\"maxCrawledPlacesPerSearch\":60,\"leadsEnrichmentDepartments\":true}" "may not use" "$W/scraping.md"
-check 2 "refused (maps): verifyLeadsEnrichmentEmails" $AG2 ${P}$MAPS "{\"maxCrawledPlacesPerSearch\":60,\"verifyLeadsEnrichmentEmails\":true}" "may not use" "$W/scraping.md"
-check 2 "refused (maps): maxReviews" $AG2 ${P}$MAPS "{\"maxCrawledPlacesPerSearch\":60,\"maxReviews\":true}" "may not use" "$W/scraping.md"
-check 2 "refused (maps): maxImages" $AG2 ${P}$MAPS "{\"maxCrawledPlacesPerSearch\":60,\"maxImages\":true}" "may not use" "$W/scraping.md"
-check 2 "refused (maps): maxQuestions" $AG2 ${P}$MAPS "{\"maxCrawledPlacesPerSearch\":60,\"maxQuestions\":true}" "may not use" "$W/scraping.md"
-check 2 "refused (maps): scrapePlaceDetailPage" $AG2 ${P}$MAPS "{\"maxCrawledPlacesPerSearch\":60,\"scrapePlaceDetailPage\":true}" "may not use" "$W/scraping.md"
-check 2 "refused (maps): enableCompetitorAnalysis" $AG2 ${P}$MAPS "{\"maxCrawledPlacesPerSearch\":60,\"enableCompetitorAnalysis\":true}" "may not use" "$W/scraping.md"
-check 2 "refused (maps): maxCompetitorsToAnalyze" $AG2 ${P}$MAPS "{\"maxCrawledPlacesPerSearch\":60,\"maxCompetitorsToAnalyze\":true}" "may not use" "$W/scraping.md"
-check 2 "refused (maps): includeWebResults" $AG2 ${P}$MAPS "{\"maxCrawledPlacesPerSearch\":60,\"includeWebResults\":true}" "may not use" "$W/scraping.md"
-check 2 "refused (maps): scrapeDirectories" $AG2 ${P}$MAPS "{\"maxCrawledPlacesPerSearch\":60,\"scrapeDirectories\":true}" "may not use" "$W/scraping.md"
-check 2 "refused (maps): scrapeOrderOnline" $AG2 ${P}$MAPS "{\"maxCrawledPlacesPerSearch\":60,\"scrapeOrderOnline\":true}" "may not use" "$W/scraping.md"
-check 2 "refused (maps): scrapeTableReservationProvider" $AG2 ${P}$MAPS "{\"maxCrawledPlacesPerSearch\":60,\"scrapeTableReservationProvider\":true}" "may not use" "$W/scraping.md"
-check 2 "refused (maps): scrapeSocialMediaProfiles" $AG2 ${P}$MAPS "{\"maxCrawledPlacesPerSearch\":60,\"scrapeSocialMediaProfiles\":true}" "may not use" "$W/scraping.md"
-check 2 "refused (maps): scrapeImageAuthors" $AG2 ${P}$MAPS "{\"maxCrawledPlacesPerSearch\":60,\"scrapeImageAuthors\":true}" "may not use" "$W/scraping.md"
-check 2 "refused (maps): scrapeReviewsPersonalData" $AG2 ${P}$MAPS "{\"maxCrawledPlacesPerSearch\":60,\"scrapeReviewsPersonalData\":true}" "may not use" "$W/scraping.md"
-check 2 "refused (maps): reviewsFilterString" $AG2 ${P}$MAPS "{\"maxCrawledPlacesPerSearch\":60,\"reviewsFilterString\":true}" "may not use" "$W/scraping.md"
-check 2 "refused (maps): reviewsOrigin" $AG2 ${P}$MAPS "{\"maxCrawledPlacesPerSearch\":60,\"reviewsOrigin\":true}" "may not use" "$W/scraping.md"
-check 2 "refused (maps): reviewsSort" $AG2 ${P}$MAPS "{\"maxCrawledPlacesPerSearch\":60,\"reviewsSort\":true}" "may not use" "$W/scraping.md"
-check 2 "refused (maps): reviewsStartDate" $AG2 ${P}$MAPS "{\"maxCrawledPlacesPerSearch\":60,\"reviewsStartDate\":true}" "may not use" "$W/scraping.md"
-check 2 "refused (maps): categoryFilterWords" $AG2 ${P}$MAPS "{\"maxCrawledPlacesPerSearch\":60,\"categoryFilterWords\":true}" "may not use" "$W/scraping.md"
-check 2 "refused (maps): placeMinimumStars" $AG2 ${P}$MAPS "{\"maxCrawledPlacesPerSearch\":60,\"placeMinimumStars\":true}" "may not use" "$W/scraping.md"
-check 2 "refused (maps): searchMatching" $AG2 ${P}$MAPS "{\"maxCrawledPlacesPerSearch\":60,\"searchMatching\":true}" "may not use" "$W/scraping.md"
-check 2 "refused (maps): skipClosedPlaces" $AG2 ${P}$MAPS "{\"maxCrawledPlacesPerSearch\":60,\"skipClosedPlaces\":true}" "may not use" "$W/scraping.md"
-check 2 "refused (maps): website" $AG2 ${P}$MAPS "{\"maxCrawledPlacesPerSearch\":60,\"website\":true}" "may not use" "$W/scraping.md"
-check 2 "refused (maps): allPlacesNoSearchAction" $AG2 ${P}$MAPS "{\"maxCrawledPlacesPerSearch\":60,\"allPlacesNoSearchAction\":true}" "may not use" "$W/scraping.md"
-check 2 "refused (maps): placeIds" $AG2 ${P}$MAPS "{\"maxCrawledPlacesPerSearch\":60,\"placeIds\":true}" "may not use" "$W/scraping.md"
-check 2 "refused (maps): customGeolocation" $AG2 ${P}$MAPS "{\"maxCrawledPlacesPerSearch\":60,\"customGeolocation\":true}" "may not use" "$W/scraping.md"
-check 2 "refused (contacts): maximumLeadsEnrichmentRecords" $AG2 ${P}$CONTACTS "{$CT,\"maximumLeadsEnrichmentRecords\":true}" "may not use" "$W/scraping.md"
-check 2 "refused (contacts): leadsEnrichmentDepartments" $AG2 ${P}$CONTACTS "{$CT,\"leadsEnrichmentDepartments\":true}" "may not use" "$W/scraping.md"
-check 2 "refused (contacts): verifyLeadsEnrichmentEmails" $AG2 ${P}$CONTACTS "{$CT,\"verifyLeadsEnrichmentEmails\":true}" "may not use" "$W/scraping.md"
-check 2 "refused (contacts): scrapeSocialMediaProfiles" $AG2 ${P}$CONTACTS "{$CT,\"scrapeSocialMediaProfiles\":true}" "may not use" "$W/scraping.md"
-check 2 "refused (contacts): useBrowser" $AG2 ${P}$CONTACTS "{$CT,\"useBrowser\":true}" "may not use" "$W/scraping.md"
-check 2 "refused: false is still a value" $AG2 ${P}$MAPS '{"maxCrawledPlacesPerSearch":60,"scrapeContacts":false}' "may not use" "$W/scraping.md"
+check 0 "run status read passes"   $AG2 ${P}get-actor-run '{"runId":"r1","waitSecs":45}' "" "$W/scraping.md"
+check 2 "run read other arg"       $AG2 ${P}get-actor-run '{"runId":"r1","token":"x"}' "may not use" "$W/scraping.md"
+check 0 "dataset read passes"      $AG2 ${P}get-dataset-items '{"datasetId":"d1","fields":"title,phone","limit":100,"offset":0,"clean":true}' "" "$W/scraping.md"
+check 2 "dataset limit 1000"       $AG2 ${P}get-dataset-items '{"datasetId":"d1","limit":1000}' "exceeds max_dataset_items" "$W/scraping.md"
+check 2 "dataset other arg"        $AG2 ${P}get-dataset-items '{"datasetId":"d1","flatten":"x"}' "may not use" "$W/scraping.md"
 for t in call-actor search-actors add-actor fetch-actor-details abort-actor-run get-key-value-store-record; do
   check 2 "blocked: $t"            $AG2 ${P}$t '{}' "" "$W/scraping.md"
 done

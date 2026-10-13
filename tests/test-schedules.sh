@@ -21,7 +21,8 @@ ledger() { # ledger <dir>: bind the ledger to Airtable with complete bindings
 scrape() { # scrape <dir>: bind scraping to Apify with every pinned value
   mkdir -p "$1/bindings"
   printf '%s\n' 'bind_scraping: apify' >> "$1/instance.yaml"
-  printf '%s\n' 'max_places_per_search: 60' 'max_pages_per_site: 3' 'max_crawl_depth: 1' 'max_pages_per_call: 30' > "$1/bindings/scraping.md"
+  printf '%s\n' 'max_places_per_search: 60' 'max_pages_per_site: 3' 'max_crawl_depth: 1' 'max_pages_per_call: 30' \
+    'max_search_terms: 1' 'max_sites_per_call: 10' 'max_dataset_items: 100' > "$1/bindings/scraping.md"
 }
 inst() { # inst <dir> <crm provider>
   mkdir -p "$1"
@@ -68,7 +69,7 @@ printf '%s\n' 'timezone: America/New_York' 'schedule_approach: "Tuesday 07:00"' 
 out=$(python3 -B "$C" check "$W/nopin" --repo acme/sales 2>&1); rc=$?
 [ "$rc" -eq 1 ] && printf '%s' "$out" | grep -qF 'has no recipient_email line' && _report ok "missing recipient_email fails the gate" || _report no "missing recipient_email (rc=$rc): $out"
 # A bound scraping capability missing a pinned value fails the gate, naming the key.
-for key in max_places_per_search max_pages_per_call; do
+for key in max_places_per_search max_pages_per_call max_search_terms max_sites_per_call max_dataset_items; do
   mkdir -p "$W/noscrape-$key"
   inst "$W/noscrape-$key" attio
   grep -v "^$key:" "$W/noscrape-$key/bindings/scraping.md" > "$W/s.tmp" && mv "$W/s.tmp" "$W/noscrape-$key/bindings/scraping.md"

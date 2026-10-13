@@ -645,5 +645,10 @@ assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" '`estimated`'
 assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" '`get-dataset-items`'
 assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" '`countryCode`'
 assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" '`max_pages_per_call`'
+assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" 'Do not pass `proxyConfig`'
+assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" '`max_search_terms` — search terms per Maps call (default 1)'
+assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" '`max_sites_per_call`'
+assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" '`max_dataset_items`'
+assert_not_contains "$SP/capabilities/scraping/tools/apify/usage.md" 'Arguments to omit'
 
 finish

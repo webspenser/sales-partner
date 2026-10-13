@@ -89,6 +89,22 @@ done
 check 2 "send-email on another server not allowed" $NP mcp__claude_ai_Gmail__send-email "{\"to\":[\"owner@acme.com\"],$OK}" "" "$W/notify.md"
 SM=
 
+echo "-- ledger (airtable)"
+LG=capabilities/ledger/tools/airtable/guard.yaml; A=mcp__claude_ai_Airtable__; SM=airtable
+printf '%s\n' 'base_id: appAAAAAAAAAAAAAA' 'field_at: fldAT000000000000' 'field_run_id: fldRUN00000000000' \
+  'field_seq: fldSEQ00000000000' 'field_event: fldEVT00000000000' > "$W/ledger.md"
+R='"baseId":"appAAAAAAAAAAAAAA","tableId":"tblE0000000000000"'
+check 0 "append an event"     $LG ${A}create_records_for_table "{$R,\"records\":[{\"fields\":{\"fldRUN00000000000\":\"prospect-20261019T1400Z\",\"fldSEQ00000000000\":1,\"fldEVT00000000000\":\"run_started\"}}]}" "" "$W/ledger.md"
+check 2 "edit an event"       $LG ${A}update_records_for_table "{$R,\"records\":[{\"id\":\"recA0000000000000\",\"fields\":{\"fldEVT00000000000\":\"error\"}}]}" "Event may not be changed after create" "$W/ledger.md"
+check 2 "upsert into Events"  $LG ${A}update_records_for_table "{$R,\"performUpsert\":{\"fieldIdsToMergeOn\":[\"fldRUN00000000000\"]},\"records\":[{\"fields\":{\"fldRUN00000000000\":\"x\"}}]}" "Run ID may not be changed after create" "$W/ledger.md"
+check 2 "typecast false"      $LG ${A}create_records_for_table "{$R,\"typecast\":false,\"records\":[{\"fields\":{\"fldEVT00000000000\":\"step\"}}]}" "may not use typecast" "$W/ledger.md"
+check 2 "unrecorded field ID" $LG ${A}create_records_for_table "{$R,\"records\":[{\"fields\":{\"fldOTHER000000000\":\"x\"}}]}" "is not a recorded field ID" "$W/ledger.md"
+for t in delete_records_for_table create_field update_field create_table create_base create_automation revert_action; do
+  check 2 "blocked: $t"       $LG ${A}$t "{$R}" "" "$W/ledger.md"
+done
+check 0 "read records"        $LG ${A}list_records_for_table "{$R}" "" "$W/ledger.md"
+SM=
+
 echo "-- Attio"
 AT=capabilities/crm/tools/attio/guard.yaml; P=mcp__claude_ai_Attio__
 L='"list":"sales_partner_outreach","parent_object":"companies","parent_record_id":"00000000-0000-0000-0000-000000000001"'

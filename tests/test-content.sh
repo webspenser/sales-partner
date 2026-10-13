@@ -546,7 +546,7 @@ echo "-- 7.0: no Airtable CRM"
 for f in README.md capabilities/crm/contract.md capabilities/crm/tools/attio/usage.md skills/send-digest/SKILL.md evals/cases.md; do
   assert_not_contains "./$f" "Airtable"
 done
-assert_contains "$SP/agent.yaml" 'standard: "7.0"'
+assert_contains "$SP/agent.yaml" 'standard: "7.1"'
 assert_contains "$SP/agent.yaml" 'capabilities: crm'
 
 echo "-- 7.0: no email_drafts"
@@ -593,5 +593,17 @@ printf '%s' "$tools_step" | grep -qF 'test notification.' && printf '%s' "$tools
 printf '%s' "$tools_step" | grep -qF 'offer one test notification' && _report no "tools step still offers the test notification" || _report ok "tools step sends no test notification"
 printf '%s' "$after_tools" | grep -qF 'git push -u' && _report ok "version control pushes the instance" || _report no "version control does not push"
 printf '%s' "$after_tools" | grep -qF 'offer one test notification' && _report ok "open step offers the test notification" || _report no "open step does not offer the test notification"
+
+echo "-- 7.1: ledger"
+assert_contains "$SP/agent.yaml" 'standard: "7.1"'
+assert_contains "$SP/agent.yaml" 'capabilities: crm, owner_notify, ledger'
+assert_contains "$SP/agent.yaml" 'activity_prospect: crm, owner_notify, ledger'
+assert_contains "$SP/agent.yaml" 'activity_digest: crm, owner_notify, ledger'
+assert_contains "$SP/capabilities/ledger/tables.md" 'ledger_schema: 1'
+for f in contract.md tools/airtable/guard.yaml tools/airtable/usage.md tools/airtable/identity.yaml tools/airtable/bootstrap.py; do
+  [ -f "./capabilities/ledger/$f" ] && _report ok "ledger $f present" || _report no "ledger $f missing"
+done
+[ -f ./skills/ledger-backfill/SKILL.md ] && _report ok "ledger-backfill skill present" || _report no "ledger-backfill skill missing"
+# Byte-identity with the builder's _ledger/ is the validator's check (validate-agent.sh), which CI runs.
 
 finish

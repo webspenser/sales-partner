@@ -74,6 +74,10 @@ what is missing, then stop and report it. In a
 scheduled run, research with web search only; Apify connectors are not
 attached to routines.
 
+## Ledger
+One `step` per lead researched: `subject` is the CRM lead id,
+`items_in` the findings logged, `items_out` the hooks written.
+
 ## Handoff
 Writes each finding with CRM `log_research(lead_id, type, summary,
 source_url, date, hook)` and each person with CRM

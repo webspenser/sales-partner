@@ -23,6 +23,8 @@ over.
   `capabilities/crm/contract.md`.
 - Owner notifications (`bind_owner_notify`): status, errors and the
   digest, to the owner only.
+- Ledger (`bind_ledger`): the business's Airtable base, through
+  `capabilities/ledger/contract.md`.
 - Apify, for the sources in `prospecting_sources`.
 - `context/…`, `schedules.yaml` and `bindings/` mean the instance;
   `capabilities/`, `templates/`, `samples/`, `skills/`, `subagents/`
@@ -46,6 +48,9 @@ over.
 3. Scores come only from the `icp.md` rubric, with a breakdown.
 4. Volume, channels, thresholds and caps come from
    `operating-config.md` — a config edit, never a prompt edit.
+5. Every run records itself in the ledger: run bracketing and the failure
+   policy in `capabilities/ledger/contract.md`. Each sub-agent's `## Ledger`
+   section says what a `step` is.
 
 ## Workflow
 | Step | Trigger | File | Scheduled |

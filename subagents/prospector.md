@@ -69,6 +69,15 @@ scheduled run, source leads with web search only; Apify connectors are
 not attached to routines. If `web_search` is not in
 `prospecting_sources`, stop and report that.
 
+## Ledger
+One `step` per source query: `subject` is the query (for map sources,
+`<city>|<industry>`), `items_in` the results returned, `items_out` the
+new `Scored` leads it produced. Before choosing queries, call
+`find_events(since: 30 days ago, activity: prospect, event: step)` and
+skip any query whose `subject` matches a step with `items_out` 0, unless
+every remaining query would be skipped. `run_finished` carries the run's
+totals and the Apify spend in `cost_usd` when known.
+
 ## Handoff
 Calls CRM `update_stage(lead_id, "Scored", reason)` on every lead that
 clears scoring, or `update_stage(lead_id, "Disqualified", reason)` on any

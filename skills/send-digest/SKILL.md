@@ -111,7 +111,8 @@ window per section:
 
 ## This skill reads; it never writes
 
-Its only side effect anywhere is delivering the finished digest. It
+Its only side effects are delivering the finished digest and recording
+the run in the ledger. It
 never calls `create_lead`, `update_stage`, `update_lead`,
 `log_activity`, `log_research`, or `upsert_contact` — no stage moves,
 no field edits, no Activity or Research row, not even a "digest sent"
@@ -147,6 +148,12 @@ path.
 In a scheduled (unattended) run, never ask the operator a question; if
 a required input is missing, call `notify_owner(kind: error)` with what
 is missing, then stop and report it.
+
+## Ledger
+One `step` for the send: `subject` `digest`, `items_in` the six
+sections, `items_out` 1 when `notify_owner` succeeded. These ledger
+writes are the digest's only writes besides delivery; it still never
+writes to the CRM.
 
 ## Procedure
 

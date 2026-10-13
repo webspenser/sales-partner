@@ -94,6 +94,10 @@ In a scheduled (unattended) run, never ask the operator a question; if
 a required input is missing, call `notify_owner(kind: error)` with
 what is missing, then stop and report it.
 
+## Ledger
+One `step` per lead drafted: `subject` is the CRM lead id, `items_in`
+the reachable channels, `items_out` the drafts logged.
+
 ## Handoff
 Logs the drafts and calls CRM `update_stage(lead_id, "Approach
 Drafted", reason)`, then stops. From there, the operator reviews the

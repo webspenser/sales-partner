@@ -543,7 +543,8 @@ assert_contains "$D" 'Report only: the digest writes nothing'
 
 echo "-- 7.0: no Airtable CRM"
 [ ! -e "./capabilities/crm/tools/airtable" ] && _report ok "airtable CRM tool removed" || _report no "airtable CRM tool still present"
-for f in README.md capabilities/crm/contract.md capabilities/crm/tools/attio/usage.md skills/send-digest/SKILL.md evals/cases.md; do
+# README.md and evals/cases.md name Airtable as the 7.1 ledger, not as a CRM.
+for f in capabilities/crm/contract.md capabilities/crm/tools/attio/usage.md skills/send-digest/SKILL.md; do
   assert_not_contains "./$f" "Airtable"
 done
 assert_contains "$SP/agent.yaml" 'standard: "7.1"'
@@ -605,5 +606,18 @@ for f in contract.md tools/airtable/guard.yaml tools/airtable/usage.md tools/air
 done
 [ -f ./skills/ledger-backfill/SKILL.md ] && _report ok "ledger-backfill skill present" || _report no "ledger-backfill skill missing"
 # Byte-identity with the builder's _ledger/ is the validator's check (validate-agent.sh), which CI runs.
+
+echo "-- 7.1: runs record themselves"
+assert_contains "$SP/AGENT.md" '`bind_ledger`'
+assert_contains "$SP/AGENT.md" 'Every run records itself in the ledger'
+assert_contains "$SP/subagents/prospector.md" '## Ledger'
+assert_contains "$SP/subagents/prospector.md" 'find_events(since: 30 days ago, activity: prospect, event: step)'
+assert_contains "$SP/subagents/preparer.md" '## Ledger'
+assert_contains "$SP/subagents/approacher.md" '## Ledger'
+assert_contains "$SP/skills/send-digest/SKILL.md" '## Ledger'
+assert_contains "$SP/README.md" 'You can see everything it did.'
+assert_contains "$SP/README.md" 'Team plan'
+assert_contains "$SP/evals/cases.md" 'A ledger outage never hides a run'
+wc -c < "$SP/AGENT.md" | awk '{exit !($1 < 6000)}' && _report ok "AGENT.md under 6000 bytes" || _report no "AGENT.md 6000 bytes or more"
 
 finish

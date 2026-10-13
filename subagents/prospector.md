@@ -76,24 +76,32 @@ structured `city`, `state` and `countryCode`), never free text: a free-text
 location can resolve to the wrong area. Deduplicate against the CRM, score
 and create leads as for any other source.
 
-Before each call, sum this cap week's `cost_usd` from `find_events` for
-activities `prospect` and `prepare`. If the next call would pass
-`apify_spend_cap_usd_per_week`, write a `stop_condition` event, call
-`notify_owner(kind: alert)` naming the cap, and stop scraping for this run.
+Before each call, add up the Apify spend of the last 7 days (a rolling
+window, not the calendar week): call `find_events` twice, with
+`activity: prospect, event: step` and `activity: prepare, event: step`,
+`since` set to now minus 7 days, and sum `cost_usd` over those `step`
+events only (`run_finished` repeats the run's total, so counting it would
+double the spend). Add this run's own steps not yet written (queued or
+pending). Estimate the next call from `usage.md`'s `## Cost`: for Maps,
+`max_places_per_search` times the per-place estimate. If the spend plus
+that estimate would pass `apify_spend_cap_usd_per_week`, write a
+`stop_condition` event, call `notify_owner(kind: alert)` naming the cap,
+and stop scraping for this run.
 
 If a call is blocked by the guard, stop the activity and call
-`notify_owner(kind: error)` with the block's message;
-never retry a guard block.
+`notify_owner(kind: error)` with the block's message. Never retry a guard
+block.
 
 ## Ledger
 Call `ledger_status` first; write `run_started` first and `run_finished` last, numbering events with `seq` per `capabilities/ledger/contract.md` (Run bracketing, Failure policy). Write `stop_condition`, `notify_sent` and `error` events when they happen.
 
-One `step` per source query: `subject` is the query (for map sources,
-`<city>|<industry>`), `items_in` the results returned, `items_out` the
-new `Scored` leads it produced. Each `find_businesses` call is a `step`
-with `subject` `<query>|<location>`, `items_in` the listings returned,
-`items_out` the new `Scored` leads, and `cost_usd` the run's cost
-(an estimate; `detail` says `estimated`). Before choosing queries, call
+One `step` per source query: `subject` is the query for web search; for
+`find_businesses` it is `<query>|<city>, <state>` (for example
+`HVAC contractor|Oakland, CA`), the same format used when matching prior
+steps. `items_in` is the results returned, `items_out` the new `Scored`
+leads it produced, and, for a `find_businesses` call, `cost_usd` is the
+run's cost (an estimate; `detail` says `estimated`). Before choosing
+queries, call
 `find_events(since: 30 days ago, activity: prospect, event: step)` and
 skip any query whose `subject` matches a step with `outcome` `ok` and
 `items_out` 0, unless every remaining query would be skipped. An errored

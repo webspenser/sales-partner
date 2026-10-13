@@ -41,15 +41,16 @@ tone: "[three adjectives from the interview]"
   use, and the only ones. `apify_google_maps` returns local-business
   listings (name, address, phone, website, rating, review count)
   through `find_businesses`; `apify_contact_info` runs `find_contacts`
-  (emails, phones and social links from a business's website, used by
-  the Preparer); `web_search` is general search; `apollo` is a stubbed tool —
+  (emails, phones and social links from a business's website; used by
+  the Preparer, not the Prospector); `web_search` is general search; `apollo` is a stubbed tool —
   listing it makes the Prospector report that it is not yet enabled,
   never substitute another source. Both Apify sources draw on
-  `apify_spend_cap_usd_per_week`.
-  apify_site_scraper was renamed apify_contact_info in 7.2; a config that
-  still lists it stops the run with that message. To research every new lead, set
+  `apify_spend_cap_usd_per_week`. To research every new lead, set
   `research_quota_per_week` equal to `leads_per_week` and lower
   `research_budget_per_lead_minutes` so the week's budget still fits.
+  The old key `apify_site_scraper` no longer exists:
+  apify_site_scraper was renamed apify_contact_info in 7.2.
+  A config that still lists it stops the run with that message.
 - **`research_quota_per_week`** — the ceiling on how many leads the
   Preparer researches per week, applied on top of `research_threshold`;
   see `subagents/preparer.md`'s `Trigger` and `Stop conditions`.

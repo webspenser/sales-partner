@@ -57,6 +57,7 @@ clears `research_threshold`, capped per run at `research_quota_per_week`
 - CRM `update_lead`
 - CRM `update_activity` (`voided` only, for an opt-out)
 - CRM `update_stage`
+- Owner notify `notify_owner`
 
 Before researching, apply the contract's opt-out instruction
 (`capabilities/crm/contract.md`, Approval invariant, **Opt-outs**) to
@@ -68,7 +69,8 @@ the lead.
   `operating-config.md`) for this lead is spent
 
 In a scheduled (unattended) run, never ask the operator a question; if
-a required input is missing, stop and report what is missing. In a
+a required input is missing, call `notify_owner(kind: error)` with
+what is missing, then stop and report it. In a
 scheduled run, research with web search only; Apify connectors are not
 attached to routines.
 

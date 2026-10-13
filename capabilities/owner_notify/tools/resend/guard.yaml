@@ -1,0 +1,21 @@
+# Resend guard policy: one send tool, pinned to the owner and the no-reply
+# sender; everything else on the account (batches, broadcasts, inboxes,
+# automations, contacts, domains, API keys, webhooks) is outside allow.
+# Tool and argument names: docs/superpowers/notes/2026-10-12-resend-connector-probe.md
+# in agent-builder.
+covers: [owner_only_send]
+allow: [send-email, list-domains, get-domain]
+deny: ["*batch*", "*broadcast*", "*inbox*", "*event*", "*automation*", "*contact*",
+       "*segment*", "*audience*", "*api-key*", "*api_key*", "*webhook*", "*share*",
+       "*remove*", "*delete*"]
+recipients:
+  - tools: [send-email]
+    at: [to, cc, bcc]
+    bound: recipient_email
+  - tools: [send-email]
+    at: [from]
+    bound: sender_email
+# replyTo redirects the owner's replies; headers could carry To/Cc/Bcc;
+# scheduledAt outlives the run (update-email can move it); attachments make
+# Resend fetch any URL; topicId ties the send to contact subscriptions.
+refuse_args: [replyTo, headers, scheduledAt, attachments, topicId]

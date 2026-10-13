@@ -123,9 +123,8 @@ that must be kept.
 | `date` | date |
 | `hook` | text |
 
-`summary` and `hook` mean exactly what the Research section of the
-Airtable tool (`../airtable/usage.md`) says: `summary` is the finding, and `hook` is the
-usable angle the Approacher opens with.
+`summary` is the finding, and `hook` is the usable angle the Approacher
+opens with.
 
 ### List `sales_partner_outreach` — the Activities table
 
@@ -265,7 +264,7 @@ attribute, so the contract's guarantees are enforced by mechanism (approval and 
    The operator's own edits in the Attio app never pass through it, so
    approving a lead (moving the lead to `Ready to Send`) stays
    operator-only.
-2. **Nothing sends from the CRM.** The agent sends nothing; after the
+2. **Nothing sends from the CRM.** The agent sends nothing to prospects; after the
    operator's approval, the owner's automations or the operator send the
    first touch.
 

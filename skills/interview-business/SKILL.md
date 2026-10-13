@@ -71,7 +71,12 @@ because a human has to answer it in their own words.
    outreach sound (three to five adjectives, plus one example sentence
    in that voice). If `call` is among the chosen channels, also ask
    for the operator's own callback number — the one a voicemail in a
-   call opener should give for callbacks.
+   call opener should give for callbacks. Last, ask which email
+   address or addresses should receive the digest and the agent's
+   alerts. Do not write them to any file here: setup's tools step
+   offers them as the `recipient_email` values for `owner_notify`,
+   repeats them back, and writes `bindings/owner_notify.md` once the
+   operator confirms.
 8. Write the answers to `context/operating-config.md`'s keys
    (`leads_per_week`, `prospecting_sources`, `enabled_channels`,
    `apify_spend_cap_usd_per_week`, `tone`, `callback_phone` when `call`

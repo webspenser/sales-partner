@@ -12,7 +12,7 @@ score threshold (`query_by_score`) — never by direct invocation.
 
 The concrete mapping onto a provider — tables, fields, views — lives in
 each tool (`tools/<provider>/usage.md`). This document defines
-behavior only; it names no Airtable table or field.
+behavior only; it names no provider table or field.
 
 ## Operations
 
@@ -95,8 +95,8 @@ and says nothing; that is not a failure.
 - **`update_stage`** is the only handoff mechanism between sub-agents
   (see below). It validates `stage` against the eleven-value status list and
   rejects anything else; it does not accept free-text stages. Every
-  call also sets `stage_changed_at` (`Stage Changed At` in the Airtable
-  tool) to the moment of the transition, as part of the same write —
+  call also sets `stage_changed_at` (`Stage Changed At` in the CRM
+  tools) to the moment of the transition, as part of the same write —
   not a second call, not an optional argument. **After creation, no
   other operation ever writes `stage_changed_at`** — `create_lead`
   stamps it once on the record it creates, and from then on only
@@ -266,7 +266,7 @@ be breaking before they break it:
   operator's move to `Ready to Send` does.** What happens next — an
   email sequence, a LinkedIn message, a call — is the operator's, or the
   owner's automation, another system or agent acting on that status.
-  The agent sends nothing and never acts on a lead at `Ready to Send`
+  The agent sends nothing to prospects and never acts on a lead at `Ready to Send`
   or later.
 
 The opt-out has one mechanism and one instruction:

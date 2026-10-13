@@ -26,8 +26,6 @@ research_quota_per_week: 10
 research_threshold: 60
 approach_threshold: 70
 enabled_channels: [email, linkedin]
-digest_channel: email
-digest_delivery: draft
 apify_spend_cap_usd_per_week: 25
 research_budget_per_lead_minutes: 8
 sending_identity: "[name] <[email]>"
@@ -70,22 +68,6 @@ tone: "[three adjectives from the interview]"
   `call` in this list means the Approacher may draft a phone opener
   (`skills/write-call-opener/SKILL.md`) for a lead with a sourced phone
   number; the operator places the call.
-- **`digest_channel`** — the delivery channel for the digest (default
-  `email`; SMS is a stubbed tool, not yet enabled).
-- **`digest_delivery`** — whether `send-digest` composes the digest as
-  a draft (via `email_drafts`) addressed to `sending_identity` for the
-  operator to open (`draft`, the default) or delivers it directly
-  (`send`). This
-  is the one setting in this file that changes what capability the
-  agent holds rather than how it behaves: `send` requires a Gmail send
-  scope, and Gmail cannot narrow that scope to a single recipient, so
-  enabling it grants an ability that could technically reach a
-  prospect. Leave it at `draft` unless the operator has decided
-  otherwise; see `skills/send-digest/SKILL.md`'s step 10 and
-  **Approval scope**. `send` is dormant and falls back to a draft with a
-  disclaimer line (the email tool's guard policy denies send tools)
-  until an `email_send` capability exists; see
-  `skills/send-digest/SKILL.md`.
 - **`apify_spend_cap_usd_per_week`** — the hard ceiling on Apify actor
   spend per week, shared across the Prospector's sourcing and the
   Preparer's research. Reaching it is a `Stop conditions` trigger and
@@ -95,10 +77,8 @@ tone: "[three adjectives from the interview]"
   whatever hooks it has found; see `subagents/preparer.md`'s `Stop
   conditions`.
 - **`sending_identity`** — the `"[name] <[email]>"` the drafted email
-  Activities are written from, and the digest's address. Filled in by
-  the interview; the agent never sends a prospect-facing message from
-  this identity — email to prospects goes out only through the
-  operator's sequence platform after approval.
+  Activities are written from. Filled in by
+  the interview; the agent never sends a message from this identity — it is only written into drafted email Activities in the CRM.
 - **`callback_phone`** — the operator's own number the voicemail in a
   call opener gives for callbacks. Filled in by the interview when
   `call` is in `enabled_channels`; never a prospect-facing send

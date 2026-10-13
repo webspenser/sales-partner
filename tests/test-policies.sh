@@ -6,9 +6,9 @@ source tests/lib.sh
 E=hooks/guard_policy.py
 W=$(mktemp -d); trap 'rm -rf "$W"' EXIT
 
-check() { # check <rc> <label> <policy> <tool_name> <tool_input> [text] [bindings]
+check() { # check <rc> <label> <policy> <tool_name> <tool_input> [text] [bindings]; SM=<server_match> as guard.sh passes it
   local out rc
-  out=$(printf '{"tool_name":"%s","tool_input":%s}' "$4" "$5" | python3 -B "$E" "$3" "${7:--}" "sales-partner guard policy" 2>&1); rc=$?
+  out=$(printf '{"tool_name":"%s","tool_input":%s}' "$4" "$5" | python3 -B "$E" "$3" "${7:--}" "sales-partner guard policy" ${SM:+"$SM"} 2>&1); rc=$?
   if [ "$rc" -eq "$1" ] && { [ -z "${6:-}" ] || printf '%s\n' "$out" | grep -qF -- "$6"; }; then _report ok "$2"; else _report no "$2 (rc=$rc): $out"; fi
 }
 for p in capabilities/*/tools/*/guard.yaml; do
@@ -33,11 +33,10 @@ for t in mcp__claude_ai_Gmail__send_message mcp__claude_ai_Gmail__reply mcp__cla
          mcp__claude_ai_Google_Calendar__respond_to_event; do
   acheck 2 "denied: $t" "$t"
 done
-for t in mcp__claude_ai_Gmail__create_draft mcp__claude_ai_Gmail__list_drafts mcp__claude_ai_Gmail__search_threads \
-         mcp__claude_ai_Gmail__get_thread mcp__claude_ai_Attio__list-comment-replies mcp__claude_ai_Attio__list-records \
+for t in mcp__claude_ai_Attio__list-comment-replies mcp__claude_ai_Attio__list-records \
          mcp__claude_ai_Beehiiv__list_publications mcp__claude_ai_Beehiiv__get_publication \
          mcp__claude_ai_HubSpot__manage_crm_objects mcp__claude_ai_HubSpot__search_crm_objects \
-         mcp__claude_ai_Airtable__update_records_for_table mcp__claude_ai_Slack__slack_read_channel \
+         mcp__claude_ai_Slack__slack_read_channel \
          mcp__claude_ai_Slack__slack_read_thread mcp__claude_ai_ClickUp__clickup_get_chat_message_replies \
          mcp__claude_ai_Zernio__posts_list mcp__claude_ai_Loops__execute mcp__claude_ai_Notion__notion-search \
          mcp__claude_ai_Google_Calendar__list_events mcp__claude_ai_Google_Calendar__get_event \
@@ -48,6 +47,48 @@ done
 for t in execute_workflow test_workflow create_workflow_from_code update_workflow archive_workflow publish_workflow unpublish_workflow restore_workflow_version; do
   acheck 2 "n8n dispatcher denied: $t" "mcp__claude_ai_N8N_Webspenser_Newsletter__$t"
 done
+# owner_notify is exempt: its server passes the agent deny only when guard.sh
+# grants --exempt (the bound tool covers owner_only_send); its own policy then decides.
+python3 -B "$E" --exempt-caps "$AG" | grep -qx owner_notify && _report ok "agent policy exempts owner_notify" || _report no "agent policy does not exempt owner_notify"
+RS=mcp__claude_ai_Resend__send-email
+out=$(printf '{"tool_name":"%s","tool_input":{}}' "$RS" | python3 -B "$E" --agent "$AG" "agent" 2>&1); rc=$?
+[ "$rc" -eq 2 ] && _report ok "resend send denied without the exemption" || _report no "resend send without exemption (rc=$rc): $out"
+out=$(printf '{"tool_name":"%s","tool_input":{}}' "$RS" | python3 -B "$E" --agent "$AG" "agent" --exempt resend 2>&1); rc=$?
+[ "$rc" -eq 0 ] && _report ok "resend send passes the agent policy with the exemption" || _report no "resend send with exemption (rc=$rc): $out"
+out=$(printf '{"tool_name":"%s","tool_input":{}}' mcp__claude_ai_Gmail__send_message | python3 -B "$E" --agent "$AG" "agent" --exempt resend 2>&1); rc=$?
+[ "$rc" -eq 2 ] && _report ok "the exemption does not reach Gmail" || _report no "gmail with resend exemption (rc=$rc): $out"
+out=$(printf '{"tool_name":"%s","tool_input":{}}' mcp__claude_ai_Gmail__resend_message | python3 -B "$E" --agent "$AG" "agent" --exempt resend 2>&1); rc=$?
+[ "$rc" -eq 2 ] && _report ok "the exemption needs resend in the server, not the tool name" || _report no "resend in tool name (rc=$rc): $out"
+
+echo "-- owner_notify (resend)"
+NP=capabilities/owner_notify/tools/resend/guard.yaml; R=mcp__claude_ai_Resend__; SM=resend
+printf '%s\n' 'recipient_email: owner@acme.com' 'recipient_email: ops@acme.com' 'sender_email: no-reply@notify.acme.com' > "$W/notify.md"
+OK='"from":"no-reply@notify.acme.com","subject":"[sales-partner] digest: x","text":"y"'
+check 0 "owner send passes"           $NP ${R}send-email "{\"to\":[\"owner@acme.com\"],$OK}" "" "$W/notify.md"
+check 0 "both owners pass"            $NP ${R}send-email "{\"to\":[\"owner@acme.com\",\"OPS@acme.com\"],$OK}" "" "$W/notify.md"
+check 0 "owner cc passes"             $NP ${R}send-email "{\"to\":[\"owner@acme.com\"],\"cc\":[\"ops@acme.com\"],$OK}" "" "$W/notify.md"
+check 2 "prospect send blocked"       $NP ${R}send-email "{\"to\":[\"lead@prospect.com\"],$OK}" "is not a pinned recipient" "$W/notify.md"
+check 2 "owner plus prospect blocked" $NP ${R}send-email "{\"to\":[\"owner@acme.com\",\"lead@prospect.com\"],$OK}" "is not a pinned recipient" "$W/notify.md"
+check 2 "extra cc blocked"            $NP ${R}send-email "{\"to\":[\"owner@acme.com\"],\"cc\":[\"lead@prospect.com\"],$OK}" "is not a pinned recipient" "$W/notify.md"
+check 2 "extra bcc blocked"           $NP ${R}send-email "{\"to\":[\"owner@acme.com\"],\"bcc\":[\"lead@prospect.com\"],$OK}" "is not a pinned recipient" "$W/notify.md"
+check 2 "no recipient blocked"        $NP ${R}send-email "{$OK}" "names no recipient" "$W/notify.md"
+check 2 "other sender blocked"        $NP ${R}send-email '{"to":["owner@acme.com"],"from":"owner@acme.com","subject":"s","text":"y"}' "(sender_email)" "$W/notify.md"
+check 2 "display-name sender blocked" $NP ${R}send-email '{"to":["owner@acme.com"],"from":"Acme <no-reply@notify.acme.com>","subject":"s","text":"y"}' "(sender_email)" "$W/notify.md"
+check 2 "no bindings blocked"         $NP ${R}send-email "{\"to\":[\"owner@acme.com\"],$OK}" "no recipient_email line"
+for a in '"replyTo":["lead@prospect.com"]' '"reply_to":["lead@prospect.com"]' '"headers":{"Bcc":"lead@prospect.com"}' \
+         '"scheduledAt":"in 1 hour"' '"attachments":[{"filename":"a.pdf","url":"https://x.test/a"}]' '"topicId":"t1"'; do
+  check 2 "refused: ${a%%:*}"         $NP ${R}send-email "{\"to\":[\"owner@acme.com\"],$OK,$a}" "may not use" "$W/notify.md"
+done
+check 0 "domain read passes"          $NP ${R}list-domains '{}' "" "$W/notify.md"
+check 0 "domain get passes"           $NP ${R}get-domain '{"id":"d1"}' "" "$W/notify.md"
+for t in send-batch-emails send-broadcast create-broadcast reply-to-inbox-thread-email forward-inbox-thread-email \
+         send-inbox-draft send-event create-automation update-email share-email create-api-key create-webhook \
+         create-contact create-segment remove-domain get_more_tools; do
+  check 2 "blocked: $t"               $NP ${R}$t '{}' "" "$W/notify.md"
+done
+check 2 "send-email on another server not allowed" $NP mcp__claude_ai_Gmail__send-email "{\"to\":[\"owner@acme.com\"],$OK}" "" "$W/notify.md"
+SM=
+
 echo "-- Attio"
 AT=capabilities/crm/tools/attio/guard.yaml; P=mcp__claude_ai_Attio__
 L='"list":"sales_partner_outreach","parent_object":"companies","parent_record_id":"00000000-0000-0000-0000-000000000001"'
@@ -102,49 +143,6 @@ check 2 "lead created past New"       $AT ${P}add-record-to-list "{$L,\"entry_va
 check 0 "lead created at New"         $AT ${P}add-record-to-list "{$L,\"entry_values\":{\"stage\":\"New\"}}"
 check 2 "agent can't mark a touch sent" $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"status\":\"sent\"}}" "status may only be written as voided on update"
 check 2 "agent can't revive a draft"  $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"status\":\"draft\"}}"
-echo "-- Gmail"
-GM=capabilities/email_drafts/tools/gmail/guard.yaml; G=mcp__claude_ai_Gmail__
-check 0 "create draft"              $GM ${G}create_draft '{"to":"a@b.c","subject":"s","body":"b"}'
-check 0 "search threads"            $GM ${G}search_threads '{"query":"x"}'
-check 2 "send refused"              $GM ${G}send_message '{}' "is denied"
-check 2 "reply refused"             $GM ${G}reply_to_thread '{}' "is denied"
-check 2 "forward refused"           $GM ${G}forward_message '{}' "is denied"
-check 2 "trash not allowed"         $GM ${G}trash_thread '{}' "is not in the allow list"
-check 2 "new unlisted tool"         $GM ${G}schedule_email '{}' "is not in the allow list"
-check 0 "prefixed create_draft"     $GM mcp__gmail_server__gmail_create_draft '{}'
-check 0 "prefixed search_threads"   $GM mcp__gmail_server__gmail_search_threads '{}'
-check 2 "prefixed send still denied" $GM mcp__gmail_server__gmail_send_message '{}' "is denied"
-check 2 "suffix glob is not a substring" $GM ${G}create_draft_and_send '{}'
-
-echo "-- Airtable"
-AR=capabilities/crm/tools/airtable/guard.yaml; A=mcp__claude_ai_Airtable__
-printf '%s\n' '# CRM binding — Airtable' 'base_id: appAAAAAAAAAAAAAA' 'field_status: fldSSSSSSSSSSSSSS' 'field_do_not_contact: fldDDDDDDDDDDDDDD' \
-  'field_draft_body: fldBBBBBBBBBBBBBB' 'field_lead: fldL1LLLLLLLLLLLLL' 'field_lead: fldL2LLLLLLLLLLLLL' \
-  'field_stage: fldSTAGEEEEEEEEEE' > "$W/b.md"
-B='"baseId":"appAAAAAAAAAAAAAA","tableId":"tblTTTTTTTTTTTTTT"'
-check 0 "create draft by ID"        $AR ${A}create_records_for_table "{$B,\"records\":[{\"fields\":{\"fldSSSSSSSSSSSSSS\":\"draft\"}}]}" "" "$W/b.md"
-check 2 "create approved by ID"     $AR ${A}create_records_for_table "{$B,\"records\":[{\"fields\":{\"fldSSSSSSSSSSSSSS\":\"approved\"}}]}" "Status may only be written as draft on create" "$W/b.md"
-check 2 "update sent by name"       $AR ${A}update_records_for_table "{$B,\"records\":[{\"id\":\"recRRRRRRRRRRRRRR\",\"fields\":{\"Status\":\"sent\"}}]}" "Status is not a recorded field ID" "$W/b.md"
-check 2 "unrecorded field ID"       $AR ${A}update_records_for_table "{$B,\"records\":[{\"id\":\"recRRRRRRRRRRRRRR\",\"fields\":{\"fldOOOOOOOOOOOOOO\":\"x\"}}]}" "fldOOOOOOOOOOOOOO is not a recorded field ID" "$W/b.md"
-check 0 "repeated name: both IDs recorded" $AR ${A}create_records_for_table "{$B,\"records\":[{\"fields\":{\"fldL1LLLLLLLLLLLLL\":[\"recA\"]}},{\"fields\":{\"fldL2LLLLLLLLLLLLL\":[\"recB\"]}}]}" "" "$W/b.md"
-check 0 "update voided by ID"       $AR ${A}update_records_for_table "{$B,\"records\":[{\"id\":\"recRRRRRRRRRRRRRR\",\"fields\":{\"fldSSSSSSSSSSSSSS\":\"voided\"}}]}" "" "$W/b.md"
-check 2 "clear DNC by ID"           $AR ${A}update_records_for_table "{$B,\"records\":[{\"id\":\"recRRRRRRRRRRRRRR\",\"fields\":{\"fldDDDDDDDDDDDDDD\":false}}]}" "Do Not Contact may only be written as true" "$W/b.md"
-check 2 "write without field IDs"   $AR ${A}create_records_for_table "{$B,\"records\":[{\"fields\":{\"fldXXXXXXXXXXXXXX\":\"x\"}}]}" "has not recorded any field IDs"
-check 2 "delete refused"            $AR ${A}delete_records_for_table "{$B}" "is denied"
-check 2 "schema change refused"     $AR ${A}create_field "{$B}" "is not in the allow list"
-check 0 "read allowed"              $AR ${A}list_records_for_table "{$B}"
-check 0 "create draft with body"    $AR ${A}create_records_for_table "{$B,\"records\":[{\"fields\":{\"fldSSSSSSSSSSSSSS\":\"draft\",\"fldBBBBBBBBBBBBBB\":\"Hi\"}}]}" "" "$W/b.md"
-check 2 "Draft Body rewritten"      $AR ${A}update_records_for_table "{$B,\"records\":[{\"id\":\"recRRRRRRRRRRRRRR\",\"fields\":{\"fldBBBBBBBBBBBBBB\":\"new\"}}]}" "Draft Body may not be changed after create" "$W/b.md"
-
-check 2 "agent can't approve a lead"  $AR ${A}update_records_for_table "{$B,\"records\":[{\"id\":\"recRRRRRRRRRRRRRR\",\"fields\":{\"fldSTAGEEEEEEEEEE\":\"Ready to Send\"}}]}" "Stage may only be written as" "$W/b.md"
-check 2 "agent can't mark Contacted"  $AR ${A}update_records_for_table "{$B,\"records\":[{\"id\":\"recRRRRRRRRRRRRRR\",\"fields\":{\"fldSTAGEEEEEEEEEE\":\"Contacted\"}}]}" "Stage may only be written as" "$W/b.md"
-check 0 "agent marks Approach Drafted" $AR ${A}update_records_for_table "{$B,\"records\":[{\"id\":\"recRRRRRRRRRRRRRR\",\"fields\":{\"fldSTAGEEEEEEEEEE\":\"Approach Drafted\"}}]}" "" "$W/b.md"
-check 2 "agent can't mark Engaged"    $AR ${A}update_records_for_table "{$B,\"records\":[{\"id\":\"recRRRRRRRRRRRRRR\",\"fields\":{\"fldSTAGEEEEEEEEEE\":\"Engaged\"}}]}" "Stage may only be written as" "$W/b.md"
-check 2 "agent can't nurture"         $AR ${A}update_records_for_table "{$B,\"records\":[{\"id\":\"recRRRRRRRRRRRRRR\",\"fields\":{\"fldSTAGEEEEEEEEEE\":\"Nurture\"}}]}" "Stage may only be written as" "$W/b.md"
-check 2 "agent can't open a deal"     $AR ${A}update_records_for_table "{$B,\"records\":[{\"id\":\"recRRRRRRRRRRRRRR\",\"fields\":{\"fldSTAGEEEEEEEEEE\":\"Open Deal\"}}]}" "Stage may only be written as" "$W/b.md"
-check 2 "no New on update"            $AR ${A}update_records_for_table "{$B,\"records\":[{\"id\":\"recRRRRRRRRRRRRRR\",\"fields\":{\"fldSTAGEEEEEEEEEE\":\"New\"}}]}" "Stage may only be written as" "$W/b.md"
-check 2 "agent can't mark Customer"   $AR ${A}update_records_for_table "{$B,\"records\":[{\"id\":\"recRRRRRRRRRRRRRR\",\"fields\":{\"fldSTAGEEEEEEEEEE\":\"Customer\"}}]}" "Stage may only be written as" "$W/b.md"
-check 2 "agent can't mark a touch sent" $AR ${A}update_records_for_table "{$B,\"records\":[{\"id\":\"recRRRRRRRRRRRRRR\",\"fields\":{\"fldSSSSSSSSSSSSSS\":\"sent\"}}]}" "Status may only be written as voided on update" "$W/b.md"
 echo "-- HubSpot"
 HS=capabilities/crm/tools/hubspot/guard.yaml; H=mcp__claude_ai_HubSpot__
 TC='{"objectType":"tasks","properties":{"hs_task_status":"%s"}}'

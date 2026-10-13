@@ -39,22 +39,17 @@ assert_contains "$SP/skills/score-lead/SKILL.md" 'no sourced address'
 assert_contains "$SP/skills/interview-business/SKILL.md" 'companies or local businesses'
 
 echo "-- contact fields and dedupe"
-C="$SP/capabilities/crm/contract.md"; A="$SP/capabilities/crm/tools/airtable/usage.md"
+C="$SP/capabilities/crm/contract.md"
 assert_contains "$C" '`company, location, industry, size, source, source_url`, plus optional `domain, address, phone, email, score, score_breakdown`'
 assert_contains "$C" 'failing that, the same normalized `phone`'
 assert_contains "$C" 'none of `domain`, `phone`, or `address`'
 assert_contains "$C" '`lead_id, name, title, email, phone, linkedin_url, role, verified, notes`'
 assert_contains "$C" 'listing, web_presence'
-assert_contains "$A" '| `Address` | text |'
-assert_contains "$A" '| `Phone` | phone |'
-assert_pass bash -c "grep -A2 -F '| \`Address\` | text |' '$A' | tr -d '\n' | grep -qF '| \`Address\` | text || \`Phone\` | phone || \`Email\` | email |'"
-assert_contains "$A" 'news, funding, social, event, hire, listing, web_presence'
 assert_contains "$SP/skills/research-company/SKILL.md" 'hire, listing, web_presence'
 assert_contains "$SP/skills/find-decision-makers/SKILL.md" 'email, phone, linkedin_url'
 assert_contains "$SP/subagents/preparer.md" 'email, phone, linkedin_url'
 assert_contains "$SP/subagents/prospector.md" '`Address`, `Phone`, `Email`'
 assert_contains "$SP/AGENT.md" 'hire, listing, web presence'
-assert_not_contains "$A" '`Domain` | text, unique'
 
 echo "-- call channel"
 assert_contains "$SP/skills/write-call-opener/SKILL.md" 'name: write-call-opener'
@@ -82,8 +77,6 @@ assert_contains docs/superpowers/specs/2026-09-01-sales-partner-agent-design.md 
 echo "-- phone normalization (I1)"
 assert_contains "$C" 'normalized to E.164'
 assert_contains "$C" 'never given a guessed country code'
-assert_contains "$A" 'normalized to E.164'
-assert_contains "$A" 'never given a guessed country code'
 assert_contains "$E" '`+15550104477`'
 
 echo "-- sourced distance (I3)"
@@ -144,8 +137,6 @@ assert_contains "$SP/capabilities/crm/contract.md" '## Invariants'
 assert_contains "$SP/capabilities/crm/contract.md" '- `draft_only` —'
 assert_contains "$SP/capabilities/crm/contract.md" '- `dnc_one_way` —'
 assert_contains "$SP/capabilities/crm/contract.md" '- `no_delete` —'
-assert_contains "$SP/capabilities/crm/tools/airtable/usage.md" '## Probe'
-assert_pass bash -c "[ \"\$(wc -l < '$SP/capabilities/crm/tools/airtable/identity.yaml' | tr -d ' ')\" = 3 ] && grep -qx 'capability: crm' '$SP/capabilities/crm/tools/airtable/identity.yaml' && grep -qx 'provider: airtable' '$SP/capabilities/crm/tools/airtable/identity.yaml' && grep -qx 'server_match: airtable' '$SP/capabilities/crm/tools/airtable/identity.yaml'"
 assert_contains "$SP/AGENT.md" 'bound in `instance.yaml` (`bind_crm`)'
 
 for h in CLAUDE GEMINI AGENTS; do
@@ -198,11 +189,8 @@ assert_contains "$HT/guard.yaml" 'field: hs_task_status'
 if grep -nE 'sp_(status|channel|direction|summary|outcome)' "$HT/usage.md" "$HT/bootstrap.py" "$HT/guard.yaml" | grep -q .; then
   _report no "the HubSpot tool still mentions a custom task field"; else _report ok "no custom task fields in the HubSpot tool"; fi
 
-echo "-- email drafts"
-assert_contains "$SP/agent.yaml" 'capabilities: crm, email_drafts'
+echo "-- tool guard policies"
 assert_not_contains "$SP/AGENT.md" 'delivers it directly'
-assert_contains "$SP/capabilities/email_drafts/contract.md" '- `no_send` —'
-assert_contains "$SP/capabilities/email_drafts/tools/gmail/guard.yaml" 'covers: [no_send]'
 assert_contains "$SP/capabilities/crm/tools/attio/guard.yaml" 'covers: [draft_only, dnc_one_way, no_delete]'
 for y in "$SP"/capabilities/*/tools/*/identity.yaml; do
   assert_pass bash -c "{ [ \"\$(grep -c . '$y')\" = 3 ] || { [ \"\$(grep -c . '$y')\" = 4 ] && grep -qx 'wrapper: n8n' '$y'; }; } && grep -q '^capability: ' '$y' && grep -q '^provider: ' '$y' && grep -q '^server_match: ' '$y'"
@@ -210,7 +198,6 @@ done
 [ ! -e "$AT/guard.py" ] && _report ok "guard.py removed" || _report no "guard.py still present"
 assert_contains "$SP/skills/setup/SKILL.md" '**Tools.**'
 assert_contains "$SP/skills/setup/SKILL.md" 'whether the tool'"'"'s guard policy covers it'
-assert_contains "$SP/skills/send-digest/SKILL.md" 'cannot send; delivered as a draft'
 
 allowed_by() { # allowed_by <policy> <prefix> <tool>
   printf '{"tool_name":"%s%s","tool_input":{}}' "$2" "$3" | python3 -B "$SP/hooks/guard_policy.py" "$1" - x >/dev/null 2>&1
@@ -224,22 +211,13 @@ in_allow() { # in_allow <policy> <prefix> <tool>: listed and not denied; a write
 for t in $(grep -oE 'attio:[a-z-]+' "$SP/capabilities/crm/tools/attio/usage.md" | sort -u | cut -d: -f2); do
   allowed_by "$SP/capabilities/crm/tools/attio/guard.yaml" mcp__attio__ "$t" && _report ok "Attio $t allowed" || _report no "Attio $t not in guard.yaml allow"
 done
-for t in $(grep -oE 'gmail:[a-z_]+' "$SP/capabilities/email_drafts/tools/gmail/usage.md" | sort -u | cut -d: -f2); do
-  allowed_by "$SP/capabilities/email_drafts/tools/gmail/guard.yaml" mcp__gmail__ "$t" && _report ok "Gmail $t allowed" || _report no "Gmail $t not in guard.yaml allow"
-done
-for t in $(grep -oE 'airtable:[a-z_]+' "$SP/capabilities/crm/tools/airtable/usage.md" | sort -u | cut -d: -f2); do
-  in_allow "$SP/capabilities/crm/tools/airtable/guard.yaml" mcp__airtable__ "$t" && _report ok "Airtable $t allowed" || _report no "Airtable $t not in guard.yaml allow"
-done
 for t in $(grep -oE 'hubspot:[a-z_]+' "$SP/capabilities/crm/tools/hubspot/usage.md" | sort -u | cut -d: -f2); do
   allowed_by "$SP/capabilities/crm/tools/hubspot/guard.yaml" mcp__hubspot__ "$t" && _report ok "HubSpot $t allowed" || _report no "HubSpot $t not in guard.yaml allow"
 done
-assert_contains "$SP/capabilities/crm/tools/airtable/usage.md" 'field_status'
 
 echo "-- scheduled runs"
-assert_contains "$SP/agent.yaml" 'standard: "6.0"'
-assert_contains "$SP/agent.yaml" 'activity_digest: crm, email_drafts'
+assert_contains "$SP/agent.yaml" 'activity_digest: crm'
 assert_contains "$SP/agent.yaml" 'activity_approach: crm'
-assert_not_contains "$SP/agent.yaml" 'activity_approach: crm, email_drafts'
 assert_contains "$SP/skills/send-digest/SKILL.md" 'DO NOT SEND — lead is Do Not Contact'
 assert_contains "$SP/skills/send-digest/SKILL.md" 'Possible duplicate leads'
 assert_contains "$SP/AGENT.md" 'this rule is an instruction'
@@ -262,25 +240,15 @@ assert_contains "$SP/context/icp.md" '`capabilities/crm/contract.md` (Lead statu
 assert_contains "$SP/capabilities/crm/contract.md" 'idle age = now − `max(last Activity date, Stage Changed'
 assert_contains "$SP/capabilities/crm/contract.md" 'at all is measured from its `Stage Changed At` alone'
 D="$SP/skills/send-digest/SKILL.md"
-assert_contains "$SP/capabilities/crm/tools/airtable/usage.md" 'has no Activity, use `Stage Changed At`'
 assert_contains "$SP/capabilities/crm/tools/attio/usage.md" '`stage_changed_at`. If the lead has no'
 assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'If the lead has no Task'
-echo "-- 5.0.0: void outcome Note, Airtable field IDs, changed fields only"
-HU="$SP/capabilities/crm/tools/hubspot/usage.md"; AU="$SP/capabilities/crm/tools/airtable/usage.md"
+echo "-- 5.0.0: void outcome Note, changed fields only"
+HU="$SP/capabilities/crm/tools/hubspot/usage.md"
 assert_contains "$HU" 'Outcome for task <activity_id>:'
 assert_contains "$HU" 'are outcomes, not Research'
 assert_not_contains "$HU" 'body with Outcome: line'
 assert_not_contains "$HU" 'appends an `Outcome: <outcome>` line'
-assert_contains "$AU" 'every field of the four tables'
-assert_contains "$AU" 'is not a recorded field ID'
-assert_contains "$AU" 'retry the write once'
-assert_not_contains "$AU" 'binding_id'
-assert_not_contains "$AU" 'stays blocked until the probe has recorded both'
 for f in "$SP"/capabilities/crm/tools/*/usage.md; do assert_contains "$f" 'Write only the fields that change'; done
-assert_not_contains "$SP/capabilities/email_drafts/tools/gmail/usage.md" 'add its names to'
-assert_contains "$SP/capabilities/email_drafts/tools/gmail/usage.md" 'matches names by suffix'
-assert_contains "$AU" 'In a scheduled run, do not rewrite'
-assert_contains "$AU" 'take each field ID from that table'
 
 echo "-- 6.0.0: Ready to Send and sent"
 K="$SP/capabilities/crm/contract.md"
@@ -298,10 +266,6 @@ assert_contains "$SP/capabilities/crm/tools/attio/usage.md" 'Ready to Send'
 assert_not_contains "$SP/capabilities/crm/tools/attio/usage.md" '`approved`'
 assert_not_contains "$SP/capabilities/crm/tools/attio/usage.md" 'Awaiting Approval'
 assert_not_contains "$SP/capabilities/crm/tools/attio/usage.md" 'twelve'
-assert_contains "$SP/capabilities/crm/tools/airtable/usage.md" 'Ready to Send'
-assert_not_contains "$SP/capabilities/crm/tools/airtable/usage.md" '`approved`'
-assert_not_contains "$SP/capabilities/crm/tools/airtable/usage.md" 'Awaiting Approval'
-assert_not_contains "$SP/capabilities/crm/tools/airtable/usage.md" 'twelve'
 assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'Ready to Send'
 assert_not_contains "$SP/capabilities/crm/tools/hubspot/usage.md" '`approved`'
 assert_not_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'Awaiting Approval'
@@ -331,10 +295,6 @@ assert_contains "$SP/capabilities/crm/tools/attio/usage.md" 'Engaged'
 assert_contains "$SP/capabilities/crm/tools/attio/usage.md" 'revisit_on'
 assert_not_contains "$SP/capabilities/crm/tools/attio/usage.md" 'Call Scheduled'
 assert_not_contains "$SP/capabilities/crm/tools/attio/usage.md" 'thirteen'
-assert_contains "$SP/capabilities/crm/tools/airtable/usage.md" 'Engaged'
-assert_contains "$SP/capabilities/crm/tools/airtable/usage.md" 'Revisit On'
-assert_not_contains "$SP/capabilities/crm/tools/airtable/usage.md" 'Call Scheduled'
-assert_not_contains "$SP/capabilities/crm/tools/airtable/usage.md" 'thirteen'
 assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'Engaged'
 assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'sp_revisit_on'
 assert_not_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'Call Scheduled'
@@ -370,7 +330,6 @@ assert_not_contains "$T" 'Won:'
 K="$SP/capabilities/crm/contract.md"
 assert_contains "$K" '| `query_activities` | `status, direction, channel, since, until, limit` |'
 assert_contains "$SP/capabilities/crm/tools/attio/usage.md" '`channel` when given'
-assert_contains "$SP/capabilities/crm/tools/airtable/usage.md" '`Channel` when given'
 assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" '`channel` when given'
 
 
@@ -391,7 +350,6 @@ echo "-- 6.0.0: final review fixes"
 PR="$SP/subagents/prospector.md"
 assert_contains "$PR" 'leave it untouched unless its status is `New`, or `Nurture` with a Revisit On date in the past'
 assert_contains "$PR" '- CRM `get_lead`'
-assert_contains "$SP/capabilities/crm/tools/airtable/usage.md" '`Lead Stage` is `Ready to Send`, and `Summary` starts `recommended:`'
 assert_contains "$SP/capabilities/crm/tools/attio/usage.md" 'act only on a `recommended:` draft of a lead at `Ready to Send`'
 assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'act only on a `recommended:` draft of a lead at `Ready to Send`'
 assert_not_contains "$SP/context/operating-config.md" '`approved`'
@@ -407,7 +365,6 @@ echo "-- 6.0.0: lead generation and personalization (sending leaves)"
 for f in capabilities/sequences skills/enroll skills/sync-replies; do
   [ ! -e "./$f" ] && _report ok "removed: $f" || _report no "still present: $f"  # ./ so the referenced-files check skips it
 done
-grep -qx 'capabilities: crm, email_drafts' "$SP/agent.yaml" && _report ok "capabilities: crm, email_drafts" || _report no "capabilities line still lists more than crm, email_drafts"
 ! grep -qE '^activity_(enroll|sync-replies):' "$SP/agent.yaml" && _report ok "no enroll or sync-replies activity" || _report no "enroll or sync-replies still declared"
 OC="$SP/context/operating-config.md"
 IV="$SP/skills/interview-business/SKILL.md"
@@ -450,7 +407,7 @@ assert_contains "$K" 'outcome: "opt-out"'
 assert_not_contains "$K" 'enroll'
 assert_not_contains "$K" 'sync-replies'
 assert_not_contains "$K" 'a bounced email returns it'
-for c in attio airtable hubspot; do
+for c in attio hubspot; do
   G="./capabilities/crm/tools/$c/guard.yaml"
   grep -qF 'update: [Scored, Researched, "Approach Drafted", Disqualified]' "$G" && _report ok "$c guard: agent statuses end at Approach Drafted" || _report no "$c guard stage update list"
   U="./capabilities/crm/tools/$c/usage.md"
@@ -458,10 +415,9 @@ for c in attio airtable hubspot; do
   assert_not_contains "$U" 'sync-replies'
   assert_not_contains "$U" 'sequences'
 done
-grep -qF 'update: [voided]' "$SP/capabilities/crm/tools/attio/guard.yaml" && grep -qF 'update: [voided]' "$SP/capabilities/crm/tools/airtable/guard.yaml" && grep -qF 'update: [DEFERRED]' "$SP/capabilities/crm/tools/hubspot/guard.yaml" && _report ok "guards: agent only voids Activities" || _report no "guards: Activity status update list"
+grep -qF 'update: [voided]' "$SP/capabilities/crm/tools/attio/guard.yaml" && grep -qF 'update: [DEFERRED]' "$SP/capabilities/crm/tools/hubspot/guard.yaml" && _report ok "guards: agent only voids Activities" || _report no "guards: Activity status update list"
 assert_contains "$SP/capabilities/crm/tools/attio/usage.md" '**`update_activity`** — Reject `status` other than `voided`.'
 assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'Reject a `status` other than `voided`.'
-assert_contains "$SP/capabilities/crm/tools/airtable/usage.md" 'accepts only `status: "voided"`'
 assert_contains "$SP/context/operating-config.md" '`update_activity` moves it only to `voided`'
 E="$SP/evals/cases.md"
 assert_contains "$E" '## Case 5: Opt-out sets Do Not Contact and voids pending drafts'
@@ -497,7 +453,6 @@ assert_not_contains "$SP/skills/write-cold-email/SKILL.md" 'variables:'
 assert_not_contains "$SP/templates/cold-email.md" 'sequences'
 assert_contains "$SP/skills/write-linkedin-touch/SKILL.md" 'one Activity holding both'
 assert_contains "$SP/capabilities/crm/tools/attio/usage.md" 'the `recommended:` one holds the full draft'
-assert_contains "$SP/capabilities/crm/tools/airtable/usage.md" 'the `recommended:` one holds the full draft'
 assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'the `recommended:` one holds the full draft'
 assert_contains "$SP/evals/cases.md" '## Case 14: The first touch is one recommendation plus statements per channel'
 
@@ -537,7 +492,7 @@ assert_contains "$D" '(now <status>)'
 E="$SP/evals/cases.md"
 assert_contains "$E" 'one `log_activity` call with `Channel = "linkedin"`'
 assert_not_contains "$E" 'two separate `log_activity` calls'
-for c in attio airtable hubspot; do
+for c in attio hubspot; do
   assert_not_contains "./capabilities/crm/tools/$c/usage.md" 'wait for you on their dates'
 done
 
@@ -561,13 +516,12 @@ assert_contains "$AU" '`primary_location`'
 assert_contains "$AU" '| `company_linkedin_url` | `linkedin` |'
 assert_contains "$AU" 'never overwrite a value Attio'"'"'s enrichment or the operator already set'
 assert_not_contains "$AU" 'The tool writes only `name` and `domains`.'
-assert_contains "$SP/capabilities/crm/tools/airtable/usage.md" 'skips the company profile fields'
 assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'skips the company profile fields'
 assert_contains "$SP/subagents/preparer.md" 'the company profile fields it confirmed'
 assert_contains "$SP/subagents/prospector.md" 'company profile fields the listing shows'
 
 echo "-- 6.0.2: review minors"
-for f in capabilities/crm/contract.md capabilities/crm/tools/attio/usage.md capabilities/crm/tools/airtable/usage.md capabilities/crm/tools/hubspot/usage.md context/operating-config.md skills/send-digest/SKILL.md; do
+for f in capabilities/crm/contract.md capabilities/crm/tools/attio/usage.md capabilities/crm/tools/hubspot/usage.md context/operating-config.md skills/send-digest/SKILL.md; do
   if grep -qiE "approves? a plan|approving a plan|approved the plan|whole plan|plans waiting|every plan waiting|Plans on DNC|The plan is approved|plan itself is approved|drafting the plan" "./$f"; then _report no "plan wording left in $f"; else _report ok "no plan wording in $f"; fi
 done
 D="$SP/skills/send-digest/SKILL.md"
@@ -575,7 +529,6 @@ assert_not_contains "$D" 'check the'
 assert_not_contains "$SP/templates/digest.md" 'check the hand-off'
 assert_contains "$D" 'drafted N days ago'
 assert_not_contains "$SP/capabilities/crm/contract.md" '`send-digest` needed to find'
-assert_not_contains "$SP/capabilities/crm/tools/airtable/usage.md" 'reads through `query_activities`'
 assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" '`LINKED_IN_MESSAGE` for linkedin (the connection note and DM share one Task)'
 assert_not_contains "$SP/capabilities/crm/tools/hubspot/usage.md" '|LINKED_IN_CONNECT|TODO>'
 assert_not_contains "$SP/evals/cases.md" 'thirteen'
@@ -587,5 +540,58 @@ PS="$SP/templates/personalized-statements.md"
 assert_contains "$PS" 'one block per reachable channel'
 assert_contains "$PS" '`opener:` and `ask:` are always present'
 assert_contains "$D" 'Report only: the digest writes nothing'
+
+echo "-- 7.0: no Airtable CRM"
+[ ! -e "./capabilities/crm/tools/airtable" ] && _report ok "airtable CRM tool removed" || _report no "airtable CRM tool still present"
+for f in README.md capabilities/crm/contract.md capabilities/crm/tools/attio/usage.md skills/send-digest/SKILL.md evals/cases.md; do
+  assert_not_contains "./$f" "Airtable"
+done
+assert_contains "$SP/agent.yaml" 'standard: "7.0"'
+assert_contains "$SP/agent.yaml" 'capabilities: crm'
+
+echo "-- 7.0: no email_drafts"
+[ ! -e "./capabilities/email_drafts" ] && _report ok "email_drafts removed" || _report no "email_drafts still present"
+for f in agent.yaml AGENT.md README.md context/operating-config.md skills/send-digest/SKILL.md skills/interview-business/SKILL.md skills/setup/SKILL.md; do
+  assert_not_contains "./$f" "email_drafts"
+  assert_not_contains "./$f" "digest_delivery"
+  assert_not_contains "./$f" "digest_channel"
+done
+assert_contains "$SP/context/operating-config.md" 'sending_identity:'
+
+echo "-- 7.0: notify_owner callers"
+assert_contains "$SP/skills/send-digest/SKILL.md" 'notify_owner(kind: digest)'
+assert_not_contains "$SP/skills/send-digest/SKILL.md" 'Delivery is added with'
+assert_not_contains "$SP/skills/send-digest/SKILL.md" 'nothing sends without operator approval'
+assert_contains "$SP/AGENT.md" 'notify_owner(kind: alert)'
+assert_contains "$SP/AGENT.md" 'notify_owner(kind: error)'
+assert_contains "$SP/AGENT.md" 'Never send a message to anyone but the business owner'
+assert_contains "$SP/AGENT.md" '`bind_owner_notify`'
+assert_contains "$SP/subagents/prospector.md" 'notify_owner(kind: error)'
+assert_contains "$SP/subagents/prospector.md" '- Owner notify `notify_owner`'
+assert_contains "$SP/subagents/preparer.md" 'notify_owner(kind: error)'
+assert_contains "$SP/subagents/preparer.md" '- Owner notify `notify_owner`'
+assert_contains "$SP/subagents/approacher.md" 'notify_owner(kind: error)'
+assert_contains "$SP/subagents/approacher.md" '- Owner notify `notify_owner`'
+assert_contains "$SP/skills/setup/SKILL.md" 'recipient_email'
+assert_contains "$SP/skills/setup/SKILL.md" 'owner_only_send'
+assert_contains "$SP/skills/interview-business/SKILL.md" 'recipient_email'
+assert_contains "$SP/README.md" 'messages only you, through Resend'
+assert_contains "$SP/evals/cases.md" 'A notification never reaches anyone but the owner'
+
+echo "-- 7.0.0: release"
+assert_contains "$SP/agent.yaml" 'version: 7.0.0'
+for m in agent.yaml .claude-plugin/plugin.json .claude-plugin/marketplace.json .codex-plugin/plugin.json gemini-extension.json; do
+  grep -qF 'prepares each first touch in the CRM:' "./$m" && _report ok "$m: description says drafts stay in the CRM" || _report no "$m: description does not say the CRM"
+done
+
+echo "-- 7.0.0: setup pushes before the test notification"
+ST="$SP/skills/setup/SKILL.md"
+tools_step=$(awk '/^9\. \*\*Tools\.\*\*/,/^10\. \*\*Version control/' "$ST")
+after_tools=$(awk '/^10\. \*\*Version control/,0' "$ST")
+printf '%s' "$tools_step" | grep -qF 'test notification.' && printf '%s' "$tools_step" | grep -qF 'step 11 offers the' \
+  && _report ok "tools step defers the test notification to step 11" || _report no "tools step does not defer the test notification"
+printf '%s' "$tools_step" | grep -qF 'offer one test notification' && _report no "tools step still offers the test notification" || _report ok "tools step sends no test notification"
+printf '%s' "$after_tools" | grep -qF 'git push -u' && _report ok "version control pushes the instance" || _report no "version control does not push"
+printf '%s' "$after_tools" | grep -qF 'offer one test notification' && _report ok "open step offers the test notification" || _report no "open step does not offer the test notification"
 
 finish

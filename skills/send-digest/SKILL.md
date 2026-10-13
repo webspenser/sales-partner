@@ -1,11 +1,11 @@
 ---
 name: send-digest
-description: Use when the digest's scheduled run fires (`schedule_digest` in the instance's `schedules.yaml`) — assembles the pipeline summary and delivers it to the operator.
+description: Use when the digest's scheduled run fires (`schedule_digest` in the instance's `schedules.yaml`) — assembles the pipeline summary and sends it to the owner through `owner_notify`.
 ---
 
 This skill produces a report, not a pipeline action. It reads the CRM
 and Apify usage, renders six fixed sections in a fixed order, and
-delivers the result to the operator. It never advances a stage, edits
+sends the result to the owner with `notify_owner`. It never advances a stage, edits
 a lead field, logs an Activity, or logs Research — see **This skill
 reads; it never writes** below.
 
@@ -91,15 +91,15 @@ Record-level timestamps are compared against the `(anchor, nominal_time]`
 window per section:
 
 - **New leads scored** compares each Lead record's own **Created
-  Time** — the timestamp the Airtable tool stamps on every row the
+  Time** — the timestamp the CRM stamps on every record the
   moment `create_lead` writes it — against the full window,
   `(anchor, nominal_time]`, not the anchor alone. Created Time is
   store-level record metadata, not one of the fields
-  the Airtable tool (`capabilities/crm/tools/airtable/usage.md`) declares on the Leads table; it needs no
+  the CRM tools declare on a lead (`capabilities/crm/tools/<provider>/usage.md`); it needs no
   new field because every record already carries it.
 - **Movement** compares each Lead record's own **`Stage Changed At`**
   against the same `(anchor, nominal_time]` window. `Stage Changed At`
-  is a declared field on the Leads table (`capabilities/crm/tools/airtable/usage.md`),
+  is a declared field on the lead record (`capabilities/crm/tools/<provider>/usage.md`),
   written only by `update_stage`, on every transition, as part of that
   same call — never by `update_lead` and never by anything else. That
   exclusivity is what makes it trustworthy here: `update_lead` writes
@@ -135,18 +135,18 @@ marker. The reads it does use, named precisely:
   CRM read at all; Apify spend is not CRM data and never was.
 
 Every one of the above is a call through `capabilities/crm/contract.md`'s eleven
-provider-neutral operations — none of the six sections reads an
-Airtable view directly. The CRM tools' named views
-(Review, Ready to Send, My touches, Research Queue, Due Today, Nurture) still exist as
-a convenience for the operator looking at Airtable by hand, and are
+provider-neutral operations — none of the six sections reads a
+CRM view directly. Any named views a CRM tool offers (Review, Ready to Send, My touches, Research Queue, Due Today, Nurture) are
+a convenience for the operator looking at the CRM by hand, and are
 defined to compute exactly what the operations above return, but this
 skill does not depend on them: swap the tool for a different CRM
 behind the same contract, and every one of these six sections still
-works, because none of them named an Airtable-specific view as its read
+works, because none of them named a tool-specific view as its read
 path.
 
 In a scheduled (unattended) run, never ask the operator a question; if
-a required input is missing, stop and report what is missing.
+a required input is missing, call `notify_owner(kind: error)` with what
+is missing, then stop and report it.
 
 ## Procedure
 
@@ -270,49 +270,11 @@ a required input is missing, stop and report what is missing.
    This is the shape `templates/digest.md` defines; until that
    template exists, the section order and content rules above **are**
    the shape.
-9. Resolve the delivery channel: read `digest_channel` from
-   `operating-config.md`. If it is `sms` and no Twilio credential is
-   configured — true of the shipped default, since SMS is a stubbed
-   tool, not yet enabled — switch delivery to email (delivered per
-   step 10: always a draft) and
-   make the digest's first line say so verbatim, e.g. `Delivered by email — SMS
-   is configured but no Twilio credential exists yet.` If
-   `digest_channel` is `email`, or is `sms` with a working Twilio
-   credential, deliver on that channel with no disclaimer line. If
-   step 10's send-fallback line also applies, it goes first, above
-   this one.
-10. Deliver the rendered digest. **The digest is always a draft,
-    never a send:** create it with `email_drafts`
-    `create_draft`, addressed to `sending_identity` (the operator's own
-    address from `operating-config.md`), and the operator opens it from
-    their own drafts. Delivering it this way needs no send capability
-    at all, and the agent holds none: the email tool's guard policy
-    denies every send tool.
-
-    `digest_delivery` shipped as `draft`. If it is set to `send`, the
-    only difference is a disclaimer: compose the draft exactly as for
-    `draft` and put this line first, above the `#` heading:
-    "digest_delivery is send, but this agent's email tool
-    cannot send; delivered as a draft." The setting cannot be honored,
-    and you must not look for another way to send.
-
-    The opt-in is dormant, not removed. Direct send would need a future
-    `email_send` capability bound in the instance; only if one is bound
-    may `digest_delivery: send` deliver directly. **Enabling it would
-    grant a send capability that is not scoped to the operator's own
-    address.** Gmail has no per-recipient send scope: a credential that
-    can send this digest to `sending_identity` can send mail to anyone,
-    prospects included. The guardrails would still forbid using it that
-    way, but with the opt-in on, "the agent cannot reach a prospect"
-    stops being true by construction and goes back to being an
-    instruction, which is why the default is `draft`, and why turning
-    it on is the operator's decision to make in config, never the
-    agent's to make at runtime. See **Approval scope** below for why
-    delivering this one report to this one recipient needs no separate
-    approval step.
-
-    Delivery, as a draft, is the skill's only side effect. Stop — no
-    CRM write of any kind follows.
+9. Deliver the rendered digest with `notify_owner(kind: digest)`: the
+   subject is `Digest <date>`, the body is the rendered digest. The
+   recipient is the owner pinned at setup; this skill never chooses
+   one. Delivery is the skill's only side effect. Stop — no further
+   reads, no writes.
 
 ## Why the review queue leads
 
@@ -324,46 +286,17 @@ every run, even when empty — see the first Failure mode below.
 
 ## Approval scope
 
-`AGENT.md`'s guardrail — "nothing sends without operator approval" —
-and `capabilities/crm/contract.md`'s `log_activity` enforcement of it both gate one
-specific thing: **outbound prospect communication**, logged as an
-Activity at `draft`, approved only when the operator moves the lead to
-`Ready to Send`, then `sent` by the operator or their automation — or,
-if an inbound opt-out arrives first,
-diverted from `draft` straight to the terminal `voided` via
-`update_activity`. The digest
-is never logged as an Activity, is never addressed to a prospect, and
-never touches `log_activity` at all — it is a report the agent sends
-to the operator, about the operator's own pipeline. Delivering it by
-email is not a violation of that guardrail; it is a different act
-entirely, on a different channel scope than the draft-only Gmail
-access `AGENT.md`'s Inputs describes for composing prospect-facing
-Activities. Do not read this skill's email delivery as an argument
-that any other agent output no longer needs approval — it applies to
-this one report, addressed to this one recipient, precisely because
-that recipient is the person the approval gate exists to protect, not
-someone the approval gate exists to protect *from*.
-
-The question is narrower still: the digest
-is composed as a draft via `email_drafts` `create_draft` to
-`sending_identity` and the operator opens it, so this skill delivers
-its one report using exactly the draft-only access `AGENT.md`'s
-Inputs already describes, holding no send capability whatsoever. The
-reasoning above would license a `digest_delivery: send` opt-in once an
-`email_send` capability exists; it is not a claim that the opt-in is
-free. Turning it on would add a send scope Gmail cannot narrow to a
-single recipient, so the operator who enables it would grant a
-capability that could technically reach a prospect — an
-instruction-enforced boundary where a withheld-capability one stood
-before. Until then the opt-in is dormant; grant it deliberately or not
-at all.
+The digest reports on drafts; it never approves, sends or changes one.
+Every first touch stays an Activity at `draft` in the CRM until the
+operator moves the lead to `Ready to Send`. The digest itself goes only
+to the owner, through `owner_notify`, whose guard pins the recipient and
+the sender; the agent has no other way to send anything.
 
 ## Worked example
 
 Run fires Monday, 2026-08-31, 08:00 — the nominal scheduled time
 matches the wall clock exactly this week. Anchor: Monday, 2026-08-24,
-08:00 (one cadence interval, 7 days, earlier). `digest_channel: email`
-(the shipped default — no fallback disclaimer needed this run).
+08:00 (one cadence interval, 7 days, earlier).
 
 ```
 # Sales Partner Digest — 2026-08-31
@@ -396,6 +329,8 @@ matches the wall clock exactly this week. Anchor: Monday, 2026-08-24,
 ## Spend
 $18.40 of $25.00/week Apify cap (74%) — $6.60 remaining this cap week
 ```
+
+Sent with `notify_owner(kind: digest)` to the owner's pinned address.
 
 Harrow Analytics shows the anchor and the two changed sections working
 together correctly: created 2026-08-25 (after the 2026-08-24 anchor),
@@ -430,16 +365,6 @@ after the anchor" with no upper bound, this run (executing at 11:00)
 would have caught Vantage Fleet too, and next week's on-time run would
 report it again — the double-report Finding 1 describes.
 
-Composed as a draft via `email_drafts` `create_draft` to `sending_identity` (e.g. `Andrew Ho Choy
-<andrew@example.com>`) — the shipped `digest_delivery: draft` default —
-for the operator to open. Had `digest_channel` instead been `sms` with
-no Twilio credential configured, the same body would still be delivered
-by email, with this line prepended above the `#` heading:
-
-```
-Delivered by email — SMS is configured but no Twilio credential exists yet.
-```
-
 ## Failure modes
 
 - **Burying an empty review queue under the reporting.** Sections 1 and
@@ -471,17 +396,3 @@ Delivered by email — SMS is configured but no Twilio credential exists yet.
   like the anchor bounds it on the lower edge — is what closes this,
   and it is mandatory for New leads scored and Movement on every run,
   not only the runs a reviewer happens to notice ran late.
-- **Flipping `digest_delivery` to `send` for convenience.** Saving
-  the operator the click of opening a draft is not a reason to hand
-  the agent an unscoped send capability. Direct send would be a
-  deliberate operator decision recorded in `operating-config.md`, and
-  in this release direct send is not available at all. This skill never
-  enables it on its own, infers it from a preference, or treats it as
-  the obvious default once it has run a few times cleanly.
-- **Silently falling back to email without saying so.** The fallback
-  from `sms` to `email` when no Twilio credential exists is not itself
-  a failure — it's the only sane behavior with a stubbed tool. The
-  failure is delivering that fallback digest with no disclaimer line,
-  leaving the operator to assume SMS delivery is live when it never
-  ran. Step 9's disclaimer line is mandatory whenever the fallback
-  fires, never optional or paraphrased away.

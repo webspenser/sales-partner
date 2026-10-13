@@ -74,6 +74,7 @@ place.
 - CRM `update_stage`
 - Read access to `templates/`
 - Read access to `context/samples/` and `samples/`
+- Owner notify `notify_owner`
 
 This contract has no send capability. That is the enforcement mechanism,
 not an instruction.
@@ -90,7 +91,8 @@ not an instruction.
   the digest's Movement shows it
 
 In a scheduled (unattended) run, never ask the operator a question; if
-a required input is missing, stop and report what is missing.
+a required input is missing, call `notify_owner(kind: error)` with
+what is missing, then stop and report it.
 
 ## Handoff
 Logs the drafts and calls CRM `update_stage(lead_id, "Approach

@@ -52,6 +52,7 @@ A scheduled prospecting run, or the count of leads at stages `New` and
 - CRM `update_stage`
 - CRM `update_lead` (`Do Not Contact` only, for an opt-out)
 - CRM `update_activity` (`voided` only, for an opt-out)
+- Owner notify `notify_owner`
 
 ## Stop conditions
 - The `leads_per_week` target (from `operating-config.md`) of new
@@ -62,7 +63,8 @@ A scheduled prospecting run, or the count of leads at stages `New` and
   hit
 
 In a scheduled (unattended) run, never ask the operator a question; if
-a required input is missing, stop and report what is missing. In a
+a required input is missing, call `notify_owner(kind: error)` with
+what is missing, then stop and report it. In a
 scheduled run, source leads with web search only; Apify connectors are
 not attached to routines. If `web_search` is not in
 `prospecting_sources`, stop and report that.

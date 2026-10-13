@@ -46,10 +46,9 @@ clears `research_threshold`, capped per run at `research_quota_per_week`
 
 ## Tools allowed
 - Web search
-- Apify site and social scrapers
-- Map and directory listings, read through web search, or through
-  `apify_google_maps` when it is listed in `prospecting_sources` —
-  within `apify_spend_cap_usd_per_week`
+- Map and directory listings, read through web search
+- Scraping `find_contacts`, when `apify_contact_info` is listed in
+  `prospecting_sources` — within `apify_spend_cap_usd_per_week`
 - CRM `get_lead`
 - CRM `query_by_score`
 - CRM `log_research`
@@ -58,7 +57,7 @@ clears `research_threshold`, capped per run at `research_quota_per_week`
 - CRM `update_activity` (`voided` only, for an opt-out)
 - CRM `update_stage`
 - Owner notify `notify_owner`
-- Ledger `ledger_status`, `append_events`
+- Ledger `ledger_status`, `append_events`, `find_events`
 
 Before researching, apply the contract's opt-out instruction
 (`capabilities/crm/contract.md`, Approval invariant, **Opt-outs**) to
@@ -71,15 +70,32 @@ the lead.
 
 In a scheduled (unattended) run, never ask the operator a question; if
 a required input is missing, call `notify_owner(kind: error)` with
-what is missing, then stop and report it. In a
-scheduled run, research with web search only; Apify connectors are not
-attached to routines.
+what is missing, then stop and report it. Scheduled and interactive runs
+use the same sources: whatever `prospecting_sources` lists.
+
+## Scraping
+When `apify_contact_info` is listed, call `find_contacts` with the lead's
+website, batching up to 10 leads' websites per call. Add each email, phone
+and social link to the lead's Contacts with its source URL.
+
+The spend-cap and guard rules are the Prospector's: before each call, sum
+this cap week's `cost_usd` from `find_events` for activities `prospect` and
+`prepare`; if the next call would pass `apify_spend_cap_usd_per_week`,
+write a `stop_condition` event, call `notify_owner(kind: alert)` naming the
+cap, and stop scraping for this run. If a call is blocked by the guard,
+stop the activity and call `notify_owner(kind: error)` with the block's
+message;
+never retry a guard block.
 
 ## Ledger
 Call `ledger_status` first; write `run_started` first and `run_finished` last, numbering events with `seq` per `capabilities/ledger/contract.md` (Run bracketing, Failure policy). Write `stop_condition`, `notify_sent` and `error` events when they happen.
 
 One `step` per lead researched: `subject` is the CRM lead id,
-`items_in` the findings logged, `items_out` the hooks written.
+`items_in` the findings logged, `items_out` the hooks written. Each
+`find_contacts` call is a `step` with `subject` the website domains joined
+by `,` (truncated to 100 characters), `items_in` the URLs sent,
+`items_out` the contacts written, and `cost_usd` (an estimate; `detail`
+says `estimated`).
 
 ## Handoff
 Writes each finding with CRM `log_research(lead_id, type, summary,

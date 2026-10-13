@@ -86,8 +86,8 @@ for a in prospect prepare approach digest; do
   grep -q "^activity_$a:" agent.yaml && _report ok "activity $a declared" || _report no "activity $a missing"
 done
 for f in subagents/prospector.md subagents/preparer.md; do
-  grep -qF "web search only; Apify connectors are" "$f" && grep -qF "attached to routines." "$f" \
-    && _report ok "$f: scheduled runs use web search only" || _report no "$f: no web-search-only rule for scheduled runs"
+  grep -qF "use the same sources: whatever" "$f" \
+    && _report ok "$f: scheduled and interactive runs share sources" || _report no "$f: no same-sources rule for scheduled runs"
 done
 # enroll and sync-replies left with the sequences capability.
 mkdir -p "$W/enr"

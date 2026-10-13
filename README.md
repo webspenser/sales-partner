@@ -44,9 +44,11 @@ and when.
 
 ## Why you can trust it
 
-- **It never sends anything.** It has no ability to email, message or
-  post on your behalf. Every message waits for your approval, and
-  sending stays with you and the tools you already use.
+- **It never sends anything to a prospect.** It has no ability to email,
+  message or post to them on your behalf. Every message waits for your
+  approval, and sending stays with you and the tools you already use.
+  It messages only you, through Resend, from a no-reply address on
+  your domain.
 - **It never makes things up.** Facts about a prospect come with a source
   link or are marked unverified. Claims about your business come only
   from what you told it.
@@ -65,6 +67,8 @@ and when.
 ## What you need
 
 - A CRM: **Attio** or **HubSpot** (or bring your own).
+- **Resend**, your own account, for the digest and alerts the agent
+  sends you (the free plan is enough), with a sending domain you verify.
 - **Claude Code** on a paid Claude plan, which runs the agent and its
   weekly schedule.
 - Optional: **Apify**, for richer map and website data when you run it
@@ -109,9 +113,10 @@ Version 6.0.2.
 ## Tools it needs
 
 - A CRM — Attio or HubSpot (`capabilities/crm/tools/`); setup binds it after a read-only check. If a CRM needs fields the probe does not find, setup offers two choices: create them yourself from the tool's `## Setup` steps, or run its `bootstrap.py` with an API key in your own terminal.
+- Resend for owner notifications, on the client's own account (`capabilities/owner_notify/tools/resend/`); setup pins your address and a no-reply sender, and the guard refuses a send to anyone else.
 - Apify for scraping and web search.
 
-Each tool's guard policy makes Attio and HubSpot unattended-safe.
+Each tool's guard policy makes Attio, HubSpot and Resend unattended-safe.
 
 Connect these in your host (connectors or MCP servers). Credentials
 never go in this repo.

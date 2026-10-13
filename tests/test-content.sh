@@ -558,4 +558,24 @@ for f in agent.yaml AGENT.md README.md context/operating-config.md skills/send-d
 done
 assert_contains "$SP/context/operating-config.md" 'sending_identity:'
 
+echo "-- 7.0: notify_owner callers"
+assert_contains "$SP/skills/send-digest/SKILL.md" 'notify_owner(kind: digest)'
+assert_not_contains "$SP/skills/send-digest/SKILL.md" 'Delivery is added with'
+assert_not_contains "$SP/skills/send-digest/SKILL.md" 'nothing sends without operator approval'
+assert_contains "$SP/AGENT.md" 'notify_owner(kind: alert)'
+assert_contains "$SP/AGENT.md" 'notify_owner(kind: error)'
+assert_contains "$SP/AGENT.md" 'Never send a message to anyone but the business owner'
+assert_contains "$SP/AGENT.md" '`bind_owner_notify`'
+assert_contains "$SP/subagents/prospector.md" 'notify_owner(kind: error)'
+assert_contains "$SP/subagents/prospector.md" '- Owner notify `notify_owner`'
+assert_contains "$SP/subagents/preparer.md" 'notify_owner(kind: error)'
+assert_contains "$SP/subagents/preparer.md" '- Owner notify `notify_owner`'
+assert_contains "$SP/subagents/approacher.md" 'notify_owner(kind: error)'
+assert_contains "$SP/subagents/approacher.md" '- Owner notify `notify_owner`'
+assert_contains "$SP/skills/setup/SKILL.md" 'recipient_email'
+assert_contains "$SP/skills/setup/SKILL.md" 'owner_only_send'
+assert_contains "$SP/skills/interview-business/SKILL.md" 'recipient_email'
+assert_contains "$SP/README.md" 'messages only you, through Resend'
+assert_contains "$SP/evals/cases.md" 'A notification never reaches anyone but the owner'
+
 finish

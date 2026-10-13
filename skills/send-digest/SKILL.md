@@ -1,11 +1,11 @@
 ---
 name: send-digest
-description: Use when the digest's scheduled run fires (`schedule_digest` in the instance's `schedules.yaml`) — assembles the pipeline summary and delivers it to the operator.
+description: Use when the digest's scheduled run fires (`schedule_digest` in the instance's `schedules.yaml`) — assembles the pipeline summary and sends it to the owner through `owner_notify`.
 ---
 
 This skill produces a report, not a pipeline action. It reads the CRM
 and Apify usage, renders six fixed sections in a fixed order, and
-delivers the result to the operator. It never advances a stage, edits
+sends the result to the owner with `notify_owner`. It never advances a stage, edits
 a lead field, logs an Activity, or logs Research — see **This skill
 reads; it never writes** below.
 
@@ -145,7 +145,8 @@ works, because none of them named a tool-specific view as its read
 path.
 
 In a scheduled (unattended) run, never ask the operator a question; if
-a required input is missing, stop and report what is missing.
+a required input is missing, call `notify_owner(kind: error)` with what
+is missing, then stop and report it.
 
 ## Procedure
 
@@ -269,8 +270,11 @@ a required input is missing, stop and report what is missing.
    This is the shape `templates/digest.md` defines; until that
    template exists, the section order and content rules above **are**
    the shape.
-9. Deliver the rendered digest. Delivery is added with the `owner_notify` capability.
-   Stop — no CRM write of any kind follows.
+9. Deliver the rendered digest with `notify_owner(kind: digest)`: the
+   subject is `Digest <date>`, the body is the rendered digest. The
+   recipient is the owner pinned at setup; this skill never chooses
+   one. Delivery is the skill's only side effect. Stop — no further
+   reads, no writes.
 
 ## Why the review queue leads
 
@@ -282,23 +286,11 @@ every run, even when empty — see the first Failure mode below.
 
 ## Approval scope
 
-`AGENT.md`'s guardrail — "nothing sends without operator approval" —
-and `capabilities/crm/contract.md`'s `log_activity` enforcement of it both gate one
-specific thing: **outbound prospect communication**, logged as an
-Activity at `draft`, approved only when the operator moves the lead to
-`Ready to Send`, then `sent` by the operator or their automation — or,
-if an inbound opt-out arrives first,
-diverted from `draft` straight to the terminal `voided` via
-`update_activity`. The digest
-is never logged as an Activity, is never addressed to a prospect, and
-never touches `log_activity` at all — it is a report for the
-operator, about the operator's own pipeline. Delivering it is not a
-violation of that guardrail; it is a different act entirely. Do not
-read this skill's delivery as an argument that any other agent output
-no longer needs approval — it applies to this one report, addressed to
-the operator, precisely because that recipient is the person the
-approval gate exists to protect, not someone the approval gate exists
-to protect *from*.
+The digest reports on drafts; it never approves, sends or changes one.
+Every first touch stays an Activity at `draft` in the CRM until the
+operator moves the lead to `Ready to Send`. The digest itself goes only
+to the owner, through `owner_notify`, whose guard pins the recipient and
+the sender; the agent has no other way to send anything.
 
 ## Worked example
 
@@ -337,6 +329,8 @@ matches the wall clock exactly this week. Anchor: Monday, 2026-08-24,
 ## Spend
 $18.40 of $25.00/week Apify cap (74%) — $6.60 remaining this cap week
 ```
+
+Sent with `notify_owner(kind: digest)` to the owner's pinned address.
 
 Harrow Analytics shows the anchor and the two changed sections working
 together correctly: created 2026-08-25 (after the 2026-08-24 anchor),

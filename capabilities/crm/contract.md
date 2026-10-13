@@ -266,7 +266,7 @@ be breaking before they break it:
   operator's move to `Ready to Send` does.** What happens next — an
   email sequence, a LinkedIn message, a call — is the operator's, or the
   owner's automation, another system or agent acting on that status.
-  The agent sends nothing and never acts on a lead at `Ready to Send`
+  The agent sends nothing to prospects and never acts on a lead at `Ready to Send`
   or later.
 
 The opt-out has one mechanism and one instruction:

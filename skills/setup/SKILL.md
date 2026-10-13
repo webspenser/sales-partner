@@ -102,9 +102,17 @@ skill, if this agent has one.
       line, `field_<name>: <ID>`, with nothing else on it: no bullet, no
       backticks or quotes, no trailing note. Anything else blocks the
       guarded call.
-   4. If the contract has a `no_external_send` invariant and the tool's
-      `guard.yaml` does not list it in `covers`, refuse to bind it and
-      say why.
+   4. If the contract has a `no_external_send` or `owner_only_send`
+      invariant and the tool's `guard.yaml` does not list it in
+      `covers`, refuse to bind it and say why. For `owner_only_send`,
+      ask the user for each pinned value the tool's `usage.md`
+      `## Setup` lists (for example `recipient_email`; offer the
+      addresses the interview collected), repeat each back, and write them as plain `<key>: <value>` lines to
+      `bindings/<capability>.md` only after the user confirms. Then
+      commit and push the instance: owner sends are refused until
+      `bindings/<capability>.md` matches the pushed copy. Then offer one
+      test notification to that recipient; send it only after the user
+      says yes.
    5. Add `bind_<capability>: <provider>` (or `custom`) to
       `instance.yaml`, replacing an earlier line for that capability.
    6. Source mode only: merge into `.claude/settings.json` a

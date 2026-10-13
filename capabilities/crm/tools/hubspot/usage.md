@@ -412,7 +412,7 @@ contract's guarantees are enforced by mechanism (approval and `dnc_one_way` only
 
    The operator's own edits in HubSpot never pass through it, so
    approving a lead stays operator-only.
-2. **Nothing sends from the CRM.** The agent sends nothing; after the
+2. **Nothing sends from the CRM.** The agent sends nothing to prospects; after the
    operator's approval, the owner's workflows or the operator send the
    first touch. HubSpot's email and marketing tools are not on the allow
    list.

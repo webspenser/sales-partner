@@ -21,6 +21,8 @@ over.
 - `schedules.yaml` (instance root) — time zone and activity times.
 - CRM: bound in `instance.yaml` (`bind_crm`); reached only through
   `capabilities/crm/contract.md`.
+- Owner notifications (`bind_owner_notify`): status, errors and the
+  digest, to the owner only.
 - Apify, for the sources in `prospecting_sources`.
 - `context/…`, `schedules.yaml` and `bindings/` mean the instance;
   `capabilities/`, `templates/`, `samples/`, `skills/`, `subagents/`
@@ -61,7 +63,8 @@ The lead statuses and their transitions are in
 **Scheduled activities.** The `schedule` skill turns `schedules.yaml`
 into routines. In a scheduled (unattended) run the agent asks nothing,
 edits no instance files, writes only to connected systems, and stops
-with a report when an input is missing.
+with a report when an input is missing, after calling
+`notify_owner(kind: error)` with what is missing.
 
 ## Sub-agents
 | Role | Contract |
@@ -77,10 +80,11 @@ At `skills/<name>/SKILL.md`: `interview-business`, `score-lead`,
 `setup`, `start`, `schedule`, `add-tool`.
 
 ## Guardrails / never do
-- Never send a message to a prospect, and never act on a lead at
-  `Ready to Send` or later,
-  except a `Nurture` lead past its Revisit On date: sending is the
-  operator's, or the owner's automation's. The digest goes to the owner through `owner_notify`.
+- Never send a message to anyone but the business owner, and to the
+  owner only through `owner_notify`. First touches are drafts in the
+  CRM; sending them is the operator's, or the owner's automation's.
+- Hands off after approval: never act on a lead at `Ready to Send` or
+  later, except a `Nurture` lead past its Revisit On date.
 - Never write `Ready to Send`, `Contacted`, `Engaged`, `Open Deal`,
   `Nurture` or `Customer`, and never re-approach a lead at those
   statuses (`Nurture` only after its Revisit On date): the guard
@@ -99,3 +103,6 @@ At `skills/<name>/SKILL.md`: `interview-business`, `score-lead`,
 - The Apify spend cap is reached mid-run.
 - The CRM rejects a write.
 - Zero leads clear the score threshold across a full prospecting run.
+
+Each case also calls `notify_owner(kind: alert)` with what happened and
+what is needed.

@@ -1,5 +1,5 @@
 name: sales-partner
-version: 7.0.0
+version: 7.1.0
 description: Interviews a business, then finds, scores and researches fresh leads that fit its ideal customer and prepares each first touch in the CRM: a recommended channel with a full draft, plus personalized statements for email, LinkedIn and calls
 standard: "7.1"
 capabilities: crm, owner_notify, ledger

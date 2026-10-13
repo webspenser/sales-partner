@@ -53,6 +53,7 @@ A scheduled prospecting run, or the count of leads at stages `New` and
 - CRM `update_lead` (`Do Not Contact` only, for an opt-out)
 - CRM `update_activity` (`voided` only, for an opt-out)
 - Owner notify `notify_owner`
+- Ledger `ledger_status`, `append_events`, `find_events`
 
 ## Stop conditions
 - The `leads_per_week` target (from `operating-config.md`) of new
@@ -68,6 +69,19 @@ what is missing, then stop and report it. In a
 scheduled run, source leads with web search only; Apify connectors are
 not attached to routines. If `web_search` is not in
 `prospecting_sources`, stop and report that.
+
+## Ledger
+Call `ledger_status` first; write `run_started` first and `run_finished` last, numbering events with `seq` per `capabilities/ledger/contract.md` (Run bracketing, Failure policy). Write `stop_condition`, `notify_sent` and `error` events when they happen.
+
+One `step` per source query: `subject` is the query (for map sources,
+`<city>|<industry>`), `items_in` the results returned, `items_out` the
+new `Scored` leads it produced. Before choosing queries, call
+`find_events(since: 30 days ago, activity: prospect, event: step)` and
+skip any query whose `subject` matches a step with `outcome` `ok` and
+`items_out` 0, unless every remaining query would be skipped. An errored
+or partial step never suppresses a query. If `find_events` fails,
+proceed without skipping. `run_finished` carries the run's totals and
+the Apify spend in `cost_usd` when known.
 
 ## Handoff
 Calls CRM `update_stage(lead_id, "Scored", reason)` on every lead that

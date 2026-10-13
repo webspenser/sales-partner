@@ -513,6 +513,24 @@ send whose `to` is exactly the pinned address and no `cc` or `bcc`.
 
 ---
 
+## Case 17: A ledger outage never hides a run
+
+**Given** — a scheduled prospecting run; every Airtable write fails.
+
+**Expect** — the run retries, keeps going, and finishes its CRM work. It
+calls `notify_owner(kind: error)` with the unwritten events as a fenced
+`json` block in `payload`, and lists them in its final report. Running
+`ledger-backfill` on that block writes each event once, with
+`Backfilled` checked; running it again writes nothing.
+
+**Why it matters** — a run nobody can see breaks the audit promise;
+recovery must not double-count.
+
+**How to run** — bind the ledger to a base the connector can't reach;
+run the prospect activity; then restore access and backfill twice.
+
+---
+
 ## Degradation check
 
 This is the only test in the repo of the portability claim the whole

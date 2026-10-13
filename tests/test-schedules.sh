@@ -10,10 +10,19 @@ notify() { # notify <dir>: bind owner_notify to Resend with pinned owner values
   printf '%s\n' 'bind_owner_notify: resend' >> "$1/instance.yaml"
   printf '%s\n' 'recipient_email: owner@example.com' 'sender_email: no-reply@example.com' > "$1/bindings/owner_notify.md"
 }
+ledger() { # ledger <dir>: bind the ledger to Airtable with complete bindings
+  mkdir -p "$1/bindings"
+  printf '%s\n' 'bind_ledger: airtable' >> "$1/instance.yaml"
+  { echo 'base_id: appAAAAAAAAAAAAAA'; echo 'table_events: tblAAAAAAAAAAAAAA'
+    for f in at run_id seq activity trigger event subject outcome items_in items_out cost_usd duration_s detail agent_version backfilled; do
+      echo "field_$f: fld$(printf '%-14s' "$f" | tr ' _' 'XX' | cut -c1-14)"; done
+    echo 'ledger_schema: 1'; } > "$1/bindings/ledger.md"
+}
 inst() { # inst <dir> <crm provider>
   mkdir -p "$1"
   printf '%s\n' 'agent: sales-partner' 'mode: plugin' "bind_crm: $2" > "$1/instance.yaml"
   notify "$1"
+  ledger "$1"
   printf '%s\n' 'timezone: America/New_York' 'schedule_prospect: "Monday 07:00"' 'then_prospect: prepare' \
     'schedule_approach: "Tuesday 07:00"' 'schedule_digest: "Monday 08:00"' > "$1/schedules.yaml"
 }
@@ -26,10 +35,18 @@ done
 mkdir -p "$W/approach"
 printf '%s\n' 'agent: sales-partner' 'mode: plugin' 'bind_crm: attio' > "$W/approach/instance.yaml"
 notify "$W/approach"
+ledger "$W/approach"
 printf '%s\n' 'timezone: America/New_York' 'schedule_approach: "Tuesday 07:00"' > "$W/approach/schedules.yaml"
 out=$(python3 -B "$C" check "$W/approach" --repo acme/sales 2>&1); rc=$?
-[ "$rc" -eq 0 ] && _report ok "approach passes with crm and owner_notify bound" || _report no "approach with crm and owner_notify (rc=$rc): $out"
-grep -qx 'activity_approach: crm, owner_notify' agent.yaml && _report ok "approach declares crm and owner_notify only" || _report no "activity_approach is not exactly crm, owner_notify"
+[ "$rc" -eq 0 ] && _report ok "approach passes with crm, owner_notify and ledger bound" || _report no "approach with crm, owner_notify and ledger (rc=$rc): $out"
+grep -qx 'activity_approach: crm, owner_notify, ledger' agent.yaml && _report ok "approach declares crm, owner_notify and ledger only" || _report no "activity_approach is not exactly crm, owner_notify, ledger"
+# An instance with the CRM and owner_notify bound but no ledger fails the gate.
+mkdir -p "$W/noledger"
+printf '%s\n' 'agent: sales-partner' 'mode: plugin' 'bind_crm: attio' > "$W/noledger/instance.yaml"
+notify "$W/noledger"
+printf '%s\n' 'timezone: America/New_York' 'schedule_approach: "Tuesday 07:00"' > "$W/noledger/schedules.yaml"
+out=$(python3 -B "$C" check "$W/noledger" --repo acme/sales 2>&1); rc=$?
+[ "$rc" -eq 1 ] && printf '%s' "$out" | grep -qF 'ledger is not bound' && _report ok "ledger unbound fails the gate" || _report no "ledger unbound (rc=$rc): $out"
 # Every activity can alert the owner, so none is schedulable without owner_notify.
 mkdir -p "$W/crmonly"
 printf '%s\n' 'agent: sales-partner' 'mode: plugin' 'bind_crm: attio' > "$W/crmonly/instance.yaml"

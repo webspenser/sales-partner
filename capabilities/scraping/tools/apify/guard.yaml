@@ -1,0 +1,36 @@
+# Apify guard policy: two actors only, each call's size pinned to the
+# pushed bindings/scraping.md. Everything else on the server (call-actor,
+# search/add actors, store, tasks, webhooks, schedules, aborting runs,
+# key-value stores) is outside allow. Names come from the probe notes
+# (docs/superpowers/notes/2026-10-13-apify-connector-probe.md) in
+# agent-builder. get-actor-run and get-dataset-items are the two reads
+# that fetch a run's status and results.
+covers: [no_external_send, allowlisted_actors, pinned_inputs]
+allow: [compass--crawler-google-places, vdrmota--contact-info-scraper, get-actor-run, get-dataset-items]
+deny: ["*call-actor*", "*call_actor*", "*search-actors*", "*add-actor*", "*fetch-actor*", "*webhook*", "*schedule*"]
+recipients:
+  - tools: [compass--crawler-google-places]
+    at: [maxCrawledPlacesPerSearch]
+    bound: max_places_per_search
+  - tools: [vdrmota--contact-info-scraper]
+    at: [maxRequestsPerStartUrl]
+    bound: max_pages_per_site
+  - tools: [vdrmota--contact-info-scraper]
+    at: [maxDepth]
+    bound: max_crawl_depth
+  - tools: [vdrmota--contact-info-scraper]
+    at: [maxRequests]
+    bound: max_pages_per_call
+# Paid add-ons (contact enrichment, reviews, images, competitor analysis),
+# filters that change what is scraped, and other ways to name the places
+# (place IDs, custom geolocation). startUrls is not listed: refuse_args
+# applies to the whole policy and the contact scraper requires it (the
+# Maps actor's startUrls stays under maxCrawledPlacesPerSearch). sameDomain
+# is not listed: a boolean cannot be pinned; maxRequests bounds an
+# off-domain crawl.
+refuse_args: [scrapeContacts, maximumLeadsEnrichmentRecords, leadsEnrichmentDepartments, verifyLeadsEnrichmentEmails,
+  maxReviews, maxImages, maxQuestions, scrapePlaceDetailPage, enableCompetitorAnalysis, maxCompetitorsToAnalyze,
+  includeWebResults, scrapeDirectories, scrapeOrderOnline, scrapeTableReservationProvider, scrapeSocialMediaProfiles,
+  scrapeImageAuthors, scrapeReviewsPersonalData, reviewsFilterString, reviewsOrigin, reviewsSort, reviewsStartDate,
+  categoryFilterWords, placeMinimumStars, searchMatching, skipClosedPlaces, website, allPlacesNoSearchAction,
+  placeIds, customGeolocation, useBrowser]

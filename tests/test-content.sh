@@ -547,7 +547,7 @@ echo "-- 7.0: no Airtable CRM"
 for f in capabilities/crm/contract.md capabilities/crm/tools/attio/usage.md skills/send-digest/SKILL.md; do
   assert_not_contains "./$f" "Airtable"
 done
-assert_contains "$SP/agent.yaml" 'standard: "7.1"'
+assert_contains "$SP/agent.yaml" 'standard: "7.2"'
 assert_contains "$SP/agent.yaml" 'capabilities: crm'
 
 echo "-- 7.0: no email_drafts"
@@ -596,7 +596,7 @@ printf '%s' "$after_tools" | grep -qF 'git push -u' && _report ok "version contr
 printf '%s' "$after_tools" | grep -qF 'offer one test notification' && _report ok "open step offers the test notification" || _report no "open step does not offer the test notification"
 
 echo "-- 7.1: ledger"
-assert_contains "$SP/agent.yaml" 'standard: "7.1"'
+assert_contains "$SP/agent.yaml" 'standard: "7.2"'
 assert_contains "$SP/agent.yaml" 'capabilities: crm, owner_notify, ledger'
 assert_contains "$SP/agent.yaml" 'activity_prospect: crm, owner_notify, ledger'
 assert_contains "$SP/agent.yaml" 'activity_digest: crm, owner_notify, ledger'
@@ -633,5 +633,17 @@ assert_contains "$SP/subagents/approacher.md" 'Ledger `ledger_status`, `append_e
 assert_not_contains "$SP/skills/send-digest/SKILL.md" 'This skill reads; it never writes'
 assert_contains "$SP/README.md" 'Upgrading from 7.0'
 wc -c < "$SP/AGENT.md" | awk '{exit !($1 < 6000)}' && _report ok "AGENT.md under 6000 bytes" || _report no "AGENT.md 6000 bytes or more"
+
+echo "-- 7.2: scraping"
+assert_contains "$SP/agent.yaml" 'standard: "7.2"'
+assert_contains "$SP/agent.yaml" 'capabilities: crm, owner_notify, ledger, scraping'
+assert_contains "$SP/capabilities/scraping/contract.md" '`pinned_inputs`'
+assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" 'mcp.apify.com?tools=compass/crawler-google-places,vdrmota/contact-info-scraper'
+assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" 'monthly usage limit'
+assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" 'omit'
+assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" '`estimated`'
+assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" '`get-dataset-items`'
+assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" '`countryCode`'
+assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" '`max_pages_per_call`'
 
 finish

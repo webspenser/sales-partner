@@ -1,0 +1,3 @@
+capability: scraping
+provider: apify
+server_match: apify

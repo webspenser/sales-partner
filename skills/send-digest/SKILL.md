@@ -91,15 +91,15 @@ Record-level timestamps are compared against the `(anchor, nominal_time]`
 window per section:
 
 - **New leads scored** compares each Lead record's own **Created
-  Time** — the timestamp the Airtable tool stamps on every row the
+  Time** — the timestamp the CRM stamps on every record the
   moment `create_lead` writes it — against the full window,
   `(anchor, nominal_time]`, not the anchor alone. Created Time is
   store-level record metadata, not one of the fields
-  the Airtable tool (`capabilities/crm/tools/airtable/usage.md`) declares on the Leads table; it needs no
+  the CRM tools declare on a lead (`capabilities/crm/tools/<provider>/usage.md`); it needs no
   new field because every record already carries it.
 - **Movement** compares each Lead record's own **`Stage Changed At`**
   against the same `(anchor, nominal_time]` window. `Stage Changed At`
-  is a declared field on the Leads table (`capabilities/crm/tools/airtable/usage.md`),
+  is a declared field on the lead record (`capabilities/crm/tools/<provider>/usage.md`),
   written only by `update_stage`, on every transition, as part of that
   same call — never by `update_lead` and never by anything else. That
   exclusivity is what makes it trustworthy here: `update_lead` writes
@@ -135,14 +135,13 @@ marker. The reads it does use, named precisely:
   CRM read at all; Apify spend is not CRM data and never was.
 
 Every one of the above is a call through `capabilities/crm/contract.md`'s eleven
-provider-neutral operations — none of the six sections reads an
-Airtable view directly. The CRM tools' named views
-(Review, Ready to Send, My touches, Research Queue, Due Today, Nurture) still exist as
-a convenience for the operator looking at Airtable by hand, and are
+provider-neutral operations — none of the six sections reads a
+CRM view directly. Any named views a CRM tool offers (Review, Ready to Send, My touches, Research Queue, Due Today, Nurture) are
+a convenience for the operator looking at the CRM by hand, and are
 defined to compute exactly what the operations above return, but this
 skill does not depend on them: swap the tool for a different CRM
 behind the same contract, and every one of these six sections still
-works, because none of them named an Airtable-specific view as its read
+works, because none of them named a tool-specific view as its read
 path.
 
 In a scheduled (unattended) run, never ask the operator a question; if

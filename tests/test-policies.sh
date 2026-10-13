@@ -37,7 +37,7 @@ for t in mcp__claude_ai_Gmail__create_draft mcp__claude_ai_Gmail__list_drafts mc
          mcp__claude_ai_Gmail__get_thread mcp__claude_ai_Attio__list-comment-replies mcp__claude_ai_Attio__list-records \
          mcp__claude_ai_Beehiiv__list_publications mcp__claude_ai_Beehiiv__get_publication \
          mcp__claude_ai_HubSpot__manage_crm_objects mcp__claude_ai_HubSpot__search_crm_objects \
-         mcp__claude_ai_Airtable__update_records_for_table mcp__claude_ai_Slack__slack_read_channel \
+         mcp__claude_ai_Slack__slack_read_channel \
          mcp__claude_ai_Slack__slack_read_thread mcp__claude_ai_ClickUp__clickup_get_chat_message_replies \
          mcp__claude_ai_Zernio__posts_list mcp__claude_ai_Loops__execute mcp__claude_ai_Notion__notion-search \
          mcp__claude_ai_Google_Calendar__list_events mcp__claude_ai_Google_Calendar__get_event \
@@ -116,35 +116,6 @@ check 0 "prefixed search_threads"   $GM mcp__gmail_server__gmail_search_threads 
 check 2 "prefixed send still denied" $GM mcp__gmail_server__gmail_send_message '{}' "is denied"
 check 2 "suffix glob is not a substring" $GM ${G}create_draft_and_send '{}'
 
-echo "-- Airtable"
-AR=capabilities/crm/tools/airtable/guard.yaml; A=mcp__claude_ai_Airtable__
-printf '%s\n' '# CRM binding — Airtable' 'base_id: appAAAAAAAAAAAAAA' 'field_status: fldSSSSSSSSSSSSSS' 'field_do_not_contact: fldDDDDDDDDDDDDDD' \
-  'field_draft_body: fldBBBBBBBBBBBBBB' 'field_lead: fldL1LLLLLLLLLLLLL' 'field_lead: fldL2LLLLLLLLLLLLL' \
-  'field_stage: fldSTAGEEEEEEEEEE' > "$W/b.md"
-B='"baseId":"appAAAAAAAAAAAAAA","tableId":"tblTTTTTTTTTTTTTT"'
-check 0 "create draft by ID"        $AR ${A}create_records_for_table "{$B,\"records\":[{\"fields\":{\"fldSSSSSSSSSSSSSS\":\"draft\"}}]}" "" "$W/b.md"
-check 2 "create approved by ID"     $AR ${A}create_records_for_table "{$B,\"records\":[{\"fields\":{\"fldSSSSSSSSSSSSSS\":\"approved\"}}]}" "Status may only be written as draft on create" "$W/b.md"
-check 2 "update sent by name"       $AR ${A}update_records_for_table "{$B,\"records\":[{\"id\":\"recRRRRRRRRRRRRRR\",\"fields\":{\"Status\":\"sent\"}}]}" "Status is not a recorded field ID" "$W/b.md"
-check 2 "unrecorded field ID"       $AR ${A}update_records_for_table "{$B,\"records\":[{\"id\":\"recRRRRRRRRRRRRRR\",\"fields\":{\"fldOOOOOOOOOOOOOO\":\"x\"}}]}" "fldOOOOOOOOOOOOOO is not a recorded field ID" "$W/b.md"
-check 0 "repeated name: both IDs recorded" $AR ${A}create_records_for_table "{$B,\"records\":[{\"fields\":{\"fldL1LLLLLLLLLLLLL\":[\"recA\"]}},{\"fields\":{\"fldL2LLLLLLLLLLLLL\":[\"recB\"]}}]}" "" "$W/b.md"
-check 0 "update voided by ID"       $AR ${A}update_records_for_table "{$B,\"records\":[{\"id\":\"recRRRRRRRRRRRRRR\",\"fields\":{\"fldSSSSSSSSSSSSSS\":\"voided\"}}]}" "" "$W/b.md"
-check 2 "clear DNC by ID"           $AR ${A}update_records_for_table "{$B,\"records\":[{\"id\":\"recRRRRRRRRRRRRRR\",\"fields\":{\"fldDDDDDDDDDDDDDD\":false}}]}" "Do Not Contact may only be written as true" "$W/b.md"
-check 2 "write without field IDs"   $AR ${A}create_records_for_table "{$B,\"records\":[{\"fields\":{\"fldXXXXXXXXXXXXXX\":\"x\"}}]}" "has not recorded any field IDs"
-check 2 "delete refused"            $AR ${A}delete_records_for_table "{$B}" "is denied"
-check 2 "schema change refused"     $AR ${A}create_field "{$B}" "is not in the allow list"
-check 0 "read allowed"              $AR ${A}list_records_for_table "{$B}"
-check 0 "create draft with body"    $AR ${A}create_records_for_table "{$B,\"records\":[{\"fields\":{\"fldSSSSSSSSSSSSSS\":\"draft\",\"fldBBBBBBBBBBBBBB\":\"Hi\"}}]}" "" "$W/b.md"
-check 2 "Draft Body rewritten"      $AR ${A}update_records_for_table "{$B,\"records\":[{\"id\":\"recRRRRRRRRRRRRRR\",\"fields\":{\"fldBBBBBBBBBBBBBB\":\"new\"}}]}" "Draft Body may not be changed after create" "$W/b.md"
-
-check 2 "agent can't approve a lead"  $AR ${A}update_records_for_table "{$B,\"records\":[{\"id\":\"recRRRRRRRRRRRRRR\",\"fields\":{\"fldSTAGEEEEEEEEEE\":\"Ready to Send\"}}]}" "Stage may only be written as" "$W/b.md"
-check 2 "agent can't mark Contacted"  $AR ${A}update_records_for_table "{$B,\"records\":[{\"id\":\"recRRRRRRRRRRRRRR\",\"fields\":{\"fldSTAGEEEEEEEEEE\":\"Contacted\"}}]}" "Stage may only be written as" "$W/b.md"
-check 0 "agent marks Approach Drafted" $AR ${A}update_records_for_table "{$B,\"records\":[{\"id\":\"recRRRRRRRRRRRRRR\",\"fields\":{\"fldSTAGEEEEEEEEEE\":\"Approach Drafted\"}}]}" "" "$W/b.md"
-check 2 "agent can't mark Engaged"    $AR ${A}update_records_for_table "{$B,\"records\":[{\"id\":\"recRRRRRRRRRRRRRR\",\"fields\":{\"fldSTAGEEEEEEEEEE\":\"Engaged\"}}]}" "Stage may only be written as" "$W/b.md"
-check 2 "agent can't nurture"         $AR ${A}update_records_for_table "{$B,\"records\":[{\"id\":\"recRRRRRRRRRRRRRR\",\"fields\":{\"fldSTAGEEEEEEEEEE\":\"Nurture\"}}]}" "Stage may only be written as" "$W/b.md"
-check 2 "agent can't open a deal"     $AR ${A}update_records_for_table "{$B,\"records\":[{\"id\":\"recRRRRRRRRRRRRRR\",\"fields\":{\"fldSTAGEEEEEEEEEE\":\"Open Deal\"}}]}" "Stage may only be written as" "$W/b.md"
-check 2 "no New on update"            $AR ${A}update_records_for_table "{$B,\"records\":[{\"id\":\"recRRRRRRRRRRRRRR\",\"fields\":{\"fldSTAGEEEEEEEEEE\":\"New\"}}]}" "Stage may only be written as" "$W/b.md"
-check 2 "agent can't mark Customer"   $AR ${A}update_records_for_table "{$B,\"records\":[{\"id\":\"recRRRRRRRRRRRRRR\",\"fields\":{\"fldSTAGEEEEEEEEEE\":\"Customer\"}}]}" "Stage may only be written as" "$W/b.md"
-check 2 "agent can't mark a touch sent" $AR ${A}update_records_for_table "{$B,\"records\":[{\"id\":\"recRRRRRRRRRRRRRR\",\"fields\":{\"fldSSSSSSSSSSSSSS\":\"sent\"}}]}" "Status may only be written as voided on update" "$W/b.md"
 echo "-- HubSpot"
 HS=capabilities/crm/tools/hubspot/guard.yaml; H=mcp__claude_ai_HubSpot__
 TC='{"objectType":"tasks","properties":{"hs_task_status":"%s"}}'

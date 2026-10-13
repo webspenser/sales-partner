@@ -13,5 +13,5 @@ message is an operator action taken outside the agent's tools.
 
 ## Invariants
 
-- `no_send` — no operation sends mail, and the bound tool makes
+- `no_external_send` — no operation sends mail, and the bound tool makes
   sending impossible rather than merely discouraged.

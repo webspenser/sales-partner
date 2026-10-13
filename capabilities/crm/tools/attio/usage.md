@@ -123,9 +123,8 @@ that must be kept.
 | `date` | date |
 | `hook` | text |
 
-`summary` and `hook` mean exactly what the Research section of the
-Airtable tool (`../airtable/usage.md`) says: `summary` is the finding, and `hook` is the
-usable angle the Approacher opens with.
+`summary` is the finding, and `hook` is the usable angle the Approacher
+opens with.
 
 ### List `sales_partner_outreach` — the Activities table
 

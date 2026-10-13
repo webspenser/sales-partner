@@ -64,7 +64,7 @@ and when.
 
 ## What you need
 
-- A CRM: **Attio**, **Airtable** or **HubSpot** (or bring your own).
+- A CRM: **Attio** or **HubSpot** (or bring your own).
 - **Gmail**, for the weekly summary (it only creates drafts).
 - **Claude Code** on a paid Claude plan, which runs the agent and its
   weekly schedule.
@@ -109,10 +109,10 @@ Version 6.0.2.
 
 ## Tools it needs
 
-- A CRM — Attio, Airtable, or HubSpot (`capabilities/crm/tools/`); setup binds it after a read-only check. If a CRM needs fields the probe does not find, setup offers two choices: create them yourself from the tool's `## Setup` steps, or run its `bootstrap.py` with an API key in your own terminal.
+- A CRM — Attio or HubSpot (`capabilities/crm/tools/`); setup binds it after a read-only check. If a CRM needs fields the probe does not find, setup offers two choices: create them yourself from the tool's `## Setup` steps, or run its `bootstrap.py` with an API key in your own terminal.
 - Apify for scraping and web search; Gmail for the digest draft.
 
-Each tool's guard policy makes Attio, Airtable, HubSpot and Gmail unattended-safe.
+Each tool's guard policy makes Attio, HubSpot and Gmail unattended-safe.
 
 Connect these in your host (connectors or MCP servers). Credentials
 never go in this repo.

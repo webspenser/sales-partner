@@ -28,6 +28,10 @@ means the connected Apify server's tools, whatever their prefix.
   `apify:get-dataset-items` takes `datasetId`, `fields`, `limit` (always pass it; at most
   `max_dataset_items`), `offset`, `clean`, `omit` and `desc`.
 
+Send only the arguments listed above, spelled exactly as listed, and
+always send `searchStringsArray` (Maps) and `startUrls` (contacts) with at
+least one item.
+
 Pass every pinned argument on every call, with the bound value: the guard
 refuses a call that leaves one out or raises it, one that carries any
 argument not listed above (even with a `false` or empty value; leave it

@@ -43,15 +43,19 @@ recipients:
     bound: max_pages_per_call
 # List lengths multiply the size pins: one search term per Maps call, at
 # most 10 sites per contact call, at most 100 items per dataset read.
+# The two lists are required, so leaving them out cannot skip the cap.
+# only_keys names are compared exactly: send the spelling listed above.
 limits:
   - tools: [compass--crawler-google-places]
     at: [searchStringsArray]
     bound: max_search_terms
     kind: count
+    required: true
   - tools: [vdrmota--contact-info-scraper]
     at: [startUrls]
     bound: max_sites_per_call
     kind: count
+    required: true
   - tools: [get-dataset-items]
     at: [limit]
     bound: max_dataset_items

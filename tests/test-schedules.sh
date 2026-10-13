@@ -69,7 +69,7 @@ printf '%s\n' 'timezone: America/New_York' 'schedule_approach: "Tuesday 07:00"' 
 out=$(python3 -B "$C" check "$W/nopin" --repo acme/sales 2>&1); rc=$?
 [ "$rc" -eq 1 ] && printf '%s' "$out" | grep -qF 'has no recipient_email line' && _report ok "missing recipient_email fails the gate" || _report no "missing recipient_email (rc=$rc): $out"
 # A bound scraping capability missing a pinned value fails the gate, naming the key.
-for key in max_places_per_search max_pages_per_call max_search_terms max_sites_per_call max_dataset_items; do
+for key in max_places_per_search max_pages_per_site max_crawl_depth max_pages_per_call max_search_terms max_sites_per_call max_dataset_items; do
   mkdir -p "$W/noscrape-$key"
   inst "$W/noscrape-$key" attio
   grep -v "^$key:" "$W/noscrape-$key/bindings/scraping.md" > "$W/s.tmp" && mv "$W/s.tmp" "$W/noscrape-$key/bindings/scraping.md"

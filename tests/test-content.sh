@@ -640,7 +640,7 @@ assert_contains "$SP/agent.yaml" 'capabilities: crm, owner_notify, ledger, scrap
 assert_contains "$SP/capabilities/scraping/contract.md" '`pinned_inputs`'
 assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" 'mcp.apify.com?tools=compass/crawler-google-places,vdrmota/contact-info-scraper'
 assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" 'monthly usage limit'
-assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" 'omit'
+assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" 'Send only the arguments listed above, spelled exactly as listed'
 assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" '`estimated`'
 assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" '`get-dataset-items`'
 assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" '`countryCode`'

@@ -117,6 +117,9 @@ check 0 "maps in limit"            $AG2 ${P}$MAPS "$MAPS_OK" "" "$W/scraping.md"
 check 2 "maps over limit"          $AG2 ${P}$MAPS '{"maxCrawledPlacesPerSearch":5000}' "5000 is not a pinned value (max_places_per_search)" "$W/scraping.md"
 check 2 "maps limit omitted"       $AG2 ${P}$MAPS '{"searchStringsArray":["x"]}' "names no pinned value" "$W/scraping.md"
 check 2 "maps two search terms"    $AG2 ${P}$MAPS '{"maxCrawledPlacesPerSearch":60,"searchStringsArray":["a","b"]}' "exceeds max_search_terms" "$W/scraping.md"
+check 2 "maps no search term"      $AG2 ${P}$MAPS '{"maxCrawledPlacesPerSearch":60,"city":"Alameda"}' "names no searchStringsArray" "$W/scraping.md"
+check 2 "maps empty search terms"  $AG2 ${P}$MAPS '{"maxCrawledPlacesPerSearch":60,"searchStringsArray":[]}' "" "$W/scraping.md"
+check 2 "maps respelled key"       $AG2 ${P}$MAPS '{"maxCrawledPlacesPerSearch":60,"SearchStringsArray":["x"]}' "may not use" "$W/scraping.md"
 for a in locationQuery startUrls placeIds customGeolocation scrapeContacts maxReviews scrapePlaceDetailPage website; do
   check 2 "maps may not use $a"    $AG2 ${P}$MAPS "{\"maxCrawledPlacesPerSearch\":60,\"$a\":\"x\"}" "may not use" "$W/scraping.md"
 done
@@ -129,6 +132,8 @@ check 2 "contacts calls unbounded" $AG2 ${P}$CONTACTS '{"startUrls":[{"url":"htt
 check 2 "contacts call cap omitted" $AG2 ${P}$CONTACTS '{"startUrls":[{"url":"https://example.com"}],"maxRequestsPerStartUrl":3,"maxDepth":1}' "names no pinned value" "$W/scraping.md"
 URLS11=$(python3 -c 'import json;print(json.dumps([{"url":"https://e%d.com"%i} for i in range(11)]))')
 check 2 "contacts 11 URLs"         $AG2 ${P}$CONTACTS "{\"startUrls\":$URLS11,$CT}" "exceeds max_sites_per_call" "$W/scraping.md"
+check 2 "contacts no startUrls"    $AG2 ${P}$CONTACTS "{$CT}" "names no startUrls" "$W/scraping.md"
+check 2 "contacts empty startUrls" $AG2 ${P}$CONTACTS "{\"startUrls\":[],$CT}" "" "$W/scraping.md"
 check 2 "contacts proxyConfig"     $AG2 ${P}$CONTACTS "{\"startUrls\":[$U1],$CT,\"proxyConfig\":{\"useApifyProxy\":true,\"apifyProxyGroups\":[\"RESIDENTIAL\"]}}" "may not use" "$W/scraping.md"
 for a in useBrowser waitUntil maximumLeadsEnrichmentRecords scrapeSocialMediaProfiles; do
   check 2 "contacts may not use $a" $AG2 ${P}$CONTACTS "{\"startUrls\":[$U1],$CT,\"$a\":\"x\"}" "may not use" "$W/scraping.md"

@@ -584,4 +584,14 @@ for m in agent.yaml .claude-plugin/plugin.json .claude-plugin/marketplace.json .
   grep -qF 'prepares each first touch in the CRM:' "./$m" && _report ok "$m: description says drafts stay in the CRM" || _report no "$m: description does not say the CRM"
 done
 
+echo "-- 7.0.0: setup pushes before the test notification"
+ST="$SP/skills/setup/SKILL.md"
+tools_step=$(awk '/^9\. \*\*Tools\.\*\*/,/^10\. \*\*Version control/' "$ST")
+after_tools=$(awk '/^10\. \*\*Version control/,0' "$ST")
+printf '%s' "$tools_step" | grep -qF 'test notification.' && printf '%s' "$tools_step" | grep -qF 'step 11 offers the' \
+  && _report ok "tools step defers the test notification to step 11" || _report no "tools step does not defer the test notification"
+printf '%s' "$tools_step" | grep -qF 'offer one test notification' && _report no "tools step still offers the test notification" || _report ok "tools step sends no test notification"
+printf '%s' "$after_tools" | grep -qF 'git push -u' && _report ok "version control pushes the instance" || _report no "version control does not push"
+printf '%s' "$after_tools" | grep -qF 'offer one test notification' && _report ok "open step offers the test notification" || _report no "open step does not offer the test notification"
+
 finish

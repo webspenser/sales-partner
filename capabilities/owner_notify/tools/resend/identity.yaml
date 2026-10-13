@@ -1,0 +1,3 @@
+capability: owner_notify
+provider: resend
+server_match: resend

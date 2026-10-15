@@ -74,8 +74,9 @@ tone: "[three adjectives from the interview]"
   number; the operator places the call.
 - **`apify_spend_cap_usd_per_week`** — the ceiling on Apify actor
   spend per week, shared across the Prospector's sourcing and the
-  Preparer's research, measured by adding up this week's ledger `Cost USD`
-  for the prospect and prepare activities before each Apify call; Apify's
+  Preparer's research, measured by adding up the ledger `Cost USD` of the
+  last 7 days (a rolling window) for the prospect and prepare activities
+  before each Apify call; Apify's
   account usage limit is the hard stop behind it. Reaching it is a `Stop conditions` trigger and
   an `AGENT.md` escalation ("Escalate to human when").
 - **`research_budget_per_lead_minutes`** — the time budget the Preparer

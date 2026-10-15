@@ -1,11 +1,11 @@
 name: sales-partner
-version: 7.1.0
+version: 7.2.0
 description: Interviews a business, then finds, scores and researches fresh leads that fit its ideal customer and prepares each first touch in the CRM: a recommended channel with a full draft, plus personalized statements for email, LinkedIn and calls
-standard: "7.1"
-capabilities: crm, owner_notify, ledger
+standard: "7.2"
+capabilities: crm, owner_notify, ledger, scraping
 catalog: webspenser
 catalog_repo: webspenser/agent-library
-activity_prospect: crm, owner_notify, ledger
-activity_prepare: crm, owner_notify, ledger
+activity_prospect: crm, owner_notify, ledger, scraping
+activity_prepare: crm, owner_notify, ledger, scraping
 activity_approach: crm, owner_notify, ledger
 activity_digest: crm, owner_notify, ledger

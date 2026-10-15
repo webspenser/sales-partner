@@ -67,11 +67,11 @@ OK='"from":"no-reply@notify.acme.com","subject":"[sales-partner] digest: x","tex
 check 0 "owner send passes"           $NP ${R}send-email "{\"to\":[\"owner@acme.com\"],$OK}" "" "$W/notify.md"
 check 0 "both owners pass"            $NP ${R}send-email "{\"to\":[\"owner@acme.com\",\"OPS@acme.com\"],$OK}" "" "$W/notify.md"
 check 0 "owner cc passes"             $NP ${R}send-email "{\"to\":[\"owner@acme.com\"],\"cc\":[\"ops@acme.com\"],$OK}" "" "$W/notify.md"
-check 2 "prospect send blocked"       $NP ${R}send-email "{\"to\":[\"lead@prospect.com\"],$OK}" "is not a pinned recipient" "$W/notify.md"
-check 2 "owner plus prospect blocked" $NP ${R}send-email "{\"to\":[\"owner@acme.com\",\"lead@prospect.com\"],$OK}" "is not a pinned recipient" "$W/notify.md"
-check 2 "extra cc blocked"            $NP ${R}send-email "{\"to\":[\"owner@acme.com\"],\"cc\":[\"lead@prospect.com\"],$OK}" "is not a pinned recipient" "$W/notify.md"
-check 2 "extra bcc blocked"           $NP ${R}send-email "{\"to\":[\"owner@acme.com\"],\"bcc\":[\"lead@prospect.com\"],$OK}" "is not a pinned recipient" "$W/notify.md"
-check 2 "no recipient blocked"        $NP ${R}send-email "{$OK}" "names no recipient" "$W/notify.md"
+check 2 "prospect send blocked"       $NP ${R}send-email "{\"to\":[\"lead@prospect.com\"],$OK}" "is not a pinned value" "$W/notify.md"
+check 2 "owner plus prospect blocked" $NP ${R}send-email "{\"to\":[\"owner@acme.com\",\"lead@prospect.com\"],$OK}" "is not a pinned value" "$W/notify.md"
+check 2 "extra cc blocked"            $NP ${R}send-email "{\"to\":[\"owner@acme.com\"],\"cc\":[\"lead@prospect.com\"],$OK}" "is not a pinned value" "$W/notify.md"
+check 2 "extra bcc blocked"           $NP ${R}send-email "{\"to\":[\"owner@acme.com\"],\"bcc\":[\"lead@prospect.com\"],$OK}" "is not a pinned value" "$W/notify.md"
+check 2 "no recipient blocked"        $NP ${R}send-email "{$OK}" "names no pinned value" "$W/notify.md"
 check 2 "other sender blocked"        $NP ${R}send-email '{"to":["owner@acme.com"],"from":"owner@acme.com","subject":"s","text":"y"}' "(sender_email)" "$W/notify.md"
 check 2 "display-name sender blocked" $NP ${R}send-email '{"to":["owner@acme.com"],"from":"Acme <no-reply@notify.acme.com>","subject":"s","text":"y"}' "(sender_email)" "$W/notify.md"
 check 2 "no bindings blocked"         $NP ${R}send-email "{\"to\":[\"owner@acme.com\"],$OK}" "no recipient_email line"
@@ -103,6 +103,56 @@ for t in delete_records_for_table create_field update_field create_table create_
   check 2 "blocked: $t"       $LG ${A}$t "{$R}" "" "$W/ledger.md"
 done
 check 0 "read records"        $LG ${A}list_records_for_table "{$R}" "" "$W/ledger.md"
+SM=
+
+echo "-- scraping (apify)"
+AG2=capabilities/scraping/tools/apify/guard.yaml; P=mcp__claude_ai_Apify__; SM=apify
+MAPS=compass--crawler-google-places; CONTACTS=vdrmota--contact-info-scraper
+printf '%s\n' 'max_places_per_search: 60' 'max_pages_per_site: 3' 'max_crawl_depth: 1' 'max_pages_per_call: 30' \
+  'max_search_terms: 1' 'max_sites_per_call: 10' 'max_dataset_items: 100' > "$W/scraping.md"
+MAPS_OK='{"maxCrawledPlacesPerSearch":60,"searchStringsArray":["HVAC contractor"],"city":"Alameda","state":"CA","countryCode":"us","language":"en","waitSecs":45}'
+CT='"maxRequestsPerStartUrl":3,"maxDepth":1,"maxRequests":30'
+U1='{"url":"https://example.com"}'
+check 0 "maps in limit"            $AG2 ${P}$MAPS "$MAPS_OK" "" "$W/scraping.md"
+check 2 "maps over limit"          $AG2 ${P}$MAPS '{"maxCrawledPlacesPerSearch":5000}' "5000 is not a pinned value (max_places_per_search)" "$W/scraping.md"
+check 2 "maps limit omitted"       $AG2 ${P}$MAPS '{"searchStringsArray":["x"]}' "names no pinned value" "$W/scraping.md"
+check 2 "maps two search terms"    $AG2 ${P}$MAPS '{"maxCrawledPlacesPerSearch":60,"searchStringsArray":["a","b"]}' "exceeds max_search_terms" "$W/scraping.md"
+check 2 "maps no search term"      $AG2 ${P}$MAPS '{"maxCrawledPlacesPerSearch":60,"city":"Alameda"}' "names no searchStringsArray" "$W/scraping.md"
+check 2 "maps empty search terms"  $AG2 ${P}$MAPS '{"maxCrawledPlacesPerSearch":60,"searchStringsArray":[]}' "" "$W/scraping.md"
+check 2 "maps respelled key"       $AG2 ${P}$MAPS '{"maxCrawledPlacesPerSearch":60,"SearchStringsArray":["x"]}' "may not use" "$W/scraping.md"
+for a in locationQuery startUrls placeIds customGeolocation scrapeContacts maxReviews scrapePlaceDetailPage website; do
+  check 2 "maps may not use $a"    $AG2 ${P}$MAPS "{\"maxCrawledPlacesPerSearch\":60,\"$a\":\"x\"}" "may not use" "$W/scraping.md"
+done
+check 2 "maps false add-on"        $AG2 ${P}$MAPS '{"maxCrawledPlacesPerSearch":60,"scrapeContacts":false}' "may not use" "$W/scraping.md"
+check 0 "contacts in limit"        $AG2 ${P}$CONTACTS "{\"startUrls\":[$U1],$CT,\"sameDomain\":true,\"mergeContacts\":true,\"considerChildFrames\":false,\"waitSecs\":45}" "" "$W/scraping.md"
+check 2 "contacts pages raised"    $AG2 ${P}$CONTACTS '{"startUrls":[{"url":"https://example.com"}],"maxRequestsPerStartUrl":50,"maxDepth":1,"maxRequests":30}' "is not a pinned value (max_pages_per_site)" "$W/scraping.md"
+check 2 "contacts depth raised"    $AG2 ${P}$CONTACTS '{"startUrls":[{"url":"https://example.com"}],"maxRequestsPerStartUrl":3,"maxDepth":5,"maxRequests":30}' "is not a pinned value (max_crawl_depth)" "$W/scraping.md"
+check 2 "contacts depth omitted"   $AG2 ${P}$CONTACTS '{"startUrls":[{"url":"https://example.com"}],"maxRequestsPerStartUrl":3,"maxRequests":30}' "names no pinned value" "$W/scraping.md"
+check 2 "contacts calls unbounded" $AG2 ${P}$CONTACTS '{"startUrls":[{"url":"https://example.com"}],"maxRequestsPerStartUrl":3,"maxDepth":1,"maxRequests":9999999}' "is not a pinned value (max_pages_per_call)" "$W/scraping.md"
+check 2 "contacts call cap omitted" $AG2 ${P}$CONTACTS '{"startUrls":[{"url":"https://example.com"}],"maxRequestsPerStartUrl":3,"maxDepth":1}' "names no pinned value" "$W/scraping.md"
+URLS11=$(python3 -c 'import json;print(json.dumps([{"url":"https://e%d.com"%i} for i in range(11)]))')
+check 2 "contacts 11 URLs"         $AG2 ${P}$CONTACTS "{\"startUrls\":$URLS11,$CT}" "exceeds max_sites_per_call" "$W/scraping.md"
+check 2 "contacts no startUrls"    $AG2 ${P}$CONTACTS "{$CT}" "names no startUrls" "$W/scraping.md"
+check 2 "contacts empty startUrls" $AG2 ${P}$CONTACTS "{\"startUrls\":[],$CT}" "" "$W/scraping.md"
+check 2 "contacts proxyConfig"     $AG2 ${P}$CONTACTS "{\"startUrls\":[$U1],$CT,\"proxyConfig\":{\"useApifyProxy\":true,\"apifyProxyGroups\":[\"RESIDENTIAL\"]}}" "may not use" "$W/scraping.md"
+for a in useBrowser waitUntil maximumLeadsEnrichmentRecords scrapeSocialMediaProfiles; do
+  check 2 "contacts may not use $a" $AG2 ${P}$CONTACTS "{\"startUrls\":[$U1],$CT,\"$a\":\"x\"}" "may not use" "$W/scraping.md"
+done
+check 2 "start URL requestsFromUrl" $AG2 ${P}$CONTACTS "{\"startUrls\":[{\"url\":\"https://example.com\",\"requestsFromUrl\":\"https://x.test/list.txt\"}],$CT}" "may not use" "$W/scraping.md"
+check 2 "start URL method"         $AG2 ${P}$CONTACTS "{\"startUrls\":[{\"url\":\"https://example.com\",\"method\":\"POST\"}],$CT}" "may not use" "$W/scraping.md"
+check 2 "start URL headers"        $AG2 ${P}$CONTACTS "{\"startUrls\":[{\"url\":\"https://example.com\",\"headers\":{}}],$CT}" "may not use" "$W/scraping.md"
+check 2 "start URL payload"        $AG2 ${P}$CONTACTS "{\"startUrls\":[{\"url\":\"https://example.com\",\"payload\":\"x\"}],$CT}" "may not use" "$W/scraping.md"
+check 2 "start URL userData"       $AG2 ${P}$CONTACTS "{\"startUrls\":[{\"url\":\"https://example.com\",\"userData\":{}}],$CT}" "may not use" "$W/scraping.md"
+check 2 "no bindings blocked"      $AG2 ${P}$MAPS "$MAPS_OK" "no max_places_per_search line"
+check 0 "run status read passes"   $AG2 ${P}get-actor-run '{"runId":"r1","waitSecs":45}' "" "$W/scraping.md"
+check 2 "run read other arg"       $AG2 ${P}get-actor-run '{"runId":"r1","token":"x"}' "may not use" "$W/scraping.md"
+check 0 "dataset read passes"      $AG2 ${P}get-dataset-items '{"datasetId":"d1","fields":"title,phone","limit":100,"offset":0,"clean":true}' "" "$W/scraping.md"
+check 2 "dataset limit 1000"       $AG2 ${P}get-dataset-items '{"datasetId":"d1","limit":1000}' "exceeds max_dataset_items" "$W/scraping.md"
+check 2 "dataset other arg"        $AG2 ${P}get-dataset-items '{"datasetId":"d1","flatten":"x"}' "may not use" "$W/scraping.md"
+for t in call-actor search-actors add-actor fetch-actor-details abort-actor-run get-key-value-store-record; do
+  check 2 "blocked: $t"            $AG2 ${P}$t '{}' "" "$W/scraping.md"
+done
+check 2 "another actor"            $AG2 ${P}apify-slash-instagram-scraper '{}' "" "$W/scraping.md"
 SM=
 
 echo "-- Attio"

@@ -1,0 +1,62 @@
+# Apify guard policy: two actors and two reads. Each tool takes only the
+# arguments listed under only_keys (an allowlist: anything else the
+# vendor accepts, such as paid add-ons, proxyConfig, locationQuery or
+# startUrls on Maps, is blocked), and each call's size is pinned or
+# capped from the pushed bindings/scraping.md. Everything else on the
+# server (call-actor, search/add actors, store, tasks, webhooks,
+# schedules, aborting runs, key-value stores) is outside allow. Names
+# come from the probe notes (docs/superpowers/notes/2026-10-13-apify-connector-probe.md)
+# in agent-builder. No refuse_args: the allowlists already block every
+# argument not named, so a deny list would add nothing.
+covers: [no_external_send, allowlisted_actors, pinned_inputs]
+allow: [compass--crawler-google-places, vdrmota--contact-info-scraper, get-actor-run, get-dataset-items]
+deny: ["*call-actor*", "*call_actor*", "*search-actors*", "*add-actor*", "*fetch-actor*", "*webhook*", "*schedule*"]
+only_keys:
+  - tools: [compass--crawler-google-places]
+    at: ["$"]
+    keys: [searchStringsArray, city, state, countryCode, maxCrawledPlacesPerSearch, language, waitSecs]
+  - tools: [vdrmota--contact-info-scraper]
+    at: ["$"]
+    keys: [startUrls, maxRequestsPerStartUrl, maxDepth, maxRequests, mergeContacts, sameDomain, considerChildFrames, waitSecs]
+  # requestsFromUrl, method, payload, headers and userData ride on a start URL object.
+  - tools: [vdrmota--contact-info-scraper]
+    at: ["startUrls[]"]
+    keys: [url]
+  - tools: [get-dataset-items]
+    at: ["$"]
+    keys: [datasetId, fields, limit, offset, clean, omit, desc]
+  - tools: [get-actor-run]
+    at: ["$"]
+    keys: [runId, waitSecs]
+recipients:
+  - tools: [compass--crawler-google-places]
+    at: [maxCrawledPlacesPerSearch]
+    bound: max_places_per_search
+  - tools: [vdrmota--contact-info-scraper]
+    at: [maxRequestsPerStartUrl]
+    bound: max_pages_per_site
+  - tools: [vdrmota--contact-info-scraper]
+    at: [maxDepth]
+    bound: max_crawl_depth
+  - tools: [vdrmota--contact-info-scraper]
+    at: [maxRequests]
+    bound: max_pages_per_call
+# List lengths multiply the size pins: one search term per Maps call, at
+# most 10 sites per contact call, at most 100 items per dataset read.
+# The two lists are required, so leaving them out cannot skip the cap.
+# only_keys names are compared exactly: send the spelling listed above.
+limits:
+  - tools: [compass--crawler-google-places]
+    at: [searchStringsArray]
+    bound: max_search_terms
+    kind: count
+    required: true
+  - tools: [vdrmota--contact-info-scraper]
+    at: [startUrls]
+    bound: max_sites_per_call
+    kind: count
+    required: true
+  - tools: [get-dataset-items]
+    at: [limit]
+    bound: max_dataset_items
+    kind: max

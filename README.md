@@ -73,9 +73,8 @@ and when.
 - **Airtable**, your own account, for the agent's record of every run. Production needs the Team plan; Free (1,000 records) is fine for a trial.
 - **Claude Code** on a paid Claude plan, which runs the agent and its
   weekly schedule.
-- Optional: **Apify**, for richer map and website data when you run it
-  yourself, with a weekly spending cap you set. Scheduled runs use web
-  search only.
+- **Apify**, your own account, with a monthly usage limit you set in
+  Apify Console, for local-business listings and website contact details.
 
 **Want it set up for you?** [Webspenser](https://www.webspenser.com/lp/agent-builder) offers
 a one-time, done-for-you setup: we connect your tools, run the
@@ -97,7 +96,7 @@ in that folder loads the agent. Plugin updates never touch your folder.
 
 Built on the [Agent Standard](https://github.com/webspenser/agent-builder/blob/main/STANDARD.md)
 with [Agent Builder](https://github.com/webspenser/agent-builder).
-Version 7.1.0.
+Version 7.2.0.
 
 ## Use it from source
 
@@ -117,20 +116,20 @@ Version 7.1.0.
 - A CRM — Attio or HubSpot (`capabilities/crm/tools/`); setup binds it after a read-only check. If a CRM needs fields the probe does not find, setup offers two choices: create them yourself from the tool's `## Setup` steps, or run its `bootstrap.py` with an API key in your own terminal.
 - Resend for owner notifications, on the client's own account (`capabilities/owner_notify/tools/resend/`); setup pins your address and a no-reply sender, and the guard refuses a send to anyone else.
 - Airtable for the ledger (`capabilities/ledger/tools/airtable/`); `bootstrap.py` creates the base, and the guard keeps the record append-only.
-- Apify for scraping and web search.
+- Apify for scraping (`capabilities/scraping/tools/apify/`): setup connects the restricted connector URL and pins the limits (results per search, pages per site, and so on) the guard enforces.
 
-Each tool's guard policy makes Attio, HubSpot, Resend and Airtable unattended-safe.
+Each tool's guard policy makes Attio, HubSpot, Resend, Airtable and Apify unattended-safe.
 
 Connect these in your host (connectors or MCP servers). Credentials
 never go in this repo.
 
-Scheduled runs: after setup, run `/sales-partner:schedule`. Scheduled
-prospecting and research use web search only: Apify is never attached
-to a routine, because no guard policy covers it.
+Scheduled runs: after setup, run `/sales-partner:schedule`.
 
 Upgrading from 7.0: re-run setup's tools step to bind the ledger, commit
 and push `bindings/ledger.md`, then re-run `/sales-partner:schedule`.
 Until then, scheduled activities stop with an error notification.
+
+Upgrading from 7.1: re-run setup's tools step to bind scraping, commit and push `bindings/scraping.md`, then re-run `/sales-partner:schedule`.
 
 ## Developing
 

@@ -23,7 +23,7 @@ while IFS= read -r f; do
 done < <(find "$SP" -name '*.md' -not -path './docs/*' -not -path './tests/*' -not -path './.git/*' -not -name README.md -not -path './.claude/*' -not -path './CLAUDE.md' -not -path './GEMINI.md' -not -path './AGENTS.md')
 
 echo "-- prospecting sources"
-assert_contains "$SP/context/operating-config.md" 'prospecting_sources: [apify_google_maps, apify_site_scraper, web_search]'
+assert_contains "$SP/context/operating-config.md" 'prospecting_sources: [apify_google_maps, apify_contact_info, web_search]'
 assert_contains "$SP/context/operating-config.md" '**`prospecting_sources`**'
 assert_contains "$SP/subagents/prospector.md" 'only the sources listed in `prospecting_sources`'
 assert_contains "$SP/subagents/prospector.md" '`apollo` is listed'
@@ -108,7 +108,7 @@ assert_contains "$SP/AGENT.md" 'a phone number, an address, a distance'
 assert_contains "$SP/subagents/approacher.md" '`callback_phone`'
 assert_contains "$SP/subagents/prospector.md" 'Existing leads, read via CRM'
 assert_contains "$SP/subagents/prospector.md" 'Every source listed in `prospecting_sources` is exhausted'
-assert_contains "$SP/subagents/preparer.md" '`apify_google_maps`'
+assert_contains "$SP/subagents/preparer.md" '`apify_contact_info`'
 assert_contains "$SP/skills/write-call-opener/SKILL.md" 'status="draft"'
 assert_contains "$SP/skills/write-call-opener/SKILL.md" 'never dials'
 assert_contains "$SP/skills/write-call-opener/SKILL.md" 'never an invented number'
@@ -547,7 +547,7 @@ echo "-- 7.0: no Airtable CRM"
 for f in capabilities/crm/contract.md capabilities/crm/tools/attio/usage.md skills/send-digest/SKILL.md; do
   assert_not_contains "./$f" "Airtable"
 done
-assert_contains "$SP/agent.yaml" 'standard: "7.1"'
+assert_contains "$SP/agent.yaml" 'standard: "7.2"'
 assert_contains "$SP/agent.yaml" 'capabilities: crm'
 
 echo "-- 7.0: no email_drafts"
@@ -580,7 +580,7 @@ assert_contains "$SP/README.md" 'messages only you, through Resend'
 assert_contains "$SP/evals/cases.md" 'A notification never reaches anyone but the owner'
 
 echo "-- 7.0.0: release"
-assert_contains "$SP/agent.yaml" 'version: 7.1.0'
+assert_contains "$SP/agent.yaml" 'version: 7.2.0'
 for m in agent.yaml .claude-plugin/plugin.json .claude-plugin/marketplace.json .codex-plugin/plugin.json gemini-extension.json; do
   grep -qF 'prepares each first touch in the CRM:' "./$m" && _report ok "$m: description says drafts stay in the CRM" || _report no "$m: description does not say the CRM"
 done
@@ -596,7 +596,7 @@ printf '%s' "$after_tools" | grep -qF 'git push -u' && _report ok "version contr
 printf '%s' "$after_tools" | grep -qF 'offer one test notification' && _report ok "open step offers the test notification" || _report no "open step does not offer the test notification"
 
 echo "-- 7.1: ledger"
-assert_contains "$SP/agent.yaml" 'standard: "7.1"'
+assert_contains "$SP/agent.yaml" 'standard: "7.2"'
 assert_contains "$SP/agent.yaml" 'capabilities: crm, owner_notify, ledger'
 assert_contains "$SP/agent.yaml" 'activity_prospect: crm, owner_notify, ledger'
 assert_contains "$SP/agent.yaml" 'activity_digest: crm, owner_notify, ledger'
@@ -633,5 +633,48 @@ assert_contains "$SP/subagents/approacher.md" 'Ledger `ledger_status`, `append_e
 assert_not_contains "$SP/skills/send-digest/SKILL.md" 'This skill reads; it never writes'
 assert_contains "$SP/README.md" 'Upgrading from 7.0'
 wc -c < "$SP/AGENT.md" | awk '{exit !($1 < 6000)}' && _report ok "AGENT.md under 6000 bytes" || _report no "AGENT.md 6000 bytes or more"
+
+echo "-- 7.2: scraping"
+assert_contains "$SP/agent.yaml" 'standard: "7.2"'
+assert_contains "$SP/agent.yaml" 'capabilities: crm, owner_notify, ledger, scraping'
+assert_contains "$SP/capabilities/scraping/contract.md" '`pinned_inputs`'
+assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" 'mcp.apify.com?tools=compass/crawler-google-places,vdrmota/contact-info-scraper'
+assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" 'monthly usage limit'
+assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" 'Send only the arguments listed above, spelled exactly as listed'
+assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" '`estimated`'
+assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" '`get-dataset-items`'
+assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" '`countryCode`'
+assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" '`max_pages_per_call`'
+assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" 'Do not pass `proxyConfig`'
+assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" '`max_search_terms` — search terms per Maps call (default 1)'
+assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" '`max_sites_per_call`'
+assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" '`max_dataset_items`'
+assert_not_contains "$SP/capabilities/scraping/tools/apify/usage.md" 'Arguments to omit'
+
+echo "-- 7.2: Apify wiring"
+assert_contains "$SP/context/operating-config.md" 'apify_contact_info'
+assert_not_contains "$SP/context/operating-config.md" 'apify_site_scraper:'
+assert_contains "$SP/context/operating-config.md" 'apify_site_scraper was renamed apify_contact_info'
+assert_not_contains "$SP/subagents/prospector.md" 'Apify is never attached'
+assert_not_contains "$SP/subagents/prospector.md" 'Apify connectors are not'
+assert_not_contains "$SP/subagents/preparer.md" 'Apify is never attached'
+assert_not_contains "$SP/subagents/preparer.md" 'Apify connectors are not'
+assert_not_contains "$SP/README.md" 'Apify is never attached'
+assert_not_contains "$SP/README.md" 'Apify connectors are not'
+assert_contains "$SP/subagents/prospector.md" '`find_businesses`'
+assert_contains "$SP/subagents/prospector.md" 'apify_spend_cap_usd_per_week'
+assert_contains "$SP/subagents/prospector.md" 'Never retry a guard'
+assert_contains "$SP/subagents/prospector.md" '`<query>|<city>, <state>`'
+assert_not_contains "$SP/subagents/prospector.md" '`<city>|<industry>`'
+assert_contains "$SP/subagents/prospector.md" 'sum `cost_usd` over those `step`'
+assert_contains "$SP/subagents/prospector.md" 'city and state'
+assert_contains "$SP/subagents/preparer.md" '`find_contacts`'
+assert_contains "$SP/subagents/preparer.md" 'Never retry a guard'
+assert_contains "$SP/subagents/preparer.md" 'sum `cost_usd` over those `step`'
+assert_contains "$SP/subagents/preparer.md" 'apify_site_scraper was renamed apify_contact_info'
+assert_contains "$SP/skills/send-digest/SKILL.md" 'Apify cost from the ledger'
+assert_contains "$SP/README.md" 'monthly usage limit'
+assert_contains "$SP/README.md" 'Upgrading from 7.1'
+assert_contains "$SP/evals/cases.md" 'A scrape never exceeds its pinned limits'
 
 finish

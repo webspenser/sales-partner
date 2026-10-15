@@ -131,7 +131,7 @@ stage moves, no field edits, no Activity or Research row, not even a
 - CRM **`query_by_stage`**, called once per stage of interest, results
   filtered client-side to the `(anchor, nominal_time]` window on
   `Stage Changed At` — Section 5, Movement.
-- Apify's own usage data — Section 6. This is the one section with no
+- Ledger **`find_events`** — Section 6. This is the one section with no
   CRM read at all; Apify spend is not CRM data and never was.
 
 Every one of the above is a call through `capabilities/crm/contract.md`'s eleven
@@ -267,11 +267,13 @@ First, call `ledger_status`, then write `run_started`
    `Score` or `Next Action` was edited without its status moving does
    not appear here. Heading with the count of leads that actually
    moved.
-7. **Section 6 — Spend.** Read Apify's usage total for the current cap
-   week — the same weekly boundary the anchor uses, so spend and
-   digest windows line up — and compare it to
+7. **Section 6 — Spend.** Read the week's Apify cost from the ledger:
+   the sum of `cost_usd` over this cap week's `step` events for `prospect`
+   and `prepare` (`find_events`) — the same weekly boundary the anchor
+   uses, so spend and digest windows line up. Compare it to
    `apify_spend_cap_usd_per_week` from `operating-config.md`. Report the
-   dollar amount spent, the cap, and the percentage. This section does
+   dollar amount spent, the cap, and the percentage. The amounts are
+   estimates (Apify does not return cost). This section does
    not touch the CRM.
 8. Render all six sections, in the fixed order above, every run — a
    section with nothing to report still gets its heading and an

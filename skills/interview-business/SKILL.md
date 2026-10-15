@@ -58,15 +58,15 @@ because a human has to answer it in their own words.
    it. Never write into the package's `samples/`.
 7. **Round 4 — the operating parameters.** Ask, one at a time: how many
    leads per week should the pipeline target; which sourcing tools may
-   it use (map listings for local businesses, company sites, web
-   search); which channels should it use; which activities should
+   it use (`apify_google_maps` for local-business listings,
+   `apify_contact_info` for contact details on business websites,
+   `web_search`; Apify needs the business's own Apify account with a
+   monthly usage limit); which channels should it use; which activities should
    run on a schedule (prospecting, research, approach drafting, the
    digest — the shipped default is prospecting
    then research on Monday at 07:00 and the digest on Monday at 08:00),
    and for each one the weekday and time, or daily, plus your time zone
-   as an IANA name such as `America/New_York` (tell them scheduled
-   prospecting and research use web search only, since Apify is never
-   attached to a scheduled run); what is the weekly
+   as an IANA name such as `America/New_York`); what is the weekly
    Apify spend cap; how should the
    outreach sound (three to five adjectives, plus one example sentence
    in that voice). If `call` is among the chosen channels, also ask

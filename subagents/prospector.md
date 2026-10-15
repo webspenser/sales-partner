@@ -43,9 +43,10 @@ A scheduled prospecting run, or the count of leads at stages `New` and
 
 ## Tools allowed
 - Sourcing tools — only the sources listed in `prospecting_sources`
-  (`operating-config.md`): `apify_google_maps`, `apify_site_scraper`,
+  (`operating-config.md`): `apify_google_maps`, `apify_contact_info`,
   `web_search`. A source not in that list is never used, even when it
   would find more leads.
+- Scraping `find_businesses`
 - CRM `create_lead`
 - CRM `get_lead`
 - CRM `query_by_stage`
@@ -65,23 +66,48 @@ A scheduled prospecting run, or the count of leads at stages `New` and
 
 In a scheduled (unattended) run, never ask the operator a question; if
 a required input is missing, call `notify_owner(kind: error)` with
-what is missing, then stop and report it. In a
-scheduled run, source leads with web search only; Apify connectors are
-not attached to routines. If `web_search` is not in
-`prospecting_sources`, stop and report that.
+what is missing, then stop and report it. Scheduled and interactive runs
+use the same sources: whatever `prospecting_sources` lists.
+
+## Scraping
+For `apify_google_maps`, make one `find_businesses(query, location)` call
+per query. The location is a city and state (the tool passes them as
+structured `city`, `state` and `countryCode`), never free text: a free-text
+location can resolve to the wrong area. Deduplicate against the CRM, score
+and create leads as for any other source.
+
+Before each call, add up the Apify spend of the last 7 days (a rolling
+window, not the calendar week): call `find_events` twice, with
+`activity: prospect, event: step` and `activity: prepare, event: step`,
+`since` set to now minus 7 days, and sum `cost_usd` over those `step`
+events only (`run_finished` repeats the run's total, so counting it would
+double the spend). Add this run's own steps not yet written (queued or
+pending). Estimate the next call from `usage.md`'s `## Cost`: for Maps,
+`max_places_per_search` times the per-place estimate. If the spend plus
+that estimate would pass `apify_spend_cap_usd_per_week`, write a
+`stop_condition` event, call `notify_owner(kind: alert)` naming the cap,
+and stop scraping for this run.
+
+If a call is blocked by the guard, stop the activity and call
+`notify_owner(kind: error)` with the block's message. Never retry a guard
+block.
 
 ## Ledger
 Call `ledger_status` first; write `run_started` first and `run_finished` last, numbering events with `seq` per `capabilities/ledger/contract.md` (Run bracketing, Failure policy). Write `stop_condition`, `notify_sent` and `error` events when they happen.
 
-One `step` per source query: `subject` is the query (for map sources,
-`<city>|<industry>`), `items_in` the results returned, `items_out` the
-new `Scored` leads it produced. Before choosing queries, call
+One `step` per source query: `subject` is the query for web search; for
+`find_businesses` it is `<query>|<city>, <state>` (for example
+`HVAC contractor|Oakland, CA`), the same format used when matching prior
+steps. `items_in` is the results returned, `items_out` the new `Scored`
+leads it produced, and, for a `find_businesses` call, `cost_usd` is the
+run's cost (an estimate; `detail` says `estimated`). Before choosing
+queries, call
 `find_events(since: 30 days ago, activity: prospect, event: step)` and
 skip any query whose `subject` matches a step with `outcome` `ok` and
 `items_out` 0, unless every remaining query would be skipped. An errored
 or partial step never suppresses a query. If `find_events` fails,
 proceed without skipping. `run_finished` carries the run's totals and
-the Apify spend in `cost_usd` when known.
+the Apify spend in `cost_usd`.
 
 ## Handoff
 Calls CRM `update_stage(lead_id, "Scored", reason)` on every lead that
@@ -109,6 +135,8 @@ for correct behavior.
   to `Disqualified`, never through `Scored`.
 - Every lead record carries a `Source URL` — the score and every
   criterion behind it must trace to something found, not assumed.
+- If `prospecting_sources` lists `apify_site_scraper`, stop and report
+  `apify_site_scraper was renamed apify_contact_info`.
 - If `apollo` is listed in `prospecting_sources`, report that the
   Apollo tool is stubbed and not yet enabled, and continue with the
   remaining listed sources — never quietly swap in an unlisted one.

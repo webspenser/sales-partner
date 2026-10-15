@@ -25,7 +25,7 @@ over.
   digest, to the owner only.
 - Ledger (`bind_ledger`): the business's Airtable base, through
   `capabilities/ledger/contract.md`.
-- Apify, for the sources in `prospecting_sources`.
+- Apify (`bind_scraping`): Google Maps listings and website contact details, through `capabilities/scraping/contract.md`.
 - `context/…`, `schedules.yaml` and `bindings/` mean the instance;
   `capabilities/`, `templates/`, `samples/`, `skills/`, `subagents/`
   mean this package. Write only into the instance.

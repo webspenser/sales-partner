@@ -93,7 +93,7 @@ assert_contains "$I" 'Target roles, Buying triggers, Anti-signals'
 echo "-- evals widened (I6)"
 assert_contains "$E" '`100×0.30=30`'
 assert_contains "$E" 'same normalized company and address'
-assert_contains "$E" 'may get a `Channel = call` draft'
+assert_contains "$E" 'gets a Call draft that prints that number'
 assert_contains "$E" 'then_prospect: prepare'
 
 echo "-- minors (M1-M11, D1-D2)"
@@ -407,7 +407,7 @@ done
 grep -qF 'update: [append]' "$SP/capabilities/crm/tools/attio/guard.yaml" && _report ok "attio guard: notes are append-only" || _report no "attio guard: note append rule"
 assert_contains "$SP/context/operating-config.md" 'Drafts are append-only'
 E="$SP/evals/cases.md"
-assert_contains "$E" '## Case 5: Opt-out sets Do Not Contact and voids pending drafts'
+assert_contains "$E" '## Case 5: An opted-out lead is disqualified and gets nothing new'
 assert_not_contains "$E" 'enroll'
 assert_not_contains "$E" 'sync-replies'
 assert_not_contains "$E" 'suppress'
@@ -433,7 +433,6 @@ assert_not_contains "$SP/skills/write-cold-email/SKILL.md" 'sequences'
 assert_not_contains "$SP/skills/write-cold-email/SKILL.md" 'variables:'
 assert_not_contains "$SP/templates/cold-email.md" 'sequences'
 assert_contains "$SP/skills/write-linkedin-touch/SKILL.md" 'Log one draft holding both'
-assert_contains "$SP/evals/cases.md" '## Case 14: The first touch is one recommendation plus statements per channel'
 
 echo "-- 6.0.0: AGENT.md and manifests describe lead generation and personalization"
 A="$SP/AGENT.md"
@@ -461,7 +460,7 @@ assert_contains "$AP" 'reason `no reachable channel`'
 D="$SP/skills/send-digest/SKILL.md"
 assert_contains "$D" '(now <status>)'
 E="$SP/evals/cases.md"
-assert_contains "$E" 'one `log_activity` call with `Channel = "linkedin"`'
+assert_contains "$E" 'one `log_draft` call with `channel ='
 assert_not_contains "$E" 'two separate `log_activity` calls'
 for c in attio hubspot; do
   assert_not_contains "./capabilities/crm/tools/$c/usage.md" 'wait for you on their dates'
@@ -757,5 +756,12 @@ assert_not_contains "$SD" 'opt-out logged — Do Not Contact not set'
 assert_not_contains "$SD" 'eleven operations'
 assert_contains "$SP/templates/digest.md" 'drafted: <channels>'
 assert_not_contains "$SP/templates/digest.md" 'recommended'
+
+EV="$SP/evals/cases.md"
+assert_contains "$EV" '## Case 14: Every reachable channel gets a full draft'
+assert_contains "$EV" '## Case 20: A redraft appends and never rewrites'
+for gone in update_activity query_activities log_activity 'recommended:'; do
+  assert_not_contains "$EV" "$gone"
+done
 
 finish

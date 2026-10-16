@@ -184,8 +184,7 @@ import importlib.util,sys
 sp=importlib.util.spec_from_file_location('b','$HT/bootstrap.py'); m=importlib.util.module_from_spec(sp); sp.loader.exec_module(m)
 print(sorted(m.PROPERTIES)==['companies','contacts'] and ''.join(n+',' for n in sorted(p['name'] for o in m.PROPERTIES.values() for p in o)) or 'unexpected objects: '+','.join(m.PROPERTIES))")
 [ -n "$u" ] && [ "$b" = "$u" ] && _report ok "Setup tables and bootstrap.py create the same properties, companies and contacts only" || _report no "Setup vs bootstrap.py: usage.md=$u bootstrap.py=$b"
-assert_contains "$HT/usage.md" "Tasks need no custom fields; drafts use HubSpot's built-in task status."
-assert_contains "$HT/guard.yaml" 'field: hs_task_status'
+assert_contains "$HT/usage.md" 'Notes need no custom fields.'
 if grep -nE 'sp_(status|channel|direction|summary|outcome)' "$HT/usage.md" "$HT/bootstrap.py" "$HT/guard.yaml" | grep -q .; then
   _report no "the HubSpot tool still mentions a custom task field"; else _report ok "no custom task fields in the HubSpot tool"; fi
 
@@ -240,11 +239,8 @@ assert_contains "$SP/context/icp.md" '`capabilities/crm/contract.md` (Lead statu
 assert_contains "$SP/capabilities/crm/contract.md" 'idle age = now − `Stage Changed At`'
 D="$SP/skills/send-digest/SKILL.md"
 assert_contains "$SP/capabilities/crm/tools/attio/usage.md" 'For `idle_days`: keep a lead when now minus'
-assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'If the lead has no Task'
 echo "-- 5.0.0: void outcome Note, changed fields only"
 HU="$SP/capabilities/crm/tools/hubspot/usage.md"
-assert_contains "$HU" 'Outcome for task <activity_id>:'
-assert_contains "$HU" 'are outcomes, not Research'
 assert_not_contains "$HU" 'body with Outcome: line'
 assert_not_contains "$HU" 'appends an `Outcome: <outcome>` line'
 for f in "$SP"/capabilities/crm/tools/*/usage.md; do assert_contains "$f" 'Write only the fields that change'; done
@@ -328,7 +324,6 @@ assert_contains "$T" '## Ready to Send ([count])'
 assert_not_contains "$T" 'Won:'
 K="$SP/capabilities/crm/contract.md"
 assert_contains "$K" '| `log_research` | `lead_id, findings[]`'
-assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" '`channel` when given'
 
 
 echo "-- 6.0.0: AGENT.md and onboarding"
@@ -349,7 +344,7 @@ PR="$SP/subagents/prospector.md"
 assert_contains "$PR" 'leave it untouched unless its status is `New`, or `Nurture` with a Revisit On date in the past'
 assert_contains "$PR" '- CRM `get_lead`'
 assert_contains "$SP/capabilities/crm/tools/attio/usage.md" 'then move the lead to `Ready to Send`: that approves it'
-assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'act only on a `recommended:` draft of a lead at `Ready to Send`'
+assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'then move the company to'
 assert_not_contains "$SP/context/operating-config.md" '`approved`'
 assert_contains "$SP/context/operating-config.md" 'only the operator approves a lead'
 AP="$SP/subagents/approacher.md"
@@ -413,7 +408,6 @@ for c in attio hubspot; do
   assert_not_contains "$U" 'sequences'
 done
 grep -qF 'update: [append]' "$SP/capabilities/crm/tools/attio/guard.yaml" && _report ok "attio guard: notes are append-only" || _report no "attio guard: note append rule"
-assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'Reject a `status` other than `voided`.'
 assert_contains "$SP/context/operating-config.md" '`update_activity` moves it only to `voided`'
 E="$SP/evals/cases.md"
 assert_contains "$E" '## Case 5: Opt-out sets Do Not Contact and voids pending drafts'
@@ -448,7 +442,6 @@ assert_not_contains "$SP/skills/write-cold-email/SKILL.md" 'sequences'
 assert_not_contains "$SP/skills/write-cold-email/SKILL.md" 'variables:'
 assert_not_contains "$SP/templates/cold-email.md" 'sequences'
 assert_contains "$SP/skills/write-linkedin-touch/SKILL.md" 'one Activity holding both'
-assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'the `recommended:` one holds the full draft'
 assert_contains "$SP/evals/cases.md" '## Case 14: The first touch is one recommendation plus statements per channel'
 
 echo "-- 6.0.0: AGENT.md and manifests describe lead generation and personalization"
@@ -523,7 +516,6 @@ assert_not_contains "$D" 'check the'
 assert_not_contains "$SP/templates/digest.md" 'check the hand-off'
 assert_contains "$D" 'drafted N days ago'
 assert_not_contains "$SP/capabilities/crm/contract.md" '`send-digest` needed to find'
-assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" '`LINKED_IN_MESSAGE` for linkedin (the connection note and DM share one Task)'
 assert_not_contains "$SP/capabilities/crm/tools/hubspot/usage.md" '|LINKED_IN_CONNECT|TODO>'
 assert_not_contains "$SP/evals/cases.md" 'thirteen'
 assert_contains "$SP/evals/cases.md" 'Case 14 is a positive check'
@@ -746,5 +738,14 @@ done
 for gone in sales_partner_research sales_partner_outreach draft_body 'attr("phone"' 'attr("email"' 'attr("address"' 'attr("location"'; do
   grep -qF "$gone" "$AB" && _report no "attio bootstrap still has $gone" || _report ok "attio bootstrap drops $gone"
 done
+
+HU="$SP/capabilities/crm/tools/hubspot/usage.md"
+assert_contains "$HU" 'Channel: email'
+assert_contains "$HU" 'hs_note_body'
+assert_contains "$HU" '=== YYYY-MM-DD · draft ==='
+for gone in hs_task_status update_activity query_activities log_activity 'Outcome for task' recommended; do
+  assert_not_contains "$HU" "$gone"
+done
+grep -qF 'field: hs_note_body' ./capabilities/crm/tools/hubspot/guard.yaml && _report ok "hubspot guard: note body fixed after create" || _report no "hubspot guard: note body rule"
 
 finish

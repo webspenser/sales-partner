@@ -24,6 +24,9 @@ unknown_writes: update
 refuse_keys: [uuid]
 
 only_keys:
+  - tools: [create-note]
+    at: ["$"]
+    keys: [parent_object, parent_record_id, title, content]
   - tools: [update-note]
     at: ["$"]
     keys: [note_id, operation]

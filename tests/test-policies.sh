@@ -177,6 +177,7 @@ check 0 "read tool allowed"         $AT ${P}list-records-in-list '{"list":"sales
 check 0 "find notes allowed"        $AT ${P}search-notes-by-metadata '{"parent_record_object":"companies","parent_record_id":"00000000-0000-0000-0000-000000000001"}'
 check 0 "read a note allowed"       $AT ${P}get-note-body "{$N}"
 check 0 "create a note"             $AT ${P}create-note '{"parent_object":"companies","parent_record_id":"00000000-0000-0000-0000-000000000001","title":"Sales Partner · Research","content":"=== 2026-10-16 · research ==="}'
+check 2 "create-note extra key refused" $AT ${P}create-note '{"parent_object":"companies","parent_record_id":"00000000-0000-0000-0000-000000000001","title":"Sales Partner · Call","content":"x","meeting_id":"00000000-0000-0000-0000-000000000009"}' "may not use"
 check 0 "append to a note"          $AT ${P}update-note "{$N,\"operation\":{\"type\":\"append\",\"content\":\"=== 2026-10-17 · draft ===\"}}"
 check 2 "prepend refused"           $AT ${P}update-note "{$N,\"operation\":{\"type\":\"prepend\",\"content\":\"x\"}}" "type may only be written as append"
 check 2 "retitle refused"           $AT ${P}update-note "{$N,\"updated_title\":\"x\"}" "may not use"
@@ -203,17 +204,11 @@ check 2 "lead created past New"       $AT ${P}add-record-to-list "{$L,\"entry_va
 check 0 "lead created at New"         $AT ${P}add-record-to-list "{$L,\"entry_values\":{\"stage\":\"New\"}}"
 echo "-- HubSpot"
 HS=capabilities/crm/tools/hubspot/guard.yaml; H=mcp__claude_ai_HubSpot__
-TC='{"objectType":"tasks","properties":{"hs_task_status":"%s"}}'
-TU='{"objectType":"tasks","objectId":101,"properties":{%s}}'
 CU='{"objectType":"companies","objectId":202,"properties":{"sp_do_not_contact":%s}}'
-check 0 "create task NOT_STARTED"   $HS ${H}manage_crm_objects "{\"createRequest\":{\"objects\":[$(printf "$TC" NOT_STARTED)]}}"
-check 2 "create task COMPLETED"     $HS ${H}manage_crm_objects "{\"createRequest\":{\"objects\":[$(printf "$TC" COMPLETED)]}}" "hs_task_status may only be written as NOT_STARTED on create"
-check 2 "create task IN_PROGRESS"   $HS ${H}manage_crm_objects "{\"createRequest\":{\"objects\":[$(printf "$TC" IN_PROGRESS)]}}" "NOT_STARTED on create"
-check 0 "update task DEFERRED"      $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$TU" '"hs_task_status":"DEFERRED"')]}}"
-check 2 "void rewrites the body"    $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$TU" '"hs_task_status":"DEFERRED","hs_task_body":"Direction: outbound\\nOutcome: dup"')]}}" "hs_task_body may not be changed after create"
-check 0 "task created with body"    $HS ${H}manage_crm_objects '{"createRequest":{"objects":[{"objectType":"tasks","properties":{"hs_task_status":"NOT_STARTED","hs_task_body":"<p>x</p>"}}]}}'
-check 0 "outcome note created"      $HS ${H}manage_crm_objects '{"createRequest":{"objects":[{"objectType":"notes","properties":{"hs_note_body":"<p>Outcome for task 101: dup</p>","hs_timestamp":"2026-10-01T00:00:00Z"},"associations":[{"targetObjectType":"COMPANY","targetObjectId":202}]}]}}'
-check 2 "agent can't complete a task (sent)" $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$TU" '"hs_task_status":"COMPLETED"')]}}" "hs_task_status may only be written as DEFERRED on update"
+NC='{"objectType":"notes","properties":{"hs_note_body":"%s","hs_timestamp":"2026-10-16T00:00:00Z"},"associations":[{"targetObjectType":"COMPANY","targetObjectId":202}]}'
+check 0 "create a draft note"       $HS ${H}manage_crm_objects "{\"createRequest\":{\"objects\":[$(printf "$NC" '<p>=== 2026-10-16 · draft ===</p><p>Channel: email</p>')]}}"
+check 0 "create a research note"    $HS ${H}manage_crm_objects "{\"createRequest\":{\"objects\":[$(printf "$NC" '<p>=== 2026-10-16 · research ===</p>')]}}"
+check 2 "note body rewritten"       $HS ${H}manage_crm_objects '{"updateRequest":{"objects":[{"objectType":"notes","objectId":303,"properties":{"hs_note_body":"<p>new</p>"}}]}}' "hs_note_body may not be changed after create"
 check 2 "agent can't approve a lead"  $HS ${H}manage_crm_objects '{"updateRequest":{"objects":[{"objectType":"companies","objectId":202,"properties":{"sp_stage":"Ready to Send"}}]}}' "sp_stage may only be written as"
 check 2 "agent can't mark Contacted"  $HS ${H}manage_crm_objects '{"updateRequest":{"objects":[{"objectType":"companies","objectId":202,"properties":{"sp_stage":"Contacted"}}]}}' "sp_stage may only be written as"
 check 0 "agent disqualifies"          $HS ${H}manage_crm_objects '{"updateRequest":{"objects":[{"objectType":"companies","objectId":202,"properties":{"sp_stage":"Disqualified"}}]}}'
@@ -223,22 +218,9 @@ check 2 "no New on update"            $HS ${H}manage_crm_objects '{"updateReques
 check 2 "agent can't open a deal"     $HS ${H}manage_crm_objects '{"updateRequest":{"objects":[{"objectType":"companies","objectId":202,"properties":{"sp_stage":"Open Deal"}}]}}' "sp_stage may only be written as"
 check 2 "agent can't mark Customer"   $HS ${H}manage_crm_objects '{"updateRequest":{"objects":[{"objectType":"companies","objectId":202,"properties":{"sp_stage":"Customer"}}]}}' "sp_stage may only be written as"
 check 2 "lead created past New"       $HS ${H}manage_crm_objects '{"createRequest":{"objects":[{"objectType":"companies","properties":{"name":"X","sp_stage":"Scored"}}]}}' "sp_stage may only be written as New on create"
-check 2 "update task IN_PROGRESS"   $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$TU" '"hs_task_status":"IN_PROGRESS"')]}}" "DEFERRED on update"
-check 2 "update task WAITING"       $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$TU" '"hs_task_status":"WAITING"')]}}" "DEFERRED on update"
-check 2 "create task WAITING"       $HS ${H}manage_crm_objects "{\"createRequest\":{\"objects\":[$(printf "$TC" WAITING)]}}" "NOT_STARTED on create"
-check 2 "create task DEFERRED"      $HS ${H}manage_crm_objects "{\"createRequest\":{\"objects\":[$(printf "$TC" DEFERRED)]}}" "NOT_STARTED on create"
-check 2 "update task NOT_STARTED"   $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$TU" '"hs_task_status":"NOT_STARTED"')]}}" "DEFERRED on update"
 DONE=61bafb31-e7fa-46ed-aaa9-1322438d6e67
-check 2 "update stage to Completed" $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$TU" "\"hs_pipeline_stage\":\"$DONE\"")]}}" "hs_pipeline_stage may not be written"
-check 2 "create at Completed stage, NOT_STARTED status" $HS ${H}manage_crm_objects "{\"createRequest\":{\"objects\":[{\"objectType\":\"tasks\",\"properties\":{\"hs_task_status\":\"NOT_STARTED\",\"hs_pipeline_stage\":\"$DONE\"}}]}}" "hs_pipeline_stage may not be written"
-check 2 "hs_pipeline blocked"       $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$TU" '"hs_pipeline":"3d314325-1b2a-4225-9388-375f49c57ec3"')]}}" "hs_pipeline may not be written"
-check 2 "hs_task_completion_date blocked" $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$TU" '"hs_task_completion_date":"2026-09-30T00:00:00Z"')]}}" "hs_task_completion_date may not be written"
-check 0 "create outbound draft, priority HIGH" $HS ${H}manage_crm_objects '{"createRequest":{"objects":[{"objectType":"tasks","properties":{"hs_task_status":"NOT_STARTED","hs_task_priority":"HIGH","hs_task_type":"EMAIL"}}]}}'
-check 0 "create task, no status"    $HS ${H}manage_crm_objects '{"createRequest":{"objects":[{"objectType":"tasks","properties":{"hs_task_subject":"x","hs_task_type":"EMAIL"}}]}}'
-check 2 "both kinds, bad create"    $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$TU" '"hs_task_status":"DEFERRED"')]},\"createRequest\":{\"objects\":[$(printf "$TC" COMPLETED)]}}" "NOT_STARTED on create"
-check 0 "both kinds, both fine"     $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$TU" '"hs_task_status":"DEFERRED"')]},\"createRequest\":{\"objects\":[$(printf "$TC" NOT_STARTED)]}}"
-# The engine compares case-insensitively; HubSpot itself would reject the lowercase value.
-check 0 "create not_started lower"  $HS ${H}manage_crm_objects "{\"createRequest\":{\"objects\":[$(printf "$TC" not_started)]}}"
+check 2 "hs_pipeline_stage blocked" $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[{\"objectType\":\"companies\",\"objectId\":202,\"properties\":{\"hs_pipeline_stage\":\"$DONE\"}}]}}" "hs_pipeline_stage may not be written"
+check 2 "hs_pipeline blocked"       $HS ${H}manage_crm_objects '{"updateRequest":{"objects":[{"objectType":"companies","objectId":202,"properties":{"hs_pipeline":"3d314325-1b2a-4225-9388-375f49c57ec3"}}]}}' "hs_pipeline may not be written"
 check 0 "dnc set \"true\""          $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$CU" '"true"')]}}"
 check 0 "dnc set true"              $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$CU" true)]}}"
 check 2 "dnc cleared \"false\""     $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$CU" '"false"')]}}" "sp_do_not_contact may only be written as true"
@@ -248,7 +230,7 @@ check 2 "custom properties refused" $HS ${H}manage_custom_properties '{}' "is no
 check 2 "marketing email refused"   $HS ${H}manage_marketing_email '{}' "is not in the allow list"
 check 2 "delete refused"            $HS ${H}delete_crm_objects '{}' "is denied"
 check 2 "merge refused"             $HS ${H}merge_crm_objects '{}' "is denied"
-check 0 "search allowed"            $HS ${H}search_crm_objects '{"objectType":"TASK"}'
+check 0 "search allowed"            $HS ${H}search_crm_objects '{"objectType":"NOTE"}'
 check 0 "local server name allowed" $HS mcp__HubSpot__search_crm_objects '{"objectType":"COMPANY"}'
 # Token canary, offline: call is faked to fail (a 401, then a raised Stop); all output is captured.
 canary=$(python3 -B - <<'PY' 2>&1

@@ -278,6 +278,8 @@ attribute, so the contract's guarantees are enforced by mechanism
    - `delete` and `merge` tools (including `delete-note`), and list
      configuration changes (`create-list`, `update-list`), are always
      denied;
+   - `create-note` takes only `parent_object`, `parent_record_id`,
+     `title` and `content`;
    - `update-note` takes only `note_id` and `operation`, and
      `operation` only `type` and `content`, with `type` = `append`: a
      note can't be prepended to, retitled or rewritten;

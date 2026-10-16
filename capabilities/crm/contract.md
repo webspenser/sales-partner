@@ -233,6 +233,12 @@ be breaking before they break it:
 - Drafts are append-only: `log_draft` adds a section and no operation
   edits, replaces or deletes one, so what the operator read when they
   approved is what stays on the record.
+- The agent writes no draft or research section on a lead at `Ready to
+  Send` or later. Approval covers the sections present when the
+  operator moved the lead, and an automation reading "the newest
+  section" relies on nothing being added after that. This is an
+  instruction: the guard checks one call at a time and cannot see the
+  lead's stage.
 - **Therefore no sequence of operations approves a lead: only the
   operator's move to `Ready to Send` does.** What happens next — an
   email sequence, a LinkedIn message, a call — is the operator's, or the

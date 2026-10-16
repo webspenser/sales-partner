@@ -8,7 +8,8 @@ invokes another sub-agent directly — **`update_stage` is the only
 handoff mechanism between sub-agents.** A sub-agent's job is done when it
 calls `update_stage`; the next sub-agent picks the lead up by querying
 for its trigger condition — a stage (`query_by_stage`) or a stage plus a
-score threshold (`query_by_score`) — never by direct invocation.
+Fit or Approach score threshold (`query_by_score`) — never by direct
+invocation.
 
 The concrete mapping onto a provider — tables, fields, views — lives in
 each tool (`tools/<provider>/usage.md`). This document defines
@@ -18,7 +19,7 @@ behavior only; it names no provider table or field.
 
 | Operation | Arguments | Returns | On failure |
 |---|---|---|---|
-| `create_lead` | `company, location, industry, size, source, source_url`, plus optional `domain, address, phone, email, score, score_breakdown` and the company profile fields | `lead_id`, on a record created at `Stage = New` with `Stage Changed At` stamped at creation | A lead matching an existing one by the dedupe order (domain, then phone, then company + address) returns the existing `lead_id` and writes nothing; rejects a call with none of `domain`, `phone`, or `address` |
+| `create_lead` | `company, location, industry, size, source, source_url`, plus optional `domain, address, phone, email, fit_score, fit_breakdown` and the company profile fields | `lead_id`, on a record created at `Stage = New` with `Stage Changed At` stamped at creation | A lead matching an existing one by the dedupe order (domain, then phone, then company + address) returns the existing `lead_id` and writes nothing; rejects a call with none of `domain`, `phone`, or `address` |
 | `get_lead` | `lead_id` | full lead record with linked Contacts, Research, Activities | Missing id is an error, not an empty record |
 | `update_stage` | `lead_id, stage, reason` | updated lead, with `stage_changed_at` set to the moment of this call | Rejects any stage outside the enumerated list |
 | `update_lead` | `lead_id, fields` | updated lead | Rejects any attempt to write `stage` through this operation — stage changes go only through `update_stage`. May set `Do Not Contact` to true; rejects any attempt to clear it once true |
@@ -27,8 +28,23 @@ behavior only; it names no provider table or field.
 | `log_research` | `lead_id, type, summary, source_url, date, hook` | `research_id` | Rejects a write with an empty `source_url` or an empty `hook` |
 | `upsert_contact` | `lead_id, name, title, email, phone, linkedin_url, role, verified, notes` | `contact_id` | Matches an existing Contact on `email` when present, otherwise on `name` plus `title`, and updates it rather than creating a duplicate; rejects a `role` outside decision-maker / influencer / gatekeeper |
 | `query_by_stage` | `stage, limit, next_action_due_before, idle_days` | list of leads | Empty list is a valid result; rejects a call where `stage` is omitted and neither `next_action_due_before` nor `idle_days` is given |
-| `query_by_score` | `min_score, stage, limit` | list of leads ordered by score descending | Empty list is a valid result |
+| `query_by_score` | `score, min_score, stage, limit` | list of leads ordered by that score descending | Rejects a `score` other than `fit` or `approach`; empty list is a valid result |
 | `query_activities` | `status, direction, channel, since, until, limit` | list of activities, each with its linked Lead | Rejects a `status` outside draft / sent / voided; `direction` is optional and, when given, must be `outbound` or `inbound`; empty list is a valid result |
+
+### Scores
+
+A lead carries two scores, one per pipeline gate, each a number from 0
+to 100 with its per-criterion breakdown as text (`skills/score-lead`):
+
+| Field | Written by | Read by |
+|---|---|---|
+| `Fit Score`, `Fit Breakdown` | the Prospector, on `create_lead` (`fit_score`, `fit_breakdown`), or on a re-found `New` lead with `update_lead` | the Preparer's trigger, against `research_threshold` |
+| `Approach Score`, `Approach Breakdown` | the Preparer, with `update_lead`, after research | the Approacher's trigger, against `approach_threshold` |
+
+Each score holds the exact value the rubric's arithmetic produces (for
+example 67.5), never rounded. `query_by_score(score: fit)` filters and
+sorts on `Fit Score`, `query_by_score(score: approach)` on `Approach
+Score`; a lead with no value for that score is never returned.
 
 ### Company profile fields
 
@@ -82,12 +98,13 @@ and says nothing; that is not a failure.
   *changes* a lead's stage, and the only writer of `stage_changed_at`
   after creation.**
 
-  `score` and `score_breakdown` are **optional**. A lead matched
+  `fit_score` and `fit_breakdown` are **optional**. A lead matched
   against a hard disqualifier is created and moved to `Disqualified`
   without ever being scored (`evals/cases.md`, Case 1; `score-lead`
   step 2), so a call that omits both is valid and leaves both fields
   empty — omitting them is not an error, and `create_lead` never
-  invents a placeholder score to fill them.
+  invents a placeholder score to fill them. `create_lead` takes no
+  Approach score: a new lead has had no research.
 - **`get_lead`** always resolves the full record graph: the lead plus
   its linked Contacts, Research, and Activities. A `lead_id` that does
   not exist is an error, not an empty or partial record — callers must
@@ -102,13 +119,13 @@ and says nothing; that is not a failure.
   stamps it once on the record it creates, and from then on only
   `update_stage` touches it. This is what makes the field
   trustworthy as "when did this lead's stage actually change": because
-  `update_lead` writes every other lead-level field routinely (`Score`,
-  `Next Action`, `Do Not Contact`, and so on) without touching stage at
+  `update_lead` writes every other lead-level field routinely (`Approach
+  Score`, `Next Action`, `Do Not Contact`, and so on) without touching stage at
   all, a record's generic last-modified time would be set by any of
   those unrelated writes too — `stage_changed_at` moves only when
   `update_stage` runs, and never otherwise.
-- **`update_lead`** writes every non-stage field on a lead — `Score`,
-  `Score Breakdown`, `Do Not Contact`, `Next Action`, `Next Action Due`,
+- **`update_lead`** writes every non-stage field on a lead — the four
+  score fields, `Do Not Contact`, `Next Action`, `Next Action Due`,
   and any other lead-level field outside the stage itself. It **rejects
   any attempt to write `stage`** through this operation, and it never
   writes `stage_changed_at` either — both belong to `update_stage`
@@ -364,8 +381,8 @@ a lead to `Disqualified` from any status the agent works on.
 | Status | Enters when | Exits to |
 |---|---|---|
 | `New` | Prospector creates the lead record from a raw find | Prospector scores it, moving it to `Scored`; a hard disqualifier moves it straight to `Disqualified` |
-| `Scored` | Prospector finishes applying the `icp.md` rubric and records the score breakdown | Preparer picks it up once the score clears `research_threshold`, moving it to `Researched` |
-| `Researched` | Preparer finishes research, identifies decision-makers, produces hooks, and re-scores | Approacher picks it up once the revised score clears `approach_threshold`, drafting its first touch and moving it to `Approach Drafted`; an anti-signal found during research moves it to `Disqualified` instead |
+| `Scored` | Prospector finishes applying the `icp.md` Fit rubric and records the Fit score and breakdown | Preparer picks it up once the Fit score clears `research_threshold`, moving it to `Researched` |
+| `Researched` | Preparer finishes research, identifies decision-makers, produces hooks, and records the Approach score and breakdown | Approacher picks it up once the Approach score clears `approach_threshold`, drafting its first touch and moving it to `Approach Drafted`; an anti-signal found during research moves it to `Disqualified` instead |
 | `Approach Drafted` | Approacher logs the lead's draft Activities (one per enabled channel: the recommended channel's full draft and statements, the others' statements) at `status: draft` | The operator reviews and edits the drafts, voids any they don't want, then approves the lead by moving it to `Ready to Send` — nothing is approved draft by draft |
 | `Ready to Send` | The operator moves the lead here once its drafts are right — only the operator writes `Ready to Send` | The owner's automation, another system or agent, or the operator sends the first touch and moves it to `Contacted`; the operator moving it back to `Approach Drafted` cancels. The agent never acts on it |
 | `Contacted` | The first touch went out, on any channel (set by the operator or the owner's automation) | A reply moves it to `Engaged` (operator or automation) |

@@ -49,7 +49,10 @@ only gathers and records.
    force a `Hook` out of it — see the anti-signal-shaped failure mode
    below.
 5. Stop the search — even mid-order — once either: two or more usable
-   `Hook` values have been written for this lead, or the
+   `Hook` values have been written for this lead **and** every Approach
+   criterion in `icp.md` has been looked for (for a local business,
+   item 6 is always searched: the newest review date, recent
+   complaint reviews and the website check), or the
    `research_budget_per_lead_minutes` budget is spent. Whichever comes
    first ends the run; a thorough search that blows the time budget is
    still a failure of this skill.

@@ -16,12 +16,13 @@ and when.
 ## What you get each week
 
 - **New leads that fit.** Businesses that match your ideal customer,
-  found from map listings, websites and web search, each scored against
-  your own criteria with the reasons written down.
+  found from map listings, websites and web search, each given a fit
+  score against your own criteria with the reasons written down.
 - **Real research on the best ones.** What's changing at each business
   (new hires, a new location, a missing website, recent news), who the
   decision-maker is, and how to reach them. Every fact links to where
-  it was found.
+  it was found. A second score, from that research, decides which leads
+  are ready for a first touch.
 - **A first touch, ready to go.** For each lead it recommends the best
   channel (email, LinkedIn or a phone call) and says why, writes that
   message in full, and gives you short personalized lines for your
@@ -96,7 +97,7 @@ in that folder loads the agent. Plugin updates never touch your folder.
 
 Built on the [Agent Standard](https://github.com/webspenser/agent-builder/blob/main/STANDARD.md)
 with [Agent Builder](https://github.com/webspenser/agent-builder).
-Version 7.2.0.
+Version 7.3.0.
 
 ## Use it from source
 
@@ -130,6 +131,31 @@ and push `bindings/ledger.md`, then re-run `/sales-partner:schedule`.
 Until then, scheduled activities stop with an error notification.
 
 Upgrading from 7.1: re-run setup's tools step to bind scraping, commit and push `bindings/scraping.md`, then re-run `/sales-partner:schedule`.
+
+Upgrading from 7.2: the single Score is now two scores. The Fit score
+comes from the map listing and decides which leads get researched
+(`research_threshold`); the Approach score comes from research and
+decides which leads get a drafted touch (`approach_threshold`).
+
+1. Rewrite the Scoring rubric in your `context/icp.md` as the two tables
+   the shipped `context/icp.md` shows (Fit score, Approach score), or
+   re-run the interview, and check `research_threshold` in
+   `context/operating-config.md` against the new Fit rubric.
+2. Re-run setup's tools step. The CRM probe now needs four fields (Fit
+   Score, Fit Breakdown, Approach Score, Approach Breakdown); create
+   them from the tool's `## Setup` steps or re-run its `bootstrap.py`.
+3. Score the leads already in flight once, in an interactive session:
+   ask the agent to score every `Scored` lead with the Fit rubric (it
+   re-reads each lead's listing with `find_businesses`, which counts
+   toward the Apify spend cap) and every `Researched` lead with the
+   Approach rubric (from its Research rows, adding the newest review
+   date where it is missing). Until then, no gate picks those leads up.
+4. The old Score and Score Breakdown fields are no longer read or
+   written. They stay in your CRM as history. In Attio you can archive
+   them (archived attributes keep their values). In HubSpot, archived
+   properties are deleted for good after 90 days, so export the values
+   first or leave the properties in place.
+5. Commit and push the instance.
 
 ## Developing
 

@@ -46,9 +46,27 @@ An actor tool returns run metadata, not items: `runId`, `status`,
 `apify:get-actor-run` with the `runId` (`waitSecs` 45) until it is. Then
 read the items with `apify:get-dataset-items` using the dataset id and a
 `fields` projection: a Maps item has about 64 fields, so ask only for
-`title,categoryName,categories,address,street,city,state,postalCode,phone,website,totalScore,reviewsCount,placeId,url,permanentlyClosed,temporarilyClosed,claimThisBusiness`.
-Map them to the contract's fields and drop places that are permanently
-closed.
+`title,categoryName,categories,address,street,city,state,postalCode,location,phone,website,totalScore,reviewsCount,reviewsDistribution,openingHours,placeId,url,permanentlyClosed,temporarilyClosed,claimThisBusiness`.
+These are all free dataset fields: no paid add-on (reviews, contacts,
+images) is needed, and none is allowed. Drop places that are
+permanently closed, then map each item to the contract's fields:
+
+| Contract field | Maps item field |
+|---|---|
+| name, category | `title`, `categoryName` (`categories` for the rest) |
+| address | `address` (or `street`, `city`, `state`, `postalCode`) |
+| coordinates | `location`: `{"lat": …, "lng": …}` |
+| phone, website | `phone`, `website` (missing when the listing shows none) |
+| rating, review count | `totalScore`, `reviewsCount` |
+| per-star review counts | `reviewsDistribution`: `oneStar` … `fiveStar` |
+| opening hours | `openingHours`: one `{"day": "Monday", "hours": "8 AM to 5 PM"}` per day; `"Closed"` and `"Open 24 hours"` as written; missing or empty when the listing posts none |
+| claimed | `claimThisBusiness`: `true` means the listing shows "Claim this business", so it is **unclaimed**; claimed = `not claimThisBusiness` |
+| temporarily closed | `temporarilyClosed` |
+| place id, URL | `placeId`, `url` |
+
+Never infer a field the item does not carry: a missing `location` leaves
+the coordinates empty, and missing `openingHours` means no hours
+listed.
 
 ## Cost
 

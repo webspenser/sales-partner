@@ -324,7 +324,7 @@ print("A", rc == 1 and "companies.sp_stage exists as string/text but must be enu
       and "Company properties" in text and not w)
 rc, text, w = run({})
 print("B", rc == 0 and not w)
-rc, text, w = run({"/companies/sp_score": 404})
+rc, text, w = run({"/companies/sp_fit_score": 404})
 print("C", rc == 0 and w == [("POST", "/companies")])
 rc, text, w = run({"/contacts/sp_role": {"type": "enumeration", "fieldType": "select",
                    "options": [{"value": "decision-maker"}, {"value": "extra"}]}})

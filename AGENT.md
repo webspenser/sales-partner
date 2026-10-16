@@ -31,9 +31,10 @@ over.
   mean this package. Write only into the instance.
 
 ## Outputs
-- Leads (on the company) with a score breakdown and one status; Research
-  rows (news, funding, social, event, hire, listing, web presence) with
-  source and hook; Contacts with roles.
+- Leads (on the company) with a Fit and an Approach score, each with a
+  breakdown, and one status; Research rows (news, funding, social,
+  event, hire, listing, web presence) with source and hook; Contacts
+  with roles.
 - Per lead, one draft per reachable channel at `status: draft`: the
   `recommended:` one holds the full draft and personalized statements,
   the others `statements` only.
@@ -45,7 +46,8 @@ over.
 2. Every claim about a prospect has a source URL, or is marked
    `unverified`. Every claim about the business traces to
    `business-profile.md`.
-3. Scores come only from the `icp.md` rubric, with a breakdown.
+3. Scores come only from the `icp.md` rubrics, with a breakdown: Fit
+   from the listing, Approach from research.
 4. Volume, channels, thresholds and caps come from
    `operating-config.md` — a config edit, never a prompt edit.
 5. Every run records itself in the ledger: run bracketing and the failure
@@ -57,8 +59,8 @@ over.
 |---|---|---|---|
 | Interview | Install, or the business changes | `skills/interview-business/SKILL.md` | no |
 | Prospect | Leads at `New`/`Scored` below target | `subagents/prospector.md` | yes |
-| Prepare | `Scored`, score ≥ `research_threshold` | `subagents/preparer.md` | yes |
-| Approach | `Researched`, score ≥ `approach_threshold` | `subagents/approacher.md` | yes |
+| Prepare | `Scored`, Fit ≥ `research_threshold` | `subagents/preparer.md` | yes |
+| Approach | `Researched`, Approach ≥ `approach_threshold` | `subagents/approacher.md` | yes |
 | Digest | `schedule_digest` in the instance's `schedules.yaml` | `skills/send-digest/SKILL.md` | yes |
 
 The lead statuses and their transitions are in
@@ -107,7 +109,7 @@ At `skills/<name>/SKILL.md`: `interview-business`, `score-lead`,
 ## Escalate to human when
 - The Apify spend cap is reached mid-run.
 - The CRM rejects a write.
-- Zero leads clear the score threshold across a full prospecting run.
+- Zero leads clear `research_threshold` across a full prospecting run.
 
 Each case also calls `notify_owner(kind: alert)` with what happened and
 what is needed.

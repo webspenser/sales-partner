@@ -1,14 +1,14 @@
 ---
 name: prospector
-description: Dispatch for a scheduled prospecting run, or when the count of leads at stages `New` and `Scored` falls below the `leads_per_week` target — turns the ICP into scored, deduplicated Lead records.
+description: Dispatch for a scheduled prospecting run, or when the count of leads at stages `New` and `Scored` falls below the `leads_per_week` target — turns the ICP into deduplicated Lead records with a Fit score.
 ---
 
 # Prospector — Sub-Agent Contract
 
 ## Purpose
-Turn the ideal customer profile into scored, deduplicated lead records, so
-qualified prospects enter the pipeline at stage `Scored` with a documented,
-mechanical reason for that score.
+Turn the ideal customer profile into deduplicated lead records with a Fit
+score, so qualified prospects enter the pipeline at stage `Scored` with a
+documented, mechanical reason for that score.
 
 ## Trigger
 A scheduled prospecting run, or the count of leads at stages `New` and
@@ -16,8 +16,8 @@ A scheduled prospecting run, or the count of leads at stages `New` and
 `operating-config.md`.
 
 ## Inputs
-- `context/icp.md` — firmographics, geography, target roles, buying
-  triggers, anti-signals, and the scoring rubric
+- `context/icp.md` — firmographics, geography, anti-signals, and the
+  Fit score rubric
 - `context/operating-config.md` — `leads_per_week`,
   `prospecting_sources`, `apify_spend_cap_usd_per_week`
 - Existing leads, read via CRM `query_by_stage` on `New` and
@@ -33,13 +33,13 @@ A scheduled prospecting run, or the count of leads at stages `New` and
 - New Leads records, one per company found, each carrying `Company`,
   `Domain` (when it has a website), `Location`, `Address`, `Phone`, `Email`
   (each when sourced), `Industry`, `Size`, `Source`, `Source URL`,
-  `Score`, `Score Breakdown`, and `Stage = Scored`, plus the
+  `Fit Score`, `Fit Breakdown`, and `Stage = Scored`, plus the
   company profile fields the listing shows (`description`, and the
   business's LinkedIn, Facebook or Instagram page when the listing links
   it; see `capabilities/crm/contract.md`), passed to `create_lead`
 - A lead matching an anti-signal in `icp.md` instead carries
   `Stage = Disqualified`, with the matched anti-signal recorded as the
-  reason
+  reason, and no score
 
 ## Tools allowed
 - Sourcing tools — only the sources listed in `prospecting_sources`
@@ -51,7 +51,8 @@ A scheduled prospecting run, or the count of leads at stages `New` and
 - CRM `get_lead`
 - CRM `query_by_stage`
 - CRM `update_stage`
-- CRM `update_lead` (`Do Not Contact` only, for an opt-out)
+- CRM `update_lead` (`Fit Score` and `Fit Breakdown` on a re-found `New`
+  lead; `Do Not Contact` for an opt-out)
 - CRM `update_activity` (`voided` only, for an opt-out)
 - Owner notify `notify_owner`
 - Ledger `ledger_status`, `append_events`, `find_events`
@@ -92,6 +93,17 @@ If a call is blocked by the guard, stop the activity and call
 `notify_owner(kind: error)` with the block's message. Never retry a guard
 block.
 
+## Scoring
+Score every find with `score-lead` (`rubric: fit`), from the listing's
+fields only: address and coordinates, phone, website, category, rating,
+per-star review counts, review count, opening hours, and whether the
+listing is claimed. A listing marked temporarily closed matches the
+Temporarily closed anti-signal: the lead goes to `Disqualified` with that
+reason and is never scored. Pass the total and the breakdown to
+`create_lead` as `fit_score` and `fit_breakdown`. When `create_lead`
+returns an existing lead at `New`, score it the same way and write the
+Fit fields with `update_lead` (a re-score appends, per `score-lead`).
+
 ## Ledger
 Call `ledger_status` first; write `run_started` first and `run_finished` last, numbering events with `seq` per `capabilities/ledger/contract.md` (Run bracketing, Failure policy). Write `stop_condition`, `notify_sent` and `error` events when they happen.
 
@@ -111,14 +123,14 @@ the Apify spend in `cost_usd`.
 
 ## Handoff
 Calls CRM `update_stage(lead_id, "Scored", reason)` on every lead that
-clears scoring, or `update_stage(lead_id, "Disqualified", reason)` on any
+has a Fit score, or `update_stage(lead_id, "Disqualified", reason)` on any
 lead matching an anti-signal, and stops there. The stage transition is
 the entire handoff — work at the next stage is picked up independently
 by whichever contract queries the CRM for leads at that stage.
 
 ## Inline fallback
 Runs as the first sequential phase on a host without sub-agent dispatch:
-source candidates, apply the scoring rubric, call `create_lead` and
+source candidates, apply the Fit rubric, call `create_lead` and
 `update_stage` in the same context, then move to the next phase once a
 stop condition is reached. No isolation or parallel dispatch is required
 for correct behavior.
@@ -133,8 +145,10 @@ for correct behavior.
   leave it absent rather than guessed.
 - Any match against `icp.md`'s Anti-signals list sends the lead straight
   to `Disqualified`, never through `Scored`.
-- Every lead record carries a `Source URL` — the score and every
+- Every lead record carries a `Source URL` — the Fit score and every
   criterion behind it must trace to something found, not assumed.
+- Never score the Approach rubric or guess at research: a buying
+  trigger or a decision-maker is the Preparer's to find.
 - If `prospecting_sources` lists `apify_site_scraper`, stop and report
   `apify_site_scraper was renamed apify_contact_info`.
 - If `apollo` is listed in `prospecting_sources`, report that the

@@ -1,20 +1,21 @@
 ---
 name: preparer
-description: Dispatch for a lead at stage `Scored` whose `Score` clears `research_threshold` — deep-researches the company, identifies decision-makers, produces hooks, and re-scores it.
+description: Dispatch for a lead at stage `Scored` whose `Fit Score` clears `research_threshold` — deep-researches the company, identifies decision-makers, produces hooks, and gives it an Approach score.
 ---
 
 # Preparer — Sub-Agent Contract
 
 ## Purpose
-Deep-research top-scoring leads, identify decision-makers, and produce
-usable hooks, then re-score the lead now that research has resolved the
-two rubric criteria that scoring at intake could only estimate.
+Deep-research the leads with the best Fit scores, identify
+decision-makers, and produce usable hooks, then give each lead an
+Approach score from what research found.
 
 ## Trigger
-CRM `query_by_score(min_score = research_threshold, stage = "Scored",
-limit = research_quota_per_week)` — leads at stage `Scored` whose `Score`
-clears `research_threshold`, capped per run at `research_quota_per_week`
-(both keys from `operating-config.md`).
+CRM `query_by_score(score = fit, min_score = research_threshold, stage =
+"Scored", limit = research_quota_per_week)` — leads at stage `Scored`
+whose `Fit Score` clears `research_threshold`, highest Fit Score first,
+capped per run at `research_quota_per_week` (both keys from
+`operating-config.md`).
 
 ## Inputs
 - The lead record, via CRM `get_lead` (includes any existing linked
@@ -22,7 +23,7 @@ clears `research_threshold`, capped per run at `research_quota_per_week`
 - `context/business-profile.md` — what the business sells, proof,
   differentiators
 - `context/icp.md` — buying triggers, target roles, anti-signals, and
-  the scoring rubric
+  the Approach score rubric
 - `context/operating-config.md` — `research_threshold`,
   `research_quota_per_week`, `research_budget_per_lead_minutes`,
   `prospecting_sources`, `apify_spend_cap_usd_per_week`
@@ -33,14 +34,13 @@ clears `research_threshold`, capped per run at `research_quota_per_week`
 - Contacts rows linked to the lead, each with `Name`, `Title`, `Email`
   (if verifiable), `Phone` (if sourced), `LinkedIn URL` (if found),
   `Role` (decision-maker / influencer / gatekeeper), and `Verified`
-- A revised `Score`, written by re-running `score-lead` against the same
-  rubric in `icp.md` now that research has resolved the
-  `Buying trigger present` and `Decision-maker reachable` criteria — the
-  two criteria worth 45 of the 100 points that could only be guessed at
-  before research
-- The new per-criterion figures **appended** to `Score Breakdown` rather
-  than overwriting the entry written when the lead was first scored, so
-  the movement from estimate to sourced fact stays visible in the record
+- The date of the lead's most recent review (the newest review on its
+  Google listing or a review site), with that page's URL, cited in the
+  Approach rubric's Review recency line; also a `listing` Research row
+  when it gives a usable hook (`log_research` needs one)
+- `Approach Score` and `Approach Breakdown`, written by `score-lead`
+  (`rubric: approach`) from research findings only. `Fit Score` and
+  `Fit Breakdown` are never written, overwritten or cleared
 - `Stage = Researched`, or `Stage = Disqualified` if research surfaces
   an anti-signal
 
@@ -53,7 +53,8 @@ clears `research_threshold`, capped per run at `research_quota_per_week`
 - CRM `query_by_score`
 - CRM `log_research`
 - CRM `upsert_contact`
-- CRM `update_lead`
+- CRM `update_lead` (`Approach Score`, `Approach Breakdown`, company
+  profile fields, `Next Action`; `Do Not Contact` for an opt-out)
 - CRM `update_activity` (`voided` only, for an opt-out)
 - CRM `update_stage`
 - Owner notify `notify_owner`
@@ -64,7 +65,9 @@ Before researching, apply the contract's opt-out instruction
 the lead.
 
 ## Stop conditions
-- Two or more usable `Hook` values have been written for the lead
+- Two or more usable `Hook` values have been written for the lead, and
+  every Approach criterion has been looked for (a buying trigger, a
+  decision-maker and a route to them, the most recent review date)
 - The `research_budget_per_lead_minutes` time budget (from
   `operating-config.md`) for this lead is spent
 - The `apify_spend_cap_usd_per_week` cap would be passed by the next
@@ -111,9 +114,10 @@ says `estimated`).
 Writes each finding with CRM `log_research(lead_id, type, summary,
 source_url, date, hook)` and each person with CRM
 `upsert_contact(lead_id, name, title, email, phone, linkedin_url, role,
-verified, notes)` as research proceeds. Re-runs `score-lead`, then calls CRM
-`update_lead(lead_id, fields)` to write the revised `Score`, the
-appended `Score Breakdown`, and the company profile fields it confirmed
+verified, notes)` as research proceeds. Runs `score-lead` (`rubric:
+approach`), which writes `Approach Score` and `Approach Breakdown`, then
+calls CRM `update_lead(lead_id, fields)` to write
+the company profile fields it confirmed
 (`description`, `address`, `company_linkedin_url`, `facebook_url`,
 `instagram_url`; see `capabilities/crm/contract.md`, each one sourced),
 then calls CRM `update_stage(lead_id,
@@ -121,13 +125,13 @@ then calls CRM `update_stage(lead_id,
 reason)` if an anti-signal was found — and stops. The stage transition
 is the entire handoff; the next stage's work is picked up independently
 by whichever contract queries the CRM for leads at that stage and
-score.
+Approach score.
 
 ## Inline fallback
 Runs as the second sequential phase on a host without sub-agent
-dispatch: pull leads at or above `research_threshold` directly from the
-CRM, research and re-score each in the same context, then advance the
-stage before moving to the next phase.
+dispatch: pull leads whose Fit score is at or above `research_threshold`
+directly from the CRM, research each and give it an Approach score in the
+same context, then advance the stage before moving to the next phase.
 
 ### Guardrails
 - If `prospecting_sources` lists `apify_site_scraper`, stop and report
@@ -140,3 +144,6 @@ stage before moving to the next phase.
   in `Summary`.
 - An anti-signal discovered during research moves the lead straight to
   `Disqualified` rather than passing it on to the next stage.
+- The Fit fields are the Prospector's record of the first gate: never
+  re-score or edit them here, even when research contradicts the
+  listing. Record the contradiction as a Research row instead.

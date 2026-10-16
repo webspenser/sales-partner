@@ -54,15 +54,16 @@ tone: "[three adjectives from the interview]"
 - **`research_quota_per_week`** — the ceiling on how many leads the
   Preparer researches per week, applied on top of `research_threshold`;
   see `subagents/preparer.md`'s `Trigger` and `Stop conditions`.
-- **`research_threshold`** — the minimum Prospector score (0–100, per
-  the rubric in `icp.md`) a `Scored` lead needs to enter research.
-  Default `60`. See `icp.md`'s Thresholds section for the full
-  explanation of this gate.
-- **`approach_threshold`** — the minimum re-scored value a `Researched`
-  lead needs to reach the Approacher and get a drafted first touch.
-  Default `70`, applied to the score the Preparer recomputes after
-  research — a distinct, later gate from `research_threshold`, not a
-  repeat of it. See `icp.md`'s Thresholds section.
+- **`research_threshold`** — the minimum Fit score (0–100, per the Fit
+  rubric in `icp.md`, scored by the Prospector from the listing) a
+  `Scored` lead needs to enter research. Default `60`. See `icp.md`'s
+  Thresholds section for the full explanation of this gate.
+- **`approach_threshold`** — the minimum Approach score (0–100, per the
+  Approach rubric in `icp.md`, scored by the Preparer from research) a
+  `Researched` lead needs to reach the Approacher and get a drafted
+  first touch. Default `70`. A different score from the one
+  `research_threshold` gates, not a repeat of it. See `icp.md`'s
+  Thresholds section.
 - **`enabled_channels`** — the outbound channels the Approacher drafts
   touches for. `linkedin` in this list means LinkedIn
   copy may be **drafted** for the operator to paste by hand — it never

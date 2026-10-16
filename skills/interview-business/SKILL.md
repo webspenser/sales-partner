@@ -32,19 +32,36 @@ because a human has to answer it in their own words.
    which events signal a prospect is newly in-market, offering the
    example set in `context/icp.md`'s Buying triggers section that
    matches `target_type`.
-4. From the Round 2 answers, derive a draft scoring rubric — five
-   criteria (industry fit, company size, geography, buying trigger,
-   decision-maker reachable, or the operator's own equivalents), a
-   weight for each summing to 100, and 0/50/100 anchor language for
-   each. State the draft weights back to the operator explicitly (e.g.
-   "I'd weight industry fit at 25, company size at 20... does that
-   match how you'd actually prioritize a lead?") and get an explicit
-   confirmation or correction before writing anything. Only after
-   confirmation, write these `context/icp.md` sections: Target type,
-   Firmographics (with `size_measure`), Geography (with `service_area`
-   when it serves an area), Target roles, Buying triggers, Anti-signals,
-   and Scoring rubric — including the "who did you decline" answers as
-   concrete Anti-signals — before starting Round 3.
+4. From the Round 2 answers, derive two draft rubrics, one per gate,
+   each with 0/50/100 anchor language per criterion and weights summing
+   to 100 within each table:
+   - **Fit score** (gates research): only criteria the Prospector can
+     read from the source listing before any research — industry fit,
+     company size, geography, and for `local_business` the listing
+     criteria in `context/icp.md` (website on listing, phone listed,
+     opening hours, review sentiment, unclaimed listing).
+   - **Approach score** (gates drafting): only criteria research
+     resolves — buying trigger, decision-maker reachable, review
+     recency (or, for `company`, the date of the latest news or post),
+     or the operator's own equivalents.
+
+   A criterion only research can resolve never goes in the Fit table:
+   scored at prospecting it is always 0, and it holds every lead below
+   the research gate. Propose `research_threshold` and
+   `approach_threshold` with the rubrics, checking that a strong-fit
+   lead can clear the Fit gate on listing facts alone. State the draft
+   weights and thresholds back to the operator explicitly, one rubric
+   at a time (e.g. "For Fit I'd weight industry at 25, geography at
+   15... does that match how you'd pick which leads to research?") and
+   get an explicit confirmation or correction of each before writing
+   anything. Only after both are confirmed, write these
+   `context/icp.md` sections: Target type, Firmographics (with
+   `size_measure`), Geography (with `service_area` when it serves an
+   area), Target roles, Buying triggers, Anti-signals, and Scoring
+   rubric (both tables, the anchor guidance and the thresholds) —
+   including the "who did you decline" answers as concrete Anti-signals
+   — and the two thresholds to `context/operating-config.md`, before
+   starting Round 3.
 5. **Round 3 — the proof.** Ask, one at a time: what results can you
    name, with numbers; who will take a reference call. If the operator
    offers a sample email, social post, or web page as evidence, ask
@@ -113,10 +130,13 @@ companies.
   companies and one that wanted a full-time hire, not a fractional
   engagement. Size measure: headcount, 50–500; no service area (they
   sell nationally); buying trigger: a funding round in the last 90
-  days. Draft rubric proposed: Industry fit 25, Company size 20,
-  Geography 10, Buying trigger 25, Decision-maker reachable 20 —
-  operator confirms as-is. Written to `icp.md`, including "not
-  B2B SaaS" and "wants full-time hire, not fractional" as Anti-signals.
+  days. Fit rubric proposed: Industry fit 40, Company size 30,
+  Geography 30, with `research_threshold` 60; Approach rubric: Buying
+  trigger 50, Decision-maker reachable 30, latest news or post 20, with
+  `approach_threshold` 70. The operator moves Fit weight from Geography
+  to Industry (50/30/20) and confirms Approach as-is. Written to
+  `icp.md`, including "not B2B SaaS" and "wants full-time hire, not
+  fractional" as Anti-signals.
 - Round 3 answers: "cut time-to-first-qualified-pipeline from 11 weeks
   to 4 weeks for Meridian Analytics"; Meridian's founder will take
   reference calls. Operator pastes an actual outbound email they sent
@@ -138,6 +158,10 @@ companies.
   the Prospector. Push for the actual pattern, or name the absence of
   one and flag it to the operator rather than inventing a plausible-
   sounding target.
+- **Putting a research-only criterion in the Fit rubric.** A buying
+  trigger or a reachable decision-maker is unknown at prospecting, so
+  it scores 0 there and lowers every lead's Fit score by its weight. If
+  the operator wants one weighed, it belongs in the Approach rubric.
 - **Writing a rubric the operator has not confirmed.** Deriving weights
   from Round 2 is a draft, not a write. `icp.md` is never updated with
   scoring weights the operator hasn't explicitly agreed to, even when

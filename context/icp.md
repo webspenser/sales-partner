@@ -1,7 +1,7 @@
 # Ideal Customer Profile
 
 Target firmographics, geography, roles, buying triggers, hard
-disqualifiers, and the scoring rubric the pipeline scores every lead
+disqualifiers, and the two scoring rubrics the pipeline scores every lead
 against. Written by the `interview-business` skill (Phase 0) and
 re-run whenever the target market changes; every bracketed section is a
 prompt for that interview to replace with the operator's own answer.
@@ -19,15 +19,16 @@ target_type: company   # company | local_business
 
 Recorded by the interview's first ICP question. It only chooses which
 examples the interview offers — B2B firmographics and funding triggers
-for `company`, map-listing facts and storefront triggers for
-`local_business`. Every rubric rule below applies identically to both.
+for `company`, map-listing facts (including the listing criteria in the
+Fit score) and storefront triggers for `local_business`. Every rubric
+rule below applies identically to both.
 
 ## Firmographics
 
 [Interview: get target industry or industries, size as bands in
 `size_measure` (below), and company stage (bootstrapped, funded, which
 stage, public). Name the bands explicitly — e.g., "50–500 employees"
-or "1–3 locations," not "mid-market" — because the scoring rubric's
+or "1–3 locations," not "mid-market" — because the Fit rubric's
 Company size criterion below scores against these exact bands.]
 
 ```yaml
@@ -44,7 +45,7 @@ score just as mechanically.
 [Interview: get the primary market (where the business actively sells
 and can deliver), any secondary/serviceable markets, and any region
 that is explicitly out of scope (time zone, regulatory, or
-language/service reasons). Name these explicitly — the scoring rubric's
+language/service reasons). Name these explicitly — the Fit rubric's
 Geography criterion below scores against this list.]
 
 Optional service area. When set, it *is* the primary market:
@@ -98,27 +99,67 @@ against a prospect from the outside. Also capture any explicit
 any "prospect has opted out" or `Do Not Contact` condition — those are
 checked before every other rule in this document.]
 
+Shipped for every lead found on a map listing, whatever the interview
+adds:
+- **Temporarily closed**: the listing is marked temporarily closed.
+  (Permanently closed listings are dropped before scoring.)
+
 ## Scoring rubric
 
-Five weighted criteria, weights summing to 100. `score-lead` (used by
-the Prospector and re-run by the Preparer) applies this table
-mechanically and records a per-criterion breakdown — never a judgment
-call in place of it. These are the shipped defaults; the interview may
-adjust the weights or the anchor language for a specific business, but
-**the five weights must always sum to 100.**
+Scoring is split into two rubrics, one per pipeline gate, so each gate
+scores only what can actually be observed at that stage:
 
-Verification: 25 + 20 + 10 + 25 + 20 = **100**.
+- **Fit score** — scored by the Prospector from the source listing
+  alone (for a map find, the Google Maps listing), and compared against
+  `research_threshold`.
+- **Approach score** — scored by the Preparer from research findings
+  only, and compared against `approach_threshold`. Fit already passed
+  the first gate, so it is not counted again here.
+
+`score-lead` applies the matching table mechanically and records a
+per-criterion breakdown, never a judgment call in place of it. Every
+criterion scores only 0, 50 or 100. These are the shipped defaults; the
+interview may change the criteria, the weights or the anchor language
+for a specific business, but **each table's weights must always sum to
+100.**
+
+### Fit score (research gate)
+
+Verification: 40 + 30 + 30 = **100**.
 
 | Criterion | Weight | 0 points | 50 points | 100 points |
 |---|---|---|---|---|
-| Industry fit | 25 | outside target list | adjacent | on target list |
-| Company size | 20 | outside range | within one band | in range |
-| Geography | 10 | unserviceable | serviceable | in primary market |
-| Buying trigger present | 25 | none found | soft signal | explicit recent trigger |
-| Decision-maker reachable | 20 | none identified | identified, no contact route | identified with contact route |
+| Industry fit | 40 | outside target list | adjacent | on target list |
+| Company size | 30 | outside range | within one band | in range |
+| Geography | 30 | unserviceable | serviceable | in primary market |
 
-Anchor guidance, so two different readers score the same company the
-same way:
+For `target_type: local_business`, the interview also offers these
+listing criteria, each read from the map listing (and re-weights the
+table so it still sums to 100):
+
+| Criterion | 0 points | 50 points | 100 points |
+|---|---|---|---|
+| Website on listing | website linked from the listing | (not used) | no website linked from the listing |
+| Phone listed | no phone on the listing | (not used) | phone on the listing |
+| Opening hours | open 24/7 | no hours listed (unknown) | closed evenings or weekends |
+| Review sentiment | rating below 3.0 | rating 4.5 or higher | rating 3.0–4.4, or 15%+ of reviews are one-star |
+| Unclaimed listing | listing claimed | (not used) | listing unclaimed |
+
+### Approach score (approach gate)
+
+Verification: 50 + 30 + 20 = **100**.
+
+| Criterion | Weight | 0 points | 50 points | 100 points |
+|---|---|---|---|---|
+| Buying trigger present | 50 | none found | dated or indirect signal, sourced | explicit recent trigger, sourced |
+| Decision-maker reachable | 30 | none identified | identified, no direct contact route | identified with a direct contact route |
+| Review recency | 20 | no review in the last 12 months, or not sourced | latest review 3–12 months old | a review within the last 3 months |
+
+### Anchor guidance
+
+So two different readers score the same company the same way.
+
+Fit score:
 
 - **Industry fit** — 0 if the company's industry does not appear on the
   Firmographics target list and has no reasonable adjacency to it; 50
@@ -137,48 +178,59 @@ same way:
   cited by URL in the justification. No sourced address scores 0 as
   `no sourced address — unverified`; an address with no sourced
   distance scores 0 as `distance not sourced — unverified`. Distance
-  is never estimated from memory, a city name, or an area code. When
+  is never estimated from memory, a city name, or an area code. A
+  great-circle distance computed from the listing's coordinates and
+  sourced coordinates for `center` counts as sourced; cite both. When
   `service_area.center` is empty: 0 if the company is in a region
   explicitly marked out of scope in Geography; 50 if it's in a
   secondary/serviceable market; 100 if it's in the primary market
   named in Geography.
-- **Buying trigger present** — 0 if prospecting found no event matching
-  the Buying triggers list; 50 if there's an indirect or dated signal
-  (e.g., a role posted months ago, an old funding round) without a
-  clear recent event; 100 if research surfaces an explicit, recent,
-  sourced trigger from the list, with a source URL. This criterion is
-  usually a guess at Prospecting time and gets resolved for real by the
-  Preparer's research — see Thresholds below.
+- **Listing criteria** (when the interview adds them) — read only from
+  the listing: Website on listing is 100 when the listing links no
+  website, whether or not a site exists elsewhere (an outdated site is
+  a research finding, not a Fit criterion); Opening hours is 100 when
+  the business is closed on weekday evenings or on at least one weekend
+  day, 0 when listed as open 24 hours, 50 when no hours are posted;
+  Review sentiment uses the star rating and the per-star counts —
+  a rating below 3.0 scores 0 first, and the one-star share counts only
+  for a rating of 3.0 or higher — and a listing with no reviews scores
+  50; Unclaimed listing is 100 when the
+  listing shows it is unclaimed by its owner.
+
+Approach score:
+
+- **Buying trigger present** — 0 if research found no event from the
+  Buying triggers list; 50 if the strongest sourced signal is indirect
+  or dated (e.g., a role posted months ago, an old funding round); 100
+  if research surfaces an explicit, recent trigger from the list, with
+  a source URL.
 - **Decision-maker reachable** — 0 if no person matching Target roles
   can be identified at the company; 50 if a matching person is
-  identified by name/title but no contact route (verified email,
-  LinkedIn profile, a sourced direct phone number) has been found; 100
-  if a matching person is identified with a verified contact route.
-  Like the trigger criterion, this is usually a guess at Prospecting
-  time and gets resolved by the Preparer.
-
-Buying trigger present and Decision-maker reachable together carry 45
-of the 100 points precisely because they are the two criteria
-Prospecting can only estimate — the Preparer's research is what turns
-an estimate into a sourced fact, which is why the lead is re-scored
-after research (see Thresholds below).
+  identified by name/title but no direct contact route has been found;
+  100 if a matching person is identified with a verified direct contact
+  route (verified email, LinkedIn profile, or
+  a sourced direct phone number). The business's main phone line is not
+  a direct route.
+- **Review recency** — the date of the most recent review, read by the
+  Preparer from the listing or a review site and cited by URL: 100
+  within the last 3 months; 50 if 3–12 months old; 0 if older or not
+  sourced. For `target_type: company`, the interview may replace it
+  with the date of the company's latest news, post or announcement,
+  on the same tiers.
 
 ### Thresholds
 
-Two different gates, at two different pipeline stages, read from
+Two gates, at two pipeline stages, each with its own score, read from
 `operating-config.md`:
 
 - **`research_threshold` (default 60)** — gates entry into research. A
   lead at stage `Scored` is picked up by the Preparer only once its
-  Prospector-assigned score is at or above this threshold (subject also
-  to the research quota). Leads below it stay at `Scored` and are never
-  researched.
+  **Fit score** is at or above this threshold (subject also to the
+  research quota, which ranks leads above the threshold by Fit score).
+  Leads below it stay at `Scored` and are never researched.
 - **`approach_threshold` (default 70)** — gates entry into outreach
   drafting. A lead at stage `Researched` is picked up by the Approacher
-  only once its score — re-computed by the Preparer against this same
-  rubric, after research resolves the Buying trigger and
-  Decision-maker criteria above — is at or above this threshold. This
-  is a second, later gate applied to a re-scored number, not the same
-  check repeated: a lead can clear `research_threshold` on a
-  Prospector guess and still fail to clear `approach_threshold` once
-  research finds no real trigger or no reachable decision-maker.
+  only once its **Approach score**, computed by the Preparer from
+  research findings, is at or above this threshold. A lead that cleared
+  the Fit gate can still fail here when research finds no real trigger
+  or no reachable decision-maker.

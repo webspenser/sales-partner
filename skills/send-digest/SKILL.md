@@ -103,7 +103,7 @@ window per section:
   written only by `update_stage`, on every transition, as part of that
   same call — never by `update_lead` and never by anything else. That
   exclusivity is what makes it trustworthy here: `update_lead` writes
-  `Score`, `Next Action`, `Do Not Contact`, and other lead fields
+  the scores, `Next Action`, `Do Not Contact`, and other lead fields
   routinely without touching stage at all, so a generic "record last
   touched" timestamp would fire on those unrelated edits too and list
   leads in Movement that never moved. `Stage Changed At` only ever
@@ -124,10 +124,12 @@ stage moves, no field edits, no Activity or Research row, not even a
 - CRM **`query_by_stage`** with its `next_action_due_before` filter
   (`stage` omitted, so leads across every stage are considered) —
   Section 3, Next actions due today.
-- CRM **`query_by_score`** (`min_score: 0`, ordered by Score descending
-  per the contract), called once per stage a scored lead can currently
-  occupy, results filtered client-side to the `(anchor, nominal_time]`
-  window on Created Time — Section 4, New leads scored.
+- CRM **`query_by_score`** (`score: fit`, `min_score: 0`), called once
+  per stage a scored lead can currently occupy, results filtered
+  client-side to the `(anchor, nominal_time]` window on Created Time —
+  Section 4, New leads scored. Every scored lead has a Fit score, so
+  this finds them all; each one's Approach score, when it has one, is
+  on the same record.
 - CRM **`query_by_stage`**, called once per stage of interest, results
   filtered client-side to the `(anchor, nominal_time]` window on
   `Stage Changed At` — Section 5, Movement.
@@ -206,25 +208,34 @@ First, call `ledger_status`, then write `run_started`
    and then advanced to `Researched` (or further) within this same
    window is still a new lead since last digest, and is exactly the
    kind of fast-moving lead the operator most wants to see, so this
-   section must not lose it. Call `query_by_score(min_score: 0, stage:
-   <stage>, limit: 50)` once per stage a lead can occupy while still
-   carrying a `Score` — every stage except `New` (score-lead hasn't run
-   yet) and `Disqualified` (a lead disqualified on an anti-signal was
-   never scored at all, per `score-lead` step 2) — merge the results,
-   and filter to leads whose Created Time falls in the window
-   `(anchor, nominal_time]` — strictly after the anchor **and** at or
-   before this run's nominal scheduled time, never merely "after the
-   anchor" (see the upper-bound explanation in **The "since last
-   digest" anchor** above; a lead created after `nominal_time`, during
-   this run's own execution lag, belongs to next week's digest, not
-   this one). Sort the merged, filtered set by Score descending and
-   take the top five.
-   For each, derive its one-line rationale from `Score Breakdown`:
-   parse the five `<criterion> <score>×<weight/100>=<points>
-   (<justification>)` lines the `score-lead` skill wrote — using only
-   the most recent block if the lead has since been re-scored — take
-   the line with the highest `<points>` value, and keep only its
-   parenthetical justification, dropping the arithmetic. If fewer than
+   section must not lose it. Call `query_by_score(score: fit,
+   min_score: 0, stage: <stage>)`, with no `limit` (a stage such as
+   `Scored` keeps older, higher-scoring leads that would push new ones
+   off a limited page), once per stage a lead can
+   occupy while carrying a Fit score — every stage except `New`
+   (score-lead hasn't run yet) and `Disqualified` (a lead disqualified
+   on an anti-signal was never scored at all, per `score-lead` step 2)
+   — merge the results, and filter to leads whose Created Time falls in
+   the window `(anchor, nominal_time]` — strictly after the anchor
+   **and** at or before this run's nominal scheduled time, never merely
+   "after the anchor" (see the upper-bound explanation in **The "since
+   last digest" anchor** above; a lead created after `nominal_time`,
+   during this run's own execution lag, belongs to next week's digest,
+   not this one).
+
+   The Approach score is the one the digest reports first: it is the
+   score that decides whether a lead gets a drafted touch. Sort leads
+   that have an `Approach Score` first, by Approach Score descending,
+   then the rest by `Fit Score` descending, and take the top five. List
+   each as `<company> — Approach <a> · Fit <f> — <rationale>`, or
+   `<company> — Fit <f> — <rationale>` while it has no Approach score
+   yet. Derive the one-line rationale from `Approach Breakdown` when the
+   lead has one, otherwise from `Fit Breakdown`: parse the
+   `<criterion> <score>×<weight/100>=<points> (<justification>)` lines
+   the `score-lead` skill wrote — using only the most recent block if
+   the lead has since been re-scored — take the line with the highest
+   `<points>` value, and keep only its parenthetical justification,
+   dropping the arithmetic. If fewer than
    five leads clear the anchor filter, list however many there are; if
    none do, render the heading with `None` under it rather than
    omitting the heading (see Failure modes). Render the section heading
@@ -234,10 +245,10 @@ First, call `ledger_status`, then write `run_started`
    fewer than five whenever fewer clear the anchor filter.
 
    A lead created since the anchor appears **at most once** in this
-   section, keyed by its Created Time, no matter how many times its
-   `Score` has since been recomputed. If that same lead's Score was
-   recomputed as part of a stage change (a Preparer re-score alongside
-   `Scored → Researched`), that transition is reported once, under
+   section, keyed by its Created Time, no matter how many scores it has
+   gained since. If that same lead gained its Approach score as part of
+   a stage change (the Preparer's score alongside `Scored →
+   Researched`), that transition is reported once, under
    Movement (Section 5) — not as a second appearance here. Section 4
    answers "which leads are new since last digest"; Section 5 answers
    "what changed since last digest." A lead that answers both
@@ -264,7 +275,7 @@ First, call `ledger_status`, then write `run_started`
    stamp `Stage Changed At`, so the digest reports where leads stand,
    not when they moved. Because
    `Stage Changed At` is written only by `update_stage`, a lead whose
-   `Score` or `Next Action` was edited without its status moving does
+   score or `Next Action` was edited without its status moving does
    not appear here. Heading with the count of leads that actually
    moved.
 7. **Section 6 — Spend.** Read the week's Apify cost from the ledger:
@@ -325,11 +336,11 @@ matches the wall clock exactly this week. Anchor: Monday, 2026-08-24,
 - Corvid Analytics — Await reply to approach; re-engage if none by 2026-08-31 — due 2026-08-31
 
 ## New leads scored (5, top 5 since last digest)
-1. Solvent Robotics — 82.5 — buying trigger: posted six ops-eng roles in two weeks after a Series B
-2. Northwind Logistics — 77.5 — on target list: mid-market logistics SaaS
-3. Harrow Analytics — 71.0 — decision-maker reachable: VP Data identified with a verified LinkedIn profile
-4. Bellcrest Health — 65.0 — on target list: healthtech, 80 employees
-5. Quill Systems — 60.0 — geography: primary market, San Francisco
+1. Harrow Analytics — Approach 80 · Fit 70 — buying trigger: posted six ops-eng roles in two weeks after a Series B
+2. Quill Systems — Approach 75 · Fit 72.5 — decision-maker reachable: COO identified with a verified LinkedIn profile
+3. Northwind Logistics — Fit 90 — on target list: mid-market logistics SaaS
+4. Bellcrest Health — Fit 85 — on target list: healthtech, 80 employees
+5. Solvent Robotics — Fit 65 — company size: 120 employees, inside the 50–500 band
 
 ## Movement (3)
 - Harrow Analytics: → Researched (2026-08-30)
@@ -346,14 +357,14 @@ Sent with `notify_owner(kind: digest)` to the owner's pinned address.
 
 Harrow Analytics shows the anchor and the two changed sections working
 together correctly: created 2026-08-25 (after the 2026-08-24 anchor),
-scored 62.5 at prospecting, then re-scored by the Preparer to 71.0 and
+Fit 70 at prospecting, then given Approach 80 by the Preparer and
 advanced `Scored → Researched` on 2026-08-30 (also after the anchor, so
 `Stage Changed At` clears the Movement filter too). It appears exactly
-once in New leads scored — Created Time selected it, Score shows its
-current, re-scored value — and exactly once in Movement, for the stage
-transition. Neither section repeats what the other already said: New
-leads scored never mentions the re-score or the transition, and
-Movement never repeats the score. Next week's run, with the anchor
+once in New leads scored — Created Time selected it, and it leads the
+list because it has an Approach score — and exactly once in Movement,
+for the stage transition. Neither section repeats what the other
+already said: New leads scored never mentions the transition, and
+Movement never repeats the scores. Next week's run, with the anchor
 moved forward to 2026-08-31, will not see Harrow Analytics in either
 section again — its Created Time and its `Stage Changed At` are both
 now before the new anchor — which is the non-overlapping-windows
@@ -385,7 +396,7 @@ report it again — the double-report Finding 1 describes.
   explains why.
 - **Recomputing "since last digest" from the wrong timestamp.**
   Using the actual moment this run executes (instead of the nominal
-  scheduled time), or using a record's Score value or Stage name
+  scheduled time), or using a record's score or Stage name
   (instead of its Created Time or `Stage Changed At`) as a stand-in for
   "when this happened," breaks the non-overlapping-windows property the
   anchor formula depends on — consecutive runs either double-report

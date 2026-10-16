@@ -40,7 +40,7 @@ assert_contains "$SP/skills/interview-business/SKILL.md" 'companies or local bus
 
 echo "-- contact fields and dedupe"
 C="$SP/capabilities/crm/contract.md"
-assert_contains "$C" '`company, location, industry, size, source, source_url`, plus optional `domain, address, phone, email, score, score_breakdown`'
+assert_contains "$C" '`company, location, industry, size, source, source_url`, plus optional `domain, address, phone, email, fit_score, fit_breakdown`'
 assert_contains "$C" 'failing that, the same normalized `phone`'
 assert_contains "$C" 'none of `domain`, `phone`, or `address`'
 assert_contains "$C" '`lead_id, name, title, email, phone, linkedin_url, role, verified, notes`'
@@ -92,7 +92,7 @@ assert_contains "$I" 'which events signal a prospect is newly in-market'
 assert_contains "$I" 'Target roles, Buying triggers, Anti-signals'
 
 echo "-- evals widened (I6)"
-assert_contains "$E" '`100×0.10=10`'
+assert_contains "$E" '`100×0.30=30`'
 assert_contains "$E" 'same normalized company and address'
 assert_contains "$E" 'may get a `Channel = call` draft'
 assert_contains "$E" 'then_prospect: prepare'
@@ -478,7 +478,7 @@ assert_contains "$K" 'moves it to `Disqualified` with reason `opt-out`'
 assert_contains "$K" 'the Prospector (on a lead it re-finds), the Preparer and the Approacher'
 assert_contains "$K" '`sent` by the operator or their automation'
 assert_not_contains "$K" '`sent` and `voided` by `update_activity`'
-assert_contains "$SP/subagents/prospector.md" '- CRM `update_lead` (`Do Not Contact` only, for an opt-out)'
+assert_contains "$SP/subagents/prospector.md" '`Do Not Contact` for an opt-out)'
 for f in prospector preparer; do
   assert_contains "./subagents/$f.md" '- CRM `update_activity` (`voided` only, for an opt-out)'
 done
@@ -580,7 +580,7 @@ assert_contains "$SP/README.md" 'messages only you, through Resend'
 assert_contains "$SP/evals/cases.md" 'A notification never reaches anyone but the owner'
 
 echo "-- 7.0.0: release"
-assert_contains "$SP/agent.yaml" 'version: 7.2.0'
+assert_contains "$SP/agent.yaml" 'version: 7.3.0'
 for m in agent.yaml .claude-plugin/plugin.json .claude-plugin/marketplace.json .codex-plugin/plugin.json gemini-extension.json; do
   grep -qF 'prepares each first touch in the CRM:' "./$m" && _report ok "$m: description says drafts stay in the CRM" || _report no "$m: description does not say the CRM"
 done
@@ -676,5 +676,53 @@ assert_contains "$SP/skills/send-digest/SKILL.md" 'Apify cost from the ledger'
 assert_contains "$SP/README.md" 'monthly usage limit'
 assert_contains "$SP/README.md" 'Upgrading from 7.1'
 assert_contains "$SP/evals/cases.md" 'A scrape never exceeds its pinned limits'
+
+
+echo "-- 7.3: two-gate scoring"
+SL="$SP/skills/score-lead/SKILL.md"
+assert_contains "$SL" '`rubric` — `fit` or `approach`'
+assert_contains "$SL" 'never writes, overwrites or clears `Fit Score` or `Fit Breakdown`'
+assert_contains "$SL" 'Total: 25+15+5+0+10+15+10+0=80'
+assert_contains "$SL" 'Total: 25+15+20=60'
+assert_contains "$SL" 'would be 25+30+20 = **75**'
+assert_not_contains "$SL" 'five-row'
+assert_not_contains "$SL" 'five weights'
+assert_contains "$SP/context/icp.md" '### Fit score (research gate)'
+assert_contains "$SP/context/icp.md" '### Approach score (approach gate)'
+assert_contains "$SP/context/icp.md" "**each table's weights must always sum to"
+assert_contains "$SP/context/icp.md" '**Temporarily closed**'
+assert_not_contains "$SP/context/icp.md" 'five weights'
+assert_contains "$SP/subagents/prospector.md" '`score-lead` (`rubric: fit`)'
+assert_contains "$SP/subagents/prospector.md" 'Temporarily closed anti-signal'
+assert_contains "$SP/subagents/prospector.md" '`fit_score` and `fit_breakdown`'
+assert_contains "$SP/subagents/preparer.md" 'query_by_score(score = fit, min_score = research_threshold'
+assert_contains "$SP/subagents/preparer.md" '(`rubric: approach`)'
+assert_contains "$SP/subagents/preparer.md" 'most recent'
+assert_contains "$SP/subagents/preparer.md" '`Fit Breakdown` are never written'
+assert_contains "$SP/subagents/approacher.md" 'query_by_score(score = approach, min_score = approach_threshold'
+assert_contains "$SP/skills/send-digest/SKILL.md" '`score: fit`, `min_score: 0`'
+assert_contains "$SP/skills/send-digest/SKILL.md" 'Approach <a> · Fit <f>'
+assert_contains "$SP/skills/interview-business/SKILL.md" 'two draft rubrics, one per gate'
+assert_contains "$SP/capabilities/crm/contract.md" '### Scores'
+assert_contains "$SP/capabilities/crm/contract.md" '`score, min_score, stage, limit`'
+for t in attio hubspot; do
+  U="$SP"/capabilities/crm/tools/$t/usage.md
+  assert_contains "$U" "Reject a \`score\` other than \`fit\` or"
+done
+for slug in fit_score fit_breakdown approach_score approach_breakdown; do
+  assert_contains "$SP/capabilities/crm/tools/attio/usage.md" "\`$slug\`"
+  grep -qF "attr(\"$slug\"" ./capabilities/crm/tools/attio/bootstrap.py && _report ok "attio bootstrap creates $slug" || _report no "attio bootstrap misses $slug"
+  assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" "\`sp_$slug\`"
+  grep -qF "prop(\"sp_$slug\"" ./capabilities/crm/tools/hubspot/bootstrap.py && _report ok "hubspot bootstrap creates sp_$slug" || _report no "hubspot bootstrap misses sp_$slug"
+done
+for f in ./capabilities/crm/tools/attio/bootstrap.py ./capabilities/crm/tools/hubspot/bootstrap.py ./capabilities/crm/tools/attio/usage.md ./capabilities/crm/tools/hubspot/usage.md; do
+  grep -qE '"(sp_)?score(_breakdown)?"|`(sp_)?score_breakdown`|`sp_score`|\| `score` \|' "$f" && _report no "$f still names the old score field" || _report ok "$f drops the old score field"
+done
+U="$SP/capabilities/scraping/tools/apify/usage.md"
+assert_contains "$U" 'postalCode,location,phone,website,totalScore,reviewsCount,reviewsDistribution,openingHours,placeId'
+assert_contains "$U" 'claimed = `not claimThisBusiness`'
+assert_contains "$SP/capabilities/scraping/contract.md" 'per-star review counts (one to five stars), opening hours (per day), claimed (true or false), temporarily closed (true or false)'
+assert_contains "$SP/evals/cases.md" '## Case 19: Each gate reads its own score'
+assert_contains "$SP/README.md" 'Upgrading from 7.2'
 
 finish

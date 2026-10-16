@@ -68,8 +68,10 @@ no phone attribute.
 | `stage` | status — exactly the eleven statuses | `Stage` |
 | `stage_changed_at` | timestamp | `Stage Changed At` |
 | `stage_reason` | text | the `reason` from the latest `update_stage` call |
-| `score` | number | `Score` |
-| `score_breakdown` | text | `Score Breakdown` |
+| `fit_score` | number | `Fit Score` |
+| `fit_breakdown` | text | `Fit Breakdown` |
+| `approach_score` | number | `Approach Score` |
+| `approach_breakdown` | text | `Approach Breakdown` |
 | `industry` | text | `Industry` |
 | `size` | text | `Size` |
 | `location` | text | `Location` |
@@ -229,9 +231,12 @@ write nothing) exactly where the contract says the operation rejects.
   `date` and the lead's `stage_changed_at`. If the lead has no
   Activity, use `stage_changed_at`. Keep the lead if its idle age is
   greater than `idle_days`. Page with `offset` until the results run out.
-- **`query_by_score`** — `attio:list-records-in-list` on
-  `sales_partner_pipeline`, filtered on `score` gte `min_score` (and
-  `stage` eq when given), sorted by `score` desc.
+- **`query_by_score`** — Reject a `score` other than `fit` or
+  `approach`. `attio:list-records-in-list` on `sales_partner_pipeline`,
+  filtered on `fit_score` (for `fit`) or `approach_score` (for
+  `approach`) gte `min_score` (and `stage` eq when given), sorted by
+  that attribute desc. Page with `offset` until the results run out;
+  apply `limit` last.
 - **`query_activities`** — `attio:list-records-in-list` on
   `sales_partner_outreach`, filtered on `status` (and `direction`, and
   `channel` when given, and `date` gte `since` / lte `until`). Each entry's `lead` gives the
@@ -295,7 +300,11 @@ views.
   for your templates, not touches. Set `status` to `sent` when you've
   done one.
 - **Research Queue** — on `sales_partner_pipeline`: filtered on `stage`
-  is `Scored`, sorted by `score`, highest first.
+  is `Scored`, sorted by `fit_score`, highest first.
+- **Approach Queue** — on `sales_partner_pipeline`: filtered on `stage`
+  is `Researched`, sorted by `approach_score`, highest first. Leads
+  below `approach_threshold` stay here, with the reason in
+  `approach_breakdown`.
 - **Due Today** — on `sales_partner_pipeline`: filtered on
   `next_action_due` on or before today.
 - **Nurture** — on `sales_partner_pipeline`: filtered on `stage` is
@@ -359,8 +368,10 @@ List `sales_partner_pipeline` (name `Sales Partner Pipeline`):
 | Stage | `stage` | Status | New, Scored, Researched, Approach Drafted, Ready to Send, Contacted, Engaged, Open Deal, Nurture, Customer, Disqualified |
 | Stage Changed At | `stage_changed_at` | Timestamp | |
 | Stage Reason | `stage_reason` | Text | |
-| Score | `score` | Number | |
-| Score Breakdown | `score_breakdown` | Text | |
+| Fit Score | `fit_score` | Number | |
+| Fit Breakdown | `fit_breakdown` | Text | |
+| Approach Score | `approach_score` | Number | |
+| Approach Breakdown | `approach_breakdown` | Text | |
 | Industry | `industry` | Text | |
 | Size | `size` | Text | |
 | Location | `location` | Text | |

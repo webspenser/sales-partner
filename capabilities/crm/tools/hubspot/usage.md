@@ -51,8 +51,10 @@ group `Sales Partner` (internal name `sales_partner`).
 | `sp_stage` | dropdown, the eleven statuses | `Stage` |
 | `sp_stage_changed_at` | datetime | `Stage Changed At` |
 | `sp_stage_reason` | multi-line text | the `reason` from the latest `update_stage` |
-| `sp_score` | number | `Score` |
-| `sp_score_breakdown` | multi-line text | `Score Breakdown` |
+| `sp_fit_score` | number | `Fit Score` |
+| `sp_fit_breakdown` | multi-line text | `Fit Breakdown` |
+| `sp_approach_score` | number | `Approach Score` |
+| `sp_approach_breakdown` | multi-line text | `Approach Breakdown` |
 | `sp_industry` | text | `Industry` |
 | `sp_size` | text | `Size` |
 | `sp_source` | text | `Source` |
@@ -200,7 +202,7 @@ outside the pipeline), adopt it (step 7) and return its ID as `lead_id`.
          "sp_stage": "New", "sp_stage_changed_at": "<now, ISO 8601 UTC>",
          "sp_industry": "…", "sp_size": "…",
          "sp_source": "…", "sp_source_url": "…", "sp_email": "…",
-         "sp_score": "…", "sp_score_breakdown": "…"}}]}}
+         "sp_fit_score": "…", "sp_fit_breakdown": "…"}}]}}
 
    Read the clock right before the call. Leave out every empty value;
    never invent a placeholder score. Return the new company's ID.
@@ -353,9 +355,12 @@ Page with `offset` until the results run out; apply `limit` last.
 
 ### `query_by_score`
 
-`hubspot:search_crm_objects` on `COMPANY`, filters `sp_score` `GTE`
-`min_score` (and `sp_stage` `EQ` the stage when given), sorted by
-`sp_score` `DESCENDING`, with `limit`.
+Reject a `score` other than `fit` or `approach`.
+`hubspot:search_crm_objects` on `COMPANY`, filters `sp_fit_score` (for
+`fit`) or `sp_approach_score` (for `approach`) `GTE` `min_score` (and
+`sp_stage` `EQ` the stage when given), sorted by that property
+`DESCENDING`. Page with `offset` until the results run out; apply
+`limit` last.
 
 ### `query_activities`
 
@@ -441,7 +446,9 @@ Create these once in HubSpot. The connector can't create views.
 - **Pipeline** — a Companies view grouped (or a board) by
   `Sales Partner stage` (`sp_stage`), filtered on `sp_stage` is known.
 - **Research Queue** — Companies filtered on `sp_stage` is `Scored`,
-  sorted by `Score`, highest first.
+  sorted by `Fit score`, highest first.
+- **Approach Queue** — Companies filtered on `sp_stage` is `Researched`,
+  sorted by `Approach score`, highest first.
 - **Due Today** — Companies filtered on `Next action due` on or before
   today.
 - **Nurture** — Companies filtered on `sp_stage` is `Nurture`, sorted
@@ -457,8 +464,9 @@ what they find to `bindings/crm.md` in the instance:
    `accountId`). `COMPANY`, `CONTACT`, `TASK`, and `NOTE` must each
    show `write: AVAILABLE`; report any that don't.
 2. `hubspot:get_properties`:
-   - on `companies`, `["sp_stage", "sp_stage_changed_at", "sp_do_not_contact"]`:
-     all three exist, and `sp_stage` has the eleven status options;
+   - on `companies`, `["sp_stage", "sp_stage_changed_at", "sp_do_not_contact",
+     "sp_fit_score", "sp_fit_breakdown", "sp_approach_score", "sp_approach_breakdown"]`:
+     all seven exist, and `sp_stage` has the eleven status options;
    - on `contacts`, `["sp_role"]`: it has the three role options;
    - on `tasks`, `["hs_task_status", "hs_task_type", "hs_task_priority"]`:
      `hs_task_status` has `NOT_STARTED`, `COMPLETED` and `DEFERRED`, `hs_task_type` has `EMAIL`, `CALL` and `TODO`, and
@@ -500,8 +508,10 @@ both equal to the text shown.
 | `sp_stage` | Sales Partner stage | Dropdown select | New, Scored, Researched, Approach Drafted, Ready to Send, Contacted, Engaged, Open Deal, Nurture, Customer, Disqualified |
 | `sp_stage_changed_at` | Stage changed at | Date and time picker | |
 | `sp_stage_reason` | Stage reason | Multi-line text | |
-| `sp_score` | Score | Number | |
-| `sp_score_breakdown` | Score breakdown | Multi-line text | |
+| `sp_fit_score` | Fit score | Number | |
+| `sp_fit_breakdown` | Fit breakdown | Multi-line text | |
+| `sp_approach_score` | Approach score | Number | |
+| `sp_approach_breakdown` | Approach breakdown | Multi-line text | |
 | `sp_industry` | Industry (Sales Partner) | Single-line text | |
 | `sp_size` | Size | Single-line text | |
 | `sp_source` | Source | Single-line text | |

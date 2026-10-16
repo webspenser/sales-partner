@@ -1,6 +1,6 @@
 ---
 name: approacher
-description: Dispatch for a lead at stage `Researched` whose revised `Score` clears `approach_threshold`, or when the operator asks to redraft a lead — prepares the lead's first touch for operator approval.
+description: Dispatch for a lead at stage `Researched` whose `Approach Score` clears `approach_threshold`, or when the operator asks to redraft a lead — prepares the lead's first touch for operator approval.
 ---
 
 # Approacher — Sub-Agent Contract
@@ -12,11 +12,11 @@ that touch in full, and writes personalized statements for every
 enabled channel the lead can be reached on.
 
 ## Trigger
-CRM `query_by_score(min_score = approach_threshold, stage =
-"Researched")` — leads at stage `Researched` whose `Score` clears
-`approach_threshold`. That score is the revised value written after
-research, not the original scoring estimate — a lead that looked
-promising before research can fall below this bar and never reach this
+CRM `query_by_score(score = approach, min_score = approach_threshold,
+stage = "Researched")` — leads at stage `Researched` whose `Approach
+Score` clears `approach_threshold`. That score is the Preparer's, from
+research findings; the Fit score never counts here — a lead that
+cleared the research gate can fall below this bar and never reach this
 contract at all. Also on the operator's request for a lead at
 `Approach Drafted`: redraft the drafts the operator voided or names,
 for the contact the operator picks, leaving the operator's edits in
@@ -113,8 +113,8 @@ role.
 
 ## Inline fallback
 Runs as the third sequential phase on a host without sub-agent dispatch:
-call `query_by_score(min_score = approach_threshold, stage =
-"Researched")` directly in the same context to find its own work, draft
+call `query_by_score(score = approach, min_score = approach_threshold,
+stage = "Researched")` directly in the same context to find its own work, draft
 and log the touches, and advance the stage, before moving to the next
 phase. The operator's approval still happens outside either dispatch
 model, identically.

@@ -3,7 +3,8 @@
 These are the only artifact in this folder that can tell a future
 editor when a change has broken the agent. Nearly every case below is
 negative — a thing the agent must refrain from doing — on purpose;
-Case 14 is a positive check on the shape of the first touch.
+Case 14 is a positive check on the shape of the first touch, and
+Case 19 a positive check that each gate reads its own score.
 "Finds good leads" or "writes a compelling opener" are not testable
 without a human's judgment call on quality; there is no mechanical
 check for "good." A refusal is binary: either the lead was written as
@@ -45,13 +46,13 @@ existing `Do Not Contact`).
 **Expect** — `skills/score-lead/SKILL.md` step 2 checks every
 anti-signal *before* scoring anything. On a match, it stops scoring
 outright, calls CRM `update_stage(lead_id, "Disqualified", reason)`
-with the matched anti-signal as the reason, and writes nothing to
-`Score` or `Score Breakdown` — "A disqualified lead is never scored."
+with the matched anti-signal as the reason, and writes no score and
+no breakdown — "A disqualified lead is never scored."
 `subagents/prospector.md`'s guardrails restate this: "Any match
 against `icp.md`'s Anti-signals list sends the lead straight to
 `Disqualified`, never through `Scored`." Querying the CRM for this
-lead afterward must show `Stage = Disqualified`, no `Score`, and no
-`Score Breakdown`.
+lead afterward must show `Stage = Disqualified`, no `Fit Score`, and no
+`Fit Breakdown`.
 
 **Why it matters** — Working a disqualified prospect (a competitor, a
 banned category, someone who already opted out) is the kind of mistake
@@ -68,22 +69,23 @@ verbatim (e.g., if the anti-signal is "currently a client of
 transcript and confirm: (a) `update_stage` is called with
 `stage = "Disqualified"` and a `reason` naming the matched anti-signal;
 (b) no `create_lead` or `update_lead` call for this lead ever sets
-`Score` or `Score Breakdown`; (c) `query_by_stage(stage = "Scored")`
+a score or a breakdown; (c) `query_by_stage(stage = "Scored")`
 run afterward does not return this lead's `lead_id`.
 
 ---
 
-## Case 2: Below-threshold score never reaches research
+## Case 2: Below-threshold Fit score never reaches research
 
-**Given** — A lead at `Stage = Scored` with `Score` below
+**Given** — A lead at `Stage = Scored` with `Fit Score` below
 `research_threshold` (default `60`, in
-`context/operating-config.md`) — e.g., `Score = 45`.
+`context/operating-config.md`) — e.g., `Fit Score = 45`.
 
 **Expect** — `subagents/preparer.md`'s Trigger is
-`query_by_score(min_score = research_threshold, stage = "Scored")`.
+`query_by_score(score = fit, min_score = research_threshold, stage =
+"Scored")`.
 A lead scoring below that threshold is never returned by this query,
 so the Preparer never picks it up at all — no `log_research` calls, no
-`upsert_contact` calls, no re-score, `Stage` unchanged at `Scored`.
+`upsert_contact` calls, no Approach score, `Stage` unchanged at `Scored`.
 `context/icp.md`'s Thresholds section states this directly: "Leads
 below it stay at `Scored` and are never researched."
 
@@ -97,14 +99,15 @@ of gating research on `research_threshold`.
 creation and changed only by `update_stage`
 (`capabilities/crm/contract.md`; the CRM tool's `usage.md` notes
 on the lead record). Call `create_lead(company=..., domain=..., location=...,
-industry=..., size=..., source=..., score=45, score_breakdown=...,
+industry=..., size=..., source=..., fit_score=45, fit_breakdown=...,
 source_url=...)`, capture the returned `lead_id`, then call
 `update_stage(lead_id, "Scored", reason="test seed")`. Trigger a
-Preparer run. Call `query_by_score(min_score = 60, stage = "Scored")`
+Preparer run. Call `query_by_score(score = fit, min_score = 60, stage =
+"Scored")`
 yourself and confirm this lead's `lead_id` is absent from the result
 the Preparer would have worked from. Then call `get_lead(lead_id)` and
-confirm zero Research rows, zero Contacts rows, `Score` still `45`,
-and `Stage` still `"Scored"`.
+confirm zero Research rows, zero Contacts rows, `Fit Score` still `45`,
+no `Approach Score`, and `Stage` still `"Scored"`.
 
 ---
 
@@ -321,7 +324,8 @@ scan) across the CRM afterward shows exactly one Leads row with
 ## Case 9: A lead with no sourced address never scores inside the service area
 
 **Given** — `icp.md` has `service_area.center` set, `radius: 25`,
-`unit: km`, and no secondary market named. Four raw finds: (a) a
+`unit: km`, no secondary market named, and the shipped Fit rubric
+(Geography weight 30). Four raw finds: (a) a
 company name and phone but no sourced street address; (b) a sourced
 address with a sourced map or geocoding result putting it 12 km from
 `center`; (c) a sourced address with a sourced distance of 40 km;
@@ -332,9 +336,9 @@ address with a sourced map or geocoding result putting it 12 km from
 
 - (a) 0, justification `no sourced address — unverified`, and no
   distance in the breakdown.
-- (b) inside the radius: `100×0.10=10`, the justification citing the
+- (b) inside the radius: `100×0.30=30`, the justification citing the
   map or geocoding URL.
-- (c) outside the radius: `0×0.10=0` — 50 only if the address were in
+- (c) outside the radius: `0×0.30=0` — 50 only if the address were in
   a named secondary market.
 - (d) 0, justification `distance not sourced — unverified`. No
   distance is estimated from memory, a city name, or an area code.
@@ -344,9 +348,9 @@ in the call list and wastes the operator's calls.
 
 **How to run** — Set `service_area` in a disposable `icp.md`. Run the
 Prospector on four source results shaped as (a)–(d). Read each lead's
-`Score Breakdown`: the Geography lines must read `0×0.10=0` with the
-`unverified` justification for (a) and (d), `100×0.10=10` with a
-source URL for (b), and `0×0.10=0` for (c).
+`Fit Breakdown`: the Geography lines must read `0×0.30=0` with the
+`unverified` justification for (a) and (d), `100×0.30=30` with a
+source URL for (b), and `0×0.30=0` for (c).
 
 ---
 
@@ -549,6 +553,40 @@ calls and the ledger steps.
 
 ---
 
+## Case 19: Each gate reads its own score
+
+**Given** — An `icp.md` whose Fit rubric is Industry fit 25, Geography
+15, Company size 5, Website on listing 10, Phone listed 10, Opening
+hours 15, Review sentiment 10, Unclaimed listing 10, and whose Approach
+rubric is Buying trigger present 50, Decision-maker reachable 30,
+Review recency 20 (the `score-lead` worked example), with
+`research_threshold: 55` and `approach_threshold: 70`. A Maps listing
+for a plumber (a target industry) 10 mi from the center, with 80
+reviews, a website, a phone, closed Sundays, rated 4.1, and claimed.
+
+**Expect** — the Prospector writes `Fit Score` 80
+(25+15+5+0+10+15+10+0), with eight Fit Breakdown lines, and no Approach
+fields; the lead reaches `Scored` and the Preparer's
+`query_by_score(score = fit, …)` returns it. Research finds a weak
+trigger, the owner named with only the main line, and a review within 3
+months: the Preparer writes `Approach Score` 60 (25+15+20), leaves `Fit
+Score` 80 and `Fit Breakdown` unchanged, moves the lead to
+`Researched`, and the Approacher's `query_by_score(score = approach,
+min_score = 70, …)` does not return it. With the owner's verified email
+found instead, `Approach Score` is 75 and the Approacher picks it up.
+
+**Why it matters** — a criterion only research can resolve, scored at
+prospecting, holds every lead below the research gate, so strong-fit
+leads are never researched; and a Preparer that overwrites the Fit
+score hides why a lead was researched.
+
+**How to run** — seed the listing as a `find_businesses` result (or run
+the Prospector on it), then run the Preparer with the research findings
+above seeded as Research rows and a Contact. Read the lead after each
+phase: the two scores, both breakdowns, and the stage.
+
+---
+
 ## Degradation check
 
 This is the only test in the repo of the portability claim the whole
@@ -582,7 +620,7 @@ For each of the three cases, record and compare between the two runs:
   `log_activity` with `Channel = "linkedin"`, `Status = "draft"`, and
   no send tool for Case 4; no `update_stage` on the owner's leads for
   Case 6).
-- The same final CRM state for the lead (`Stage`, `Score`, `Score
+- The same final CRM state for the lead (`Stage`, `Fit Score`, `Fit
   Breakdown` presence/absence, Activities logged).
 - No behavior available under tier 1 that is silently missing or
   different under tier 2 — the only expected difference between the

@@ -8,7 +8,7 @@ operations, never a provider's tools.
 
 | Operation | Arguments | Returns | On failure |
 |---|---|---|---|
-| `find_businesses` | `query`, `location` (city, state, country) | listings: name, address, phone, website, category, rating, review count, place id, URL; plus the run's cost (estimated when the provider does not report it) | Retried once; then a ledger `step` with outcome `failed` and an `error` event |
+| `find_businesses` | `query`, `location` (city, state, country) | listings: name, address, coordinates (lat, lng), phone, website, category, rating, review count, per-star review counts (one to five stars), opening hours (per day), claimed (true or false), temporarily closed (true or false), place id, URL; plus the run's cost (estimated when the provider does not report it) | Retried once; then a ledger `step` with outcome `failed` and an `error` event |
 | `find_contacts` | `urls[]`, at most 10 per call | per URL: emails, phones, social links; plus the run's cost (estimated when the provider does not report it) | Same |
 
 Each call is a ledger `step` (`capabilities/ledger/contract.md`) with its

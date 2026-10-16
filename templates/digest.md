@@ -22,7 +22,7 @@
 
 ## New leads scored ([count])
 
-1. [company — score — one-line rationale, or "None"]
+1. [company — Approach score · Fit score (Fit only until researched) — one-line rationale, or "None"]
 
 ## Movement ([count])
 

@@ -284,8 +284,12 @@ drafts and `dnc_one_way`):
      updates, even in one call. The connector's `manage_crm_objects`
      accepts only those two request shapes, so there is no other place
      for values to sit;
-   - `hs_note_body` may not be changed after create, so a draft or a
-     research section is never rewritten (`draft_only`);
+   - `hs_note_body` and `hs_timestamp` may not be changed after
+     create, so a draft or a research section is never rewritten or
+     re-ordered (`draft_only`);
+   - `hs_task_status`, `hs_task_body` and `hs_task_completion_date` are
+     forbidden outright: the agent uses no Tasks, so the operator's own
+     Tasks are out of its reach;
    - `sp_stage` may only be created as `New`, and never written as
      `Ready to Send`: only the operator approves a lead.
      `hs_pipeline_stage` and `hs_pipeline` are forbidden to the agent

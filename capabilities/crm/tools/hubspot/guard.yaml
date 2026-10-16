@@ -26,3 +26,12 @@ rules:
     forbid: true
   - field: hs_note_body
     forbid: update
+  - field: hs_timestamp
+    forbid: update
+  # The agent uses no Tasks: the operator's own Tasks are out of reach.
+  - field: hs_task_status
+    forbid: true
+  - field: hs_task_body
+    forbid: true
+  - field: hs_task_completion_date
+    forbid: true

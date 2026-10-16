@@ -219,6 +219,11 @@ check 2 "agent can't open a deal"     $HS ${H}manage_crm_objects '{"updateReques
 check 2 "agent can't mark Customer"   $HS ${H}manage_crm_objects '{"updateRequest":{"objects":[{"objectType":"companies","objectId":202,"properties":{"sp_stage":"Customer"}}]}}' "sp_stage may only be written as"
 check 2 "lead created past New"       $HS ${H}manage_crm_objects '{"createRequest":{"objects":[{"objectType":"companies","properties":{"name":"X","sp_stage":"Scored"}}]}}' "sp_stage may only be written as New on create"
 DONE=61bafb31-e7fa-46ed-aaa9-1322438d6e67
+check 2 "task status written"       $HS ${H}manage_crm_objects '{"updateRequest":{"objects":[{"objectType":"tasks","objectId":101,"properties":{"hs_task_status":"COMPLETED"}}]}}' "hs_task_status may not be written"
+check 2 "task created with status"  $HS ${H}manage_crm_objects '{"createRequest":{"objects":[{"objectType":"tasks","properties":{"hs_task_status":"NOT_STARTED"}}]}}' "hs_task_status may not be written"
+check 2 "task body written"         $HS ${H}manage_crm_objects '{"updateRequest":{"objects":[{"objectType":"tasks","objectId":101,"properties":{"hs_task_body":"x"}}]}}' "hs_task_body may not be written"
+check 2 "task completion date"      $HS ${H}manage_crm_objects '{"updateRequest":{"objects":[{"objectType":"tasks","objectId":101,"properties":{"hs_task_completion_date":"2026-10-16T00:00:00Z"}}]}}' "hs_task_completion_date may not be written"
+check 2 "note re-dated"             $HS ${H}manage_crm_objects '{"updateRequest":{"objects":[{"objectType":"notes","objectId":303,"properties":{"hs_timestamp":"2027-01-01T00:00:00Z"}}]}}' "hs_timestamp may not be changed after create"
 check 2 "hs_pipeline_stage blocked" $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[{\"objectType\":\"companies\",\"objectId\":202,\"properties\":{\"hs_pipeline_stage\":\"$DONE\"}}]}}" "hs_pipeline_stage may not be written"
 check 2 "hs_pipeline blocked"       $HS ${H}manage_crm_objects '{"updateRequest":{"objects":[{"objectType":"companies","objectId":202,"properties":{"hs_pipeline":"3d314325-1b2a-4225-9388-375f49c57ec3"}}]}}' "hs_pipeline may not be written"
 check 0 "dnc set \"true\""          $HS ${H}manage_crm_objects "{\"updateRequest\":{\"objects\":[$(printf "$CU" '"true"')]}}"

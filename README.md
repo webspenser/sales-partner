@@ -23,11 +23,12 @@ and when.
   decision-maker is, and how to reach them. Every fact links to where
   it was found. A second score, from that research, decides which leads
   are ready for a first touch.
-- **A first touch, ready to go.** For each lead it recommends the best
-  channel (email, LinkedIn or a phone call) and says why, writes that
-  message in full, and gives you short personalized lines for your
-  other channels: an opener, why it matters to them, a proof point
-  from your own results, and one simple ask.
+- **A first touch, ready to go.** For each lead it writes a full
+  message for every channel it can reach them on (an email, a LinkedIn
+  note, talking points for a call), each with short personalized
+  lines: an opener, why it matters to them, a proof point from your own
+  results, and one simple ask. Everything sits in notes on the company
+  in your CRM.
 - **A weekly summary** sent to you: what's waiting for your
   review, what's approved, what moved, and what research tools cost.
 
@@ -97,7 +98,7 @@ in that folder loads the agent. Plugin updates never touch your folder.
 
 Built on the [Agent Standard](https://github.com/webspenser/agent-builder/blob/main/STANDARD.md)
 with [Agent Builder](https://github.com/webspenser/agent-builder).
-Version 7.3.0.
+Version 7.4.0.
 
 ## Use it from source
 
@@ -156,6 +157,24 @@ decides which leads get a drafted touch (`approach_threshold`).
    properties are deleted for good after 90 days, so export the values
    first or leave the properties in place.
 5. Commit and push the instance.
+
+Upgrading from 7.3: research and drafts move into notes on the company,
+and every channel a lead can be reached on gets a full draft.
+
+- **Attio.** Only the `Sales Partner Pipeline` list is used. Re-run
+  setup's tools step (the probe now checks only that list). Then,
+  before the next scheduled run, ask the agent in an interactive
+  session to move research and drafts into notes: for each company, a
+  `Sales Partner · Research` note with one section per original date,
+  and a `Sales Partner · Email`, `· LinkedIn` or `· Call` note from the
+  newest draft per channel; a pipeline phone or email that belongs to a
+  linked person goes onto that person. Then archive the `Sales Partner
+  Research` and `Sales Partner Outreach` lists and the pipeline's
+  `Phone`, `Email`, `Address` and `Location` attributes (archived data
+  stays recoverable).
+- **HubSpot.** New research and drafts are Notes on the company;
+  existing draft Tasks stay as history.
+- Commit and push the instance.
 
 ## Developing
 

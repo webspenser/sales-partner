@@ -549,7 +549,7 @@ assert_contains "$SP/README.md" 'messages only you, through Resend'
 assert_contains "$SP/evals/cases.md" 'A notification never reaches anyone but the owner'
 
 echo "-- 7.0.0: release"
-assert_contains "$SP/agent.yaml" 'version: 7.3.0'
+assert_contains "$SP/agent.yaml" 'version: 7.4.0'
 for m in agent.yaml .claude-plugin/plugin.json .claude-plugin/marketplace.json .codex-plugin/plugin.json gemini-extension.json; do
   grep -qF 'prepares each first touch in the CRM:' "./$m" && _report ok "$m: description says drafts stay in the CRM" || _report no "$m: description does not say the CRM"
 done
@@ -763,5 +763,13 @@ assert_contains "$EV" '## Case 20: A redraft appends and never rewrites'
 for gone in update_activity query_activities log_activity 'recommended:'; do
   assert_not_contains "$EV" "$gone"
 done
+
+for m in agent.yaml .claude-plugin/plugin.json .claude-plugin/marketplace.json .codex-plugin/plugin.json gemini-extension.json; do
+  grep -qF 'prepares each first touch in the CRM: a full draft with personalized statements for every channel it can reach' "./$m" && _report ok "$m: description, every channel" || _report no "$m: description still old"
+  grep -qF 'recommended channel' "./$m" && _report no "$m still says recommended channel" || _report ok "$m: no recommended channel"
+done
+assert_contains "$SP/README.md" 'Upgrading from 7.3'
+assert_contains "$SP/README.md" 'Version 7.4.0.'
+assert_not_contains "$SP/README.md" 'recommends the best'
 
 finish

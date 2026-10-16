@@ -168,8 +168,11 @@ write nothing) exactly where the contract says the operation rejects.
   `attio:search-notes-by-metadata` (`parent_record_object: companies`,
   `parent_record_id: lead_id`, paging until the results run out); keep
   those whose title equals one of the four titles exactly, and read each
-  with `attio:get-note-body`. Split a note into sections on its header
-  lines; the last section is the newest. If there is no company or no
+  with `attio:get-note-body`. When more than one note has the same
+  exact title, use the oldest (earliest `created_at`): it is the one the
+  agent appends to. Split a note into sections on its header lines; the
+  last section is the newest, and a header with nothing after it (a
+  write cut short) is skipped. If there is no company or no
   Pipeline entry, that is an error, not an empty record.
 - **`update_stage`** — Reject a `stage` outside the eleven. Find the
   Pipeline entry by `lead`, then call `attio:update-list-entry-by-id`
@@ -195,16 +198,22 @@ write nothing) exactly where the contract says the operation rejects.
   `call`. Build one draft section (format below), then write it to the
   note titled `Sales Partner · Email`, `Sales Partner · LinkedIn` or
   `Sales Partner · Call` (see **Writing a section**).
-- **Writing a section.** `attio:search-notes-by-metadata` on the company
-  and keep the notes whose title equals the wanted one, by exact title
-  match (case and the `·` included; `Sales Partner · research`
-  or `Research` is the operator's own note and is never touched).
-  None: `attio:create-note` with `parent_object: companies`,
-  `parent_record_id: lead_id`, the title, and the section as `content`.
-  One: `attio:update-note` with `note_id` and `operation: {type:
-  append, content: <section>}`. More than one (an operator copy, or a
-  race): append to the oldest (earliest `created_at`) and never create
-  another. Never pass `updated_title`, never prepend, never delete.
+- **Writing a section.** `attio:search-notes-by-metadata` on the company,
+  paging with `limit: 100` and `offset` until the results run out (a
+  company can hold many other notes, newest first), or reuse the note
+  IDs `get_lead` found. Keep the notes whose title equals the wanted one,
+  by exact title match (case and the `·` included; `Sales Partner ·
+  research` or `Research` is the operator's own note and is never
+  touched). None: create the note with the header line alone, then append
+  the rest of the section: `attio:create-note` with `parent_object:
+  companies`, `parent_record_id: lead_id`, the title, and the header
+  line as `content`, then `attio:update-note` with the new `note_id` and
+  `operation: {type: append, content: <the section's other lines>}`.
+  Appended text is plain, one paragraph per line, so no line is ever
+  reformatted as Markdown. One: `attio:update-note` appending the whole
+  section. More than one (an operator copy, or a race):
+  append to the oldest (earliest `created_at`) and never create another. Never pass
+  `updated_title`, never prepend, never delete.
 - **`upsert_contact`** — Reject a `role` outside the three values.
   Find an existing person first. With an email: `attio:list-records`
   on `people`, filtered on `email_addresses` eq the email. Without
@@ -256,10 +265,14 @@ only with a version bump and an upgrade note in the README.
   a note's first section.
 
 To read the current draft or research, list the notes on the company
-(Attio API: notes filtered by parent record), pick the title, and take
-the last header line and everything after it. To pick leads, list
-`sales_partner_pipeline` entries filtered on `approach_score` and on
-`stage` = `Ready to Send`, so only leads the operator approved go out.
+(Attio API: notes filtered by parent record, paging until the results
+run out), pick the title, and take the last header line and everything
+after it. If more than one note has the exact title, use the oldest
+(earliest `created_at`), the one the agent appends to. Skip a header
+with nothing after it. To pick leads, list `sales_partner_pipeline`
+entries filtered on `approach_score`, on `stage` = `Ready to Send`, so
+only leads the operator approved go out, and on
+`do_not_contact` is not true, so a lead the operator opted out after approving is left out.
 A lead that was researched but not drafted (its Approach score is below
 `approach_threshold`) has a research note and no draft notes.
 

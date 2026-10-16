@@ -772,4 +772,20 @@ assert_contains "$SP/README.md" 'Upgrading from 7.3'
 assert_contains "$SP/README.md" 'Version 7.4.0.'
 assert_not_contains "$SP/README.md" 'recommends the best'
 
+echo "-- 7.4: final review fixes"
+RC="$SP/skills/research-company/SKILL.md"
+assert_contains "$RC" 'Hook: contact route'
+assert_contains "$SP/capabilities/crm/contract.md" 'contact route'
+assert_contains "$SP/subagents/preparer.md" 'Hook: contact route'
+AU2="$SP/capabilities/crm/tools/attio/usage.md"
+assert_contains "$AU2" 'paging with `limit: 100` and `offset`'
+assert_contains "$AU2" 'use the oldest (earliest `created_at`)'
+assert_contains "$AU2" 'create the note with the header line alone, then append'
+assert_contains "$AU2" '`do_not_contact` is not true'
+assert_contains "$SP/skills/send-digest/SKILL.md" 'In Section 2 too, mark every lead whose `Do Not Contact` is true'
+assert_contains "$SP/README.md" 'otherwise it is recorded as a `listing` finding in the research note'
+assert_contains "$SP/subagents/approacher.md" 'the lead'"'"'s own sourced `phone` where the CRM tool stores one'
+assert_contains "$SP/subagents/approacher.md" 'the lead'"'"'s own sourced `email` where the CRM tool stores one'
+assert_contains "$SP/evals/cases.md" 'only email is a general inbox recorded in its research'
+
 finish

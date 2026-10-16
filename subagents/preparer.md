@@ -34,7 +34,8 @@ capped per run at `research_quota_per_week` (both keys from
   finding with its `Type`, `Summary`, `Source URL`, `Date` and `Hook`.
   The listing facts are findings too: rating, review count, hours, and
   the business's main line and general inbox (info@) when sourced, each
-  with its source URL; in a CRM with no home for them on the lead,
+  with its source URL and `Hook: contact route` (always recorded, even
+  without a usable hook); in a CRM with no home for them on the lead,
   that is where the drafts find them
 - Contacts rows linked to the lead, each with `Name`, `Title`, `Email`
   (if verifiable), `Phone` (if sourced), `LinkedIn URL` (if found),

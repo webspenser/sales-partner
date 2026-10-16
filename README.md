@@ -167,8 +167,9 @@ and every channel a lead can be reached on gets a full draft.
   session to move research and drafts into notes: for each company, a
   `Sales Partner · Research` note with one section per original date,
   and a `Sales Partner · Email`, `· LinkedIn` or `· Call` note from the
-  newest draft per channel; a pipeline phone or email that belongs to a
-  linked person goes onto that person. Then archive the `Sales Partner
+  newest draft per channel. A pipeline phone or email that belongs to a
+  linked person goes onto that person; otherwise it is recorded as a `listing` finding in the research note, with its source,
+  so a lead whose only route was that phone keeps it. Then archive the `Sales Partner
   Research` and `Sales Partner Outreach` lists and the pipeline's
   `Phone`, `Email`, `Address` and `Location` attributes (archived data
   stays recoverable).

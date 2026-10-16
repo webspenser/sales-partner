@@ -170,7 +170,11 @@ and says nothing; that is not a failure.
   runs, even on the same day, are two sections. It **rejects the whole
   call** when any finding has an empty `source_url` or an empty `hook`:
   a finding without a source is an unverifiable claim, and one without
-  a hook is a research dump the drafting phase cannot use. `type` is one
+  a hook is a research dump the drafting phase cannot use. The one
+  exception to the usable-hook bar is a contact route: the business's
+  main line or general inbox, recorded as a `listing` finding with
+  `Hook: contact route` whenever it is sourced, because a draft may need
+  it to reach the lead. `type` is one
   of news, funding, social, event, hire, listing, web_presence;
   anything else is rejected. `listing` holds map- or directory-listing
   facts (rating, review count, newest review date, hours, the main

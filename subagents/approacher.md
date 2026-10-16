@@ -39,10 +39,10 @@ edits to earlier sections stay in place.
 ## Outputs
 - **Reachable channels.** A channel in `enabled_channels` the lead can
   be reached on:
-  - `call` with a sourced phone on the chosen Contact, or
+  - `call` with a sourced phone on the chosen Contact, the lead's own sourced `phone` where the CRM tool stores one, or
     a main line recorded in the research with its source URL (the
     business's listing phone counts);
-  - `email` with the chosen Contact's email, or a general inbox
+  - `email` with the chosen Contact's email, the lead's own sourced `email` where the CRM tool stores one, or a general inbox
     (info@) recorded in the research with its source URL;
   - `linkedin` only when the chosen Contact has a sourced `linkedin_url`
     (their own profile; a company page does not count).

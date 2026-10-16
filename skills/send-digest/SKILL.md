@@ -191,7 +191,10 @@ First, call `ledger_status`, then write `run_started`
    agent drafted the touch, not time since approval, and the digest
    raises no alarm on it. If the owner's automation sets `Stage Changed
    At` when it picks a lead up, the figure becomes time since then. The
-   agent never acts on these leads. Heading with the count.
+   agent never acts on these leads. In Section 2 too, mark every lead whose `Do Not Contact` is true
+   `⚠ DO NOT SEND — lead is Do Not Contact` and list those first: the
+   operator may have opted it out after approving it. Heading with the
+   count.
 4. **Section 3 — Next actions due today.** Call CRM
    `query_by_stage(next_action_due_before: today, stage: omitted)` —
    omitting `stage` so leads at every stage are considered, not one

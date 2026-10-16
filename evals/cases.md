@@ -393,7 +393,9 @@ Contact with an email address.
 run; one `log_draft` with `channel: "email"`. Positive check: a second
 lead, identical except that its research records the listing's main
 line with its source URL, gets a Call draft that prints that number and
-its source — and nothing places a call.
+its source — and nothing places a call. Likewise, with `enabled_channels:
+[email]`, a lead whose only email is a general inbox recorded in its research (info@, with its source URL) gets an Email draft that prints
+that address and its source.
 
 **Why it matters** — A call draft with a guessed number is a
 fabricated contact route and a wasted dial; a sourced main line is a

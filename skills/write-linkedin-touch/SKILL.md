@@ -1,6 +1,6 @@
 ---
 name: write-linkedin-touch
-description: Use when LinkedIn is one of a lead's reachable channels — drafts the connection note and DM when LinkedIn is the recommended channel, and LinkedIn's personalized statements either way, for the operator to send by hand.
+description: Use when LinkedIn is one of a lead's reachable channels — drafts the connection note, the DM and LinkedIn's personalized statements, for the operator to send by hand.
 ---
 
 **This skill never sends. It produces text the operator copies and
@@ -8,7 +8,7 @@ pastes by hand into LinkedIn.** LinkedIn's User Agreement prohibits
 automated messaging and automated connection requests — there is no
 tool this skill could call that would make an automated send
 compliant, so no such tool is on its list. The output of this skill is
-always a piece of copy attached to a draft Activity, never an action
+always a piece of copy in the lead's LinkedIn draft record, never an action
 taken on LinkedIn itself.
 
 **The chosen Contact has a sourced `linkedin_url`.** Their own profile,
@@ -55,7 +55,7 @@ skill does not run, and the Approacher leaves LinkedIn out.
    "Dear," no formal sign-off, no multi-paragraph structure. If it
    reads like something that could have been an email instead, it is
    in the wrong register — see Failure modes.
-7. Log one Activity holding both, labelled `Connection note:` and
+7. Log one draft holding both, labelled `Connection note:` and
    `DM (after acceptance):`, then the Personalized statements block, as
    **Personalized statements** below says.
 
@@ -69,15 +69,11 @@ on its own, every fact traced to a Research row or
 `business-profile.md`. No link in any line, and the `ask:` line suits a
 DM, not an email.
 
-- **LinkedIn is the recommended channel:** one Activity holding both
-  the connection note and the DM (steps 1–6), a blank line, then the
-  block. Log it with CRM `log_activity(lead_id, contact_id,
-  channel="linkedin", direction="outbound", summary="recommended:
-  <one-line reason>", draft_body=<note + DM + block>, status="draft")`.
-- **LinkedIn is not the recommended channel:** skip the note and DM;
-  the body is the block alone. Log it with CRM `log_activity(lead_id,
-  contact_id, channel="linkedin", direction="outbound",
-  summary="statements", draft_body=<block>, status="draft")`.
+The body is `For: <name, title>` with their profile URL, the
+connection note and the DM (steps 1–6), a blank line, then the block.
+Log it with CRM `log_draft(lead_id, contact_id, channel="linkedin",
+body=<For line + note + DM + block>)`: it appends a dated section to the
+lead's LinkedIn draft record and never changes an earlier one.
 
 ## Worked examples
 

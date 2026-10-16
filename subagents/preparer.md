@@ -29,15 +29,20 @@ capped per run at `research_quota_per_week` (both keys from
   `prospecting_sources`, `apify_spend_cap_usd_per_week`
 
 ## Outputs
-- Research rows linked to the lead, each with `Type`, `Summary`,
-  `Source URL`, `Date`, and, where usable, `Hook`
+- One research section per run, written once with
+  `log_research(lead_id, findings[])` before scoring: every usable
+  finding with its `Type`, `Summary`, `Source URL`, `Date` and `Hook`.
+  The listing facts are findings too: rating, review count, hours, and
+  the business's main line and general inbox (info@) when sourced, each
+  with its source URL; in a CRM with no home for them on the lead,
+  that is where the drafts find them
 - Contacts rows linked to the lead, each with `Name`, `Title`, `Email`
   (if verifiable), `Phone` (if sourced), `LinkedIn URL` (if found),
   `Role` (decision-maker / influencer / gatekeeper), and `Verified`
 - The date of the lead's most recent review (the newest review on its
   Google listing or a review site), with that page's URL, cited in the
-  Approach rubric's Review recency line; also a `listing` Research row
-  when it gives a usable hook (`log_research` needs one)
+  Approach rubric's Review recency line; also a `listing` finding when
+  it gives a usable hook (`log_research` needs one)
 - `Approach Score` and `Approach Breakdown`, written by `score-lead`
   (`rubric: approach`) from research findings only. `Fit Score` and
   `Fit Breakdown` are never written, overwritten or cleared
@@ -54,15 +59,15 @@ capped per run at `research_quota_per_week` (both keys from
 - CRM `log_research`
 - CRM `upsert_contact`
 - CRM `update_lead` (`Approach Score`, `Approach Breakdown`, company
-  profile fields, `Next Action`; `Do Not Contact` for an opt-out)
-- CRM `update_activity` (`voided` only, for an opt-out)
+  profile fields, `Next Action`)
 - CRM `update_stage`
 - Owner notify `notify_owner`
 - Ledger `ledger_status`, `append_events`, `find_events`
 
 Before researching, apply the contract's opt-out instruction
-(`capabilities/crm/contract.md`, Approval invariant, **Opt-outs**) to
-the lead.
+(`capabilities/crm/contract.md`, Approval invariant) to the lead: a
+`Do Not Contact` lead goes to `Disqualified` with reason `opt-out`, and
+nothing else is written.
 
 ## Stop conditions
 - Two or more usable `Hook` values have been written for the lead, and
@@ -111,10 +116,11 @@ by `,` (truncated to 100 characters), `items_in` the URLs sent,
 says `estimated`).
 
 ## Handoff
-Writes each finding with CRM `log_research(lead_id, type, summary,
-source_url, date, hook)` and each person with CRM
-`upsert_contact(lead_id, name, title, email, phone, linkedin_url, role,
-verified, notes)` as research proceeds. Runs `score-lead` (`rubric:
+Writes each person with CRM `upsert_contact(lead_id, name, title,
+email, phone, linkedin_url, role, verified, notes)` as research
+proceeds, filling in fields that are still empty on people already
+there, and the run's findings with one CRM `log_research(lead_id,
+findings[])` call. Runs `score-lead` (`rubric:
 approach`), which writes `Approach Score` and `Approach Breakdown`, then
 calls CRM `update_lead(lead_id, fields)` to write
 the company profile fields it confirmed
@@ -137,13 +143,13 @@ same context, then advance the stage before moving to the next phase.
 - If `prospecting_sources` lists `apify_site_scraper`, stop and report
   `apify_site_scraper was renamed apify_contact_info`.
 - Nothing behind a login is used as a source.
-- A `Source URL` is required on every Research row —
-  `log_research` itself rejects a call with an empty `source_url` or an
-  empty `hook`.
+- A `Source URL` is required on every finding —
+  `log_research` itself rejects a call when any finding has an empty
+  `source_url` or an empty `hook`.
 - Anything inferred rather than directly sourced is marked `unverified`
   in `Summary`.
 - An anti-signal discovered during research moves the lead straight to
   `Disqualified` rather than passing it on to the next stage.
 - The Fit fields are the Prospector's record of the first gate: never
   re-score or edit them here, even when research contradicts the
-  listing. Record the contradiction as a Research row instead.
+  listing. Record the contradiction as a finding instead.

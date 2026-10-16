@@ -55,7 +55,6 @@ echo "-- call channel"
 assert_contains "$SP/skills/write-call-opener/SKILL.md" 'name: write-call-opener'
 assert_contains "$SP/skills/write-call-opener/SKILL.md" 'channel="call"'
 assert_contains "$SP/templates/cold-call-opener.md" 'Voicemail:'
-assert_contains "$SP/subagents/approacher.md" 'only for a lead with a sourced phone number'
 assert_contains "$SP/context/operating-config.md" '`call` in this list'
 assert_contains "$SP/skills/send-digest/SKILL.md" 'number to dial'
 assert_contains "$SP/templates/digest.md" 'number to dial'
@@ -109,7 +108,6 @@ assert_contains "$SP/subagents/approacher.md" '`callback_phone`'
 assert_contains "$SP/subagents/prospector.md" 'Existing leads, read via CRM'
 assert_contains "$SP/subagents/prospector.md" 'Every source listed in `prospecting_sources` is exhausted'
 assert_contains "$SP/subagents/preparer.md" '`apify_contact_info`'
-assert_contains "$SP/skills/write-call-opener/SKILL.md" 'status="draft"'
 assert_contains "$SP/skills/write-call-opener/SKILL.md" 'never dials'
 assert_contains "$SP/skills/write-call-opener/SKILL.md" 'never an invented number'
 assert_contains "$SP/subagents/approacher.md" 'places, schedules, or records a call'
@@ -271,7 +269,6 @@ assert_not_contains "$SP/capabilities/crm/tools/attio/bootstrap.py" '"approved"'
 
 echo "-- 6.0.0: personalization and config"
 OC="$SP/context/operating-config.md"
-assert_contains "$SP/subagents/approacher.md" 'never an address with a `bounced` Activity'
 
 echo "-- 6.0.0: lead status"
 K="$SP/capabilities/crm/contract.md"
@@ -349,7 +346,7 @@ assert_not_contains "$SP/context/operating-config.md" '`approved`'
 assert_contains "$SP/context/operating-config.md" 'only the operator approves a lead'
 AP="$SP/subagents/approacher.md"
 assert_not_contains "$AP" 'One opening touch per lead'
-assert_contains "$AP" 'prepares the lead'"'"'s first touch'
+assert_contains "$AP" 'drafts the lead'"'"'s first touch'
 assert_contains "$AP" 'redraft'
 E="$SP/evals/cases.md"
 assert_contains "$E" 'at `Contacted` and one at `Ready to Send`'
@@ -408,7 +405,7 @@ for c in attio hubspot; do
   assert_not_contains "$U" 'sequences'
 done
 grep -qF 'update: [append]' "$SP/capabilities/crm/tools/attio/guard.yaml" && _report ok "attio guard: notes are append-only" || _report no "attio guard: note append rule"
-assert_contains "$SP/context/operating-config.md" '`update_activity` moves it only to `voided`'
+assert_contains "$SP/context/operating-config.md" 'Drafts are append-only'
 E="$SP/evals/cases.md"
 assert_contains "$E" '## Case 5: Opt-out sets Do Not Contact and voids pending drafts'
 assert_not_contains "$E" 'enroll'
@@ -417,12 +414,7 @@ assert_not_contains "$E" 'suppress'
 
 echo "-- 6.0.0: recommendation and personalized statements"
 AP="$SP/subagents/approacher.md"
-assert_contains "$AP" 'recommended: <one-line reason>'
-assert_contains "$AP" 'summary `statements`'
-assert_contains "$AP" 'one draft Activity per enabled channel'
-assert_contains "$AP" 'the full draft only for the recommended channel'
 assert_contains "$AP" 'templates/personalized-statements.md'
-assert_contains "$AP" 'never an address with a `bounced` Activity'
 assert_not_contains "$AP" 'touch_spacing_days'
 assert_not_contains "$AP" 'sequences'
 assert_not_contains "$AP" 'sequence platform'
@@ -436,12 +428,11 @@ assert_contains "$PS" 'two to four lines'
 for w in write-cold-email write-linkedin-touch write-call-opener; do
   assert_contains "./skills/$w/SKILL.md" '## Personalized statements'
   assert_contains "./skills/$w/SKILL.md" 'templates/personalized-statements.md'
-  assert_contains "./skills/$w/SKILL.md" 'summary="statements"'
 done
 assert_not_contains "$SP/skills/write-cold-email/SKILL.md" 'sequences'
 assert_not_contains "$SP/skills/write-cold-email/SKILL.md" 'variables:'
 assert_not_contains "$SP/templates/cold-email.md" 'sequences'
-assert_contains "$SP/skills/write-linkedin-touch/SKILL.md" 'one Activity holding both'
+assert_contains "$SP/skills/write-linkedin-touch/SKILL.md" 'Log one draft holding both'
 assert_contains "$SP/evals/cases.md" '## Case 14: The first touch is one recommendation plus statements per channel'
 
 echo "-- 6.0.0: AGENT.md and manifests describe lead generation and personalization"
@@ -449,7 +440,6 @@ A="$SP/AGENT.md"
 assert_contains "$A" 'lead generation and personalization'
 assert_contains "$A" 'stops at `Approach Drafted`'
 assert_contains "$A" 'never act on a lead at'
-assert_contains "$A" '`recommended:`'
 assert_not_contains "$A" 'enroll'
 assert_not_contains "$A" 'sync-replies'
 assert_not_contains "$A" 'sequence'
@@ -465,14 +455,9 @@ K="$SP/capabilities/crm/contract.md"
 assert_contains "$K" '`Disqualified` with reason `opt-out` and writes nothing else'
 assert_contains "$K" 'When the Prospector (on a lead it re-finds),'
 assert_not_contains "$K" '`sent` and `voided` by `update_activity`'
-assert_contains "$SP/subagents/prospector.md" '`Do Not Contact` for an opt-out)'
-for f in prospector preparer; do
-  assert_contains "./subagents/$f.md" '- CRM `update_activity` (`voided` only, for an opt-out)'
-done
 AP="$SP/subagents/approacher.md"
 assert_contains "$AP" 'No reachable channel'
 assert_contains "$AP" 'reason `no reachable channel`'
-assert_contains "$AP" 'exactly one `recommended:` draft'
 D="$SP/skills/send-digest/SKILL.md"
 assert_contains "$D" '⚠ opt-out logged — Do Not Contact not set'
 assert_contains "$D" '(now <status>)'
@@ -743,9 +728,25 @@ HU="$SP/capabilities/crm/tools/hubspot/usage.md"
 assert_contains "$HU" 'Channel: email'
 assert_contains "$HU" 'hs_note_body'
 assert_contains "$HU" '=== YYYY-MM-DD · draft ==='
-for gone in hs_task_status update_activity query_activities log_activity 'Outcome for task' recommended; do
+assert_contains "$HU" 'forbidden outright: the agent uses no Tasks'
+assert_contains "$HU" 'by `hs_createdate` (stamped by HubSpot, never by the agent)'
+for gone in update_activity query_activities log_activity 'Outcome for task' recommended; do
   assert_not_contains "$HU" "$gone"
 done
 grep -qF 'field: hs_note_body' ./capabilities/crm/tools/hubspot/guard.yaml && _report ok "hubspot guard: note body fixed after create" || _report no "hubspot guard: note body rule"
+
+while IFS= read -r f; do
+  for gone in log_activity update_activity query_activities 'recommended:' '`statements`' 'bounced Activity'; do
+    assert_not_contains "$f" "$gone"
+  done
+done < <(find ./AGENT.md ./subagents ./skills ./templates ./context -name '*.md')
+assert_contains "$SP/subagents/approacher.md" 'a full draft for each enabled channel the lead is reachable on'
+assert_contains "$SP/subagents/approacher.md" 'a main line recorded in the research with its source URL'
+assert_contains "$SP/subagents/preparer.md" 'log_research(lead_id, findings[])'
+assert_contains "$SP/subagents/preparer.md" 'main line and general inbox'
+assert_contains "$SP/skills/write-cold-email/SKILL.md" 'log_draft(lead_id, contact_id, channel="email"'
+assert_contains "$SP/skills/write-linkedin-touch/SKILL.md" 'log_draft(lead_id, contact_id, channel="linkedin"'
+assert_contains "$SP/skills/write-call-opener/SKILL.md" 'log_draft(lead_id, contact_id, channel="call"'
+assert_contains "$SP/AGENT.md" 'a full draft and personalized statements for every channel it can reach'
 
 finish

@@ -162,7 +162,7 @@ outside the pipeline), adopt it (step 7) and return its ID as `lead_id`.
    first line is a `research` header is a research section; one whose
    first lines are a `draft` header and `Channel: <channel>` is a draft
    section for that channel. Any other Note is the operator's and is
-   ignored. Sort each record's sections by `hs_timestamp`: the last is
+   ignored. Sort each record's sections by `hs_createdate` (stamped by HubSpot, never by the agent): the last is
    the newest.
 
 ### `update_stage`

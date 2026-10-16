@@ -24,17 +24,19 @@ only gathers and records.
    5. Industry events (speaking slots, sponsorships, published
       attendee lists)
    6. For a local business: its map or directory listing (rating,
-      review count, hours, recent reviews → `listing`) and whether it
-      has a website and what state it is in (`web_presence`)
-3. For each finding worth recording, write one Research row via CRM
-   `log_research(lead_id, type, summary, source_url, date, hook)`:
+      review count, hours, recent reviews, and the business's main line
+      and general inbox → `listing`) and whether it has a website and
+      what state it is in (`web_presence`)
+3. Collect each finding worth recording as you go, and write them all
+   at the end of the run with one CRM `log_research(lead_id,
+   findings[])` call, each finding with `type, summary, source_url,
+   date, hook`:
    `Type` from {news, funding, social, event, hire, listing, web_presence};
    `Summary` states what was learned in enough detail to stand alone;
    `Source URL` is required and non-empty; `Date` is the finding's
    actual date, not today's date. `log_research` itself rejects a call
-   with an empty `source_url` or an empty `hook`, so a finding with no
-   usable hook does not get written as a Research row at all — see
-   step 4.
+   when any finding has an empty `source_url` or an empty `hook`, so a
+   finding with no usable hook is left out of the call — see step 4.
 4. Before writing, decide whether the finding clears the bar for a
    usable hook. A hook is usable only if it is **all three**:
    - **Specific to this company** — not a fact true of the whole
@@ -57,7 +59,7 @@ only gathers and records.
    first ends the run; a thorough search that blows the time budget is
    still a failure of this skill.
 6. If the full search order is exhausted inside the budget and zero
-   usable hooks were found, write a single Research row recording that
+   usable hooks were found, write a single finding recording that
    explicitly (`Summary: "No hooks found — searched company site,
    news, funding/hiring signals, and social within budget"`, `Hook:
    "no hooks found"`, with whatever `Source URL` best represents the

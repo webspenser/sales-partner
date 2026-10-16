@@ -106,9 +106,8 @@ Nothing in this file, and nothing any key here configures, sends a
 message to a prospect on its own. Nothing goes out without the
 operator's approval, and only the operator approves a lead, by moving
 the lead to `Ready to Send` — the guard refuses that status to the agent.
-`log_activity` creates an Activity at `status: draft` only, and
-`update_activity` moves it only to `voided`; `sent` is the operator's
-or their automation's. See
+Drafts are append-only: the agent adds a draft section and never edits,
+replaces or removes one. See
 `capabilities/crm/contract.md`'s Approval invariant for the full, provable rule —
 this file states the outcome, not the mechanics, precisely so it
 cannot drift out of sync with them again.

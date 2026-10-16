@@ -157,40 +157,34 @@ SM=
 
 echo "-- Attio"
 AT=capabilities/crm/tools/attio/guard.yaml; P=mcp__claude_ai_Attio__
-L='"list":"sales_partner_outreach","parent_object":"companies","parent_record_id":"00000000-0000-0000-0000-000000000001"'
-X='"list":"sales_partner_outreach","entry_id":"00000000-0000-0000-0000-000000000002"'
-check 0 "create draft"              $AT ${P}add-record-to-list "{$L,\"entry_values\":{\"status\":\"draft\",\"summary\":\"x\"}}"
-check 0 "create draft as list"      $AT ${P}add-record-to-list "{$L,\"entry_values\":{\"status\":[\"draft\"]}}"
-check 2 "create approved"           $AT ${P}add-record-to-list "{$L,\"entry_values\":{\"status\":\"approved\"}}" "status may only be written as draft on create"
-check 2 "create sent via option"    $AT ${P}add-record-to-list "{$L,\"entry_values\":{\"status\":{\"option\":\"sent\"}}}"
-check 2 "create voided"             $AT ${P}add-record-to-list "{$L,\"entry_values\":{\"status\":\"voided\"}}"
-check 2 "mixed wrapped status"      $AT ${P}add-record-to-list "{$L,\"entry_values\":{\"status\":{\"option\":\"draft\",\"title\":\"approved\"}}}"
+L='"list":"sales_partner_pipeline","parent_object":"companies","parent_record_id":"00000000-0000-0000-0000-000000000001"'
+X='"list":"sales_partner_pipeline","entry_id":"00000000-0000-0000-0000-000000000002"'
+N='"note_id":"00000000-0000-0000-0000-000000000005"'
 check 0 "create lead, dnc false ok" $AT ${P}add-record-to-list "{$L,\"entry_values\":{\"stage\":\"New\",\"do_not_contact\":false}}"
-check 0 "update voided"             $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"status\":\"voided\",\"outcome\":\"dup\"}}"
-check 2 "update draft"              $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"status\":\"draft\"}}" "status may only be written as voided on update"
-check 2 "update approved by record" $AT ${P}update-list-entry-by-record-id "{$L,\"entry_values\":{\"status\":\"Approved\"}}"
-check 2 "status by option UUID"     $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"status\":\"49e56c99-597b-40b5-9413-162ce1adadfc\"}}"
-check 2 "unknown value shape"       $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"status\":{\"foo\":1}}}" "cannot check this call"
+check 2 "unknown value shape"       $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"stage\":{\"foo\":1}}}" "cannot check this call"
 check 2 "dnc cleared"               $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"do_not_contact\":false}}" "do_not_contact may only be written as true"
 check 2 "dnc cleared as string"     $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"do_not_contact\":\"false\"}}"
 check 0 "dnc set true"              $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"do_not_contact\":true}}"
-check 2 "attribute by ID"           $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"925c1cde-cba6-453e-96f9-5bd8f498d8a3\":\"sent\"}}" "addressed by ID"
-check 2 "upsert with approved"      $AT ${P}upsert-record '{"object":"people","matching_attribute":"email_addresses","values":{"status":"approved"}}'
+check 2 "attribute by ID"           $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"925c1cde-cba6-453e-96f9-5bd8f498d8a3\":\"Ready to Send\"}}" "addressed by ID"
 check 0 "update person"             $AT ${P}update-record '{"object":"people","record_id":"00000000-0000-0000-0000-000000000003","values":{"sp_role":"influencer"}}'
 check 0 "fill company profile"      $AT ${P}update-record '{"object":"companies","record_id":"00000000-0000-0000-0000-000000000004","values":{"description":"Plumbing and radiant heating in Alameda, CA","primary_location":"1173 Broadway, Alameda, CA, 94501, US","linkedin":"https://www.linkedin.com/company/x"}}'
-check 2 "create-record approved"    $AT ${P}create-record '{"object":"companies","values":{"status":"approved"}}'
 check 2 "create-list refused"       $AT ${P}create-list '{"name":"x"}' "is denied"
-check 2 "update-list refused"       $AT ${P}update-list '{"list":"sales_partner_outreach"}'
+check 2 "update-list refused"       $AT ${P}update-list '{"list":"sales_partner_pipeline"}'
 check 2 "delete refused"            $AT ${P}delete-comment '{}' "is denied"
 check 2 "merge refused"             $AT ${P}merge-records '{}' "is denied"
 check 2 "unlisted tool refused"     $AT ${P}create-comment '{}' "is not in the allow list"
-check 0 "read tool allowed"         $AT ${P}list-records-in-list '{"list":"sales_partner_outreach"}'
-check 2 "create-note not allowed"   $AT ${P}create-note '{"title":"x","content":"y"}' "is not in the allow list"
+check 0 "read tool allowed"         $AT ${P}list-records-in-list '{"list":"sales_partner_pipeline"}'
+check 0 "find notes allowed"        $AT ${P}search-notes-by-metadata '{"parent_record_object":"companies","parent_record_id":"00000000-0000-0000-0000-000000000001"}'
+check 0 "read a note allowed"       $AT ${P}get-note-body "{$N}"
+check 0 "create a note"             $AT ${P}create-note '{"parent_object":"companies","parent_record_id":"00000000-0000-0000-0000-000000000001","title":"Sales Partner · Research","content":"=== 2026-10-16 · research ==="}'
+check 0 "append to a note"          $AT ${P}update-note "{$N,\"operation\":{\"type\":\"append\",\"content\":\"=== 2026-10-17 · draft ===\"}}"
+check 2 "prepend refused"           $AT ${P}update-note "{$N,\"operation\":{\"type\":\"prepend\",\"content\":\"x\"}}" "type may only be written as append"
+check 2 "retitle refused"           $AT ${P}update-note "{$N,\"updated_title\":\"x\"}" "may not use"
+check 2 "append and retitle refused" $AT ${P}update-note "{$N,\"operation\":{\"type\":\"append\",\"content\":\"x\"},\"updated_title\":\"x\"}" "may not use"
+check 2 "extra operation key refused" $AT ${P}update-note "{$N,\"operation\":{\"type\":\"append\",\"content\":\"x\",\"mode\":\"replace\"}}" "may not use"
+check 2 "delete-note refused"       $AT ${P}delete-note "{$N}" "is denied"
 check 2 "create-task not allowed"   $AT ${P}create-task '{"content":"x"}' "is not in the allow list"
 check 2 "update-task not allowed"   $AT ${P}update-task '{"task_id":"x"}' "is not in the allow list"
-check 0 "create with draft_body"    $AT ${P}add-record-to-list "{$L,\"entry_values\":{\"status\":\"draft\",\"draft_body\":\"Hi\"}}"
-check 2 "draft_body rewritten"      $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"draft_body\":\"new\"}}" "draft_body may not be changed after create"
-check 2 "Draft Body spelled out"    $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"Draft Body\":\"new\"}}" "may not be changed after create"
 out=$(printf '{not json' | python3 -B "$E" "$AT" - x 2>&1); rc=$?
 [ "$rc" -eq 2 ] && _report ok "malformed JSON blocks" || _report no "malformed JSON (rc=$rc)"
 
@@ -207,8 +201,6 @@ check 2 "agent can't mark Customer"   $AT ${P}update-list-entry-by-id "{$X,\"ent
 check 2 "Replied is gone"             $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"stage\":\"Replied\"}}" "stage may only be written as"
 check 2 "lead created past New"       $AT ${P}add-record-to-list "{$L,\"entry_values\":{\"stage\":\"Scored\"}}" "stage may only be written as New on create"
 check 0 "lead created at New"         $AT ${P}add-record-to-list "{$L,\"entry_values\":{\"stage\":\"New\"}}"
-check 2 "agent can't mark a touch sent" $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"status\":\"sent\"}}" "status may only be written as voided on update"
-check 2 "agent can't revive a draft"  $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"status\":\"draft\"}}"
 echo "-- HubSpot"
 HS=capabilities/crm/tools/hubspot/guard.yaml; H=mcp__claude_ai_HubSpot__
 TC='{"objectType":"tasks","properties":{"hs_task_status":"%s"}}'

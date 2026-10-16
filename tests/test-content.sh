@@ -239,7 +239,7 @@ assert_contains "$SP/AGENT.md" '`capabilities/crm/contract.md` (Lead status, Lea
 assert_contains "$SP/context/icp.md" '`capabilities/crm/contract.md` (Lead status transitions)'
 assert_contains "$SP/capabilities/crm/contract.md" 'idle age = now − `Stage Changed At`'
 D="$SP/skills/send-digest/SKILL.md"
-assert_contains "$SP/capabilities/crm/tools/attio/usage.md" '`stage_changed_at`. If the lead has no'
+assert_contains "$SP/capabilities/crm/tools/attio/usage.md" 'For `idle_days`: keep a lead when now minus'
 assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'If the lead has no Task'
 echo "-- 5.0.0: void outcome Note, changed fields only"
 HU="$SP/capabilities/crm/tools/hubspot/usage.md"
@@ -328,7 +328,6 @@ assert_contains "$T" '## Ready to Send ([count])'
 assert_not_contains "$T" 'Won:'
 K="$SP/capabilities/crm/contract.md"
 assert_contains "$K" '| `log_research` | `lead_id, findings[]`'
-assert_contains "$SP/capabilities/crm/tools/attio/usage.md" '`channel` when given'
 assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" '`channel` when given'
 
 
@@ -349,7 +348,7 @@ echo "-- 6.0.0: final review fixes"
 PR="$SP/subagents/prospector.md"
 assert_contains "$PR" 'leave it untouched unless its status is `New`, or `Nurture` with a Revisit On date in the past'
 assert_contains "$PR" '- CRM `get_lead`'
-assert_contains "$SP/capabilities/crm/tools/attio/usage.md" 'act only on a `recommended:` draft of a lead at `Ready to Send`'
+assert_contains "$SP/capabilities/crm/tools/attio/usage.md" 'then move the lead to `Ready to Send`: that approves it'
 assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'act only on a `recommended:` draft of a lead at `Ready to Send`'
 assert_not_contains "$SP/context/operating-config.md" '`approved`'
 assert_contains "$SP/context/operating-config.md" 'only the operator approves a lead'
@@ -413,8 +412,7 @@ for c in attio hubspot; do
   assert_not_contains "$U" 'sync-replies'
   assert_not_contains "$U" 'sequences'
 done
-grep -qF 'update: [voided]' "$SP/capabilities/crm/tools/attio/guard.yaml" && grep -qF 'update: [DEFERRED]' "$SP/capabilities/crm/tools/hubspot/guard.yaml" && _report ok "guards: agent only voids Activities" || _report no "guards: Activity status update list"
-assert_contains "$SP/capabilities/crm/tools/attio/usage.md" '**`update_activity`** — Reject `status` other than `voided`.'
+grep -qF 'update: [append]' "$SP/capabilities/crm/tools/attio/guard.yaml" && _report ok "attio guard: notes are append-only" || _report no "attio guard: note append rule"
 assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'Reject a `status` other than `voided`.'
 assert_contains "$SP/context/operating-config.md" '`update_activity` moves it only to `voided`'
 E="$SP/evals/cases.md"
@@ -450,7 +448,6 @@ assert_not_contains "$SP/skills/write-cold-email/SKILL.md" 'sequences'
 assert_not_contains "$SP/skills/write-cold-email/SKILL.md" 'variables:'
 assert_not_contains "$SP/templates/cold-email.md" 'sequences'
 assert_contains "$SP/skills/write-linkedin-touch/SKILL.md" 'one Activity holding both'
-assert_contains "$SP/capabilities/crm/tools/attio/usage.md" 'the `recommended:` one holds the full draft'
 assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'the `recommended:` one holds the full draft'
 assert_contains "$SP/evals/cases.md" '## Case 14: The first touch is one recommendation plus statements per channel'
 
@@ -733,5 +730,21 @@ assert_not_contains "$C" 'log_activity'
 assert_not_contains "$C" 'recommended'
 assert_contains "$C" 'drafts are append-only'
 assert_contains "$C" 'a tool with no home for them skips them'
+
+AU="$SP/capabilities/crm/tools/attio/usage.md"
+AB=./capabilities/crm/tools/attio/bootstrap.py
+assert_contains "$AU" '`Sales Partner · Research`'
+assert_contains "$AU" '`Sales Partner · Email`'
+assert_contains "$AU" '=== YYYY-MM-DD · draft ==='
+assert_contains "$AU" '## Reading notes from an automation'
+assert_contains "$AU" 'append to the oldest'
+assert_contains "$AU" 'exact title'
+assert_contains "$AU" 'company name + `primary_location`'
+for gone in sales_partner_research sales_partner_outreach draft_body '`phone` | text' log_activity update_activity query_activities; do
+  assert_not_contains "$AU" "$gone"
+done
+for gone in sales_partner_research sales_partner_outreach draft_body 'attr("phone"' 'attr("email"' 'attr("address"' 'attr("location"'; do
+  grep -qF "$gone" "$AB" && _report no "attio bootstrap still has $gone" || _report ok "attio bootstrap drops $gone"
+done
 
 finish

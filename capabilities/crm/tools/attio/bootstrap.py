@@ -11,7 +11,7 @@ object_configuration, list_configuration, record_permission, list_entry
 
     python3 capabilities/crm/tools/attio/bootstrap.py
 
-Uses lists rather than custom objects so it works on plans with no
+Uses one list rather than custom objects so it works on plans with no
 custom-object allowance.
 """
 import json
@@ -28,8 +28,6 @@ STAGES = [
 ]
 
 PIPELINE = "sales_partner_pipeline"
-RESEARCH = "sales_partner_research"
-OUTREACH = "sales_partner_outreach"
 
 
 def attr(slug, title, type_, options=None, config=None, description=""):
@@ -40,9 +38,8 @@ def attr(slug, title, type_, options=None, config=None, description=""):
     }
 
 
-# Every list hangs off Companies. Pipeline holds exactly one entry per
-# company (the tool upserts by parent record); Research and Outreach
-# hold many entries per company, one per finding / per message.
+# One list, hanging off Companies: exactly one entry per lead company.
+# Research and drafts are notes on the company, which need no schema.
 LISTS = {
     PIPELINE: ("Sales Partner Pipeline", [
         attr("stage", "Stage", "status"),
@@ -54,43 +51,12 @@ LISTS = {
         attr("approach_breakdown", "Approach Breakdown", "text"),
         attr("industry", "Industry", "text"),
         attr("size", "Size", "text"),
-        attr("location", "Location", "text"),
-        attr("address", "Address", "text"),
-        attr("phone", "Phone", "text"),
-        attr("email", "Email", "text"),
         attr("source", "Source", "text"),
         attr("source_url", "Source URL", "text"),
         attr("next_action", "Next Action", "text"),
         attr("next_action_due", "Next Action Due", "date"),
         attr("revisit_on", "Revisit On", "date"),
         attr("do_not_contact", "Do Not Contact", "checkbox"),
-        attr("lead", "Lead", "record-reference",
-             config={"record_reference": {"allowed_objects": ["companies"]}},
-             description="Same company as the parent record; exists because list "
-                         "entries cannot be filtered by parent."),
-    ]),
-    RESEARCH: ("Sales Partner Research", [
-        attr("type", "Type", "select",
-             ["news", "funding", "social", "event", "hire", "listing", "web_presence"]),
-        attr("summary", "Summary", "text"),
-        attr("source_url", "Source URL", "text"),
-        attr("date", "Date", "date"),
-        attr("hook", "Hook", "text"),
-        attr("lead", "Lead", "record-reference",
-             config={"record_reference": {"allowed_objects": ["companies"]}},
-             description="Same company as the parent record; exists because list "
-                         "entries cannot be filtered by parent."),
-    ]),
-    OUTREACH: ("Sales Partner Outreach", [
-        attr("channel", "Channel", "select", ["email", "linkedin", "call", "other"]),
-        attr("direction", "Direction", "select", ["outbound", "inbound"]),
-        attr("date", "Date", "date"),
-        attr("summary", "Summary", "text"),
-        attr("draft_body", "Draft Body", "text"),
-        attr("status", "Status", "select", ["draft", "sent", "voided"]),
-        attr("outcome", "Outcome", "text"),
-        attr("contact", "Contact", "record-reference",
-             config={"record_reference": {"allowed_objects": ["people"]}}),
         attr("lead", "Lead", "record-reference",
              config={"record_reference": {"allowed_objects": ["companies"]}},
              description="Same company as the parent record; exists because list "

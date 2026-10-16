@@ -1,9 +1,12 @@
 # Attio guard policy: enforces the crm contract's invariants on Attio tool calls.
+# Drafts and research are notes on the company: the agent may create a note
+# and append to it, never prepend, retitle or delete one.
 covers: [draft_only, dnc_one_way, no_delete]
 
 allow: [whoami, list-*, get-*, search-*, semantic-search-*, run-basic-report,
         add-record-to-list, create-record, upsert-record, update-record,
-        update-list-entry-by-id, update-list-entry-by-record-id]
+        update-list-entry-by-id, update-list-entry-by-record-id,
+        create-note, update-note]
 deny: ["*delete*", "*merge*", create-list, update-list]
 
 writes:
@@ -13,18 +16,29 @@ writes:
   - kind: update
     tools: [update-list-entry-by-id, update-list-entry-by-record-id, update-record, upsert-record]
     at: [entry_values, values]
+  - kind: update
+    tools: [update-note]
+    at: [operation]
 unwrap: [option, status, value, title]
 unknown_writes: update
 refuse_keys: [uuid]
 
+only_keys:
+  - tools: [create-note]
+    at: ["$"]
+    keys: [parent_object, parent_record_id, title, content]
+  - tools: [update-note]
+    at: ["$"]
+    keys: [note_id, operation]
+  - tools: [update-note]
+    at: [operation]
+    keys: [type, content]
+
 rules:
-  - field: status
-    create: [draft]
-    update: [voided]
   - field: stage
     create: [New]
     update: [Scored, Researched, "Approach Drafted", Disqualified]
   - field: do_not_contact
     update: [true]
-  - field: draft_body
-    forbid: update
+  - field: type
+    update: [append]

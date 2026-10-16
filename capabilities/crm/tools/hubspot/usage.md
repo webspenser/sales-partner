@@ -17,13 +17,13 @@ their prefix (for example `mcp__claude_ai_HubSpot__search_crm_objects`).
 
 Every lead is a HubSpot **Company**, with a custom `sp_stage` dropdown
 holding the eleven statuses. People at the lead are **Contacts**
-associated with that company. Each research finding is a **Note**
-associated with the company. Each outreach draft or logged interaction
-(an Activity) is a **Task** associated with the company and, when there
-is one, the contact. A Task's contract `status` lives in HubSpot's
-built-in task status (`hs_task_status`), because the free tier allows no
-custom properties on Tasks. This works on the free tier, keeps one
-record per business, and leaves the Deals pipeline free for real deals.
+associated with that company. The research record and the draft
+records are **Notes** associated with the company: one Note per
+`log_research` call and one per `log_draft` call. HubSpot notes have no
+title and can't be appended to through a guard-safe write, so each
+section is its own Note, and its first lines say which record it
+belongs to. This works on the free tier, keeps one record per business,
+and leaves the Deals pipeline free for real deals. Tasks are not used.
 All custom properties carry the `sp_` prefix and sit in the property
 group `Sales Partner` (internal name `sales_partner`).
 
@@ -31,47 +31,11 @@ group `Sales Partner` (internal name `sales_partner`).
 |---|---|---|
 | Lead | Company | — |
 | Contact | Contact | its company |
-| Research | Note | its company |
-| Activity | Task (built-in fields only; status in `hs_task_status`) | its company and contact |
+| Research record | Notes, one per research run | its company |
+| Draft records | Notes, one per draft | its company and, when there is one, the contact |
 
-**`lead_id` is the Company's record ID** (`hs_object_id`).
-`activity_id` is the Task's ID, `research_id` the Note's, and
+**`lead_id` is the Company's record ID** (`hs_object_id`), and
 `contact_id` the Contact's.
-
-## Schema
-
-### Company — the Leads table
-
-| Property | Type | Contract field |
-|---|---|---|
-| `name` | native | `company` |
-| `domain` | native | `domain` (bare, no `https://` or `www.`) |
-| `phone` | native, written as E.164 | `phone` |
-| `address`, `city`, `state`, `zip`, `country` | native | `address`, as sourced, split into its parts |
-| `sp_stage` | dropdown, the eleven statuses | `Stage` |
-| `sp_stage_changed_at` | datetime | `Stage Changed At` |
-| `sp_stage_reason` | multi-line text | the `reason` from the latest `update_stage` |
-| `sp_fit_score` | number | `Fit Score` |
-| `sp_fit_breakdown` | multi-line text | `Fit Breakdown` |
-| `sp_approach_score` | number | `Approach Score` |
-| `sp_approach_breakdown` | multi-line text | `Approach Breakdown` |
-| `sp_industry` | text | `Industry` |
-| `sp_size` | text | `Size` |
-| `sp_source` | text | `Source` |
-| `sp_source_url` | text | `Source URL` |
-| `sp_email` | text | `Email` (the general inbox only) |
-| `sp_next_action` | text | `Next Action` |
-| `sp_next_action_due` | date | `Next Action Due` |
-| `sp_revisit_on` | date | `Revisit On` — set by the operator for `Nurture`; the agent reads it, never writes it |
-| `sp_do_not_contact` | checkbox (`true` / `false`) | `Do Not Contact` |
-
-The contract's `Location` has no custom property. It is the native `city`,
-`state` and `country`, which the tool writes; readers compose the location
-from those three.
-
-`sp_stage` option values are exactly the contract's stage names: `New`,
-`Scored`, `Researched`, `Approach Drafted`, `Ready to Send`, `Contacted`, `Engaged`,
-`Open Deal`, `Nurture`, `Customer`, `Disqualified`.
 
 ### Contact — the Contacts table
 
@@ -86,58 +50,23 @@ from those three.
 | `sp_verified` | `verified` (`true` / `false`) |
 | `sp_notes` | `notes` |
 
-### Note — the Research table
+### Notes — the research and draft records
 
-`hs_note_body` holds five labelled lines, one `<p>` each:
+`hs_note_body` is rich text: one `<p>` per line, in the section format
+of the Attio tool's **Reading notes from an automation**
+(`../attio/usage.md`), so an automation reads both CRMs the same way. A
+research Note's first line is `=== YYYY-MM-DD · research ===`, then one
+block per finding (`Type:`, `Date:`, `Summary:`, `Source:`, `Hook:`). A
+draft Note's first lines are `=== YYYY-MM-DD · draft ===` and
+`Channel: email` (or `linkedin`, `call`), then `For: …`, the full draft
+and the Personalized statements block. `hs_timestamp` is the moment of
+the write.
 
-    <p>Type: news</p><p>Summary: …</p><p>Source URL: https://…</p><p>Date: 2026-09-30</p><p>Hook: …</p>
-
-`hs_timestamp` is the research `date` (ISO 8601). `type` is one of news,
-funding, social, event, hire, listing, web_presence.
-
-### Task — the Activities table
-
-Every field is a built-in Task property; Tasks need no custom fields.
-
-| Property | Contract field |
-|---|---|
-| `hs_task_subject` | `subject`: a short title, `<channel> <direction> — <company>` |
-| `hs_task_body` | rich text: `direction`, `summary` and (when known at create) `outcome` as labelled `<p>` lines, then `draft_body` (below). Set on create only |
-| `hs_timestamp` | the due date / `Date` (set to now on create) |
-| `hs_task_type` | `channel`: `EMAIL` for email, `CALL` for call, `LINKED_IN_MESSAGE` for linkedin (the connection note and DM share one Task), `TODO` for other |
-| `hs_task_status` | `status`, mapped below |
-| `hs_task_priority` | `direction`: `HIGH` for outbound, `NONE` for inbound. This is the source of truth for direction |
-
-`status` maps onto HubSpot's built-in task status:
-
-| Contract `status` | `hs_task_status` | Who sets it |
-|---|---|---|
-| `draft` | `NOT_STARTED` | the agent, on create only (omitting the field also yields `NOT_STARTED`) |
-| `sent` | `COMPLETED` | the operator or their automation, after the touch went out — never the agent |
-| `voided` | `DEFERRED` | the agent or the operator |
-
-`IN_PROGRESS` and `WAITING` are not contract statuses: a Task the
-operator moves there is read as `draft`. The lead is approved on the
-Company, by moving `sp_stage` to `Ready to Send`.
-
-`hs_task_body` is rich text, so it starts with labelled lines, one
-`<p>` each (as Research Notes do), then the draft:
-
-    <p>Direction: outbound</p><p>Summary: <summary></p><p><draft_body></p>
-
-The guard refuses any change to `hs_task_body` after create, so a draft
-can't be rewritten after the operator approved the lead. A voided Task's outcome is a Note on
-the lead's Company whose body starts `Outcome for task <activity_id>:`
-(see `update_activity`). An operator's edit in HubSpot may rewrap these lines in other tags, so
-on read strip the HTML tags (treating `</p>`, `<br>` and `</div>` as line
-breaks) before parsing the lines back into `summary` and `outcome`. The
-`Direction:` line is kept for people to read; `direction` itself is read
-from `hs_task_priority`.
-
-Outbound drafts are Tasks with status Not started and priority High,
-one per channel, each with its due date. There is no separate drafts
-object: the operator reviews a lead's drafts from its Company (see
-**Review** below).
+The guard refuses any change to `hs_note_body` after create, so a draft
+can't be rewritten after the operator read it: a redraft is a new Note.
+An operator's edit in HubSpot may rewrap the lines in other tags, so on
+read strip the HTML tags (treating `</p>`, `<br>` and `</div>` as line
+breaks) before parsing the lines.
 
 ## Calling the connector
 
@@ -152,7 +81,7 @@ object: the operator reviews a lead's drafts from its Company (see
   batches.
 - **`confirmationStatus`.** Interactive runs: follow the connector's confirmation step — on the first write show the change table and offer to skip confirmations for the session. Scheduled runs (the prompt starts `Scheduled run of`): pass `confirmationStatus: CONFIRMATION_WAIVED_FOR_SESSION`; the guard enforces the invariants.
 - **Reads.** `hubspot:search_crm_objects` takes `objectType` (`COMPANY`,
-  `CONTACT`, `NOTE`, `TASK`), `filterGroups` (each
+  `CONTACT`, `NOTE`), `filterGroups` (each
   `{"filters": [{"propertyName", "operator", "value"}], "associatedWith": [{"objectType", "operator", "objectIdValues"}]}`;
   groups are ORed, filters in a group ANDed), `properties`, `sorts`
   (one rule), `limit` (max 200) and `offset` for paging. It also needs
@@ -226,13 +155,15 @@ outside the pipeline), adopt it (step 7) and return its ID as `lead_id`.
 1. `hubspot:get_crm_objects` on `COMPANY` with `objectIds: [lead_id]`
    and every Company property in the Schema. No record, or a record
    without `sp_stage`, is an error, not an empty record.
-2. `hubspot:search_crm_objects` on `CONTACT`, `NOTE`, and `TASK`, each
-   with `associatedWith: [{"objectType": "companies", "operator": "EQUAL", "objectIdValues": [lead_id]}]`
-   and the Schema properties for that object. These are the lead's
-   Contacts, Research, and Activities. Notes whose body starts
-   `<p>Outcome for task ` are outcomes, not Research: the text after
-   `Outcome for task <activity_id>: ` is that Activity's `outcome` (the
-   newest such Note wins), overriding any `Outcome:` line in its body.
+2. `hubspot:search_crm_objects` on `CONTACT` and `NOTE`, each with
+   `associatedWith: [{"objectType": "companies", "operator": "EQUAL", "objectIdValues": [lead_id]}]`
+   and the Schema properties for that object, paging until the results
+   run out. These are the lead's Contacts and its Notes. A Note whose
+   first line is a `research` header is a research section; one whose
+   first lines are a `draft` header and `Channel: <channel>` is a draft
+   section for that channel. Any other Note is the operator's and is
+   ignored. Sort each record's sections by `hs_createdate` (stamped by HubSpot, never by the agent): the last is
+   the newest.
 
 ### `update_stage`
 
@@ -259,59 +190,30 @@ already `true`, reject any `fields` that sets it to `false`. Otherwise
 one `updateRequest` on `companies` with the mapped properties. Setting
 the flag is `"sp_do_not_contact": "true"`.
 
-### `log_activity`
+### `log_draft`
 
-1. Reject a `status` other than `draft`.
-2. If `direction` is `outbound`: `hubspot:get_crm_objects` on `COMPANY`
-   with `objectIds: [lead_id]` and property `sp_do_not_contact`.
-   Reject if it is `true`.
-3. Build the body: `<p>Direction: <direction></p><p>Summary: <summary></p>`
-   (and `<p>Outcome: <outcome></p>` when given), then `draft_body` in
-   `<p>` paragraphs. Map `channel` to `hs_task_type` per the Schema and
-   `direction` to `hs_task_priority`: `HIGH` for outbound, `NONE` for
-   inbound.
-4. One create, never an update, always at `NOT_STARTED`:
+1. Reject a `channel` other than `email`, `linkedin` or `call`.
+2. `hubspot:get_crm_objects` on `COMPANY` with `objectIds: [lead_id]`
+   and property `sp_do_not_contact`. Reject if it is `true`.
+3. One create, never an update:
 
-       {"createRequest": {"objects": [{"objectType": "tasks",
-         "properties": {"hs_task_subject": "…",
-           "hs_task_body": "<p>Direction: <direction></p><p>Summary: <summary></p><p><draft_body></p>",
-           "hs_timestamp": "<now, ISO 8601 UTC>", "hs_task_type": "<EMAIL|CALL|LINKED_IN_MESSAGE|TODO>",
-           "hs_task_priority": "<HIGH|NONE>", "hs_task_status": "NOT_STARTED"},
+       {"createRequest": {"objects": [{"objectType": "notes",
+         "properties": {"hs_note_body": "<p>=== YYYY-MM-DD · draft ===</p><p>Channel: <channel></p><p>For: …</p><p><draft lines></p>",
+           "hs_timestamp": "<now, ISO 8601 UTC>"},
          "associations": [{"targetObjectType": "COMPANY", "targetObjectId": <lead_id>},
                           {"targetObjectType": "CONTACT", "targetObjectId": <contact_id>}]}]}}
 
-   Drop the contact association when there is no `contact_id`. Return
-   the new Task's ID as `activity_id`.
-
-### `update_activity`
-
-Reject a `status` other than `voided`. Set the Task's status only, to
-`DEFERRED`:
-
-    {"updateRequest": {"objects": [{"objectType": "tasks", "objectId": <activity_id>,
-      "properties": {"hs_task_status": "DEFERRED"}}]}}
-
-When an `outcome` is given, also create a Note on the lead's Company
-(find it as `query_activities` does, from the Task's association):
-
-    {"createRequest": {"objects": [{"objectType": "notes",
-      "properties": {"hs_note_body": "<p>Outcome for task <activity_id>: <outcome></p>",
-                     "hs_timestamp": "<now, ISO 8601 UTC>"},
-      "associations": [{"targetObjectType": "COMPANY", "targetObjectId": <lead_id>}]}]}}
-
-The status change is the only write this tool ever makes to an existing
-Task: the guard refuses any change to `hs_task_body` after create.
+   Drop the contact association when there is no `contact_id`.
 
 ### `log_research`
 
-Reject an empty `source_url` or `hook`, or a `type` outside the seven
-values. Then:
+Reject the call if any finding has an empty `source_url` or `hook`, or a
+`type` outside the seven values. Then one Note for the whole run:
 
     {"createRequest": {"objects": [{"objectType": "notes",
-      "properties": {"hs_note_body": "<the five labelled lines>", "hs_timestamp": "<date, ISO 8601>"},
+      "properties": {"hs_note_body": "<p>=== YYYY-MM-DD · research ===</p><p>Type: …</p><p>Date: …</p><p>Summary: …</p><p>Source: …</p><p>Hook: …</p>…",
+                     "hs_timestamp": "<now, ISO 8601 UTC>"},
       "associations": [{"targetObjectType": "COMPANY", "targetObjectId": <lead_id>}]}]}}
-
-Return the new Note's ID as `research_id`.
 
 ### `upsert_contact`
 
@@ -345,11 +247,7 @@ Reject a call with no `stage` and neither filter. Then
 `sp_stage` `EQ` the stage (when given), plus `sp_next_action_due` `LTE`
 the date (for `next_action_due_before`). With no stage, add
 `sp_stage` `HAS_PROPERTY` so only pipeline companies return. For
-`idle_days`: for each candidate, search `TASK` with `associatedWith`
-that company, sorted by `hs_timestamp` `DESCENDING`, `limit: 1`. The
-lead's idle age is now minus the later of that Task's `hs_timestamp`
-and the company's `sp_stage_changed_at`. If the lead has no Task (no
-Activity), use `sp_stage_changed_at`. Keep the lead if its idle age is
+`idle_days`: keep a lead when now minus its `sp_stage_changed_at` is
 greater than `idle_days`.
 Page with `offset` until the results run out; apply `limit` last.
 
@@ -362,26 +260,6 @@ Reject a `score` other than `fit` or `approach`.
 `DESCENDING`. Page with `offset` until the results run out; apply
 `limit` last.
 
-### `query_activities`
-
-Reject a `status` outside draft / sent / voided, or a
-`direction` other than outbound / inbound. Then
-`hubspot:search_crm_objects` on `TASK`, mapping the contract status to
-status filters: `draft` → `hs_task_status` `IN` with
-`"values": ["NOT_STARTED", "IN_PROGRESS", "WAITING"]`;
-`sent` → `EQ` `COMPLETED`; `voided` → `EQ` `DEFERRED`. When
-`direction` is given, add `hs_task_priority` `EQ` `HIGH` (outbound) or
-`NONE` (inbound) to the same filter group. Add `channel` when given as
-`hs_task_type` `EQ` `EMAIL` (email), `CALL` (call), `IN` with
-`["LINKED_IN_MESSAGE", "LINKED_IN_CONNECT"]` (linkedin) or `TODO`
-(other). Add
-`hs_timestamp` `GTE` `since` and `hs_timestamp` `LTE` `until` when
-given, request `hs_task_body` and `hs_task_priority`, and sort by
-`hs_timestamp`. Read each Task's `direction` from `hs_task_priority`
-(`HIGH` = outbound, anything else = inbound). For each Task's lead, search `COMPANY` with
-`associatedWith: [{"objectType": "tasks", "operator": "EQUAL", "objectIdValues": [<task id>]}]`
-and properties `["name", "sp_stage"]`.
-
 Every record carries HubSpot's own `createdate`. `send-digest`'s "New
 leads scored" section uses the company's `createdate` as the lead's
 Created Time.
@@ -389,7 +267,8 @@ Created Time.
 ## Approval invariant under HubSpot
 
 `manage_crm_objects` can write any value to any property, so the
-contract's guarantees are enforced by mechanism (approval and `dnc_one_way` only):
+contract's guarantees are enforced by mechanism (approval, append-only
+drafts and `dnc_one_way`):
 
 1. **`guard.yaml` in this folder**, enforced by the agent's guard
    policy engine before every HubSpot call inside an instance:
@@ -405,14 +284,16 @@ contract's guarantees are enforced by mechanism (approval and `dnc_one_way` only
      updates, even in one call. The connector's `manage_crm_objects`
      accepts only those two request shapes, so there is no other place
      for values to sit;
-   - `hs_task_status` may only be created as `NOT_STARTED` and updated
-     to `DEFERRED` (`draft_only`);
+   - `hs_note_body` and `hs_timestamp` may not be changed after
+     create, so a draft or a research section is never rewritten or
+     re-ordered (`draft_only`);
+   - `hs_task_status`, `hs_task_body` and `hs_task_completion_date` are
+     forbidden outright: the agent uses no Tasks, so the operator's own
+     Tasks are out of its reach;
    - `sp_stage` may only be created as `New`, and never written as
-     `Ready to Send`: only the operator approves a lead. Creating a Task with no status also
-     yields `NOT_STARTED`. The Task Pipeline's stages mirror the
-     statuses, so `hs_pipeline_stage`, `hs_pipeline` and
-     `hs_task_completion_date` are forbidden to the agent outright
-     (`forbid: true`): it may never write them, on create or update;
+     `Ready to Send`: only the operator approves a lead.
+     `hs_pipeline_stage` and `hs_pipeline` are forbidden to the agent
+     outright (`forbid: true`), on create or update;
    - `sp_do_not_contact` may only be updated to `true` (`dnc_one_way`).
 
    The operator's own edits in HubSpot never pass through it, so
@@ -427,22 +308,14 @@ contract's guarantees are enforced by mechanism (approval and `dnc_one_way` only
 Create these once in HubSpot. The connector can't create views.
 
 - **Review** — Companies filtered on `sp_stage` is `Approach Drafted`.
-  Open a company to see its drafts: one Not started Task per channel;
-  the `recommended:` one holds the full draft and its personalized
-  statements, the others `statements` only, and `Do Not Contact`
-  (`sp_do_not_contact`). Mark any task you don't want Deferred, then
-  move the company to `Ready to Send`: that approves the lead.
+  Open a company to read its research and draft Notes (one draft Note
+  per channel, a full draft and its personalized statements each) and
+  `Do Not Contact` (`sp_do_not_contact`), then move the company to
+  `Ready to Send`: that approves the lead.
 - **Ready to Send** — Companies filtered on `sp_stage` is
   `Ready to Send`: approved, waiting for your workflow or your own
   touch. The agent never acts on them; move a company back to `Approach
   Drafted` to cancel.
-- **My touches** — Tasks filtered on status Not started, priority High
-  and type LinkedIn or Call, sorted by due date. A Tasks view can't
-  filter by the company's stage or the task's summary, so open the
-  company first and act only on a `recommended:` draft of a lead at `Ready to Send`;
-  `statements` tasks are material for your templates, not touches.
-  Mark a task Completed when you've done it. Deferred tasks are voided
-  drafts.
 - **Pipeline** — a Companies view grouped (or a board) by
   `Sales Partner stage` (`sp_stage`), filtered on `sp_stage` is known.
 - **Research Queue** — Companies filtered on `sp_stage` is `Scored`,
@@ -461,16 +334,13 @@ Setup runs these read-only calls when binding this tool, and writes
 what they find to `bindings/crm.md` in the instance:
 
 1. `hubspot:get_user_details` — record `hub_id:` (the `hubId` /
-   `accountId`). `COMPANY`, `CONTACT`, `TASK`, and `NOTE` must each
+   `accountId`). `COMPANY`, `CONTACT` and `NOTE` must each
    show `write: AVAILABLE`; report any that don't.
 2. `hubspot:get_properties`:
    - on `companies`, `["sp_stage", "sp_stage_changed_at", "sp_do_not_contact",
      "sp_fit_score", "sp_fit_breakdown", "sp_approach_score", "sp_approach_breakdown"]`:
      all seven exist, and `sp_stage` has the eleven status options;
    - on `contacts`, `["sp_role"]`: it has the three role options;
-   - on `tasks`, `["hs_task_status", "hs_task_type", "hs_task_priority"]`:
-     `hs_task_status` has `NOT_STARTED`, `COMPLETED` and `DEFERRED`, `hs_task_type` has `EMAIL`, `CALL` and `TODO`, and
-     `hs_task_priority` has `HIGH` and `NONE`.
 3. Report every missing property or option by name.
 
 If step 2 finds anything missing, offer the two choices in `## Setup`.
@@ -486,7 +356,7 @@ HubSpot writes properties by name, so the binding holds no field IDs.
 
 The probe needs these company and contact properties to exist. Create
 them yourself in HubSpot (Choice 1) or run the script (Choice 2). Then
-probe again. Tasks need no custom fields; drafts use HubSpot's built-in task status.
+probe again. Notes need no custom fields.
 
 ### Choice 1: create them yourself in HubSpot
 

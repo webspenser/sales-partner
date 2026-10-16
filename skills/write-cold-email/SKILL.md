@@ -1,10 +1,10 @@
 ---
 name: write-cold-email
-description: Use when email is one of a lead's reachable channels — writes the full cold email when email is the recommended channel, and the email's personalized statements either way.
+description: Use when email is one of a lead's reachable channels — writes the full cold email and its personalized statements.
 ---
 
 Every rule below is a hard constraint, not a suggestion. A draft that
-breaks any one of them is not ready for `Status = draft`, regardless of
+breaks any one of them is not ready to log, regardless of
 how well-written it otherwise reads:
 
 - **Under 120 words**, counting the greeting and body, not the subject
@@ -68,8 +68,7 @@ how well-written it otherwise reads:
 10. Re-read every factual claim against `business-profile.md` one more
     time. Anything that doesn't trace to a specific section gets cut.
 11. Add the Personalized statements block and log the result as
-    **Personalized statements** below says — this skill never sets
-    `status` to anything but `draft`.
+    **Personalized statements** below says.
 
 ## Personalized statements
 
@@ -80,15 +79,12 @@ same hook and proof this skill uses, following
 on its own, every fact traced to a Research row or
 `business-profile.md`.
 
-- **Email is the recommended channel:** the body is the full email
-  (steps 1–10), a blank line, then the block. Log it with CRM
-  `log_activity(lead_id, contact_id, channel="email",
-  direction="outbound", summary="recommended: <one-line reason>",
-  draft_body=<email + block>, status="draft")`.
-- **Email is not the recommended channel:** skip the full email; the
-  body is the block alone. Log it with CRM `log_activity(lead_id,
-  contact_id, channel="email", direction="outbound",
-  summary="statements", draft_body=<block>, status="draft")`.
+The body is `For: <name, title>` (or `For: the business`, with the
+general inbox and its source URL when that is the address), the full
+email (steps 1–10), a blank line, then the block. Log it with CRM
+`log_draft(lead_id, contact_id, channel="email", body=<For line + email
++ block>)`: it appends a dated section to the lead's email draft
+record and never changes an earlier one.
 
 ## Worked example
 

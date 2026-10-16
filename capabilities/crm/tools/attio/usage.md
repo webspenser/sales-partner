@@ -1,9 +1,9 @@
 # CRM — Attio tool
 
-Maps the contract (`../../contract.md`) onto Attio: which Attio objects and lists
-hold each kind of data, the exact attribute slugs, the tool-call
-procedure behind every operation, and the views the operator works
-from.
+Maps the contract (`../../contract.md`) onto Attio: which Attio objects,
+list and notes hold each kind of data, the exact attribute slugs, the
+tool-call procedure behind every operation, and the views the operator
+works from.
 
 The schema is created by `bootstrap.py` in this folder (see Probe). You can
 re-run that script safely: it only adds what is missing and never deletes anything.
@@ -15,23 +15,24 @@ record-reference filters) are in the instance's `bindings/crm.md`,
 written by the probe. `attio:` below means the connected Attio server's
 tools, whatever their prefix.
 
-## Why lists, not custom objects
+## Layout
 
-Lists work on every Attio plan, including those with no custom-object
-allowance, so every contract entity other than Contacts is an Attio **list** whose parent object is
-`companies`:
+The operator works from the **company record**. One list tracks which
+companies are leads; everything else sits on the company and its people:
 
-| Contract entity | Attio home | Entries per company |
-|---|---|---|
-| Lead | `companies` record + one entry in list `sales_partner_pipeline` | exactly one |
-| Research | list `sales_partner_research` | many, one per finding |
-| Activity | list `sales_partner_outreach` | many, one per message or logged interaction |
-| Contact | `people` record | — |
+| Contract entity | Attio home |
+|---|---|
+| Lead (pipeline state) | one entry in list `sales_partner_pipeline` on the company |
+| Company facts | the `companies` record, built-in attributes |
+| Research record | the note `Sales Partner · Research` on the company |
+| Draft records | the notes `Sales Partner · Email`, `Sales Partner · LinkedIn`, `Sales Partner · Call` on the company |
+| Contact | a `people` record, `company` = the lead's company |
 
-Attio list entries cannot be filtered by their parent record. Every
-list therefore carries a `lead` record-reference attribute that holds
-**the same company as the parent record**, and every write sets it.
-Every read filters on `lead`, never on the parent.
+The list works on every Attio plan, including those with no custom-object
+allowance. Attio list entries cannot be filtered by their parent record,
+so the entry carries a `lead` record-reference attribute holding **the
+same company as the parent record**; every write sets it and every read
+filters on it.
 
 **`lead_id` is the company's Attio `record_id`.** It identifies the
 lead in every operation. The Pipeline entry is found from it by
@@ -42,23 +43,25 @@ filtering `sales_partner_pipeline` on `lead`.
 ### Companies (standard object)
 
 The tool writes `name` and `domains`, plus the contract's company
-profile fields onto the company's own standard attributes, so the
+profile fields onto the company's own built-in attributes, so the
 company page shows the basics. `domains` is unique in Attio, which gives
-dedupe rule 1 (domain) for free. Every pipeline field lives on the list
-entry below.
+dedupe rule 1 (domain) for free. No custom attribute is added to
+Companies.
 
 | Contract field | Company attribute |
 |---|---|
+| `address`, else `location` | `primary_location` (written as one string, for example `1173 Broadway, Alameda, CA, 94501, US`, or `Alameda, CA, US` when only the city is sourced; Attio parses it) |
 | `description` | `description` |
-| `address` | `primary_location` (written as one string, for example `1173 Broadway, Alameda, CA, 94501, US`; Attio parses it) |
 | `company_linkedin_url` | `linkedin` |
 | `facebook_url` | `facebook` |
 | `instagram_url` | `instagram` |
 
 Read the company first (`attio:get-records-by-ids`) and write only the
-attributes that are empty: never overwrite a value Attio's enrichment or the operator already set.
-Phone stays on the Pipeline entry and the Contact: Attio companies have
-no phone attribute.
+attributes that are empty:
+never overwrite a value Attio's enrichment or the operator already set. The contract's lead `phone` and `email` (the
+business's main line and general inbox) have no home in this tool: they
+are skipped here and recorded, with their source URLs, as `listing`
+findings in the research note.
 
 ### List `sales_partner_pipeline` — the Leads table
 
@@ -74,10 +77,6 @@ no phone attribute.
 | `approach_breakdown` | text | `Approach Breakdown` |
 | `industry` | text | `Industry` |
 | `size` | text | `Size` |
-| `location` | text | `Location` |
-| `address` | text | `Address` (as sourced) |
-| `phone` | text, E.164 | `Phone` |
-| `email` | text | `Email` (general inbox only) |
 | `source` | text | `Source` |
 | `source_url` | text | `Source URL` |
 | `next_action` | text | `Next Action` |
@@ -112,39 +111,24 @@ person it **creates** gets `lead_source` = `Outbound` (only when
 agent found them by prospecting rather than them coming in. It never
 sets or changes `lead_source` on a person who already exists, since
 that person may have arrived through an inbound source
-that must be kept.
+that must be kept. The operator can add people to a company by hand;
+the agent treats them like any other Contact.
 
-### List `sales_partner_research` — the Research table
+### Notes — the research and draft records
 
-| Slug | Type |
-|---|---|
-| `lead` | record-reference → companies |
-| `type` | select: news, funding, social, event, hire, listing, web_presence |
-| `summary` | text |
-| `source_url` | text |
-| `date` | date |
-| `hook` | text |
+Each lead has at most one note per title, on the company:
 
-`summary` is the finding, and `hook` is the usable angle the Approacher
-opens with.
+| Title, exactly | Holds | Written by |
+|---|---|---|
+| `Sales Partner · Research` | one section per research run | `log_research` |
+| `Sales Partner · Email` | one section per email draft | `log_draft` (`channel: email`) |
+| `Sales Partner · LinkedIn` | one section per LinkedIn draft | `log_draft` (`channel: linkedin`) |
+| `Sales Partner · Call` | one section per call draft | `log_draft` (`channel: call`) |
 
-### List `sales_partner_outreach` — the Activities table
-
-| Slug | Type |
-|---|---|
-| `lead` | record-reference → companies |
-| `contact` | record-reference → people (optional) |
-| `channel` | select: email, linkedin, call, other |
-| `direction` | select: outbound, inbound |
-| `date` | date |
-| `summary` | text |
-| `draft_body` | text |
-| `status` | select: draft, sent, voided |
-| `outcome` | text |
-
-Drafts are Outreach entries at `status = draft`, one per channel, each
-with its `date`. There is no separate drafts list: the operator reviews
-a lead's drafts from the lead (see **Review** below).
+A note is created with its first section and only ever appended to.
+The newest section is at the bottom. The format is in **Reading notes
+from an automation** below; it is the same whether the section was the
+note's first or was appended.
 
 ## Operations
 
@@ -153,35 +137,43 @@ checks in the order written, and **refuse the call** (report it and
 write nothing) exactly where the contract says the operation rejects.
 
 - **`create_lead`**
-  1. Reject if `domain`, `phone`, and `address` are all empty.
+  1. Reject if `domain`, `phone`, and `address` are all empty (the
+     contract's rule; `phone` itself is not stored here).
   2. If `domain` is present: `attio:list-records` on `companies`,
      filtered on `domains` eq the bare domain. If a company matches and
      it has a Pipeline entry (filter `sales_partner_pipeline` on
      `lead`), return that company's `record_id` and stop.
-  3. Otherwise, if `phone` is present, normalize it to E.164 per
-     the contract and filter `sales_partner_pipeline` on `phone`
-     eq that value. If an entry matches, return its `lead` and stop.
-  4. Otherwise, if `address` is present, `attio:search-records` on
-     `companies` by `company`. For each hit that has a Pipeline entry,
-     compare the normalized company + address (lowercase, punctuation
-     and suite numbers stripped). If one matches, return it and stop.
-  5. No match: create the company. Use `attio:upsert-record` matching on
+  3. Otherwise, `attio:search-records` on `companies` by `company`. For
+     each hit that has a Pipeline entry, compare the normalized
+     company name + `primary_location` (lowercase, punctuation and suite
+     numbers stripped) against the call's company and its `address`, or
+     its `location` when there is no address. If one matches, return it
+     and stop. This is the dedupe for a business with no website, even
+     one whose listing shows no street address.
+  4. No match: create the company. Use `attio:upsert-record` matching on
      `domains` when a domain exists (this reuses a company already in
      your CRM outside the pipeline), or `attio:create-record` with
      `name` only when there is no domain. Then
      `attio:add-record-to-list` on `sales_partner_pipeline` with
      `allow_duplicates: false` and these entry values: `lead` = the
      company, `stage` = `New`, `stage_changed_at` = now (ISO 8601 UTC,
-     read right before the call),
-     and the given fields. Then write any company profile fields given
+     read right before the call), and the given pipeline fields. Then
+     write `primary_location` and any company profile fields given
      (see Companies above) with `attio:update-record` on `companies`,
      empty attributes only. Return the company `record_id`.
 - **`get_lead`** — `attio:get-records-by-ids` on `companies`, then
-  the Pipeline entry, then Research and Outreach entries, each filtered
-  on `lead` eq `{object_id: companies, record_id: lead_id}`. Contacts
-  come from `attio:list-records` on `people`, filtered on `company` eq
-  the same reference. If there is no company or no Pipeline entry,
-  that is an error, not an empty record.
+  the Pipeline entry (filtered on `lead` eq `{object_id: companies,
+  record_id: lead_id}`). Contacts come from `attio:list-records` on
+  `people`, filtered on `company` eq the same reference. Notes come from
+  `attio:search-notes-by-metadata` (`parent_record_object: companies`,
+  `parent_record_id: lead_id`, paging until the results run out); keep
+  those whose title equals one of the four titles exactly, and read each
+  with `attio:get-note-body`. When more than one note has the same
+  exact title, use the oldest (earliest `created_at`): it is the one the
+  agent appends to. Split a note into sections on its header lines; the
+  last section is the newest, and a header with nothing after it (a
+  write cut short) is skipped. If there is no company or no
+  Pipeline entry, that is an error, not an empty record.
 - **`update_stage`** — Reject a `stage` outside the eleven. Find the
   Pipeline entry by `lead`, then call `attio:update-list-entry-by-id`
   with `stage`, `stage_changed_at` = now (read the clock right before
@@ -193,123 +185,155 @@ write nothing) exactly where the contract says the operation rejects.
   `do_not_contact` is already `true`, reject any `fields` that sets it
   to `false`. Otherwise, one `attio:update-list-entry-by-id` call. Company
   profile fields in `fields` go to the company instead: one
-  `attio:update-record` on `companies`, empty attributes only.
+  `attio:update-record` on `companies`, empty attributes only. `phone`
+  and `email` in `fields` are skipped (no home here).
   Write only the fields that change: an update that repeats unchanged
   fields (for example `do_not_contact: false`) can be refused by the
   guard.
-- **`log_activity`** — Reject `status` other than `draft`. If
-  `direction` is `outbound`, read the Pipeline entry and reject if
-  `do_not_contact` is `true`. Then call `attio:add-record-to-list` on
-  `sales_partner_outreach` with `allow_duplicates: true`,
-  `parent_record_id` = `lead_id`, `lead` = the same company, `status` =
-  `draft`, `date` = today, and the other fields. Return the new
-  `entry_id` as `activity_id`. Never update an existing entry here.
-- **`update_activity`** — Reject `status` other than `voided`.
-  Call `attio:update-list-entry-by-id` on `sales_partner_outreach` with
-  `status` and `outcome` only (never `draft_body`). This is the only
-  write this tool ever makes to an existing Outreach entry.
-- **`log_research`** — Reject an empty `source_url` or `hook`, or a
-  `type` outside the seven values. Then `attio:add-record-to-list` on
-  `sales_partner_research` with `allow_duplicates: true` and `lead` set.
+- **`log_research`** — Reject the call if any finding has an empty
+  `source_url` or `hook`, or a `type` outside the seven. Build one
+  research section (format below), then write it to the note titled
+  `Sales Partner · Research` (see **Writing a section**).
+- **`log_draft`** — Reject a `channel` other than `email`, `linkedin` or
+  `call`. Build one draft section (format below), then write it to the
+  note titled `Sales Partner · Email`, `Sales Partner · LinkedIn` or
+  `Sales Partner · Call` (see **Writing a section**).
+- **Writing a section.** `attio:search-notes-by-metadata` on the company,
+  paging with `limit: 100` and `offset` until the results run out (a
+  company can hold many other notes, newest first), or reuse the note
+  IDs `get_lead` found. Keep the notes whose title equals the wanted one,
+  by exact title match (case and the `·` included; `Sales Partner ·
+  research` or `Research` is the operator's own note and is never
+  touched). None: create the note with the header line alone, then append
+  the rest of the section: `attio:create-note` with `parent_object:
+  companies`, `parent_record_id: lead_id`, the title, and the header
+  line as `content`, then `attio:update-note` with the new `note_id` and
+  `operation: {type: append, content: <the section's other lines>}`.
+  Appended text is plain, one paragraph per line, so no line is ever
+  reformatted as Markdown. One: `attio:update-note` appending the whole
+  section. More than one (an operator copy, or a race):
+  append to the oldest (earliest `created_at`) and never create another. Never pass
+  `updated_title`, never prepend, never delete.
 - **`upsert_contact`** — Reject a `role` outside the three values.
   Find an existing person first. With an email: `attio:list-records`
   on `people`, filtered on `email_addresses` eq the email. Without
   one: `attio:search-records` on `people` by name, and pick the hit
   whose `job_title` equals `title` and whose `company` is this lead.
-  If a person matches, update it with `attio:update-record` and leave
-  `lead_source` out of the call. If none matches, create the person
-  with `attio:create-record` and include `lead_source` = `Outbound`
-  only when `bindings/crm.md` says `lead_source_outbound: yes`.
-  Always set `company` = the lead. Set `sp_verified` to `true` only
-  when the caller passes it.
+  If a person matches, update it with `attio:update-record`, writing
+  only attributes that are empty on the person (a later run fills in
+  an email, phone or LinkedIn found since; it never replaces a value),
+  and leave `lead_source` out of the call. If none matches, create the
+  person with `attio:create-record` and include `lead_source` =
+  `Outbound` only when `bindings/crm.md` says `lead_source_outbound:
+  yes`. Always set `company` = the lead. Set `sp_verified` to `true`
+  only when the caller passes it.
 - **`query_by_stage`** — `attio:list-records-in-list` on
   `sales_partner_pipeline`, filtered on `stage` eq the stage (when
   given), plus `next_action_due` lte the date for
-  `next_action_due_before`. For `idle_days`: for each candidate lead,
-  read its Outreach entries (filtered on `lead`, sorted by `date`
-  desc, limit 1). Its idle age is now minus the later of that newest
-  `date` and the lead's `stage_changed_at`. If the lead has no
-  Activity, use `stage_changed_at`. Keep the lead if its idle age is
-  greater than `idle_days`. Page with `offset` until the results run out.
+  `next_action_due_before`. For `idle_days`: keep a lead when now minus
+  its `stage_changed_at` is greater than `idle_days`. Page with `offset`
+  until the results run out.
 - **`query_by_score`** — Reject a `score` other than `fit` or
   `approach`. `attio:list-records-in-list` on `sales_partner_pipeline`,
   filtered on `fit_score` (for `fit`) or `approach_score` (for
   `approach`) gte `min_score` (and `stage` eq when given), sorted by
   that attribute desc. Page with `offset` until the results run out;
   apply `limit` last.
-- **`query_activities`** — `attio:list-records-in-list` on
-  `sales_partner_outreach`, filtered on `status` (and `direction`, and
-  `channel` when given, and `date` gte `since` / lte `until`). Each entry's `lead` gives the
-  company without a second call.
 
-Every list entry carries Attio's own `created_at`. `send-digest`'s
-"New leads scored" section uses the Pipeline entry's `created_at` as
-the lead's Created Time.
+The Pipeline entry carries Attio's own `created_at`. `send-digest`'s
+"New leads scored" section uses it as the lead's Created Time.
+
+## Reading notes from an automation
+
+The note titles and the section format are fixed, so the operator's own
+automations (for example an n8n workflow) can read them. They change
+only with a version bump and an upgrade note in the README.
+
+- Titles, exactly: `Sales Partner · Research`, `Sales Partner · Email`,
+  `Sales Partner · LinkedIn`, `Sales Partner · Call`.
+- Every section starts with a header alone on its line:
+  `=== YYYY-MM-DD · research ===` in the research note,
+  `=== YYYY-MM-DD · draft ===` in the draft notes.
+- A research section holds one block per finding, each with the lines
+  `Type:`, `Date:` (the finding's own date), `Summary:`, `Source:` (the
+  URL) and `Hook:`, blocks separated by a blank line.
+- A draft section holds `For: <person, title>` (or `For: the
+  business`), then the full draft, then the block that starts with the
+  line `Personalized statements` and its `opener:`, `relevance:`,
+  `proof:` and `ask:` lines (`templates/personalized-statements.md`).
+- Every line is plain text: no tables, no markdown that renders only in
+  a note's first section.
+
+To read the current draft or research, list the notes on the company
+(Attio API: notes filtered by parent record, paging until the results
+run out), pick the title, and take the last header line and everything
+after it. If more than one note has the exact title, use the oldest
+(earliest `created_at`), the one the agent appends to. Skip a header
+with nothing after it. To pick leads, list `sales_partner_pipeline`
+entries filtered on `approach_score`, on `stage` = `Ready to Send`, so
+only leads the operator approved go out, and on
+`do_not_contact` is not true, so a lead the operator opted out after approving is left out.
+A lead that was researched but not drafted (its Approach score is below
+`approach_threshold`) has a research note and no draft notes.
 
 ## Approval invariant under Attio
 
 Attio's `update-list-entry-by-id` can write any value to any
-attribute, so the contract's guarantees are enforced by mechanism (approval and `dnc_one_way` only):
+attribute, so the contract's guarantees are enforced by mechanism
+(approval, append-only drafts and `dnc_one_way`):
 
 1. **`guard.yaml` in this folder**, enforced by the agent's guard policy
    engine before every Attio call inside an instance (the agent's
    `hooks/guard.sh` starts it; nothing to wire by hand):
-   - an allow list: only the read tools, `whoami`, and the write tools
-     this tool uses are callable; any other Attio tool is blocked;
-   - `delete` and `merge` tools, and list configuration changes
-     (`create-list`, `update-list`), are always denied;
-   - `status` may only be written as `draft` on create and `voided` on
-     update;
+   - an allow list: only the read tools, `whoami`, `create-note`,
+     `update-note` and the record and list-entry write tools this tool
+     uses are callable; any other Attio tool is blocked;
+   - `delete` and `merge` tools (including `delete-note`), and list
+     configuration changes (`create-list`, `update-list`), are always
+     denied;
+   - `create-note` takes only `parent_object`, `parent_record_id`,
+     `title` and `content`;
+   - `update-note` takes only `note_id` and `operation`, and
+     `operation` only `type` and `content`, with `type` = `append`: a
+     note can't be prepended to, retitled or rewritten;
    - `stage` may only be written as `New` on create, and never as
-     `Ready to Send`: only the operator approves a lead;
-   - `draft_body` can't be changed after create;
+     `Ready to Send` or a later status: only the operator approves a
+     lead;
    - `do_not_contact` may only be updated to `true`;
    - attribute keys given as IDs instead of slugs are refused.
 
    The operator's own edits in the Attio app never pass through it, so
    approving a lead (moving the lead to `Ready to Send`) stays
-   operator-only.
+   operator-only. "Notes go on companies only" is an instruction: the
+   guard can't see which record a note is attached to, and a note on the
+   wrong record sends nothing and deletes nothing.
 2. **Nothing sends from the CRM.** The agent sends nothing to prospects; after the
    operator's approval, the owner's automations or the operator send the
    first touch.
 
 ## Views (the operator's interface)
 
-Create these once in the Attio app. The Attio connector can't create
-views.
+The operator arranges Attio's screens. Suggested views on
+`sales_partner_pipeline` (create them in the Attio app; the connector
+can't):
 
-- **Pipeline board** — on `sales_partner_pipeline`: a Kanban view
-  grouped by `stage`.
-- **Review** — on `sales_partner_pipeline`: filtered on `stage` is
-  `Approach Drafted`. Open a lead to see its draft Outreach entries (one
-  per channel: the `recommended:` one holds the full draft and its
-  personalized statements, the others `statements` only) and show
-  `do_not_contact`, so drafts for an opted-out lead are obvious. Edit a
-  draft's `draft_body`, set any draft you don't want to `voided`, then
-  move the lead to `Ready to Send`: that approves the lead.
-- **Ready to Send** — on `sales_partner_pipeline`: filtered on `stage`
-  is `Ready to Send`: approved, waiting for your automation or your own
-  touch. The agent never acts on them; move a lead back to `Approach
-  Drafted` to cancel.
-- **My touches** — on `sales_partner_outreach`: filtered on `status` is
-  `draft`, `direction` is `outbound`, `channel` is `linkedin` or
-  `call`, and `summary` starts with `recommended:`, sorted by `date`.
-  Attio can't filter by the parent lead's stage, so open the lead first
-  and act only on a `recommended:` draft of a lead at `Ready to Send`
-  (unless your automation handles it); `statements` drafts are material
-  for your templates, not touches. Set `status` to `sent` when you've
-  done one.
-- **Research Queue** — on `sales_partner_pipeline`: filtered on `stage`
-  is `Scored`, sorted by `fit_score`, highest first.
-- **Approach Queue** — on `sales_partner_pipeline`: filtered on `stage`
-  is `Researched`, sorted by `approach_score`, highest first. Leads
-  below `approach_threshold` stay here, with the reason in
-  `approach_breakdown`.
-- **Due Today** — on `sales_partner_pipeline`: filtered on
-  `next_action_due` on or before today.
-- **Nurture** — on `sales_partner_pipeline`: filtered on `stage` is
-  `Nurture`, sorted by `revisit_on`, soonest first. Leads you parked to
-  come back to; the agent leaves them alone until that date.
+- **Pipeline board** — a Kanban view grouped by `stage`.
+- **Review** — filtered on `stage` is `Approach Drafted`. Open a lead's
+  company to read its research note and its draft notes, edit what you
+  want, then move the lead to `Ready to Send`: that approves it. Show
+  `do_not_contact`, so an opted-out lead is obvious.
+- **Ready to Send** — filtered on `stage` is `Ready to Send`: approved,
+  waiting for your automation or your own touch. The agent never acts
+  on them; move a lead back to `Approach Drafted` to cancel.
+- **Research Queue** — filtered on `stage` is `Scored`, sorted by
+  `fit_score`, highest first.
+- **Approach Queue** — filtered on `stage` is `Researched`, sorted by
+  `approach_score`, highest first. Leads below `approach_threshold`
+  stay here, with the reason in `approach_breakdown`.
+- **Due Today** — filtered on `next_action_due` on or before today.
+- **Nurture** — filtered on `stage` is `Nurture`, sorted by
+  `revisit_on`, soonest first. Leads you parked to come back to; the
+  agent leaves them alone until that date.
 
 ## Probe
 
@@ -319,10 +343,9 @@ what they find to `bindings/crm.md` in the instance:
 1. `attio:whoami` — record `workspace:`.
 2. `attio:list-objects` — record `companies_object_id:` and
    `people_object_id:`.
-3. `attio:list-list-attribute-definitions` on `sales_partner_pipeline`,
-   `sales_partner_research`, and `sales_partner_outreach` — every slug
-   in the Schema tables above must exist, and `stage` must hold the
-   eleven statuses.
+3. `attio:list-list-attribute-definitions` on `sales_partner_pipeline`
+   — every slug in its Schema table above must exist, and `stage` must
+   hold the eleven statuses.
 4. `attio:list-attribute-definitions` on `people` — `sp_role`,
    `sp_verified`, and `sp_notes` must exist. Record
    `lead_source_outbound: yes` if `lead_source` exists with an
@@ -341,7 +364,7 @@ Then probe again.
 
 ## Setup
 
-The probe needs these objects, lists and attributes to exist. Create them
+The probe needs these attributes and the list to exist. Create them
 yourself in Attio (Choice 1) or run the script (Choice 2). Then probe again.
 
 ### Choice 1: create them yourself in Attio
@@ -357,11 +380,9 @@ Attributes, then New attribute. Add three:
 2. Title `Contact Verified`, slug `sp_verified`, type Checkbox.
 3. Title `Contact Notes`, slug `sp_notes`, type Text.
 
-**Three lists.** Lists, then New list. For each one: parent object
-Companies, access: full access for the workspace. Then add its attributes
-in the list's settings.
-
-List `sales_partner_pipeline` (name `Sales Partner Pipeline`):
+**One list.** Lists, then New list: name `Sales Partner Pipeline`, slug
+`sales_partner_pipeline`, parent object Companies, access: full access
+for the workspace. Then add its attributes in the list's settings:
 
 | Title | Slug | Type | Options |
 |---|---|---|---|
@@ -374,10 +395,6 @@ List `sales_partner_pipeline` (name `Sales Partner Pipeline`):
 | Approach Breakdown | `approach_breakdown` | Text | |
 | Industry | `industry` | Text | |
 | Size | `size` | Text | |
-| Location | `location` | Text | |
-| Address | `address` | Text | |
-| Phone | `phone` | Text | |
-| Email | `email` | Text | |
 | Source | `source` | Text | |
 | Source URL | `source_url` | Text | |
 | Next Action | `next_action` | Text | |
@@ -386,33 +403,8 @@ List `sales_partner_pipeline` (name `Sales Partner Pipeline`):
 | Do Not Contact | `do_not_contact` | Checkbox | |
 | Lead | `lead` | Record reference, allowed object Companies | |
 
-List `sales_partner_research` (name `Sales Partner Research`):
-
-| Title | Slug | Type | Options |
-|---|---|---|---|
-| Type | `type` | Select | news, funding, social, event, hire, listing, web_presence |
-| Summary | `summary` | Text | |
-| Source URL | `source_url` | Text | |
-| Date | `date` | Date | |
-| Hook | `hook` | Text | |
-| Lead | `lead` | Record reference, allowed object Companies | |
-
-List `sales_partner_outreach` (name `Sales Partner Outreach`):
-
-| Title | Slug | Type | Options |
-|---|---|---|---|
-| Channel | `channel` | Select | email, linkedin, call, other |
-| Direction | `direction` | Select | outbound, inbound |
-| Date | `date` | Date | |
-| Summary | `summary` | Text | |
-| Draft Body | `draft_body` | Text | |
-| Status | `status` | Select | draft, sent, voided |
-| Outcome | `outcome` | Text | |
-| Contact | `contact` | Record reference, allowed object People | |
-| Lead | `lead` | Record reference, allowed object Companies | |
-
 Leave every attribute optional (not required, not unique, not multi-select).
-When you are done, tell the agent and it probes again.
+Notes need no setup. When you are done, tell the agent and it probes again.
 
 ### Choice 2: run the script with an API key
 

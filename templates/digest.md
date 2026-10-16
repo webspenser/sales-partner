@@ -3,18 +3,18 @@
   Six sections, in this fixed order, every run. A section with nothing to
   report still gets its heading and an explicit "None" — never a silently
   omitted heading. This is a report; it never advances a stage, edits a
-  lead field, or logs an Activity or Research row.
+  lead field, or logs a draft or research section.
 -->
 
 # Sales Partner Digest — [date]
 
 ## Review ([count])
 
-- [lead/company — recommended: channel; statements: other channels — link; for a call draft, the number to dial — or "None"]
+- [lead/company — drafted: <channels> — link; for a call draft, the number from the Call note — or "None"]
 
 ## Ready to Send ([count])
 
-- [lead/company — recommended channel — drafted N days ago — or "None"]
+- [lead/company — drafted: <channels> — drafted N days ago — or "None"]
 
 ## Next actions due today ([count])
 

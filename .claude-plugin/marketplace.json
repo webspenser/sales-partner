@@ -2,6 +2,6 @@
   "name": "sales-partner",
   "owner": { "name": "Webspenser" },
   "plugins": [
-    { "name": "sales-partner", "source": "./", "description": "Interviews a business, then finds, scores and researches fresh leads that fit its ideal customer and prepares each first touch in the CRM: a recommended channel with a full draft, plus personalized statements for email, LinkedIn and calls" }
+    { "name": "sales-partner", "source": "./", "description": "Interviews a business, then finds, scores and researches fresh leads that fit its ideal customer and prepares each first touch in the CRM: a full draft with personalized statements for every channel it can reach, email, LinkedIn and calls" }
   ]
 }

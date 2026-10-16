@@ -55,10 +55,9 @@ echo "-- call channel"
 assert_contains "$SP/skills/write-call-opener/SKILL.md" 'name: write-call-opener'
 assert_contains "$SP/skills/write-call-opener/SKILL.md" 'channel="call"'
 assert_contains "$SP/templates/cold-call-opener.md" 'Voicemail:'
-assert_contains "$SP/subagents/approacher.md" 'only for a lead with a sourced phone number'
 assert_contains "$SP/context/operating-config.md" '`call` in this list'
-assert_contains "$SP/skills/send-digest/SKILL.md" 'number to dial'
-assert_contains "$SP/templates/digest.md" 'number to dial'
+assert_contains "$SP/skills/send-digest/SKILL.md" 'the number it uses'
+assert_contains "$SP/templates/digest.md" 'the number from the Call note'
 assert_contains "$SP/AGENT.md" '`write-call-opener`'
 assert_contains "$SP/context/operating-config.md" 'callback_phone:'
 assert_contains "$SP/skills/write-call-opener/SKILL.md" '`callback_phone`'
@@ -94,7 +93,7 @@ assert_contains "$I" 'Target roles, Buying triggers, Anti-signals'
 echo "-- evals widened (I6)"
 assert_contains "$E" '`100×0.30=30`'
 assert_contains "$E" 'same normalized company and address'
-assert_contains "$E" 'may get a `Channel = call` draft'
+assert_contains "$E" 'gets a Call draft that prints that number'
 assert_contains "$E" 'then_prospect: prepare'
 
 echo "-- minors (M1-M11, D1-D2)"
@@ -109,7 +108,6 @@ assert_contains "$SP/subagents/approacher.md" '`callback_phone`'
 assert_contains "$SP/subagents/prospector.md" 'Existing leads, read via CRM'
 assert_contains "$SP/subagents/prospector.md" 'Every source listed in `prospecting_sources` is exhausted'
 assert_contains "$SP/subagents/preparer.md" '`apify_contact_info`'
-assert_contains "$SP/skills/write-call-opener/SKILL.md" 'status="draft"'
 assert_contains "$SP/skills/write-call-opener/SKILL.md" 'never dials'
 assert_contains "$SP/skills/write-call-opener/SKILL.md" 'never an invented number'
 assert_contains "$SP/subagents/approacher.md" 'places, schedules, or records a call'
@@ -151,7 +149,7 @@ assert_contains "$AT/usage.md" 'lead_source_outbound: yes'
 assert_not_contains "$AT/usage.md" 'Webspenser'
 [ -x "$AT/bootstrap.py" ] && _report ok "bootstrap.py present and executable" || _report no "bootstrap.py missing or not executable"
 assert_not_contains "$AT/bootstrap.py" '.env'
-for op in create_lead get_lead update_stage update_lead log_activity update_activity log_research upsert_contact query_by_stage query_by_score query_activities; do
+for op in create_lead get_lead update_stage update_lead log_draft log_research upsert_contact query_by_stage query_by_score; do
   assert_contains "$AT/usage.md" "\`$op\`"
 done
 
@@ -164,7 +162,7 @@ assert_contains "$HT/usage.md" 'CONFIRMATION_WAIVED_FOR_SESSION'
 assert_not_contains "$HT/usage.md" 'Webspenser'
 [ -x "$HT/bootstrap.py" ] && _report ok "hubspot bootstrap.py present and executable" || _report no "hubspot bootstrap.py missing or not executable"
 assert_contains "$HT/bootstrap.py" 'HUBSPOT_TOKEN'
-for op in create_lead get_lead update_stage update_lead log_activity update_activity log_research upsert_contact query_by_stage query_by_score query_activities; do
+for op in create_lead get_lead update_stage update_lead log_draft log_research upsert_contact query_by_stage query_by_score; do
   assert_contains "$HT/usage.md" "\`$op\`"
 done
 
@@ -184,8 +182,7 @@ import importlib.util,sys
 sp=importlib.util.spec_from_file_location('b','$HT/bootstrap.py'); m=importlib.util.module_from_spec(sp); sp.loader.exec_module(m)
 print(sorted(m.PROPERTIES)==['companies','contacts'] and ''.join(n+',' for n in sorted(p['name'] for o in m.PROPERTIES.values() for p in o)) or 'unexpected objects: '+','.join(m.PROPERTIES))")
 [ -n "$u" ] && [ "$b" = "$u" ] && _report ok "Setup tables and bootstrap.py create the same properties, companies and contacts only" || _report no "Setup vs bootstrap.py: usage.md=$u bootstrap.py=$b"
-assert_contains "$HT/usage.md" "Tasks need no custom fields; drafts use HubSpot's built-in task status."
-assert_contains "$HT/guard.yaml" 'field: hs_task_status'
+assert_contains "$HT/usage.md" 'Notes need no custom fields.'
 if grep -nE 'sp_(status|channel|direction|summary|outcome)' "$HT/usage.md" "$HT/bootstrap.py" "$HT/guard.yaml" | grep -q .; then
   _report no "the HubSpot tool still mentions a custom task field"; else _report ok "no custom task fields in the HubSpot tool"; fi
 
@@ -234,18 +231,14 @@ assert_contains "$SP/AGENT.md" 'unattended'
 echo "-- 4.0.4: AGENT.md inline size, idle rule"
 [ "$(wc -c < "$SP/AGENT.md" | tr -d ' ')" -le 9000 ] && _report ok "AGENT.md fits the 9000-byte inline limit" || _report no "AGENT.md is over 9000 bytes; the hook will not inline it"
 assert_contains "$SP/capabilities/crm/contract.md" '## Lead status transitions'
-assert_contains "$SP/capabilities/crm/contract.md" 'draft Activities (one per enabled channel: the recommended channel'"'"'s full draft and statements, the others'"'"' statements) at `status: draft`'
+assert_contains "$SP/capabilities/crm/contract.md" 'Approacher logs one draft per reachable enabled channel'
 assert_contains "$SP/AGENT.md" '`capabilities/crm/contract.md` (Lead status, Lead status transitions)'
 assert_contains "$SP/context/icp.md" '`capabilities/crm/contract.md` (Lead status transitions)'
-assert_contains "$SP/capabilities/crm/contract.md" 'idle age = now − `max(last Activity date, Stage Changed'
-assert_contains "$SP/capabilities/crm/contract.md" 'at all is measured from its `Stage Changed At` alone'
+assert_contains "$SP/capabilities/crm/contract.md" 'idle age = now − `Stage Changed At`'
 D="$SP/skills/send-digest/SKILL.md"
-assert_contains "$SP/capabilities/crm/tools/attio/usage.md" '`stage_changed_at`. If the lead has no'
-assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'If the lead has no Task'
+assert_contains "$SP/capabilities/crm/tools/attio/usage.md" 'For `idle_days`: keep a lead when now minus'
 echo "-- 5.0.0: void outcome Note, changed fields only"
 HU="$SP/capabilities/crm/tools/hubspot/usage.md"
-assert_contains "$HU" 'Outcome for task <activity_id>:'
-assert_contains "$HU" 'are outcomes, not Research'
 assert_not_contains "$HU" 'body with Outcome: line'
 assert_not_contains "$HU" 'appends an `Outcome: <outcome>` line'
 for f in "$SP"/capabilities/crm/tools/*/usage.md; do assert_contains "$f" 'Write only the fields that change'; done
@@ -255,7 +248,7 @@ K="$SP/capabilities/crm/contract.md"
 python3 -c "import sys; t=open('$K').read(); sys.exit(0 if 'Approach Drafted\nReady to Send\nContacted' in t else 1)" && _report ok "stage order has Ready to Send" || _report no "stage order lacks Ready to Send"
 assert_contains "$K" '| `Ready to Send` |'
 assert_contains "$K" 'only the operator writes `Ready to Send`'
-assert_contains "$K" 'the only status it may later write is `voided`'
+assert_contains "$K" 'drafts are append-only (see Approval invariant)'
 assert_not_contains "$K" '`approved`'
 assert_not_contains "$SP/AGENT.md" 'twelve lead stages'
 assert_contains "$SP/AGENT.md" 'The lead statuses and their transitions'
@@ -276,7 +269,6 @@ assert_not_contains "$SP/capabilities/crm/tools/attio/bootstrap.py" '"approved"'
 
 echo "-- 6.0.0: personalization and config"
 OC="$SP/context/operating-config.md"
-assert_contains "$SP/subagents/approacher.md" 'never an address with a `bounced` Activity'
 
 echo "-- 6.0.0: lead status"
 K="$SP/capabilities/crm/contract.md"
@@ -328,9 +320,7 @@ assert_contains "$T" '## Review ([count])'
 assert_contains "$T" '## Ready to Send ([count])'
 assert_not_contains "$T" 'Won:'
 K="$SP/capabilities/crm/contract.md"
-assert_contains "$K" '| `query_activities` | `status, direction, channel, since, until, limit` |'
-assert_contains "$SP/capabilities/crm/tools/attio/usage.md" '`channel` when given'
-assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" '`channel` when given'
+assert_contains "$K" '| `log_research` | `lead_id, findings[]`'
 
 
 echo "-- 6.0.0: AGENT.md and onboarding"
@@ -350,13 +340,13 @@ echo "-- 6.0.0: final review fixes"
 PR="$SP/subagents/prospector.md"
 assert_contains "$PR" 'leave it untouched unless its status is `New`, or `Nurture` with a Revisit On date in the past'
 assert_contains "$PR" '- CRM `get_lead`'
-assert_contains "$SP/capabilities/crm/tools/attio/usage.md" 'act only on a `recommended:` draft of a lead at `Ready to Send`'
-assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'act only on a `recommended:` draft of a lead at `Ready to Send`'
+assert_contains "$SP/capabilities/crm/tools/attio/usage.md" 'then move the lead to `Ready to Send`: that approves it'
+assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'then move the company to'
 assert_not_contains "$SP/context/operating-config.md" '`approved`'
 assert_contains "$SP/context/operating-config.md" 'only the operator approves a lead'
 AP="$SP/subagents/approacher.md"
 assert_not_contains "$AP" 'One opening touch per lead'
-assert_contains "$AP" 'prepares the lead'"'"'s first touch'
+assert_contains "$AP" 'drafts the lead'"'"'s first touch'
 assert_contains "$AP" 'redraft'
 E="$SP/evals/cases.md"
 assert_contains "$E" 'at `Contacted` and one at `Ready to Send`'
@@ -400,10 +390,9 @@ assert_contains "$SP/guard.yaml" '"*_workflow*"'
 echo "-- 6.0.0: the agent stops at Approach Drafted"
 K="$SP/capabilities/crm/contract.md"
 assert_contains "$K" '**The agent'"'"'s job ends at `Approach Drafted`.**'
-assert_contains "$K" '| `update_activity` | `activity_id, status, outcome` | updated activity | Accepts only `status: "voided"`'
+assert_contains "$K" '| `log_draft` | `lead_id, contact_id, channel, body` |'
 assert_contains "$K" 'the owner'"'"'s automation'
-assert_contains "$K" '**Opt-outs.**'
-assert_contains "$K" 'outcome: "opt-out"'
+assert_contains "$K" '**Instruction, not a mechanism.** The operator records an opt-out'
 assert_not_contains "$K" 'enroll'
 assert_not_contains "$K" 'sync-replies'
 assert_not_contains "$K" 'a bounced email returns it'
@@ -415,24 +404,17 @@ for c in attio hubspot; do
   assert_not_contains "$U" 'sync-replies'
   assert_not_contains "$U" 'sequences'
 done
-grep -qF 'update: [voided]' "$SP/capabilities/crm/tools/attio/guard.yaml" && grep -qF 'update: [DEFERRED]' "$SP/capabilities/crm/tools/hubspot/guard.yaml" && _report ok "guards: agent only voids Activities" || _report no "guards: Activity status update list"
-assert_contains "$SP/capabilities/crm/tools/attio/usage.md" '**`update_activity`** — Reject `status` other than `voided`.'
-assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'Reject a `status` other than `voided`.'
-assert_contains "$SP/context/operating-config.md" '`update_activity` moves it only to `voided`'
+grep -qF 'update: [append]' "$SP/capabilities/crm/tools/attio/guard.yaml" && _report ok "attio guard: notes are append-only" || _report no "attio guard: note append rule"
+assert_contains "$SP/context/operating-config.md" 'Drafts are append-only'
 E="$SP/evals/cases.md"
-assert_contains "$E" '## Case 5: Opt-out sets Do Not Contact and voids pending drafts'
+assert_contains "$E" '## Case 5: An opted-out lead is disqualified and gets nothing new'
 assert_not_contains "$E" 'enroll'
 assert_not_contains "$E" 'sync-replies'
 assert_not_contains "$E" 'suppress'
 
 echo "-- 6.0.0: recommendation and personalized statements"
 AP="$SP/subagents/approacher.md"
-assert_contains "$AP" 'recommended: <one-line reason>'
-assert_contains "$AP" 'summary `statements`'
-assert_contains "$AP" 'one draft Activity per enabled channel'
-assert_contains "$AP" 'the full draft only for the recommended channel'
 assert_contains "$AP" 'templates/personalized-statements.md'
-assert_contains "$AP" 'never an address with a `bounced` Activity'
 assert_not_contains "$AP" 'touch_spacing_days'
 assert_not_contains "$AP" 'sequences'
 assert_not_contains "$AP" 'sequence platform'
@@ -446,22 +428,17 @@ assert_contains "$PS" 'two to four lines'
 for w in write-cold-email write-linkedin-touch write-call-opener; do
   assert_contains "./skills/$w/SKILL.md" '## Personalized statements'
   assert_contains "./skills/$w/SKILL.md" 'templates/personalized-statements.md'
-  assert_contains "./skills/$w/SKILL.md" 'summary="statements"'
 done
 assert_not_contains "$SP/skills/write-cold-email/SKILL.md" 'sequences'
 assert_not_contains "$SP/skills/write-cold-email/SKILL.md" 'variables:'
 assert_not_contains "$SP/templates/cold-email.md" 'sequences'
-assert_contains "$SP/skills/write-linkedin-touch/SKILL.md" 'one Activity holding both'
-assert_contains "$SP/capabilities/crm/tools/attio/usage.md" 'the `recommended:` one holds the full draft'
-assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'the `recommended:` one holds the full draft'
-assert_contains "$SP/evals/cases.md" '## Case 14: The first touch is one recommendation plus statements per channel'
+assert_contains "$SP/skills/write-linkedin-touch/SKILL.md" 'Log one draft holding both'
 
 echo "-- 6.0.0: AGENT.md and manifests describe lead generation and personalization"
 A="$SP/AGENT.md"
 assert_contains "$A" 'lead generation and personalization'
 assert_contains "$A" 'stops at `Approach Drafted`'
 assert_contains "$A" 'never act on a lead at'
-assert_contains "$A" '`recommended:`'
 assert_not_contains "$A" 'enroll'
 assert_not_contains "$A" 'sync-replies'
 assert_not_contains "$A" 'sequence'
@@ -474,23 +451,16 @@ if grep -rlE "enroll|sync-replies|InvokeIQ|invokeiq|sequence_bands|bind_sequence
 
 echo "-- 6.0.0: final review of the scope cut"
 K="$SP/capabilities/crm/contract.md"
-assert_contains "$K" 'moves it to `Disqualified` with reason `opt-out`'
-assert_contains "$K" 'the Prospector (on a lead it re-finds), the Preparer and the Approacher'
-assert_contains "$K" '`sent` by the operator or their automation'
+assert_contains "$K" '`Disqualified` with reason `opt-out` and writes nothing else'
+assert_contains "$K" 'When the Prospector (on a lead it re-finds),'
 assert_not_contains "$K" '`sent` and `voided` by `update_activity`'
-assert_contains "$SP/subagents/prospector.md" '`Do Not Contact` for an opt-out)'
-for f in prospector preparer; do
-  assert_contains "./subagents/$f.md" '- CRM `update_activity` (`voided` only, for an opt-out)'
-done
 AP="$SP/subagents/approacher.md"
 assert_contains "$AP" 'No reachable channel'
 assert_contains "$AP" 'reason `no reachable channel`'
-assert_contains "$AP" 'exactly one `recommended:` draft'
 D="$SP/skills/send-digest/SKILL.md"
-assert_contains "$D" '⚠ opt-out logged — Do Not Contact not set'
 assert_contains "$D" '(now <status>)'
 E="$SP/evals/cases.md"
-assert_contains "$E" 'one `log_activity` call with `Channel = "linkedin"`'
+assert_contains "$E" 'one `log_draft` call with `channel ='
 assert_not_contains "$E" 'two separate `log_activity` calls'
 for c in attio hubspot; do
   assert_not_contains "./capabilities/crm/tools/$c/usage.md" 'wait for you on their dates'
@@ -529,7 +499,6 @@ assert_not_contains "$D" 'check the'
 assert_not_contains "$SP/templates/digest.md" 'check the hand-off'
 assert_contains "$D" 'drafted N days ago'
 assert_not_contains "$SP/capabilities/crm/contract.md" '`send-digest` needed to find'
-assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" '`LINKED_IN_MESSAGE` for linkedin (the connection note and DM share one Task)'
 assert_not_contains "$SP/capabilities/crm/tools/hubspot/usage.md" '|LINKED_IN_CONNECT|TODO>'
 assert_not_contains "$SP/evals/cases.md" 'thirteen'
 assert_contains "$SP/evals/cases.md" 'Case 14 is a positive check'
@@ -580,7 +549,7 @@ assert_contains "$SP/README.md" 'messages only you, through Resend'
 assert_contains "$SP/evals/cases.md" 'A notification never reaches anyone but the owner'
 
 echo "-- 7.0.0: release"
-assert_contains "$SP/agent.yaml" 'version: 7.3.0'
+assert_contains "$SP/agent.yaml" 'version: 7.4.0'
 for m in agent.yaml .claude-plugin/plugin.json .claude-plugin/marketplace.json .codex-plugin/plugin.json gemini-extension.json; do
   grep -qF 'prepares each first touch in the CRM:' "./$m" && _report ok "$m: description says drafts stay in the CRM" || _report no "$m: description does not say the CRM"
 done
@@ -724,5 +693,99 @@ assert_contains "$U" 'claimed = `not claimThisBusiness`'
 assert_contains "$SP/capabilities/scraping/contract.md" 'per-star review counts (one to five stars), opening hours (per day), claimed (true or false), temporarily closed (true or false)'
 assert_contains "$SP/evals/cases.md" '## Case 19: Each gate reads its own score'
 assert_contains "$SP/README.md" 'Upgrading from 7.2'
+
+
+echo "-- 7.4: one Attio list"
+assert_contains "$C" '| `log_draft` |'
+assert_contains "$C" 'log_research(lead_id, findings[])'
+assert_contains "$C" 'the nine operations'
+assert_not_contains "$C" 'update_activity'
+assert_not_contains "$C" 'query_activities'
+assert_not_contains "$C" 'log_activity'
+assert_not_contains "$C" 'recommended'
+assert_contains "$C" 'drafts are append-only'
+assert_contains "$C" 'a tool with no home for them skips them'
+
+AU="$SP/capabilities/crm/tools/attio/usage.md"
+AB=./capabilities/crm/tools/attio/bootstrap.py
+assert_contains "$AU" '`Sales Partner · Research`'
+assert_contains "$AU" '`Sales Partner · Email`'
+assert_contains "$AU" '=== YYYY-MM-DD · draft ==='
+assert_contains "$AU" '## Reading notes from an automation'
+assert_contains "$AU" 'append to the oldest'
+assert_contains "$AU" 'exact title'
+assert_contains "$AU" 'company name + `primary_location`'
+for gone in sales_partner_research sales_partner_outreach draft_body '`phone` | text' log_activity update_activity query_activities; do
+  assert_not_contains "$AU" "$gone"
+done
+for gone in sales_partner_research sales_partner_outreach draft_body 'attr("phone"' 'attr("email"' 'attr("address"' 'attr("location"'; do
+  grep -qF "$gone" "$AB" && _report no "attio bootstrap still has $gone" || _report ok "attio bootstrap drops $gone"
+done
+
+HU="$SP/capabilities/crm/tools/hubspot/usage.md"
+assert_contains "$HU" 'Channel: email'
+assert_contains "$HU" 'hs_note_body'
+assert_contains "$HU" '=== YYYY-MM-DD · draft ==='
+assert_contains "$HU" 'forbidden outright: the agent uses no Tasks'
+assert_contains "$HU" 'by `hs_createdate` (stamped by HubSpot, never by the agent)'
+for gone in update_activity query_activities log_activity 'Outcome for task' recommended; do
+  assert_not_contains "$HU" "$gone"
+done
+grep -qF 'field: hs_note_body' ./capabilities/crm/tools/hubspot/guard.yaml && _report ok "hubspot guard: note body fixed after create" || _report no "hubspot guard: note body rule"
+
+while IFS= read -r f; do
+  for gone in log_activity update_activity query_activities 'recommended:' '`statements`' 'bounced Activity'; do
+    assert_not_contains "$f" "$gone"
+  done
+done < <(find ./AGENT.md ./subagents ./skills ./templates ./context -name '*.md')
+assert_contains "$SP/subagents/approacher.md" 'a full draft for each enabled channel the lead is reachable on'
+assert_contains "$SP/subagents/approacher.md" 'a main line recorded in the research with its source URL'
+assert_contains "$SP/subagents/preparer.md" 'log_research(lead_id, findings[])'
+assert_contains "$SP/subagents/preparer.md" 'main line and general inbox'
+assert_contains "$SP/skills/write-cold-email/SKILL.md" 'log_draft(lead_id, contact_id, channel="email"'
+assert_contains "$SP/skills/write-linkedin-touch/SKILL.md" 'log_draft(lead_id, contact_id, channel="linkedin"'
+assert_contains "$SP/skills/write-call-opener/SKILL.md" 'log_draft(lead_id, contact_id, channel="call"'
+assert_contains "$SP/AGENT.md" 'a full draft and personalized statements for every channel it can reach'
+
+SD="$SP/skills/send-digest/SKILL.md"
+assert_contains "$SD" 'drafted:'
+assert_contains "$SD" 'the Call note'
+assert_contains "$SD" 'nine operations'
+assert_not_contains "$SD" 'recommended'
+assert_not_contains "$SD" 'opt-out logged — Do Not Contact not set'
+assert_not_contains "$SD" 'eleven operations'
+assert_contains "$SP/templates/digest.md" 'drafted: <channels>'
+assert_not_contains "$SP/templates/digest.md" 'recommended'
+
+EV="$SP/evals/cases.md"
+assert_contains "$EV" '## Case 14: Every reachable channel gets a full draft'
+assert_contains "$EV" '## Case 20: A redraft appends and never rewrites'
+for gone in update_activity query_activities log_activity 'recommended:'; do
+  assert_not_contains "$EV" "$gone"
+done
+
+for m in agent.yaml .claude-plugin/plugin.json .claude-plugin/marketplace.json .codex-plugin/plugin.json gemini-extension.json; do
+  grep -qF 'prepares each first touch in the CRM: a full draft with personalized statements for every channel it can reach' "./$m" && _report ok "$m: description, every channel" || _report no "$m: description still old"
+  grep -qF 'recommended channel' "./$m" && _report no "$m still says recommended channel" || _report ok "$m: no recommended channel"
+done
+assert_contains "$SP/README.md" 'Upgrading from 7.3'
+assert_contains "$SP/README.md" 'Version 7.4.0.'
+assert_not_contains "$SP/README.md" 'recommends the best'
+
+echo "-- 7.4: final review fixes"
+RC="$SP/skills/research-company/SKILL.md"
+assert_contains "$RC" 'Hook: contact route'
+assert_contains "$SP/capabilities/crm/contract.md" 'contact route'
+assert_contains "$SP/subagents/preparer.md" 'Hook: contact route'
+AU2="$SP/capabilities/crm/tools/attio/usage.md"
+assert_contains "$AU2" 'paging with `limit: 100` and `offset`'
+assert_contains "$AU2" 'use the oldest (earliest `created_at`)'
+assert_contains "$AU2" 'create the note with the header line alone, then append'
+assert_contains "$AU2" '`do_not_contact` is not true'
+assert_contains "$SP/skills/send-digest/SKILL.md" 'In Section 2 too, mark every lead whose `Do Not Contact` is true'
+assert_contains "$SP/README.md" 'otherwise it is recorded as a `listing` finding in the research note'
+assert_contains "$SP/subagents/approacher.md" 'the lead'"'"'s own sourced `phone` where the CRM tool stores one'
+assert_contains "$SP/subagents/approacher.md" 'the lead'"'"'s own sourced `email` where the CRM tool stores one'
+assert_contains "$SP/evals/cases.md" 'only email is a general inbox recorded in its research'
 
 finish

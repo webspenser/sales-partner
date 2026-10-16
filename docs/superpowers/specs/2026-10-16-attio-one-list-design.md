@@ -83,6 +83,10 @@ a sales-pipeline item.
 - Person fields: phone, email, LinkedIn, job title, role (`sp_role`),
   plus the existing `sp_verified`, `sp_notes` and `lead_source`.
 - Pipeline entry: no phone, no email. Dedupe uses the company's domain.
+- No recommended channel: every channel the lead can be reached on
+  gets a full draft (see below).
+- n8n (the operator's future automation) must be able to read the
+  research and draft notes; their format is fixed.
 - Opt-out: shown by status only (`Do Not Contact` ticked, lead moved to
   `Disqualified`). The agent does not touch notes for an opt-out. Notes
   are never deleted; nothing acts on them.
@@ -107,10 +111,6 @@ Kept: `lead`, `stage`, `stage_changed_at`, `stage_reason`, `fit_score`,
 `fit_breakdown`, `approach_score`, `approach_breakdown`, `industry`,
 `size`, `source`, `source_url`, `next_action`, `next_action_due`,
 `revisit_on`, `do_not_contact`.
-
-Added: `recommended_channel` — select `email`, `linkedin`, `call`;
-written by the Approacher with the drafts, so the operator sees the
-recommendation in the list without opening notes.
 
 Removed from the package (no longer read, written or probed): `phone`,
 `email`, `address`, `location`. Address and location live on the
@@ -157,23 +157,32 @@ operator can scroll to the newest and an automation can split on it
   `Source:` (URL), `Hook:`. Listing facts
   (rating, review count, newest review date, hours, the main phone,
   website state) are findings like any other, each with its URL.
-- Draft notes: `=== 2026-10-16 · recommended: <one-line reason> ===` or
-  `=== 2026-10-16 · statements ===`, then `For: <person, title>` (or
-  `For: the business`), then the body: the full draft and the
-  Personalized statements block for the recommended channel, the
-  statements block alone otherwise (unchanged content rules,
-  `templates/personalized-statements.md`).
+- Draft notes: `=== 2026-10-16 · draft ===`, then `For: <person,
+  title>` (or `For: the business`), then the full draft for that
+  channel, then the Personalized statements block (content rules
+  unchanged, `templates/personalized-statements.md`).
 
 The first section goes into `create-note` as markdown; later sections
 are appended as plain text, so the header and body use plain lines in
 both cases (no tables, no markdown that only renders in the first
 section).
 
-**Redraft.** Append a new dated section to that channel's note. If the
-recommendation moves to another channel, `recommended_channel` changes
-on the pipeline entry and the new channel's note gets a `recommended:`
-section; the old channel's note gets a new `statements` section only
-if its statements change. Nothing is voided.
+**Redraft.** Append a new dated section to that channel's note.
+Nothing is voided.
+
+### Every reachable channel gets a full draft
+
+The operator works every channel a lead can be reached on: an email
+address gets an email, a phone number a call, a LinkedIn profile a
+connection. So the Approacher no longer recommends one channel. For
+**each** enabled channel the lead is reachable on, it writes a full
+draft plus the Personalized statements block into that channel's note.
+This replaces the 6.0 shape (one `recommended:` full draft, the other
+channels statements only) everywhere it appears: `AGENT.md` (Identity,
+Outputs), `subagents/approacher.md` (Outputs, Stop conditions,
+Guardrails), the three `write-*` skills, `send-digest` (Review lists the
+channels drafted), `README.md`, and the description in `agent.yaml` and
+the host manifests.
 
 ### Reading from an automation
 
@@ -198,8 +207,7 @@ and a README upgrade note:
 - Titles, exactly: `Sales Partner · Research`, `Sales Partner · Email`,
   `Sales Partner · LinkedIn`, `Sales Partner · Call`.
 - Header, alone on its line: `=== YYYY-MM-DD · <kind> ===`, where
-  `<kind>` is `research`, `recommended: <one-line reason>` or
-  `statements`.
+  `<kind>` is `research` (research note) or `draft` (channel notes).
 - Inside a draft section, labelled lines an automation can split on:
   `For: …`, then the draft, then the block starting `Personalized
   statements` with its `opener:`, `relevance:`, `proof:`, `ask:` lines
@@ -229,15 +237,14 @@ there is one shape (no Attio-only branch):
   writes them once, before scoring; under HubSpot that is one Note per
   run.
 - **`log_activity`** becomes **`log_draft(lead_id, contact_id, channel,
-  kind, reason, body)`**: appends a dated section to the lead's draft
-  record for `channel` (`kind` is `recommended` or `statements`).
+  body)`**: appends a dated section to the lead's draft record for
+  `channel`.
   Create or append only; it never edits or removes earlier text.
 - **Removed:** `update_activity` (no voiding: a redraft appends, an
   opt-out is the status), `query_activities` (no caller needs it once
   drafts have no status), and Activity `status`/`direction`/`outcome`.
 - **`get_lead`** returns the lead, its Contacts, its research record
   and its draft records (per channel, newest section identified).
-- **`update_lead`** gains `Recommended Channel`.
 - **Lead `phone` and `email`** remain optional `create_lead` arguments,
   stored where the tool has a home for them; a tool with no home skips
   them (as with company profile fields). Attio has none. Dedupe then
@@ -259,30 +266,30 @@ there is one shape (no Attio-only branch):
 - **Preparer** — one research section per run; fills company and person
   fields (empty only). Records the main phone and general inbox as
   listing findings with URLs.
-- **Approacher** — `log_draft` per reachable channel, sets
-  `recommended_channel`. Reachability: `call` needs a sourced phone on
+- **Approacher** — `log_draft` with a full draft per reachable
+  channel; no recommendation. Reachability: `call` needs a sourced phone on
   the chosen Contact or a main line recorded in the research with its
   URL; `email` needs a contact email or a general inbox recorded in the
   research with its URL; `linkedin` unchanged (the Contact's own
   profile). The "bounced Activity" rule goes away: the operator removes
   a bad address from the person.
-- **send-digest** — Review lists each lead's `recommended_channel` and
-  the channels with a draft note; the call number comes from the Call
+- **send-digest** — Review lists each lead's drafted channels (the
+  draft notes present); the call number comes from the Call
   note. The "opt-out logged but not flagged" check goes. Duplicate
   check uses domain (and phone where the tool stores one).
 - **write-cold-email / write-linkedin-touch / write-call-opener** — log
   with `log_draft`.
 - **Attio tool** — `usage.md`, `bootstrap.py`, `guard.yaml`, probe and
   `## Setup` per this design. Bootstrap stops creating the research and
-  outreach lists and the four removed pipeline attributes, and adds
-  `recommended_channel`; it still never deletes anything.
+  outreach lists and the four removed pipeline attributes; it still
+  never deletes anything.
 - **HubSpot tool** — follows the contract: research and drafts become
   Notes on the company with the same titles and section format (a
   HubSpot note can't be appended through the guard-safe path, so each
   section is its own Note, titled with the channel and date, body
   `forbid: update`). HubSpot Tasks are no longer used for drafts.
-  `sp_recommended_channel` added.
-- **evals/cases.md** — cases that use `update_activity`,
+- **evals/cases.md** — Case 14 becomes "every reachable channel gets a
+  full draft"; cases that use `update_activity`,
   `query_activities` or Activity status (4, 5, 11, 14, 15 and the
   degradation check) are rewritten against notes and statuses; add a
   case: a redraft appends and never rewrites; a second run never
@@ -315,25 +322,47 @@ a 7.4 run first would create the notes and the migration would then
 have to append older dates below newer ones. *(My call.)* One
 interactive pass, inside the guard:
 
-1. Add `recommended_channel` (bootstrap or by hand).
-2. For each company with entries in `sales_partner_research`: create
+1. For each company with entries in `sales_partner_research`: create
    "Sales Partner · Research" with one section per original date, from
    the entries' type, date, summary, source URL and hook.
-3. For each company with non-voided entries in
+2. For each company with non-voided entries in
    `sales_partner_outreach`: create the channel notes from the newest
-   draft per channel (`recommended:` summary → recommended section),
-   and set `recommended_channel`.
-4. Pipeline `phone`/`email`: where the number or address belongs to a
+   draft per channel, as written (a statements-only draft stays
+   statements-only; the operator can ask for a full redraft).
+3. Pipeline `phone`/`email`: where the number or address belongs to a
    linked person and that person's field is empty, fill it there;
    otherwise it is already in the listing and is recorded in the
    research note as a listing finding. Nothing is lost that isn't
    re-sourceable.
-5. Then the operator archives the two lists and the four pipeline
+4. Then the operator archives the two lists and the four pipeline
    attributes in Attio (archived data stays recoverable).
 
 Live state on 2026-10-16: research entries for the researched leads
 (latest 2026-10-15), outreach drafts for Corral Cooling and HTO
 Plumbing (2026-10-05), 18 pipeline entries.
+
+## Calls made in writing this spec (operator to check)
+
+1. **HubSpot changes too.** The contract is shared, so HubSpot research
+   and drafts become Notes and Tasks stop being used for drafts. The
+   alternative, an Attio-only contract branch, was rejected to keep one
+   shape.
+2. **Removed:** voiding, Activity status (draft/sent/voided), inbound
+   reply/opt-out entries, the bounced-email check. An opt-out is the Do
+   Not Contact tick plus the status; a bad address is removed from the
+   person by the operator.
+3. **No main phone or info@ field.** Recorded in the research note with
+   a source, printed in the Call or Email draft that uses it, and enough
+   to make that channel reachable.
+4. **Dedupe** on the company's domain, then name + primary location; no
+   domain copy on the pipeline entry.
+5. **One research section per run** (`log_research(findings[])`).
+6. **Notes on companies only** is an instruction, not a guard rule.
+7. **The 50–70 Approach band gets research but no drafts** while
+   `approach_threshold` is 70. If the n8n sequence for that band should
+   use drafts, lower `approach_threshold` to 50 in the instance's
+   `operating-config.md` (a config edit, no build change).
+8. **Migration runs before the next scheduled run.**
 
 ## Left to the builder
 

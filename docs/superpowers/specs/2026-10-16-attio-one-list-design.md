@@ -217,9 +217,8 @@ and a README upgrade note:
 
 A lead in the 50–70 band was researched (Fit gate) but got no drafts:
 the Approacher drafts only at or above `approach_threshold` (70). For
-those leads the automation reads the research note alone. Lowering
-`approach_threshold` to 50 is the operator's choice if they want drafts
-for that band too.
+those leads the automation reads the research note alone, which the
+operator confirmed is enough.
 
 ### Contract changes (`capabilities/crm/contract.md`)
 
@@ -358,10 +357,9 @@ Plumbing (2026-10-05), 18 pipeline entries.
    domain copy on the pipeline entry.
 5. **One research section per run** (`log_research(findings[])`).
 6. **Notes on companies only** is an instruction, not a guard rule.
-7. **The 50–70 Approach band gets research but no drafts** while
-   `approach_threshold` is 70. If the n8n sequence for that band should
-   use drafts, lower `approach_threshold` to 50 in the instance's
-   `operating-config.md` (a config edit, no build change).
+7. **The 50–70 Approach band gets research but no drafts**
+   (`approach_threshold` stays 70). Confirmed by the operator: the n8n
+   sequence for that band works from the research note alone.
 8. **Migration runs before the next scheduled run.**
 
 ## Left to the builder

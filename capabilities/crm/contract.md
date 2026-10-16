@@ -2,7 +2,7 @@
 
 Provider-neutral contract for the sales-partner agent's data layer. Every
 sub-agent (Prospector, Preparer, Approacher) and skill reads and writes
-the CRM only through the eleven operations
+the CRM only through the nine operations
 below. No sub-agent talks to a provider's API directly, and no sub-agent
 invokes another sub-agent directly — **`update_stage` is the only
 handoff mechanism between sub-agents.** A sub-agent's job is done when it
@@ -19,17 +19,15 @@ behavior only; it names no provider table or field.
 
 | Operation | Arguments | Returns | On failure |
 |---|---|---|---|
-| `create_lead` | `company, location, industry, size, source, source_url`, plus optional `domain, address, phone, email, fit_score, fit_breakdown` and the company profile fields | `lead_id`, on a record created at `Stage = New` with `Stage Changed At` stamped at creation | A lead matching an existing one by the dedupe order (domain, then phone, then company + address) returns the existing `lead_id` and writes nothing; rejects a call with none of `domain`, `phone`, or `address` |
-| `get_lead` | `lead_id` | full lead record with linked Contacts, Research, Activities | Missing id is an error, not an empty record |
+| `create_lead` | `company, location, industry, size, source, source_url`, plus optional `domain, address, phone, email, fit_score, fit_breakdown` and the company profile fields | `lead_id`, on a record created at `Stage = New` with `Stage Changed At` stamped at creation | A lead matching an existing one by the dedupe order (domain, then phone, then company + address, each where the tool stores it) returns the existing `lead_id` and writes nothing; rejects a call with none of `domain`, `phone`, or `address` |
+| `get_lead` | `lead_id` | full lead record with linked Contacts, its research record and its draft records (one per channel), the newest section of each identified | Missing id is an error, not an empty record |
 | `update_stage` | `lead_id, stage, reason` | updated lead, with `stage_changed_at` set to the moment of this call | Rejects any stage outside the enumerated list |
 | `update_lead` | `lead_id, fields` | updated lead | Rejects any attempt to write `stage` through this operation — stage changes go only through `update_stage`. May set `Do Not Contact` to true; rejects any attempt to clear it once true |
-| `log_activity` | `lead_id, contact_id, channel, direction, summary, draft_body, status, outcome` | `activity_id` of the newly created row | Create-only — takes no `activity_id` and never touches an existing row. Accepts only `status: "draft"`; rejects `sent` and `voided` outright and unconditionally. The agent rejects `direction: "outbound"` for a lead whose `Do Not Contact` is true — an instruction the guard does not enforce |
-| `update_activity` | `activity_id, status, outcome` | updated activity | Accepts only `status: "voided"` — rejects `draft` and `sent` outright and unconditionally; never changes the draft's body |
-| `log_research` | `lead_id, type, summary, source_url, date, hook` | `research_id` | Rejects a write with an empty `source_url` or an empty `hook` |
+| `log_draft` | `lead_id, contact_id, channel, body` | the draft record the section was added to | Create or append only: adds one dated section to the lead's draft record for `channel` (`email`, `linkedin` or `call`), creating the record when it has none; never edits, replaces or removes earlier text. Rejects any other `channel`. The agent drafts nothing for a lead whose `Do Not Contact` is true — an instruction the guard does not enforce |
+| `log_research` | `lead_id, findings[]` (each `type, summary, source_url, date, hook`) | the research record the section was added to | Adds one dated section holding the whole run's findings; rejects the call when any finding has an empty `source_url` or `hook`, or a `type` outside the seven |
 | `upsert_contact` | `lead_id, name, title, email, phone, linkedin_url, role, verified, notes` | `contact_id` | Matches an existing Contact on `email` when present, otherwise on `name` plus `title`, and updates it rather than creating a duplicate; rejects a `role` outside decision-maker / influencer / gatekeeper |
 | `query_by_stage` | `stage, limit, next_action_due_before, idle_days` | list of leads | Empty list is a valid result; rejects a call where `stage` is omitted and neither `next_action_due_before` nor `idle_days` is given |
 | `query_by_score` | `score, min_score, stage, limit` | list of leads ordered by that score descending | Rejects a `score` other than `fit` or `approach`; empty list is a valid result |
-| `query_activities` | `status, direction, channel, since, until, limit` | list of activities, each with its linked Lead | Rejects a `status` outside draft / sent / voided; `direction` is optional and, when given, must be `outbound` or `inbound`; empty list is a valid result |
 
 ### Scores
 
@@ -82,9 +80,13 @@ and says nothing; that is not a failure.
   lead with no dedupe key could never be kept unique.
 
   `address`, `phone`, and `email` are optional and hold only sourced
-  values: `email` is the business's general inbox (an `info@` address
-  from its site or listing), never a person's address and never a
-  pattern guess. A value that cannot be sourced is left empty.
+  values: `phone` is the business's main line and `email` its general
+  inbox (an `info@` address from its site or listing), never a person's
+  address and never a pattern guess. A value that cannot be sourced is
+  left empty. They are stored where the tool has a home for them;
+  a tool with no home for them skips them, and its dedupe skips the
+  steps that need them. The research record still holds them as listing findings,
+  with their source URLs, which is enough for a draft to use them.
 
   **Every lead it creates starts at `Stage = New`.** `create_lead`
   takes no `stage` argument because there is nothing to choose: it
@@ -106,7 +108,9 @@ and says nothing; that is not a failure.
   invents a placeholder score to fill them. `create_lead` takes no
   Approach score: a new lead has had no research.
 - **`get_lead`** always resolves the full record graph: the lead plus
-  its linked Contacts, Research, and Activities. A `lead_id` that does
+  its linked Contacts, its research record and its draft records, with
+  the newest section of each identified (sections are dated and the
+  newest is last). A `lead_id` that does
   not exist is an error, not an empty or partial record — callers must
   not treat "not found" as "no data yet."
 - **`update_stage`** is the only handoff mechanism between sub-agents
@@ -147,56 +151,31 @@ and says nothing; that is not a failure.
   This is deliberate and it is the point: an opt-out that an agent can
   undo is not an opt-out, and the one guardrail in this system carrying
   legal weight should not rest on an agent choosing not to reverse it.
-- **`log_activity`** is **create-only**: it takes no `activity_id`, it
-  never reads or touches an existing Activity row, and every call
-  produces a brand-new row, returning that new row's `activity_id`.
-  The `status` it accepts is hard-restricted to `"draft"` — a call
-  passing `sent` or `voided` is **rejected outright and
-  unconditionally**. There is no "current status" for a create-only
-  operation to check against; the restriction applies to every call,
-  every time, with no conditional path through it. Every draft this
-  operation produces sits on a lead at `Approach Drafted`, where the
-  operator reviews the lead's drafts (each tool's **Review** view). Nothing
-  goes out until the operator moves the lead to `Ready to Send`, and no
-  operation this contract exposes to an agent can write that stage — see
-  the Approval invariant below — not because agents are instructed to
-  wait.
-
-  `log_activity` carries a second rule alongside its draft-only one,
-  but **it is an instruction, not a mechanism**: the agent must refuse
-  to create an Activity with `direction: "outbound"` for a lead whose
-  `Do Not Contact` is true. The guard checks one call at a time and
-  cannot see the lead's flag, so it does not enforce this. The rule is
-  held by the agent's instructions (`AGENT.md`), the digest's check
-  that flags any outbound draft on a Do Not Contact lead, and the
-  Do Not Contact column in the operator's approval view. What the guard
-  does enforce is `dnc_one_way`: the flag can never be cleared. Inbound
-  Activities are unaffected — a reply or a debrief on an opted-out lead
-  is still recordable history.
-- **`update_activity`** is the only operation that can change an
-  existing Activity after `log_activity` created it. It takes the
-  `activity_id` `log_activity` returned and writes `status` and
-  `outcome` on that row; the only `status` value it accepts is
-  `"voided"` — a call passing `draft` or `sent` is **rejected outright
-  and unconditionally**. `sent` (the touch went out) is written by the
-  operator or the owner's automation in the CRM, never by the agent. It
-  never changes the draft's body: what the operator approved is what
-  goes out. `log_activity` and `update_activity` are disjoint by
-  design: one only ever creates a new row (and only at `draft`), the
-  other only ever voids an existing one. Both `sent` and `voided` are
-  dead ends — an Activity never moves again after either. This is the
-  operation the opt-out instruction (Approval invariant, **Opt-outs**)
-  calls to void every pending draft Activity for a lead.
-- **`log_research`** creates one Research row linked to the lead. It
-  **rejects a write with an empty `source_url` or an empty `hook`.** A
-  Research row without a source is an unverifiable claim; one without a
-  hook is a research dump the outreach phase cannot use — both are
-  exactly the failure modes the Preparer's guardrails prohibit, so this
-  operation is where they are enforced, not merely stated. `type` is one
-  of news, funding, social, event, hire, listing, web_presence; anything
-  else is rejected. `listing` holds map- or directory-listing facts
-  (rating, review count, hours); `web_presence` holds whether a website
-  exists and its visible state.
+- **`log_draft`** adds one section to the lead's draft record for one
+  channel: a header line with today's date, `For: <person, title>` (or
+  `For: the business`), the full draft, then the Personalized
+  statements block (`templates/personalized-statements.md`). There is
+  one draft record per channel per lead, created by the first call;
+  every later call appends. A redraft is a new section at the end: the
+  newest section is the current draft, and nothing before it is ever
+  rewritten, voided or deleted. There is no draft status: a lead's
+  drafts are approved together when the operator moves the lead to
+  `Ready to Send` (Approval invariant). The tool fixes the record's
+  exact title and section format in its `usage.md`, because the
+  operator's own automations read them.
+- **`log_research(lead_id, findings[])`** adds one section to the lead's research record:
+  a header line with today's date, then one block per finding with its
+  `type`, `date` (the finding's own date), `summary`, `source_url` and
+  `hook`. A caller collects a run's findings and makes one call, so two
+  runs, even on the same day, are two sections. It **rejects the whole
+  call** when any finding has an empty `source_url` or an empty `hook`:
+  a finding without a source is an unverifiable claim, and one without
+  a hook is a research dump the drafting phase cannot use. `type` is one
+  of news, funding, social, event, hire, listing, web_presence;
+  anything else is rejected. `listing` holds map- or directory-listing
+  facts (rating, review count, newest review date, hours, the main
+  phone); `web_presence` holds whether a website exists and its visible
+  state.
 - **`upsert_contact`** creates or updates one Contact row linked to the
   lead. It matches an existing Contact on `email` when one is given,
   and otherwise on `name` plus `title`, and updates that row rather than
@@ -210,7 +189,8 @@ and says nothing; that is not a failure.
   other field — most importantly an unverified pattern-guessed email
   address, recorded as `pattern guess, unverified` rather than ever
   written into `email`. `phone` is optional and holds only a sourced
-  number — a business's main line belongs on the lead, a person's
+  number — a business's main line belongs on the lead (or, in a tool
+  with no home for it, in the research record), a person's
   direct line here. A business owner is written with
   `role: decision-maker` and the title the source gives.
 - **`query_by_stage`** and **`query_by_score`** are read operations used
@@ -238,53 +218,27 @@ and says nothing; that is not a failure.
   form.
 
   **Idle age** is defined exactly, so the same data always gives the
-  same answer: idle age = now − `max(last Activity date, Stage Changed
-  At)`, where "now" is the moment of the call. A lead with no Activity
-  at all is measured from its `Stage Changed At` alone — it is neither
-  skipped nor treated as infinitely idle. `idle_days` keeps a lead only
-  when its idle age is greater than `idle_days` days.
-- **`query_activities`** is the read counterpart to `log_activity` and
-  `update_activity`: it finds Activities directly, by `status`,
-  optionally `direction`, optionally `channel` (email, linkedin, call,
-  other), and optionally a `[since, until]` window on `Date`, so a
-  caller can find every outbound Activity at `status: draft` regardless
-  of which lead it belongs to. `status` is
-  required and validated against the three-value `Status` enum
-  (`draft`, `sent`, `voided`): `draft` is written by `log_activity`,
-  `voided` by `update_activity`, and `sent` by the operator or their automation. `direction`, when
-  given, must be `outbound` or `inbound`; omitting it returns
-  Activities in either direction. This is what lets a caller separate
-  outbound drafts genuinely awaiting an operator decision from inbound
-  replies and call debriefs that also land at `status: draft` (every
-  Activity `log_activity` creates starts there, regardless of
-  direction) but need no approval: filter on both `status: draft` and
-  `direction: outbound` for exactly that. `since` and `until` are each
-  optional, and omitting one leaves that edge of the window unbounded,
-  so omitting both returns every Activity at that status regardless of
-  `Date`. Every returned Activity carries its linked Lead, so a caller
-  does not need a separate `get_lead` call per row just to show which
-  company an Activity belongs to.
-
+  same answer: idle age = now − `Stage Changed At`, where "now" is the
+  moment of the call. `idle_days` keeps a lead only when its idle age
+  is greater than `idle_days` days.
 ## Approval invariant
 
 Stated once, plainly, so a future editor sees exactly what they would
 be breaking before they break it:
 
-- An agent can create an Activity only at `status: "draft"`, via
-  `log_activity` — no other status is accepted, ever.
-- An agent can move an existing Activity only to `status: "voided"`,
-  via `update_activity`, and never rewrites a draft's body after it was
-  created.
-- An agent never writes the stage `Ready to Send`: only the operator
-  writes `Ready to Send`, by moving the lead once its drafts are right.
-  That move approves the lead's first touch; nothing is approved draft
-  by draft.
+- An agent never writes the stage `Ready to Send` or any later status:
+  only the operator writes `Ready to Send`, by moving the lead once its
+  drafts are right. That move approves the lead's first touch on every
+  channel; nothing is approved draft by draft.
+- Drafts are append-only: `log_draft` adds a section and no operation
+  edits, replaces or deletes one, so what the operator read when they
+  approved is what stays on the record.
 - **Therefore no sequence of operations approves a lead: only the
   operator's move to `Ready to Send` does.** What happens next — an
   email sequence, a LinkedIn message, a call — is the operator's, or the
   owner's automation, another system or agent acting on that status.
-  The agent sends nothing to prospects and never acts on a lead at `Ready to Send`
-  or later.
+  The agent sends nothing to prospects and never acts on a lead at
+  `Ready to Send` or later.
 
 The opt-out has one mechanism and one instruction:
 
@@ -292,48 +246,33 @@ The opt-out has one mechanism and one instruction:
   to true and can never clear it — a write that would move the flag
   from true back to false is rejected, and no other operation writes
   the field at all.
-- **Instruction, not a mechanism.** `log_activity` must not create an
-  Activity with `direction: "outbound"` for a lead whose
-  `Do Not Contact` is true. The guard cannot see the lead's flag when
-  it checks a single call, so this is not enforced, and re-creating a
-  lead can also get around it. It is held by the agent's instructions,
-  the digest check (outbound drafts on Do Not Contact leads, and
-  duplicate leads) and the Do Not Contact column in the operator's
-  approval view.
-- **Opt-outs.** No skill reads replies; the operator or the owner's
-  automation logs them as inbound Activities. When the Prospector (on a lead it re-finds), the Preparer and the Approacher
-  read a lead with `get_lead` and find an inbound Activity recording an
-  opt-out (the prospect asked not to be contacted), or the lead is
-  already `Do Not Contact`: they set
-  `update_lead(lead_id, {"Do Not Contact": true})`, void every
-  outbound draft Activity on the lead with
-  `update_activity(activity_id, "voided", outcome: "opt-out")`, and,
-  if the lead is at a status the agent works on (`New`, `Scored`,
-  `Researched`, `Approach Drafted`), moves it to `Disqualified` with reason `opt-out`
-  so no run picks it up again. A lead at `Ready to Send` or later is
-  the owner's: the agent leaves it alone, and the digest flags it. The
-  owner's sending system handles its own suppression list.
+- **Instruction, not a mechanism.** The operator records an opt-out by
+  ticking `Do Not Contact`. When the Prospector (on a lead it re-finds),
+  the Preparer or the Approacher reads a lead whose `Do Not Contact` is
+  true and the lead is at a status the agent works on (`New`, `Scored`,
+  `Researched`, `Approach Drafted`), it moves the lead to
+  `Disqualified` with reason `opt-out` and writes nothing else: no
+  draft, no research, no note. A lead at `Ready to Send` or later is the
+  owner's: the agent leaves it alone, and the digest flags it. The
+  guard cannot see the lead's flag when it checks a single call, so
+  "draft nothing for a Do Not Contact lead" is held by the agent's
+  instructions and the digest, not enforced. The owner's sending system
+  handles its own suppression list.
 
-Any change that gives an operation a new way to write `Status` on an
-Activity — a new argument, a relaxed check, a new operation — must be
-checked against this invariant before it ships. If the change would
-let any of the eleven operations write the stage `Ready to Send`, or
-rewrite a draft after create, the invariant is broken and the guardrail
-"nothing goes out without operator approval" (`AGENT.md`) stops being a
-mechanism and goes back to being
-an unenforced instruction. The same test applies to `dnc_one_way`:
-any change that would let an operation clear `Do Not Contact` breaks
-that invariant. "Never draft a message toward a lead flagged
-`Do Not Contact`" is already an instruction, not a mechanism.
+Any change that lets an operation write the stage `Ready to Send`, or
+edit or remove a draft after it was written, breaks the invariant and
+turns the guardrail "nothing goes out without operator approval"
+(`AGENT.md`) back into an unenforced instruction. The same test
+applies to `dnc_one_way`: any change that would let an operation clear
+`Do Not Contact` breaks that invariant.
 
 ## Invariants
 
 Each tool's `guard.yaml` lists in `covers` the invariants its guard
 policy enforces; an invariant it does not list is instruction-only.
 
-- `draft_only` — the agent creates Activities only at `status: draft`,
-  the only status it may later write is `voided`, and
-  only the operator writes `Ready to Send` (see Approval invariant).
+- `draft_only` — the agent never writes `Ready to Send` or any later
+  status, and drafts are append-only (see Approval invariant).
 - `dnc_one_way` — `Do Not Contact`, once true, is never cleared.
 - `no_delete` — the agent never deletes or merges CRM records.
 
@@ -383,7 +322,7 @@ a lead to `Disqualified` from any status the agent works on.
 | `New` | Prospector creates the lead record from a raw find | Prospector scores it, moving it to `Scored`; a hard disqualifier moves it straight to `Disqualified` |
 | `Scored` | Prospector finishes applying the `icp.md` Fit rubric and records the Fit score and breakdown | Preparer picks it up once the Fit score clears `research_threshold`, moving it to `Researched` |
 | `Researched` | Preparer finishes research, identifies decision-makers, produces hooks, and records the Approach score and breakdown | Approacher picks it up once the Approach score clears `approach_threshold`, drafting its first touch and moving it to `Approach Drafted`; an anti-signal found during research moves it to `Disqualified` instead |
-| `Approach Drafted` | Approacher logs the lead's draft Activities (one per enabled channel: the recommended channel's full draft and statements, the others' statements) at `status: draft` | The operator reviews and edits the drafts, voids any they don't want, then approves the lead by moving it to `Ready to Send` — nothing is approved draft by draft |
+| `Approach Drafted` | Approacher logs one draft per reachable enabled channel (`log_draft`: the full draft and its personalized statements) | The operator reviews and edits the drafts, ignores any they don't want, then approves the lead by moving it to `Ready to Send` — nothing is approved draft by draft |
 | `Ready to Send` | The operator moves the lead here once its drafts are right — only the operator writes `Ready to Send` | The owner's automation, another system or agent, or the operator sends the first touch and moves it to `Contacted`; the operator moving it back to `Approach Drafted` cancels. The agent never acts on it |
 | `Contacted` | The first touch went out, on any channel (set by the operator or the owner's automation) | A reply moves it to `Engaged` (operator or automation) |
 | `Engaged` | The prospect replied | The operator decides: `Open Deal`, `Nurture` or `Customer` |

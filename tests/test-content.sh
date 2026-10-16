@@ -151,7 +151,7 @@ assert_contains "$AT/usage.md" 'lead_source_outbound: yes'
 assert_not_contains "$AT/usage.md" 'Webspenser'
 [ -x "$AT/bootstrap.py" ] && _report ok "bootstrap.py present and executable" || _report no "bootstrap.py missing or not executable"
 assert_not_contains "$AT/bootstrap.py" '.env'
-for op in create_lead get_lead update_stage update_lead log_activity update_activity log_research upsert_contact query_by_stage query_by_score query_activities; do
+for op in create_lead get_lead update_stage update_lead log_draft log_research upsert_contact query_by_stage query_by_score; do
   assert_contains "$AT/usage.md" "\`$op\`"
 done
 
@@ -164,7 +164,7 @@ assert_contains "$HT/usage.md" 'CONFIRMATION_WAIVED_FOR_SESSION'
 assert_not_contains "$HT/usage.md" 'Webspenser'
 [ -x "$HT/bootstrap.py" ] && _report ok "hubspot bootstrap.py present and executable" || _report no "hubspot bootstrap.py missing or not executable"
 assert_contains "$HT/bootstrap.py" 'HUBSPOT_TOKEN'
-for op in create_lead get_lead update_stage update_lead log_activity update_activity log_research upsert_contact query_by_stage query_by_score query_activities; do
+for op in create_lead get_lead update_stage update_lead log_draft log_research upsert_contact query_by_stage query_by_score; do
   assert_contains "$HT/usage.md" "\`$op\`"
 done
 
@@ -234,11 +234,10 @@ assert_contains "$SP/AGENT.md" 'unattended'
 echo "-- 4.0.4: AGENT.md inline size, idle rule"
 [ "$(wc -c < "$SP/AGENT.md" | tr -d ' ')" -le 9000 ] && _report ok "AGENT.md fits the 9000-byte inline limit" || _report no "AGENT.md is over 9000 bytes; the hook will not inline it"
 assert_contains "$SP/capabilities/crm/contract.md" '## Lead status transitions'
-assert_contains "$SP/capabilities/crm/contract.md" 'draft Activities (one per enabled channel: the recommended channel'"'"'s full draft and statements, the others'"'"' statements) at `status: draft`'
+assert_contains "$SP/capabilities/crm/contract.md" 'Approacher logs one draft per reachable enabled channel'
 assert_contains "$SP/AGENT.md" '`capabilities/crm/contract.md` (Lead status, Lead status transitions)'
 assert_contains "$SP/context/icp.md" '`capabilities/crm/contract.md` (Lead status transitions)'
-assert_contains "$SP/capabilities/crm/contract.md" 'idle age = now − `max(last Activity date, Stage Changed'
-assert_contains "$SP/capabilities/crm/contract.md" 'at all is measured from its `Stage Changed At` alone'
+assert_contains "$SP/capabilities/crm/contract.md" 'idle age = now − `Stage Changed At`'
 D="$SP/skills/send-digest/SKILL.md"
 assert_contains "$SP/capabilities/crm/tools/attio/usage.md" '`stage_changed_at`. If the lead has no'
 assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'If the lead has no Task'
@@ -255,7 +254,7 @@ K="$SP/capabilities/crm/contract.md"
 python3 -c "import sys; t=open('$K').read(); sys.exit(0 if 'Approach Drafted\nReady to Send\nContacted' in t else 1)" && _report ok "stage order has Ready to Send" || _report no "stage order lacks Ready to Send"
 assert_contains "$K" '| `Ready to Send` |'
 assert_contains "$K" 'only the operator writes `Ready to Send`'
-assert_contains "$K" 'the only status it may later write is `voided`'
+assert_contains "$K" 'drafts are append-only (see Approval invariant)'
 assert_not_contains "$K" '`approved`'
 assert_not_contains "$SP/AGENT.md" 'twelve lead stages'
 assert_contains "$SP/AGENT.md" 'The lead statuses and their transitions'
@@ -328,7 +327,7 @@ assert_contains "$T" '## Review ([count])'
 assert_contains "$T" '## Ready to Send ([count])'
 assert_not_contains "$T" 'Won:'
 K="$SP/capabilities/crm/contract.md"
-assert_contains "$K" '| `query_activities` | `status, direction, channel, since, until, limit` |'
+assert_contains "$K" '| `log_research` | `lead_id, findings[]`'
 assert_contains "$SP/capabilities/crm/tools/attio/usage.md" '`channel` when given'
 assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" '`channel` when given'
 
@@ -400,10 +399,9 @@ assert_contains "$SP/guard.yaml" '"*_workflow*"'
 echo "-- 6.0.0: the agent stops at Approach Drafted"
 K="$SP/capabilities/crm/contract.md"
 assert_contains "$K" '**The agent'"'"'s job ends at `Approach Drafted`.**'
-assert_contains "$K" '| `update_activity` | `activity_id, status, outcome` | updated activity | Accepts only `status: "voided"`'
+assert_contains "$K" '| `log_draft` | `lead_id, contact_id, channel, body` |'
 assert_contains "$K" 'the owner'"'"'s automation'
-assert_contains "$K" '**Opt-outs.**'
-assert_contains "$K" 'outcome: "opt-out"'
+assert_contains "$K" '**Instruction, not a mechanism.** The operator records an opt-out'
 assert_not_contains "$K" 'enroll'
 assert_not_contains "$K" 'sync-replies'
 assert_not_contains "$K" 'a bounced email returns it'
@@ -474,9 +472,8 @@ if grep -rlE "enroll|sync-replies|InvokeIQ|invokeiq|sequence_bands|bind_sequence
 
 echo "-- 6.0.0: final review of the scope cut"
 K="$SP/capabilities/crm/contract.md"
-assert_contains "$K" 'moves it to `Disqualified` with reason `opt-out`'
-assert_contains "$K" 'the Prospector (on a lead it re-finds), the Preparer and the Approacher'
-assert_contains "$K" '`sent` by the operator or their automation'
+assert_contains "$K" '`Disqualified` with reason `opt-out` and writes nothing else'
+assert_contains "$K" 'When the Prospector (on a lead it re-finds),'
 assert_not_contains "$K" '`sent` and `voided` by `update_activity`'
 assert_contains "$SP/subagents/prospector.md" '`Do Not Contact` for an opt-out)'
 for f in prospector preparer; do
@@ -724,5 +721,17 @@ assert_contains "$U" 'claimed = `not claimThisBusiness`'
 assert_contains "$SP/capabilities/scraping/contract.md" 'per-star review counts (one to five stars), opening hours (per day), claimed (true or false), temporarily closed (true or false)'
 assert_contains "$SP/evals/cases.md" '## Case 19: Each gate reads its own score'
 assert_contains "$SP/README.md" 'Upgrading from 7.2'
+
+
+echo "-- 7.4: one Attio list"
+assert_contains "$C" '| `log_draft` |'
+assert_contains "$C" 'log_research(lead_id, findings[])'
+assert_contains "$C" 'the nine operations'
+assert_not_contains "$C" 'update_activity'
+assert_not_contains "$C" 'query_activities'
+assert_not_contains "$C" 'log_activity'
+assert_not_contains "$C" 'recommended'
+assert_contains "$C" 'drafts are append-only'
+assert_contains "$C" 'a tool with no home for them skips them'
 
 finish

@@ -56,8 +56,8 @@ assert_contains "$SP/skills/write-call-opener/SKILL.md" 'name: write-call-opener
 assert_contains "$SP/skills/write-call-opener/SKILL.md" 'channel="call"'
 assert_contains "$SP/templates/cold-call-opener.md" 'Voicemail:'
 assert_contains "$SP/context/operating-config.md" '`call` in this list'
-assert_contains "$SP/skills/send-digest/SKILL.md" 'number to dial'
-assert_contains "$SP/templates/digest.md" 'number to dial'
+assert_contains "$SP/skills/send-digest/SKILL.md" 'the number it uses'
+assert_contains "$SP/templates/digest.md" 'the number from the Call note'
 assert_contains "$SP/AGENT.md" '`write-call-opener`'
 assert_contains "$SP/context/operating-config.md" 'callback_phone:'
 assert_contains "$SP/skills/write-call-opener/SKILL.md" '`callback_phone`'
@@ -459,7 +459,6 @@ AP="$SP/subagents/approacher.md"
 assert_contains "$AP" 'No reachable channel'
 assert_contains "$AP" 'reason `no reachable channel`'
 D="$SP/skills/send-digest/SKILL.md"
-assert_contains "$D" '⚠ opt-out logged — Do Not Contact not set'
 assert_contains "$D" '(now <status>)'
 E="$SP/evals/cases.md"
 assert_contains "$E" 'one `log_activity` call with `Channel = "linkedin"`'
@@ -748,5 +747,15 @@ assert_contains "$SP/skills/write-cold-email/SKILL.md" 'log_draft(lead_id, conta
 assert_contains "$SP/skills/write-linkedin-touch/SKILL.md" 'log_draft(lead_id, contact_id, channel="linkedin"'
 assert_contains "$SP/skills/write-call-opener/SKILL.md" 'log_draft(lead_id, contact_id, channel="call"'
 assert_contains "$SP/AGENT.md" 'a full draft and personalized statements for every channel it can reach'
+
+SD="$SP/skills/send-digest/SKILL.md"
+assert_contains "$SD" 'drafted:'
+assert_contains "$SD" 'the Call note'
+assert_contains "$SD" 'nine operations'
+assert_not_contains "$SD" 'recommended'
+assert_not_contains "$SD" 'opt-out logged — Do Not Contact not set'
+assert_not_contains "$SD" 'eleven operations'
+assert_contains "$SP/templates/digest.md" 'drafted: <channels>'
+assert_not_contains "$SP/templates/digest.md" 'recommended'
 
 finish

@@ -6,7 +6,7 @@ description: Use when the digest's scheduled run fires (`schedule_digest` in the
 This skill produces a report, not a pipeline action. It reads the CRM
 and Apify usage, renders six fixed sections in a fixed order, and
 sends the result to the owner with `notify_owner`. It never advances a stage, edits
-a lead field, logs an Activity, or logs Research — see **This skill
+a lead field, logs a draft, or logs research — see **This skill
 reads the CRM; it never writes to it** below.
 
 ## The "since last digest" anchor
@@ -55,7 +55,7 @@ in the instance's `schedules.yaml`, the cadence interval is 7 days; for a
 
 This anchor comes from `schedule_digest` and `timezone` in the
 instance's `schedules.yaml` and calendar arithmetic alone — never from a stored "last digest sent" value, because no such
-field exists among the CRM contract's eleven operations
+field exists among the CRM contract's nine operations
 (`capabilities/crm/contract.md`) and this skill does not invent one.
 
 **Both edges matter equally, and pinning only the lower edge is not
@@ -113,14 +113,14 @@ window per section:
 
 Its only side effects are delivering the finished digest and recording
 the run in the ledger. It never calls `create_lead`, `update_stage`,
-`update_lead`, `log_activity`, `log_research`, or `upsert_contact` — no
-stage moves, no field edits, no Activity or Research row, not even a
+`update_lead`, `log_draft`, `log_research`, or `upsert_contact` — no
+stage moves, no field edits, no draft or research section, not even a
 "digest sent" marker in the CRM. The reads it does use, named precisely:
 
 - CRM **`query_by_stage`** on `Approach Drafted` — Section 1, Review —
   and on `Ready to Send` — Section 2, Ready to Send.
 - CRM **`get_lead`**, once for each lead those two calls return (its
-  draft touches, contact phone and Do Not Contact).
+  draft records, contacts and Do Not Contact).
 - CRM **`query_by_stage`** with its `next_action_due_before` filter
   (`stage` omitted, so leads across every stage are considered) —
   Section 3, Next actions due today.
@@ -165,30 +165,27 @@ First, call `ledger_status`, then write `run_started`
    both edges — per **The "since last digest" anchor** above.
 2. **Section 1 — Review.** Call CRM `query_by_stage("Approach Drafted")`
    and `get_lead` for each lead: these are leads waiting for the
-   operator. List each lead with its recommended channel (the draft
-   whose summary starts `recommended:`) and the other channels it has
-   statements for, and for a `call` draft the number to dial (the
-   draft's Contact `phone`, otherwise the Lead's `phone`). No window:
+   operator. List each lead as `<company> — drafted: <channels> —
+   [link]`, the channels that have a draft record, and for a call draft
+   the number it uses, read from the newest section of the Call note
+   (its `Call:` line). No window:
    every lead waiting right now, however old. Heading with the count of
    leads, e.g. `Review (3)`.
    - **Drafts on DNC leads.** Mark every lead whose `Do Not Contact` is
      true `⚠ DO NOT SEND — lead is Do Not Contact` and list those first.
-     Report only: write nothing and void nothing.
-   - **Opt-outs not yet flagged.** Mark every lead (here and in Section
-     2) with an inbound Activity recording an opt-out but `Do Not
-     Contact` still false `⚠ opt-out logged — Do Not Contact not set`,
-     and list it first. Report only: the digest writes nothing to the CRM.
+     Report only: the digest writes nothing to the CRM.
    - **Possible duplicate leads.** Across the leads this run already
      reads (Sections 1 to 5), list leads that share a normalized
-     `domain` or E.164 `phone` (normalized as in
-     `capabilities/crm/contract.md`), one line per group, as `Possible
+     `domain`, or an E.164 `phone` where the CRM tool stores one
+     (normalized as in `capabilities/crm/contract.md`), one line per
+     group, as `Possible
      duplicate leads (among leads in this digest)`. Include the line only
      when there are any.
 3. **Section 2 — Ready to Send.** Call CRM `query_by_stage("Ready to
    Send")` and `get_lead` for each: leads the operator approved, now
    waiting for the owner's hand-off (their CRM automation, another
    system or agent, or the operator's own touch). List each lead with
-   its recommended channel and `drafted N days ago` (now − `Stage
+   `drafted: <channels>` and `drafted N days ago` (now − `Stage
    Changed At`). The operator's drag in the CRM does not stamp `Stage
    Changed At` (only `update_stage` does), so this is time since the
    agent drafted the touch, not time since approval, and the digest
@@ -310,8 +307,8 @@ every run, even when empty — see the first Failure mode below.
 ## Approval scope
 
 The digest reports on drafts; it never approves, sends or changes one.
-Every first touch stays an Activity at `draft` in the CRM until the
-operator moves the lead to `Ready to Send`. The digest itself goes only
+Every first touch stays a draft in the CRM until the operator moves the
+lead to `Ready to Send`. The digest itself goes only
 to the owner, through `owner_notify`, whose guard pins the recipient and
 the sender; the agent has no other way to send anything.
 
@@ -325,11 +322,11 @@ matches the wall clock exactly this week. Anchor: Monday, 2026-08-24,
 # Sales Partner Digest — 2026-08-31
 
 ## Review (2)
-- Meridian Robotics — recommended: email; statements: linkedin — [link]
-- Thornfield Media — recommended: linkedin — [link]
+- Meridian Robotics — drafted: email, linkedin — [link]
+- Thornfield Media — drafted: linkedin, call (+1 510 555 0142) — [link]
 
 ## Ready to Send (1)
-- Corvid Analytics — email — drafted 1 day ago
+- Corvid Analytics — drafted: email — drafted 1 day ago
 
 ## Next actions due today (2)
 - Fennimore Health — Send onboarding proposal — due 2026-08-28 (3 days overdue)

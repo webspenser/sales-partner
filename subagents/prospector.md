@@ -118,8 +118,8 @@ carries two more fields, passed to `create_lead` as `industry` and
   `Plumber` is `Plumbing` when a segment's `industries` lists
   `Plumbing`); otherwise the trade as the source names it.
 - **Segment:** the id of the catalog segment whose `industries` include it,
-  matched on the Industry as written. When no segment lists it, `segment`
-  is left empty, never a guess at the nearest one. Such a lead scores low
+  matched on the Industry as written. When no segment lists it, or two
+  do, `segment` is left empty, never a guess at the nearest one. Such a lead scores low
   on industry fit, per the rubric, and is not researched unless the
   operator ticks Research Anyway.
 

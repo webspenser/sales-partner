@@ -840,11 +840,15 @@ done
 assert_contains "$PP" 'an empty Segment is first filled from Industry, using the catalog'"'"'s `industries` lists; if that fails, the lead is skipped'
 assert_contains "$PP" 'never writes `hero_offer`, `offer_evidence` or `offer_reason` itself'
 assert_contains "$PP" 'Segment chosen by the Preparer'
-assert_contains "$PP" 'run its catalog search (step 2) for that segment'
+assert_contains "$PP" 'run its search (step 3) for that segment'"'"'s signals and rule-outs'
 assert_contains "$PP" '`segment`, `industry`, `hero_offer`, `offer_reason`, `offer_evidence`'
 assert_contains "$PP" 'Re-match a lead at `Researched`'
 assert_contains "$PP" 'never acts on a lead at `Approved` or later'
 assert_contains "$PP" 'hero_offer=<id or none>; offer_evidence=<grade or none>'
+for w in 'the Prospector'"'"'s rule' 'a clear synonym of' 'matches two segments'"'"' `industries` is no unambiguous match' 'after the `get_lead`, status and opt-out' 'researched by operator request; no Fit score' 'but Industry "<Industry>" matches no single segment' '`disqualified; <reason>`' 'counts against the lead'"'"'s `research_budget_per_lead_minutes`' 'A lead not at `Researched` is not re-matched'; do
+  assert_contains "$PP" "$w"
+done
+assert_not_contains "$PP" 'catalog search (step 2)'
 for gone in approach_threshold log_draft 'the drafts'; do
   assert_not_contains "$PP" "$gone"
 done

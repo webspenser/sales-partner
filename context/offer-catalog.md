@@ -6,10 +6,17 @@ re-run whenever an offer, a segment or a target industry changes; every
 bracketed section is a prompt for that interview to replace with the
 operator's own answer. The interview is the only writer of this file.
 
-The CRM bootstraps read the YAML block below (and only that block) to
-fill the Segment and Hero Offer choice lists. The Prospector, the
-Preparer and `match-offer` read the whole file. Nothing downstream may
-claim an offer, a segment or a signal this file doesn't contain.
+The CRM bootstraps read the one fenced `yaml` block (and only that
+block) to fill the Segment and Hero Offer choice lists. **This package
+template has no such block on purpose**: the example below is a `text`
+block the bootstraps ignore, so an unfilled template can't put example
+ids into a CRM. A bootstrap run against it stops and says to run the
+interview's offer catalog round first, which writes the instance's real
+`yaml` block.
+
+The Prospector, the Preparer and `match-offer` read the whole file.
+Nothing downstream may claim an offer, a segment or a signal this file
+doesn't contain.
 
 ## Rules for the catalog
 
@@ -36,10 +43,12 @@ name, what the business delivers in one or two sentences, who it suits
 best, the buying `signals` that research can find in public sources
 (reviews, listings, websites, job posts), and the `rule_out` signals that
 make it a poor fit. Confirm the finished catalog with the operator, the
-same way the rubrics are confirmed. The block below is an example of the
-shape; replace every entry with the operator's own.]
+same way the rubrics are confirmed. Write the result as one fenced
+`yaml` block in the shape of the example below, and delete the example.]
 
-```yaml
+Example of the shape (a `text` block, not read by code):
+
+```text
 segments:
   - id: professional-services          # stable, kebab-case; what the CRMs store
     name: Professional Services

@@ -180,7 +180,7 @@ u=$(awk '/^### Choice 1/,/^### Choice 2/' "$HT/usage.md" | grep -oE '^\| `sp_[a-
 b=$(python3 -B -c "
 import importlib.util,sys
 sp=importlib.util.spec_from_file_location('b','$HT/bootstrap.py'); m=importlib.util.module_from_spec(sp); sp.loader.exec_module(m)
-m.PROPERTIES=m.build_properties(*m.read_catalog('$SP/context/offer-catalog.md'))
+m.PROPERTIES=m.build_properties(*m.read_catalog('$SP/tests/fixtures/offer-catalog.md'))
 print(sorted(m.PROPERTIES)==['companies','contacts'] and ''.join(n+',' for n in sorted(p['name'] for o in m.PROPERTIES.values() for p in o)) or 'unexpected objects: '+','.join(m.PROPERTIES))")
 [ -n "$u" ] && [ "$b" = "$u" ] && _report ok "Setup tables and bootstrap.py create the same properties, companies and contacts only" || _report no "Setup vs bootstrap.py: usage.md=$u bootstrap.py=$b"
 assert_contains "$HT/usage.md" 'Notes need no custom fields.'

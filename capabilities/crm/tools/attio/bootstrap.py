@@ -70,7 +70,8 @@ def read_catalog(path):
             cur.append(line)
     if len(blocks) != 1:
         sys.exit(f"offer-catalog.md: {path} must hold exactly one fenced yaml block "
-                 f"(found {len(blocks)}).")
+                 f"(found {len(blocks)}). If this is the unfilled package template, run the "
+                 "interview's offer catalog round first; it writes the catalog.")
     segments, offers, seen, stack = [], [], set(), []  # stack: (indent, key)
     for raw in blocks[0]:
         line = re.sub(r"(^|\s)#.*$", "", raw).rstrip()

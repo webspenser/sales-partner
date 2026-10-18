@@ -420,7 +420,7 @@ it from the instance folder, where the default
 `context/offer-catalog.md` is found, or pass `--catalog <path>`. After
 you change the catalog, run it again: re-running only adds the new
 options. It also leaves the old stages `Approach Drafted` and `Ready to
-Send` in place; archive them by hand in HubSpot.
+Send` in place and prints a note; archive them by hand in HubSpot.
 
 1. In HubSpot, create a private app (Settings → Integrations → Private
    Apps → Create a private app) with these scopes:

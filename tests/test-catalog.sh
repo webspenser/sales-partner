@@ -80,8 +80,7 @@ for tool in attio hubspot; do
   echo "-- $tool"
   check "$tool: two segments, six offers" "$B" "$T/two.md" "$WANT"
   check "$tool: one segment, two offers" "$B" "$T/one.md" "$WANT_ONE"
-  check "$tool: the package template parses to two segments, six offers" "$B" context/offer-catalog.md \
-    "(['professional-services', 'home-auto-services'], ['ps-inbound-lead-qualification', 'ps-invoice-reconciliation', 'ps-onboarding-copilot', 'ha-inbound-lead-qualification', 'ha-reputation-management', 'ha-past-customer-outreach'])"
+  fails "$tool: the unfilled package template stops and says to run the interview first" "$B" context/offer-catalog.md "offer catalog round first"
   fails "$tool: missing file" "$B" "$T/missing.md"
   fails "$tool: no yaml block" "$B" "$T/noblock.md"
   fails "$tool: bad id" "$B" "$T/badid.md" Invoice_Recon

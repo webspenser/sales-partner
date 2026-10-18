@@ -238,6 +238,7 @@ check 2 "merge refused"             $HS ${H}merge_crm_objects '{}' "is denied"
 check 0 "search allowed"            $HS ${H}search_crm_objects '{"objectType":"NOTE"}'
 check 0 "local server name allowed" $HS mcp__HubSpot__search_crm_objects '{"objectType":"COMPANY"}'
 # Token canary, offline: call is faked to fail (a 401, then a raised Stop); all output is captured.
+export CATALOG_FIXTURE="$PWD/tests/fixtures/offer-catalog.md"
 canary=$(python3 -B - <<'PY' 2>&1
 import importlib.util, io, os, contextlib
 sp = importlib.util.spec_from_file_location("b", "capabilities/crm/tools/hubspot/bootstrap.py")
@@ -254,7 +255,7 @@ for name, fake in (("401", unauthorized), ("stop", unreachable)):
     b.call = fake
     buf = io.StringIO()
     with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
-        rc = b.main()
+        rc = b.main(["--catalog", os.environ["CATALOG_FIXTURE"]])
     print(f"[{name}] rc={rc}")
     print(buf.getvalue())
 PY
@@ -269,9 +270,11 @@ bt=$(python3 -B - <<'PY' 2>&1
 import importlib.util, io, contextlib
 sp = importlib.util.spec_from_file_location("b", "capabilities/crm/tools/hubspot/bootstrap.py")
 b = importlib.util.module_from_spec(sp); sp.loader.exec_module(b)
-b.PROPERTIES = b.build_properties(*b.read_catalog("context/offer-catalog.md"))
 import os
 os.environ["HUBSPOT_TOKEN"] = "t"
+CATALOG = os.environ["CATALOG_FIXTURE"]
+# The same function main() calls, fed the same fixture main() is given below.
+b.PROPERTIES = b.build_properties(*b.read_catalog(CATALOG))
 
 def defn(obj, name):
     return next(p for p in b.PROPERTIES[obj] if p["name"] == name)
@@ -295,7 +298,7 @@ def run(over):
     b.call = fake
     out, err = io.StringIO(), io.StringIO()
     with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
-        rc = b.main()
+        rc = b.main(["--catalog", CATALOG])
     writes = [c for c in calls if c[0] in ("POST", "PATCH")]
     return rc, out.getvalue() + err.getvalue(), writes
 
@@ -309,6 +312,11 @@ print("C", rc == 0 and w == [("POST", "/companies")])
 rc, text, w = run({"/contacts/sp_role": {"type": "enumeration", "fieldType": "select",
                    "options": [{"value": "decision-maker"}, {"value": "extra"}]}})
 print("D", rc == 0 and [m for m, _ in w] == ["PATCH"])
+
+rc, text, w = run({"/companies/sp_stage": {"type": "enumeration", "fieldType": "select",
+                   "options": [{"value": v} for v in b.STAGES + ["Approach Drafted", "Ready to Send"]]}})
+print("F", rc == 0 and not w and "companies.sp_stage: extra options left in place (archive by hand if unwanted)" in text
+      and "Approach Drafted" in text and "Ready to Send" in text)
 
 # E: a realistic HubSpot GET payload for every property: extra fields, real type/fieldType pairs.
 META = {"archivable": True, "readOnlyDefinition": False, "readOnlyValue": False}
@@ -334,7 +342,8 @@ PY
 )
 for c in A:"mismatched type blocks with a clear message and no writes" B:"correct types pass with no writes" \
          C:"a missing property is created" D:"missing enum options are patched, extras kept" \
-         E:"a realistic HubSpot property payload passes with no writes"; do
+         E:"a realistic HubSpot property payload passes with no writes" \
+         F:"old stages left in place are reported, not removed"; do
   k=${c%%:*}; echo "$bt" | grep -qx "$k True" && _report ok "bootstrap $k: ${c#*:}" || _report no "bootstrap $k: ${c#*:} ($bt)"
 done
 

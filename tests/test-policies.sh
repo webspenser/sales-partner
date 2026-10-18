@@ -109,7 +109,10 @@ echo "-- scraping (apify)"
 AG2=capabilities/scraping/tools/apify/guard.yaml; P=mcp__claude_ai_Apify__; SM=apify
 MAPS=compass--crawler-google-places; CONTACTS=vdrmota--contact-info-scraper
 printf '%s\n' 'max_places_per_search: 60' 'max_pages_per_site: 3' 'max_crawl_depth: 1' 'max_pages_per_call: 30' \
-  'max_search_terms: 1' 'max_sites_per_call: 10' 'max_dataset_items: 100' > "$W/scraping.md"
+  'max_search_terms: 1' 'max_sites_per_call: 10' 'max_dataset_items: 100' \
+  'max_reviews: 50' 'max_ads: 5' 'max_jobs: 20' 'max_site_pages: 5' 'max_site_depth: 1' 'max_review_places: 1' \
+  'max_ad_queries: 1' 'max_ad_advertisers: 1' 'ads_result_type: advertisers' 'site_crawler_type: cheerio' \
+  'site_html_transformer: none' 'max_site_urls: 1' > "$W/scraping.md"
 MAPS_OK='{"maxCrawledPlacesPerSearch":60,"searchStringsArray":["HVAC contractor"],"city":"Alameda","state":"CA","countryCode":"us","language":"en","waitSecs":45}'
 CT='"maxRequestsPerStartUrl":3,"maxDepth":1,"maxRequests":30'
 U1='{"url":"https://example.com"}'
@@ -153,6 +156,103 @@ for t in call-actor search-actors add-actor fetch-actor-details abort-actor-run 
   check 2 "blocked: $t"            $AG2 ${P}$t '{}' "" "$W/scraping.md"
 done
 check 2 "another actor"            $AG2 ${P}apify-slash-instagram-scraper '{}' "" "$W/scraping.md"
+
+# 8.1 evidence actors, under the server name the restricted connector shows.
+P2=mcp__claude_ai_Apify_Actors__
+REV=compass--Google-Maps-Reviews-Scraper; GADS=scrapesage--google-ads-transparency-scraper
+FB=apify--facebook-ads-scraper; JOBS=valig--indeed-jobs-scraper; SITE=apify--website-content-crawler
+jset() { python3 -c 'import json,sys;d=json.loads(sys.argv[1]);d[sys.argv[2]]=json.loads(sys.argv[3]);print(json.dumps(d))' "$@"; }
+jdel() { python3 -c 'import json,sys;d=json.loads(sys.argv[1]);del d[sys.argv[2]];print(json.dumps(d))' "$@"; }
+pins() { # pins <label> <tool> <ok json> <key>:<bound>:<raised json>...: each pin raised, then omitted
+  local label=$1 tool=$2 ok=$3 spec key bound; shift 3
+  for spec in "$@"; do
+    key=${spec%%:*}; bound=${spec#*:}; bound=${bound%%:*}
+    check 2 "$label $key raised"  $AG2 ${P2}$tool "$(jset "$ok" "$key" "${spec#*:*:}")" "is not a pinned value ($bound)" "$W/scraping.md"
+    check 2 "$label $key omitted" $AG2 ${P2}$tool "$(jdel "$ok" "$key")" "names no pinned value at $key" "$W/scraping.md"
+  done
+}
+lists() { # lists <label> <tool> <ok json> <key>:<bound>:<over-bound list json>...: over, empty, omitted
+  local label=$1 tool=$2 ok=$3 spec key bound; shift 3
+  for spec in "$@"; do
+    key=${spec%%:*}; bound=${spec#*:}; bound=${bound%%:*}
+    check 2 "$label $key over $bound" $AG2 ${P2}$tool "$(jset "$ok" "$key" "${spec#*:*:}")" "exceeds $bound at $key" "$W/scraping.md"
+    check 2 "$label $key empty"       $AG2 ${P2}$tool "$(jset "$ok" "$key" '[]')" "names no $key" "$W/scraping.md"
+    check 2 "$label $key omitted"     $AG2 ${P2}$tool "$(jdel "$ok" "$key")" "names no $key" "$W/scraping.md"
+  done
+}
+refused() { # refused <label> <tool> <ok json> <key>...: each key blocked, even set to false
+  local label=$1 tool=$2 ok=$3 key; shift 3
+  for key in "$@"; do
+    check 2 "$label may not use $key (false)" $AG2 ${P2}$tool "$(jset "$ok" "$key" false)" "may not use $key" "$W/scraping.md"
+  done
+}
+start_extras() { # start_extras <label> <tool> <ok json>: nothing but url on a start URL
+  local a
+  for a in method headers payload userData; do
+    check 2 "$1 start URL $a" $AG2 ${P2}$2 "$(jset "$3" startUrls "[{\"url\":\"https://example.com\",\"$a\":\"x\"}]")" "may not use startUrls[].$a" "$W/scraping.md"
+  done
+  check 2 "$1 start URL as a bare string" $AG2 ${P2}$2 "$(jset "$3" startUrls '["https://example.com"]')" "expected an object" "$W/scraping.md"
+}
+
+check 0 "maps on the Apify_Actors server passes" $AG2 ${P2}$MAPS "$MAPS_OK" "" "$W/scraping.md"
+check 2 "Apify_Actors call-actor denied" $AG2 ${P2}call-actor '{}' "is denied" "$W/scraping.md"
+check 2 "reviews tool on another server not allowed" $AG2 mcp__claude_ai_Gmail__$REV '{}' "is not in the allow list" "$W/scraping.md"
+
+REV_OK='{"placeIds":["ChIJkyhXi8iHj4ARLP5o2YRo-iY"],"maxReviews":50,"reviewsSort":"newest","personalData":false,"language":"en","waitSecs":45}'
+check 0 "reviews in limit with personalData false" $AG2 ${P2}$REV "$REV_OK" "" "$W/scraping.md"
+check 0 "reviews tool name matches in any case"    $AG2 ${P2}compass--google-maps-reviews-scraper "$REV_OK" "" "$W/scraping.md"
+check 0 "reviews with date, keyword and origin"    $AG2 ${P2}$REV '{"placeIds":["ChIJkyhXi8iHj4ARLP5o2YRo-iY"],"maxReviews":50,"reviewsSort":"newest","reviewsStartDate":"2025-10-18","reviewsFilterString":"voicemail","reviewsOrigin":"google","personalData":false,"language":"en","waitSecs":45}' "" "$W/scraping.md"
+pins    reviews $REV "$REV_OK" 'maxReviews:max_reviews:10000000'
+lists   reviews $REV "$REV_OK" 'placeIds:max_review_places:["ChIJaaaaaaaaaaaaaaaaaaaaaaa","ChIJbbbbbbbbbbbbbbbbbbbbbbb"]'
+check 2 "reviews respelled key"    $AG2 ${P2}$REV "$(jset "$REV_OK" PlaceIds '["ChIJx"]')" "may not use PlaceIds" "$W/scraping.md"
+refused reviews $REV "$REV_OK" startUrls
+check 2 "reviews startUrls list"   $AG2 ${P2}$REV "$(jset "$REV_OK" startUrls '[{"url":"https://maps.google.com/?cid=1"}]')" "may not use startUrls" "$W/scraping.md"
+check 2 "reviews without bindings" $AG2 ${P2}$REV "$REV_OK" "no max_reviews line"
+
+GADS_OK='{"queries":["bigbrothersplumbinginc.com"],"resultType":"advertisers","maxAdvertisersPerQuery":1,"maxAdsPerSearch":5,"region":"US","waitSecs":45}'
+check 0 "google ads in limit"      $AG2 ${P2}$GADS "$GADS_OK" "" "$W/scraping.md"
+pins    "google ads" $GADS "$GADS_OK" 'maxAdsPerSearch:max_ads:100' 'maxAdvertisersPerQuery:max_ad_advertisers:5' 'resultType:ads_result_type:"ads"'
+lists   "google ads" $GADS "$GADS_OK" 'queries:max_ad_queries:["a.com","b.com"]'
+check 2 "google ads respelled key" $AG2 ${P2}$GADS "$(jset "$GADS_OK" max_ads_per_search 5)" "may not use max_ads_per_search" "$W/scraping.md"
+refused "google ads" $GADS "$GADS_OK" includeDetails onlyNewAds monitorStoreName includeRawData proxyConfiguration startUrls urlsFromFile domains advertiserIds
+check 2 "google ads proxyConfiguration object" $AG2 ${P2}$GADS "$(jset "$GADS_OK" proxyConfiguration '{"useApifyProxy":true,"apifyProxyGroups":["DATACENTER"]}')" "may not use proxyConfiguration" "$W/scraping.md"
+check 2 "google ads domains list"  $AG2 ${P2}$GADS "$(jset "$GADS_OK" domains '["bigbrothersplumbinginc.com"]')" "may not use domains" "$W/scraping.md"
+check 2 "google ads includeDetails true" $AG2 ${P2}$GADS "$(jset "$GADS_OK" includeDetails true)" "may not use includeDetails" "$W/scraping.md"
+grep -v '^ads_result_type:' "$W/scraping.md" > "$W/scraping-notext.md"
+check 2 "google ads without the text pin" $AG2 ${P2}$GADS "$GADS_OK" "no ads_result_type line" "$W/scraping-notext.md"
+
+FB_OK='{"startUrls":[{"url":"https://www.facebook.com/bigbrothersplumbinginc"}],"onlyTotal":true,"resultsLimit":5,"activeStatus":"active","onlyAdsNewerThan":"2026-01-01","waitSecs":45}'
+check 0 "facebook in limit"        $AG2 ${P2}$FB "$FB_OK" "" "$W/scraping.md"
+pins    facebook $FB "$FB_OK" 'resultsLimit:max_ads:100'
+check 2 "facebook resultsLimit empty (unlimited)" $AG2 ${P2}$FB "$(jset "$FB_OK" resultsLimit '""')" "is not a pinned value (max_ads)" "$W/scraping.md"
+check 2 "facebook resultsLimit null" $AG2 ${P2}$FB "$(jset "$FB_OK" resultsLimit null)" "names no pinned value at resultsLimit" "$W/scraping.md"
+lists   facebook $FB "$FB_OK" 'startUrls:max_ad_queries:[{"url":"https://www.facebook.com/a"},{"url":"https://www.facebook.com/b"}]'
+check 2 "facebook respelled key"   $AG2 ${P2}$FB "$(jset "$FB_OK" ResultsLimit 5)" "may not use ResultsLimit" "$W/scraping.md"
+refused facebook $FB "$FB_OK" isDetailsPerAd includeAboutPage enrichWithEcommerceData sorting onlyAdsOlderThan proxyConfiguration
+check 2 "facebook enrichWithEcommerceData true" $AG2 ${P2}$FB "$(jset "$FB_OK" enrichWithEcommerceData true)" "may not use enrichWithEcommerceData" "$W/scraping.md"
+start_extras facebook $FB "$FB_OK"
+
+JOBS_OK='{"title":"Big Brothers Plumbing","location":"Alameda, CA","country":"us","limit":20,"datePosted":"30","waitSecs":45}'
+check 0 "jobs in limit"            $AG2 ${P2}$JOBS "$JOBS_OK" "" "$W/scraping.md"
+pins    jobs $JOBS "$JOBS_OK" 'limit:max_jobs:100'
+check 2 "jobs respelled key"       $AG2 ${P2}$JOBS "$(jset "$JOBS_OK" Title '"x"')" "may not use Title" "$W/scraping.md"
+refused jobs $JOBS "$JOBS_OK" maxItems proxyConfiguration startUrls
+
+SITE_OK='{"startUrls":[{"url":"https://bigbrothersplumbinginc.com/"}],"crawlerType":"cheerio","maxCrawlPages":5,"maxResults":5,"maxCrawlDepth":1,"htmlTransformer":"none","removeElementsCssSelector":"script, style, noscript, svg","saveMarkdown":true,"waitSecs":45}'
+check 0 "site reader in limit"     $AG2 ${P2}$SITE "$SITE_OK" "" "$W/scraping.md"
+pins    "site reader" $SITE "$SITE_OK" 'crawlerType:site_crawler_type:"playwright:firefox"' 'htmlTransformer:site_html_transformer:"readableText"' \
+  'maxCrawlPages:max_site_pages:9999999' 'maxResults:max_site_pages:9999999' 'maxCrawlDepth:max_site_depth:20'
+lists   "site reader" $SITE "$SITE_OK" 'startUrls:max_site_urls:[{"url":"https://example.com"},{"url":"https://www.example.com"}]'
+check 2 "site reader respelled key" $AG2 ${P2}$SITE "$(jset "$SITE_OK" maxCrawlpages 5)" "may not use maxCrawlpages" "$W/scraping.md"
+refused "site reader" $SITE "$SITE_OK" customHttpHeaders pageFunction initialCookies summarize saveScreenshots saveContentTypes \
+  saveFiles saveHtmlAsFile includeUrlGlobs useSitemaps useLlmsTxt clickElementsCssSelector waitForSelector maxConcurrency proxyConfiguration
+check 2 "site reader customHttpHeaders object" $AG2 ${P2}$SITE "$(jset "$SITE_OK" customHttpHeaders '{"Cookie":"session=x"}')" "may not use customHttpHeaders" "$W/scraping.md"
+check 2 "site reader summarize true"    $AG2 ${P2}$SITE "$(jset "$SITE_OK" summarize true)" "may not use summarize" "$W/scraping.md"
+check 2 "site reader useSitemaps true"  $AG2 ${P2}$SITE "$(jset "$SITE_OK" useSitemaps true)" "may not use useSitemaps" "$W/scraping.md"
+check 2 "site reader includeUrlGlobs list" $AG2 ${P2}$SITE "$(jset "$SITE_OK" includeUrlGlobs '[{"glob":"https://example.com/**"}]')" "may not use includeUrlGlobs" "$W/scraping.md"
+check 2 "site reader proxyConfiguration object" $AG2 ${P2}$SITE "$(jset "$SITE_OK" proxyConfiguration '{"useApifyProxy":true}')" "may not use proxyConfiguration" "$W/scraping.md"
+check 2 "site reader maxConcurrency 200" $AG2 ${P2}$SITE "$(jset "$SITE_OK" maxConcurrency 200)" "may not use maxConcurrency" "$W/scraping.md"
+start_extras "site reader" $SITE "$SITE_OK"
 SM=
 
 echo "-- Attio"

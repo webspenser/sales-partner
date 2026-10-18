@@ -986,4 +986,41 @@ assert_not_contains "$SD" 'My touches'
 assert_not_contains "$SD" 'Await reply to approach'
 assert_contains "$A" 'Per lead, its Industry and Segment, and its Hero Offer, Offer'
 
+echo "-- 8.1: evidence scrapers (contract, Apify usage)"
+SC="$SP/capabilities/scraping/contract.md"; SU="$SP/capabilities/scraping/tools/apify/usage.md"
+for op in find_reviews find_ads find_jobs read_site; do
+  grep -qE "^\| \`$op\` \|" "$SC" && _report ok "contract.md has operation $op" || _report no "contract.md missing operation $op"
+  assert_contains "$SU" "\`$op\`"
+done
+SETUP=$(awk '/^## Setup/ { f=1; next } f && /^## / { f=0 } f' "$SU")
+for key in max_reviews max_ads max_jobs max_site_pages max_site_depth max_review_places max_ad_queries max_ad_advertisers \
+           ads_result_type site_crawler_type site_html_transformer max_site_urls; do
+  printf '%s' "$SETUP" | grep -qF -- "- \`$key\` — " && _report ok "usage.md Setup lists $key" || _report no "usage.md Setup missing $key"
+done
+for d in '`max_reviews` — reviews per reviews call (default 50)' '`max_ads` — ads per Google query, and the Facebook results limit (default 5)' \
+         '`max_jobs` — job listings per jobs call (default 20)' '`max_site_pages` — pages the site reader reads per call (default 5)' \
+         '`max_site_depth` — link depth for the site reader (default 1)'; do
+  printf '%s' "$SETUP" | grep -qF -- "$d" && _report ok "usage.md Setup: $d" || _report no "usage.md Setup missing: $d"
+done
+printf '%s' "$SETUP" | grep -qF 'mcp.apify.com?tools=compass/crawler-google-places,vdrmota/contact-info-scraper,compass/Google-Maps-Reviews-Scraper,scrapesage/google-ads-transparency-scraper,apify/facebook-ads-scraper,valig/indeed-jobs-scraper,apify/website-content-crawler`' \
+  && _report ok "usage.md Setup gives the seven-actor connector URL" || _report no "usage.md Setup lacks the seven-actor connector URL"
+assert_contains "$SU" 'always pass `personalData: false`'
+assert_contains "$SU" 'never record reviewer names'
+assert_contains "$SU" 'always pass `onlyTotal: true`'
+assert_contains "$SU" 'With no page URL, skip this call and record no Facebook finding'
+assert_contains "$SU" 'Zero items is a valid result: no open listings'
+assert_contains "$SU" 'the `website` the Maps listing gives'
+assert_contains "$SU" '`"script, style, noscript, svg"`'
+assert_contains "$SU" 'never claim a site lacks chat'
+assert_contains "$SU" 'Do not pass `proxyConfiguration`'
+for t in compass--Google-Maps-Reviews-Scraper scrapesage--google-ads-transparency-scraper apify--facebook-ads-scraper \
+         valig--indeed-jobs-scraper apify--website-content-crawler; do
+  assert_contains "$SU" "\`apify:$t\`"
+  grep -qF "$t" "$SP/capabilities/scraping/tools/apify/guard.yaml" && _report ok "guard.yaml allows $t" || _report no "guard.yaml missing $t"
+done
+for c in '`find_reviews` | $0.05' '`find_ads`, Google | $0.01' '`find_ads`, Facebook | $0.03' '`find_jobs` | $0.005' '`read_site` | $0.03'; do
+  assert_contains "$SU" "$c"
+done
+assert_not_contains "$SU" 'reviewerId,'
+
 finish

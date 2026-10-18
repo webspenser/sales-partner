@@ -1,15 +1,27 @@
-# Apify guard policy: two actors and two reads. Each tool takes only the
+# Apify guard policy: seven actors and two reads. Each tool takes only the
 # arguments listed under only_keys (an allowlist: anything else the
-# vendor accepts, such as paid add-ons, proxyConfig, locationQuery or
-# startUrls on Maps, is blocked), and each call's size is pinned or
-# capped from the pushed bindings/scraping.md. Everything else on the
-# server (call-actor, search/add actors, store, tasks, webhooks,
-# schedules, aborting runs, key-value stores) is outside allow. Names
-# come from the probe notes (docs/superpowers/notes/2026-10-13-apify-connector-probe.md)
-# in agent-builder. No refuse_args: the allowlists already block every
-# argument not named, so a deny list would add nothing.
+# vendor accepts, such as paid add-ons, proxyConfig or proxyConfiguration,
+# locationQuery or startUrls on Maps and reviews, custom headers, cookies,
+# page functions, sitemaps or URL globs, is blocked), and each call's size
+# is pinned or capped from the pushed bindings/scraping.md. Everything else
+# on the server (call-actor, search/add actors, store, tasks, webhooks,
+# schedules, aborting runs, key-value stores) is outside allow. Names come
+# from the probe notes: Maps and contacts from
+# docs/superpowers/notes/2026-10-13-apify-connector-probe.md in
+# agent-builder; reviews, ads, jobs and the site reader from this repo's
+# docs/superpowers/notes/2026-10-18-research-actors-probe.md. Tool names
+# are matched without regard to case (the reviews actor's tool is
+# compass--Google-Maps-Reviews-Scraper), and server_match apify covers the
+# connector's claude_ai_Apify_Actors server. Three text pins fix the Google
+# Ads mode (resultType), the crawler (crawlerType) and the HTML
+# transformer (htmlTransformer). True/false inputs and comma strings
+# (personalData, onlyTotal, saveMarkdown, removeElementsCssSelector) can't
+# be pinned; usage.md gives their values. No refuse_args: the allowlists
+# already block every argument not named, so a deny list would add nothing.
 covers: [no_external_send, allowlisted_actors, pinned_inputs]
-allow: [compass--crawler-google-places, vdrmota--contact-info-scraper, get-actor-run, get-dataset-items]
+allow: [compass--crawler-google-places, vdrmota--contact-info-scraper, compass--Google-Maps-Reviews-Scraper,
+  scrapesage--google-ads-transparency-scraper, apify--facebook-ads-scraper, valig--indeed-jobs-scraper,
+  apify--website-content-crawler, get-actor-run, get-dataset-items]
 deny: ["*call-actor*", "*call_actor*", "*search-actors*", "*add-actor*", "*fetch-actor*", "*webhook*", "*schedule*"]
 only_keys:
   - tools: [compass--crawler-google-places]
@@ -19,15 +31,32 @@ only_keys:
     at: ["$"]
     keys: [startUrls, maxRequestsPerStartUrl, maxDepth, maxRequests, mergeContacts, sameDomain, considerChildFrames, waitSecs]
   # requestsFromUrl, method, payload, headers and userData ride on a start URL object.
-  - tools: [vdrmota--contact-info-scraper]
+  - tools: [vdrmota--contact-info-scraper, apify--facebook-ads-scraper, apify--website-content-crawler]
     at: ["startUrls[]"]
     keys: [url]
+  - tools: [compass--Google-Maps-Reviews-Scraper]
+    at: ["$"]
+    keys: [placeIds, maxReviews, reviewsSort, reviewsStartDate, reviewsFilterString, reviewsOrigin, language, personalData, waitSecs]
+  - tools: [scrapesage--google-ads-transparency-scraper]
+    at: ["$"]
+    keys: [queries, resultType, maxAdvertisersPerQuery, maxAdsPerSearch, region, waitSecs]
+  - tools: [apify--facebook-ads-scraper]
+    at: ["$"]
+    keys: [startUrls, onlyTotal, resultsLimit, activeStatus, onlyAdsNewerThan, waitSecs]
+  - tools: [valig--indeed-jobs-scraper]
+    at: ["$"]
+    keys: [title, location, country, limit, datePosted, waitSecs]
+  - tools: [apify--website-content-crawler]
+    at: ["$"]
+    keys: [startUrls, crawlerType, maxCrawlPages, maxResults, maxCrawlDepth, htmlTransformer, removeElementsCssSelector, saveMarkdown, waitSecs]
   - tools: [get-dataset-items]
     at: ["$"]
     keys: [datasetId, fields, limit, offset, clean, omit, desc]
   - tools: [get-actor-run]
     at: ["$"]
     keys: [runId, waitSecs]
+# One entry per argument, so leaving any one out is blocked ("names no
+# pinned value"), even where two arguments share a binding.
 recipients:
   - tools: [compass--crawler-google-places]
     at: [maxCrawledPlacesPerSearch]
@@ -41,9 +70,44 @@ recipients:
   - tools: [vdrmota--contact-info-scraper]
     at: [maxRequests]
     bound: max_pages_per_call
+  - tools: [compass--Google-Maps-Reviews-Scraper]
+    at: [maxReviews]
+    bound: max_reviews
+  - tools: [scrapesage--google-ads-transparency-scraper]
+    at: [maxAdsPerSearch]
+    bound: max_ads
+  - tools: [scrapesage--google-ads-transparency-scraper]
+    at: [maxAdvertisersPerQuery]
+    bound: max_ad_advertisers
+  - tools: [scrapesage--google-ads-transparency-scraper]
+    at: [resultType]
+    bound: ads_result_type
+  - tools: [apify--facebook-ads-scraper]
+    at: [resultsLimit]
+    bound: max_ads
+  - tools: [valig--indeed-jobs-scraper]
+    at: [limit]
+    bound: max_jobs
+  - tools: [apify--website-content-crawler]
+    at: [crawlerType]
+    bound: site_crawler_type
+  - tools: [apify--website-content-crawler]
+    at: [htmlTransformer]
+    bound: site_html_transformer
+  - tools: [apify--website-content-crawler]
+    at: [maxCrawlPages]
+    bound: max_site_pages
+  - tools: [apify--website-content-crawler]
+    at: [maxResults]
+    bound: max_site_pages
+  - tools: [apify--website-content-crawler]
+    at: [maxCrawlDepth]
+    bound: max_site_depth
 # List lengths multiply the size pins: one search term per Maps call, at
-# most 10 sites per contact call, at most 100 items per dataset read.
-# The two lists are required, so leaving them out cannot skip the cap.
+# most 10 sites per contact call, one place per reviews call, one query
+# per Google Ads call, one page URL per Facebook call, one start URL per
+# site read, at most 100 items per dataset read. The lists are required,
+# so leaving them out cannot skip the cap.
 # only_keys names are compared exactly: send the spelling listed above.
 limits:
   - tools: [compass--crawler-google-places]
@@ -54,6 +118,26 @@ limits:
   - tools: [vdrmota--contact-info-scraper]
     at: [startUrls]
     bound: max_sites_per_call
+    kind: count
+    required: true
+  - tools: [compass--Google-Maps-Reviews-Scraper]
+    at: [placeIds]
+    bound: max_review_places
+    kind: count
+    required: true
+  - tools: [scrapesage--google-ads-transparency-scraper]
+    at: [queries]
+    bound: max_ad_queries
+    kind: count
+    required: true
+  - tools: [apify--facebook-ads-scraper]
+    at: [startUrls]
+    bound: max_ad_queries
+    kind: count
+    required: true
+  - tools: [apify--website-content-crawler]
+    at: [startUrls]
+    bound: max_site_urls
     kind: count
     required: true
   - tools: [get-dataset-items]

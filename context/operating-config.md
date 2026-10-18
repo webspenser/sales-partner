@@ -21,11 +21,12 @@ these keys are what make that countable.
 
 ```yaml
 leads_per_week: 40
-prospecting_sources: [apify_google_maps, apify_contact_info, web_search]
+prospecting_sources: [apify_google_maps, apify_contact_info, apify_reviews, apify_ads, apify_jobs, apify_site_reader, web_search]
 research_quota_per_week: 10
 research_threshold: 60
 apify_spend_cap_usd_per_week: 25
-research_budget_per_lead_minutes: 8
+apify_cap_usd_per_lead: 0.50
+research_budget_per_lead_minutes: 15
 tone: "[three adjectives from the interview]"
 ```
 
@@ -38,10 +39,19 @@ tone: "[three adjectives from the interview]"
   listings (name, address, phone, website, rating, review count)
   through `find_businesses`; `apify_contact_info` runs `find_contacts`
   (emails, phones and social links from a business's website; used by
-  the Preparer, not the Prospector); `web_search` is general search; `apollo` is a stubbed tool —
+  the Preparer, not the Prospector); `apify_reviews` runs
+  `find_reviews` (a place's Google Maps reviews), `apify_ads` runs
+  `find_ads` (the ads a business is running), `apify_jobs` runs
+  `find_jobs` (a company's job posts) and `apify_site_reader` runs
+  `read_site` (the text, links and markup of a few pages of a
+  business's website); these four are used by the Preparer, which picks
+  among them from the lead's segment's offers' `research_tips`;
+  `web_search` is general search; `apollo` is a stubbed tool —
   listing it makes the Prospector report that it is not yet enabled,
-  never substitute another source. Both Apify sources draw on
-  `apify_spend_cap_usd_per_week`. To research every new lead, set
+  never substitute another source. Every Apify source draws on
+  `apify_spend_cap_usd_per_week` and, for a lead being researched, on
+  `apify_cap_usd_per_lead`. A source left out of the list is not run,
+  in scheduled and interactive runs alike. To research every new lead, set
   `research_quota_per_week` equal to `leads_per_week` and lower
   `research_budget_per_lead_minutes` so the week's budget still fits.
   The old key `apify_site_scraper` no longer exists:
@@ -61,10 +71,21 @@ tone: "[three adjectives from the interview]"
   before each Apify call; Apify's
   account usage limit is the hard stop behind it. Reaching it is a `Stop conditions` trigger and
   an `AGENT.md` escalation ("Escalate to human when").
+- **`apify_cap_usd_per_lead`** — the ceiling on Apify spend for
+  researching a single lead, in US dollars, summed over the estimated
+  cost of each Apify call for that lead (the contact scraper included).
+  Default `0.50`. Before each call the Preparer checks that the call's
+  worst-case estimate fits in what remains; if it doesn't, it stops
+  scraping that lead, completes it with what it has, sets Research
+  Capped, and starts the stage reason with `research capped at
+  $<cap>; <sources not run>`. In an interactive session it asks the
+  operator whether to continue instead. It sits inside
+  `apify_spend_cap_usd_per_week`, which stays the ceiling for the week.
 - **`research_budget_per_lead_minutes`** — the time budget the Preparer
   spends researching a single lead before it stops and hands off with
   whatever hooks it has found; see `subagents/preparer.md`'s `Stop
-  conditions`.
+  conditions`. Default `15`: a scraping call can wait up to 45 seconds,
+  and a lead may use several.
 - **`tone`** — three adjectives describing how the talking points should
   read, filled in by the interview from `business-profile.md`'s Voice
   section. Read by `write-talking-points` when it writes the opener.

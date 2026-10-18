@@ -34,6 +34,13 @@ doesn't contain.
 - `industries` is the list the Fit score's industry criterion scores
   against, in the wording the Prospector should write to a lead's
   Industry field.
+- `research_tips` is optional free text on an offer: what the Preparer
+  should look for, and where (reviews, ads, job posts, the website), to
+  find that offer's `signals` and `rule_out` signals. Write it as a
+  folded block (`research_tips: >`). It is prose for the agent, not
+  structure: the bootstraps skip the whole block, so a line inside it
+  that looks like a list item or an `id` is never read as one. An offer
+  without tips is researched from its signals and rule-outs alone.
 
 ## Segments and offers
 
@@ -41,8 +48,9 @@ doesn't contain.
 to), each segment's industries, and, for each offer in a segment, its
 name, what the business delivers in one or two sentences, who it suits
 best, the buying `signals` that research can find in public sources
-(reviews, listings, websites, job posts), and the `rule_out` signals that
-make it a poor fit. Confirm the finished catalog with the operator, the
+(reviews, listings, websites, job posts), the `rule_out` signals that
+make it a poor fit, and, optionally, `research_tips` (what to look for
+and where). Confirm the finished catalog with the operator, the
 same way the rubrics are confirmed. Write the result as one fenced
 `yaml` block in the shape of the example below, and delete the example.]
 
@@ -63,6 +71,10 @@ segments:
           - listing shows limited opening hours
         rule_out:                      # signals that make it a poor fit
           - already advertises a 24/7 answering service
+        research_tips: >               # optional prose: what to look for, and where
+          Reviews mentioning voicemail, no answer, or after-hours. A front
+          desk or receptionist job posting is strong. Check whether the
+          website offers online booking.
       - id: ps-invoice-reconciliation
         name: Invoice Reconciliation
         what: Matches invoices to payments and flags the differences, so the books close without manual checking.

@@ -52,6 +52,32 @@ echo "-- one segment, two offers"
 printf '%s\n' '```yaml' 'segments:' '- id: acme' '  offers:' '  - id: widget-a' '  - id: widget-b' '```' > "$T/one.md"
 WANT_ONE="(['acme'], ['widget-a', 'widget-b'])"
 
+echo "-- research_tips: a folded block is prose, not structure"
+printf '%s\n' '```yaml' 'segments:' \
+  '  - id: home-auto-services' \
+  '    name: Home' \
+  '    offers:' \
+  '      - id: ha-voice-agent' \
+  '        name: Voice agent' \
+  '        research_tips: >            # operator prose' \
+  '          Reviews mentioning voicemail or no answer.' \
+  '          - id: not-an-offer' \
+  '          - id: Bad_Id' \
+  '          offers:' \
+  '' \
+  '          A front desk job posting is strong.' \
+  '        signals:' \
+  '          - reviews mention unanswered calls' \
+  '      - id: ha-reputation-management' \
+  '        research_tips: |' \
+  '          - id: also-not-an-offer' \
+  '        rule_out:' \
+  '          - already has many reviews' \
+  '      - id: ha-past-customer-outreach' \
+  '        name: Outreach' \
+  '```' > "$T/tips.md"
+WANT_TIPS="(['home-auto-services'], ['ha-voice-agent', 'ha-reputation-management', 'ha-past-customer-outreach'])"
+
 echo "-- bad catalogs"
 printf '%s\n' '# Offer Catalog' 'No block here.' > "$T/noblock.md"
 printf '%s\n' '```yaml' 'segments:' '  - id: acme' '    offers:' '      - id: Invoice_Recon' '```' > "$T/badid.md"
@@ -80,6 +106,7 @@ for tool in attio hubspot; do
   echo "-- $tool"
   check "$tool: two segments, six offers" "$B" "$T/two.md" "$WANT"
   check "$tool: one segment, two offers" "$B" "$T/one.md" "$WANT_ONE"
+  check "$tool: ids inside a research_tips block do not count" "$B" "$T/tips.md" "$WANT_TIPS"
   fails "$tool: the unfilled package template stops and says to run the interview first" "$B" context/offer-catalog.md "offer catalog round first"
   fails "$tool: missing file" "$B" "$T/missing.md"
   fails "$tool: no yaml block" "$B" "$T/noblock.md"
@@ -95,6 +122,9 @@ echo "-- both bootstraps agree"
 A=$(catalog capabilities/crm/tools/attio/bootstrap.py "$T/two.md" 2>&1)
 H=$(catalog capabilities/crm/tools/hubspot/bootstrap.py "$T/two.md" 2>&1)
 [ "$A" = "$H" ] && _report ok "identical results for the two-segment fixture" || _report no "bootstraps disagree: $A vs $H"
+A=$(catalog capabilities/crm/tools/attio/bootstrap.py "$T/tips.md" 2>&1)
+H=$(catalog capabilities/crm/tools/hubspot/bootstrap.py "$T/tips.md" 2>&1)
+[ "$A" = "$H" ] && _report ok "identical results for the research_tips fixture" || _report no "bootstraps disagree on research_tips: $A vs $H"
 
 echo "-- the catalog is read before the key and any API call"
 for tool in attio hubspot; do

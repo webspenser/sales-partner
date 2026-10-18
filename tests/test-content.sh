@@ -23,7 +23,7 @@ while IFS= read -r f; do
 done < <(find "$SP" -name '*.md' -not -path './docs/*' -not -path './tests/*' -not -path './.git/*' -not -name README.md -not -path './.claude/*' -not -path './CLAUDE.md' -not -path './GEMINI.md' -not -path './AGENTS.md')
 
 echo "-- prospecting sources"
-assert_contains "$SP/context/operating-config.md" 'prospecting_sources: [apify_google_maps, apify_contact_info, web_search]'
+assert_contains "$SP/context/operating-config.md" 'prospecting_sources: [apify_google_maps, apify_contact_info, apify_reviews, apify_ads, apify_jobs, apify_site_reader, web_search]'
 assert_contains "$SP/context/operating-config.md" '**`prospecting_sources`**'
 assert_contains "$SP/subagents/prospector.md" 'only the sources listed in `prospecting_sources`'
 assert_contains "$SP/subagents/prospector.md" '`apollo` is listed'
@@ -1038,5 +1038,24 @@ assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" '"sp_research_anyw
 assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" '| `sp_research_capped` | Research capped | Single checkbox |'
 grep -qF 'attr("research_capped", "Research Capped", "checkbox"' ./capabilities/crm/tools/attio/bootstrap.py && _report ok "attio research_capped is a checkbox" || _report no "attio research_capped is not a checkbox"
 grep -qF 'prop("sp_research_capped", "Research capped", "bool", "booleancheckbox"' ./capabilities/crm/tools/hubspot/bootstrap.py && _report ok "hubspot sp_research_capped is a checkbox" || _report no "hubspot sp_research_capped is not a checkbox"
+
+echo "-- 8.1.0: catalog research tips, new config keys, interview"
+OC="$SP/context/operating-config.md"
+assert_contains "$OC" 'apify_cap_usd_per_lead: 0.50'
+assert_contains "$OC" 'research_budget_per_lead_minutes: 15'
+assert_not_contains "$OC" 'research_budget_per_lead_minutes: 8'
+for k in apify_reviews apify_ads apify_jobs apify_site_reader; do
+  grep -E '^prospecting_sources:' "$OC" | grep -qF "$k" && _report ok "prospecting_sources lists $k" || _report no "prospecting_sources lacks $k"
+  assert_contains "$OC" "\`$k\`"
+done
+assert_contains "$OC" '**`apify_cap_usd_per_lead`**'
+assert_contains "$OC" '**`research_budget_per_lead_minutes`**'
+assert_contains "$SP/context/offer-catalog.md" 'research_tips'
+assert_contains "$SP/skills/interview-business/SKILL.md" 'research_tips'
+assert_contains "$SP/skills/interview-business/SKILL.md" 'research_tips: >'
+for k in apify_reviews apify_ads apify_jobs apify_site_reader; do
+  assert_contains "$SP/skills/interview-business/SKILL.md" "\`$k\`"
+done
+assert_not_contains "$SP/skills/interview-business/SKILL.md" 'Apify connector URL'
 
 finish

@@ -10,7 +10,7 @@
 
 ## Review ([count])
 
-- [company — segment · hero offer or "no offer" · evidence — link; ordered by Approach score, highest first. Mark `weak` evidence "(weak: segment fit only)"; mark a lead with no offer with a leading ⚠, "no offer" and "no evidence". Or "None"]
+- [company — segment · hero offer or "no offer" · evidence — link; ordered by Approach score, highest first. Mark `weak` evidence "(weak: segment fit only)"; mark a lead with no offer with a leading ⚠, "no offer" and "no evidence". Mark a lead with Research Capped true "(research capped)" after the evidence. Or "None"]
 
 ## Approved, not yet contacted ([count])
 
@@ -32,4 +32,4 @@
 
 ## Spend
 
-[$ spent] of [$ cap]/week Apify cap ([percent]%) — [$ remaining]
+[$ spent] of [$ cap]/week Apify cap ([percent]%) — [$ remaining]; per-lead cap [$ per-lead cap]

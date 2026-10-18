@@ -1104,5 +1104,14 @@ assert_contains "$RC" 'lacks chat'
 assert_contains "$RC" 'only after the home page and the relevant page'
 assert_contains "$SP/skills/match-offer/SKILL.md" '12 months'
 assert_contains "$SP/skills/match-offer/SKILL.md" 'An old review alone still counts'
+# Task 6: the digest marks research-capped leads and shows the per-lead cap
+SD="$SP/skills/send-digest/SKILL.md"
+DT="$SP/templates/digest.md"
+assert_contains "$SD" '(research capped)'
+assert_contains "$DT" '(research capped)'
+assert_contains "$SD" 'Research Capped'
+assert_contains "$SD" 'apify_cap_usd_per_lead'
+assert_contains "$DT" 'per-lead cap'
+assert_contains "$SD" 'per lead'
 
 finish

@@ -15,6 +15,7 @@ CRM automations, other systems or agents take over.
 
 ## Inputs
 - `context/business-profile.md`, `context/icp.md`,
+  `context/offer-catalog.md` (segments, offers and their signals),
   `context/operating-config.md` — written by `interview-business`.
 - `schedules.yaml` (instance root) — time zone and activity times.
 - CRM: bound in `instance.yaml` (`bind_crm`); reached only through
@@ -42,7 +43,7 @@ CRM automations, other systems or agents take over.
    write back right after. Work is chosen by querying for a status.
 2. Every claim about a prospect has a source URL, or is marked
    `unverified`. Every claim about the business traces to
-   `business-profile.md`.
+   `business-profile.md` or `offer-catalog.md`.
 3. Scores come only from the `icp.md` rubrics, with a breakdown: Fit
    from the listing, Approach from research.
 4. Volume, thresholds and caps come from
@@ -77,7 +78,8 @@ with a report when an input is missing, after calling
 
 ## Skills
 At `skills/<name>/SKILL.md`: `interview-business`, `score-lead`,
-`research-company`, `find-decision-makers`, `send-digest`, and
+`research-company`, `find-decision-makers`, `match-offer`,
+`write-talking-points`, `send-digest`, and
 `setup`, `start`, `schedule`, `add-tool`.
 
 ## Guardrails / never do

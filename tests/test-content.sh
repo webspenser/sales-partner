@@ -786,4 +786,37 @@ done < <(find AGENT.md README.md subagents skills templates context capabilities
   -not -path 'README.md' `# Task 9` \
   -not -name '*.pyc')
 
+echo "-- 8.0.0: match-offer, write-talking-points and catalog-aware research"
+MO="$SP/skills/match-offer/SKILL.md"
+WT="$SP/skills/write-talking-points/SKILL.md"
+TP_HEADER='=== YYYY-MM-DD · talking points ==='
+for f in "$WT" "$SP/capabilities/crm/contract.md" "$SP/capabilities/crm/tools/attio/usage.md" "$SP/capabilities/crm/tools/hubspot/usage.md"; do
+  assert_contains "$f" "$TP_HEADER"
+  for lbl in 'For:' 'Offer:' 'Opener:' 'Points:' 'Avoid:' 'Contact routes:'; do
+    assert_contains "$f" "$lbl"
+  done
+done
+assert_contains "$WT" 'Offer: none matched'
+assert_contains "$WT" 'log_talking_points(lead_id, contact_id, body)'
+assert_contains "$WT" '`tone`'
+assert_contains "$WT" 'offer-catalog.md'
+for w in '`strong`' '`moderate`' '`weak`' 'ruled out'; do
+  assert_contains "$MO" "$w"
+done
+assert_contains "$MO" 'offer-catalog.md'
+assert_contains "$MO" 'hero_offer'
+assert_contains "$MO" 'offer_evidence'
+assert_contains "$MO" 'offer_reason'
+A="$SP/AGENT.md"
+assert_contains "$A" '`business-profile.md` or `offer-catalog.md`'
+assert_contains "$A" '`context/offer-catalog.md`'
+assert_contains "$A" '`match-offer`'
+assert_contains "$A" '`write-talking-points`'
+RC="$SP/skills/research-company/SKILL.md"
+assert_contains "$RC" 'offer-catalog.md'
+assert_contains "$RC" 'rule_out'
+assert_contains "$SP/context/icp.md" 'offer-catalog.md'
+assert_contains "$SP/context/business-profile.md" 'offer-catalog.md'
+wc -c < "$A" | awk '{exit !($1 < 6000)}' && _report ok "AGENT.md under 6000 bytes" || _report no "AGENT.md 6000 bytes or more"
+
 finish

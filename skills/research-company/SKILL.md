@@ -1,6 +1,6 @@
 ---
 name: research-company
-description: Use when a lead enters the research quota — gathers recent, specific, verifiable facts about a company and converts them into usable outreach hooks.
+description: Use when a lead enters the research quota — gathers recent, specific, verifiable facts about a company, converts them into usable outreach hooks, and records the signals and rule-outs of its segment's offers.
 ---
 
 Every claim this skill produces about a prospect carries a source URL.
@@ -14,7 +14,14 @@ only gathers and records.
 1. Read `context/operating-config.md`'s `research_budget_per_lead_minutes`
    before starting, and track elapsed time against it — this is the
    stop condition for the whole run, not a suggestion.
-2. Search in this fixed order, moving to the next source only once the
+2. Read the lead's segment in `context/offer-catalog.md`: the segment
+   whose `id` is the lead's Segment, and each of its offers' `signals`
+   and `rule_out` entries. These are what separates one offer from
+   another, so the search below looks for every one of them alongside
+   the hooks (reviews, the listing, the website, job posts). Look only at
+   this segment's offers. With no Segment, or one the catalog doesn't
+   hold, skip this step and say so in the run's report.
+3. Search in this fixed order, moving to the next source only once the
    current one is exhausted or clearly unproductive:
    1. Company site and blog
    2. Recent news
@@ -27,7 +34,7 @@ only gathers and records.
       review count, hours, recent reviews, and the business's main line
       and general inbox → `listing`) and whether it has a website and
       what state it is in (`web_presence`)
-3. Collect each finding worth recording as you go, and write them all
+4. Collect each finding worth recording as you go, and write them all
    at the end of the run with one CRM `log_research(lead_id,
    findings[])` call, each finding with `type, summary, source_url,
    date, hook`:
@@ -36,11 +43,23 @@ only gathers and records.
    `Source URL` is required and non-empty; `Date` is the finding's
    actual date, not today's date. `log_research` itself rejects a call
    when any finding has an empty `source_url` or an empty `hook`, so a
-   finding with no usable hook is left out of the call — see step 4.
-4. A contact route is always recorded when sourced, whatever the bar
-   below: the business's main line or general inbox (info@) becomes a
-   `listing` finding with `Hook: contact route`, so the talking points can
-   name it as a route to the lead. For every other finding, before writing,
+   finding with no usable hook is left out of the call — see step 5.
+5. Two kinds of finding are always recorded when sourced, whatever the
+   bar below:
+   - A contact route: the business's main line or general inbox (info@)
+     becomes a `listing` finding with `Hook: contact route`, so the
+     talking points can name it as a route to the lead.
+   - A catalog signal or rule-out from step 2: one finding each, under
+     the one of the seven types its source fits (a review or a listing
+     detail → `listing`, a job post → `hire`, a claim on the website →
+     `web_presence`, a news item → `news`). Its `Summary` says what was
+     found and ends with the catalog entry it matches, in the form
+     `Signal for <offer id>: "<signals entry>".` or `Rule-out for <offer
+     id>: "<rule_out entry>".`; quote the entry exactly as the catalog
+     words it. Its `Hook` is the usable angle when the finding clears the
+     bar below, and otherwise `offer signal` or `rule-out`. `match-offer`
+     weighs these findings to pick the lead's offer.
+   For every other finding, before writing,
    decide whether the finding clears the bar for a
    usable hook. A hook is usable only if it is **all three**:
    - **Specific to this company** — not a fact true of the whole
@@ -54,15 +73,15 @@ only gathers and records.
    may still be worth noting in `Summary` for context, but do not
    force a `Hook` out of it — see the anti-signal-shaped failure mode
    below.
-5. Stop the search — even mid-order — once either: two or more usable
+6. Stop the search — even mid-order — once either: two or more usable
    `Hook` values have been written for this lead **and** every Approach
-   criterion in `icp.md` has been looked for (for a local business,
-   item 6 is always searched: the newest review date, recent
-   complaint reviews and the website check), or the
+   criterion in `icp.md` and every signal and rule-out from step 2 has
+   been looked for (for a local business, item 6 is always searched: the
+   newest review date, recent complaint reviews and the website check), or the
    `research_budget_per_lead_minutes` budget is spent. Whichever comes
    first ends the run; a thorough search that blows the time budget is
    still a failure of this skill.
-6. If the full search order is exhausted inside the budget and zero
+7. If the full search order is exhausted inside the budget and zero
    usable hooks were found, write a single finding recording that
    explicitly (`Summary: "No hooks found — searched company site,
    news, funding/hiring signals, and social within budget"`, `Hook:
@@ -85,9 +104,13 @@ Contrast concretely, not abstractly:
 ## Worked example
 
 Researching **Fennimore Health**, a healthtech company, within an
-8-minute budget:
+8-minute budget. Its Segment's one offer in the catalog (fictional) is
+Clinical Ops Scheduling (`ho-clinical-scheduling`), with the signal
+`hiring for clinical operations roles` and the rule-out `already
+advertises a scheduling platform`.
 
-1. Company site/blog: no posts in the last year — nothing usable.
+1. Company site/blog: no posts in the last year — nothing usable; no
+   scheduling platform advertised, so the rule-out is not found.
 2. Recent news: TechCrunch, 2026-07-30, "Fennimore Health raises $9M
    Series A led by Bluecrest Partners." Written to Research: `Type:
    funding`, `Summary: "Fennimore Health raised a $9M Series A led by
@@ -101,14 +124,15 @@ Researching **Fennimore Health**, a healthtech company, within an
    four "Clinical Operations Coordinator" postings opened in the last
    two weeks. Written to Research: `Type: hire`, `Summary: "Four
    Clinical Operations Coordinator roles opened on Fennimore's
-   LinkedIn jobs tab between 2026-08-14 and 2026-08-21."`, `Source
-   URL:` the jobs tab URL, `Date: 2026-08-21`, `Hook: "they posted four
-   clinical-ops roles in one week, directly following the Series A —
-   open by asking how they're structuring that team as it scales."` —
-   usable hook #2.
-4. Two usable hooks reached at minute 5 of 8 — stop here per step 5,
-   even though executive social posts and industry events haven't been
-   checked.
+   LinkedIn jobs tab between 2026-08-14 and 2026-08-21. Signal for
+   ho-clinical-scheduling: "hiring for clinical operations roles"."`,
+   `Source URL:` the jobs tab URL, `Date: 2026-08-21`, `Hook: "they
+   posted four clinical-ops roles in one week, directly following the
+   Series A — open by asking how they're structuring that team as it
+   scales."` — usable hook #2, and the offer's signal.
+4. Two usable hooks reached at minute 5 of 8, with the offer's signal
+   and rule-out both looked for — stop here per step 6, even though
+   executive social posts and industry events haven't been checked.
 
 ## Failure modes
 
@@ -122,7 +146,12 @@ Researching **Fennimore Health**, a healthtech company, within an
   were current makes the resulting outreach read as out of touch.
 - **Inventing a hook when the company has no public footprint.** If the
   full search order turns up nothing that clears the usable-hook bar,
-  record "no hooks found" per step 6 and let the lead stall at
+  record "no hooks found" per step 7 and let the lead stall at
   `Researched` with a thin file, rather than manufacturing a plausible-
   sounding hook to fill the gap. A fabricated hook is worse than none —
   it puts a false claim in front of the prospect.
+- **Searching only for hooks, not for the offers' signals.** A file of
+  good hooks with no word on the segment's signals or rule-outs leaves
+  `match-offer` to pick by segment fit alone, or to pick an offer the
+  lead already has. Every signal and rule-out from step 2 is looked for
+  before the search stops, and each one found is recorded.

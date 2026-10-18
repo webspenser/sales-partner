@@ -25,11 +25,18 @@ rule below applies identically to both.
 
 ## Firmographics
 
-[Interview: get target industry or industries, size as bands in
-`size_measure` (below), and company stage (bootstrapped, funded, which
-stage, public). Name the bands explicitly — e.g., "50–500 employees"
-or "1–3 locations," not "mid-market" — because the Fit rubric's
-Company size criterion below scores against these exact bands.]
+**Target industries are the catalog's.** The industries this business
+targets are the `industries` lists of the segments in
+`context/offer-catalog.md`, and only those; this file keeps no industry
+list of its own, so the two can't disagree. The Fit rubric's Industry
+fit criterion scores against them.
+
+[Interview: get size as bands in `size_measure` (below), and company
+stage (bootstrapped, funded, which stage, public). Name the bands
+explicitly — e.g., "50–500 employees" or "1–3 locations," not
+"mid-market" — because the Fit rubric's Company size criterion below
+scores against these exact bands. Industries go in the offer catalog,
+not here.]
 
 ```yaml
 size_measure: headcount   # headcount | revenue | locations | review_count
@@ -162,11 +169,12 @@ So two different readers score the same company the same way.
 
 Fit score:
 
-- **Industry fit** — 0 if the company's industry does not appear on the
-  Firmographics target list and has no reasonable adjacency to it; 50
-  if it's a neighboring industry the business has served before but
-  didn't name as primary target; 100 only if the industry is named on
-  the target list above.
+- **Industry fit** — the target list is every segment's `industries`
+  in `context/offer-catalog.md` (see Firmographics). 0 if the company's
+  industry appears in no segment's list and has no reasonable adjacency
+  to one; 50 if it's a neighboring industry the business has served
+  before but the catalog doesn't name; 100 only if the industry is named
+  in a segment's `industries`, which is also the lead's Segment.
 - **Company size** — measured against the bands in `size_measure`: 0
   if the lead's size falls outside every band in Firmographics; 50 if
   it falls within one band's boundary but outside the sweet spot

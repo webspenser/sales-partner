@@ -40,7 +40,7 @@ assert_contains "$SP/skills/interview-business/SKILL.md" 'companies or local bus
 
 echo "-- contact fields and dedupe"
 C="$SP/capabilities/crm/contract.md"
-assert_contains "$C" '`company, location, industry, size, source, source_url`, plus optional `domain, address, phone, email, fit_score, fit_breakdown`'
+assert_contains "$C" '`company, location, industry, size, source, source_url`, plus optional `domain, address, phone, email, fit_score, fit_breakdown, segment`'
 assert_contains "$C" 'failing that, the same normalized `phone`'
 assert_contains "$C" 'none of `domain`, `phone`, or `address`'
 assert_contains "$C" '`lead_id, name, title, email, phone, linkedin_url, role, verified, notes`'
@@ -132,7 +132,7 @@ assert_not_contains "$SP/skills/interview-business/SKILL.md" 'artifacts supplied
 assert_contains "$SP/subagents/approacher.md" 'the instance'"'"'s `context/samples/` first, then the package'"'"'s `samples/`'
 echo "-- capabilities"
 assert_contains "$SP/capabilities/crm/contract.md" '## Invariants'
-assert_contains "$SP/capabilities/crm/contract.md" '- `draft_only` —'
+assert_contains "$SP/capabilities/crm/contract.md" '- `approval_only` —'
 assert_contains "$SP/capabilities/crm/contract.md" '- `dnc_one_way` —'
 assert_contains "$SP/capabilities/crm/contract.md" '- `no_delete` —'
 assert_contains "$SP/AGENT.md" 'bound in `instance.yaml` (`bind_crm`)'
@@ -149,7 +149,7 @@ assert_contains "$AT/usage.md" 'lead_source_outbound: yes'
 assert_not_contains "$AT/usage.md" 'Webspenser'
 [ -x "$AT/bootstrap.py" ] && _report ok "bootstrap.py present and executable" || _report no "bootstrap.py missing or not executable"
 assert_not_contains "$AT/bootstrap.py" '.env'
-for op in create_lead get_lead update_stage update_lead log_draft log_research upsert_contact query_by_stage query_by_score; do
+for op in create_lead get_lead update_stage update_lead log_talking_points log_research upsert_contact query_by_stage query_by_score; do
   assert_contains "$AT/usage.md" "\`$op\`"
 done
 
@@ -162,7 +162,7 @@ assert_contains "$HT/usage.md" 'CONFIRMATION_WAIVED_FOR_SESSION'
 assert_not_contains "$HT/usage.md" 'Webspenser'
 [ -x "$HT/bootstrap.py" ] && _report ok "hubspot bootstrap.py present and executable" || _report no "hubspot bootstrap.py missing or not executable"
 assert_contains "$HT/bootstrap.py" 'HUBSPOT_TOKEN'
-for op in create_lead get_lead update_stage update_lead log_draft log_research upsert_contact query_by_stage query_by_score; do
+for op in create_lead get_lead update_stage update_lead log_talking_points log_research upsert_contact query_by_stage query_by_score; do
   assert_contains "$HT/usage.md" "\`$op\`"
 done
 
@@ -189,7 +189,7 @@ if grep -nE 'sp_(status|channel|direction|summary|outcome)' "$HT/usage.md" "$HT/
 
 echo "-- tool guard policies"
 assert_not_contains "$SP/AGENT.md" 'delivers it directly'
-assert_contains "$SP/capabilities/crm/tools/attio/guard.yaml" 'covers: [draft_only, dnc_one_way, no_delete]'
+assert_contains "$SP/capabilities/crm/tools/attio/guard.yaml" 'covers: [approval_only, dnc_one_way, no_delete]'
 for y in "$SP"/capabilities/*/tools/*/identity.yaml; do
   assert_pass bash -c "{ [ \"\$(grep -c . '$y')\" = 3 ] || { [ \"\$(grep -c . '$y')\" = 4 ] && grep -qx 'wrapper: n8n' '$y'; }; } && grep -q '^capability: ' '$y' && grep -q '^provider: ' '$y' && grep -q '^server_match: ' '$y'"
 done
@@ -232,7 +232,7 @@ assert_contains "$SP/AGENT.md" 'unattended'
 echo "-- 4.0.4: AGENT.md inline size, idle rule"
 [ "$(wc -c < "$SP/AGENT.md" | tr -d ' ')" -le 9000 ] && _report ok "AGENT.md fits the 9000-byte inline limit" || _report no "AGENT.md is over 9000 bytes; the hook will not inline it"
 assert_contains "$SP/capabilities/crm/contract.md" '## Lead status transitions'
-assert_contains "$SP/capabilities/crm/contract.md" 'Approacher logs one draft per reachable enabled channel'
+assert_contains "$SP/capabilities/crm/contract.md" 'matched the hero offer and written the talking points (`log_talking_points`)'
 assert_contains "$SP/AGENT.md" '`capabilities/crm/contract.md` (Lead status, Lead status transitions)'
 assert_contains "$SP/context/icp.md" '`capabilities/crm/contract.md` (Lead status transitions)'
 assert_contains "$SP/capabilities/crm/contract.md" 'idle age = now − `Stage Changed At`'
@@ -244,23 +244,23 @@ assert_not_contains "$HU" 'body with Outcome: line'
 assert_not_contains "$HU" 'appends an `Outcome: <outcome>` line'
 for f in "$SP"/capabilities/crm/tools/*/usage.md; do assert_contains "$f" 'Write only the fields that change'; done
 
-echo "-- 6.0.0: Ready to Send and sent"
+echo "-- 8.0.0: Approved and the agent's last stage"
 K="$SP/capabilities/crm/contract.md"
-python3 -c "import sys; t=open('$K').read(); sys.exit(0 if 'Approach Drafted\nReady to Send\nContacted' in t else 1)" && _report ok "stage order has Ready to Send" || _report no "stage order lacks Ready to Send"
-assert_contains "$K" '| `Ready to Send` |'
-assert_contains "$K" 'only the operator writes `Ready to Send`'
-assert_contains "$K" 'drafts are append-only (see Approval invariant)'
+python3 -c "import sys; t=open('$K').read(); sys.exit(0 if 'Researched\nApproved\nContacted' in t else 1)" && _report ok "stage order has Approved" || _report no "stage order lacks Approved"
+assert_contains "$K" '| `Approved` |'
+assert_contains "$K" 'only the operator writes `Approved`'
+assert_contains "$K" 'talking points are append-only (see Approval invariant)'
 assert_not_contains "$K" '`approved`'
 assert_not_contains "$SP/AGENT.md" 'twelve lead stages'
 assert_contains "$SP/AGENT.md" 'The lead statuses and their transitions'
 assert_not_contains "$SP/evals/cases.md" 'approved'
 
 echo "-- 6.0.0: CRM tools"
-assert_contains "$SP/capabilities/crm/tools/attio/usage.md" 'Ready to Send'
+assert_contains "$SP/capabilities/crm/tools/attio/usage.md" 'Approved'
 assert_not_contains "$SP/capabilities/crm/tools/attio/usage.md" '`approved`'
 assert_not_contains "$SP/capabilities/crm/tools/attio/usage.md" 'Awaiting Approval'
 assert_not_contains "$SP/capabilities/crm/tools/attio/usage.md" 'twelve'
-assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'Ready to Send'
+assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'Approved'
 assert_not_contains "$SP/capabilities/crm/tools/hubspot/usage.md" '`approved`'
 assert_not_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'Awaiting Approval'
 assert_not_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'twelve'
@@ -281,8 +281,8 @@ OC="$SP/context/operating-config.md"
 
 echo "-- 6.0.0: lead status"
 K="$SP/capabilities/crm/contract.md"
-python3 -c "import sys; t=open('$K').read(); sys.exit(0 if 'Ready to Send\nContacted\nEngaged\nOpen Deal\nNurture\nCustomer\nDisqualified' in t else 1)" && _report ok "status order" || _report no "status order"
-assert_contains "$K" 'A lead holds exactly one of these eleven statuses'
+python3 -c "import sys; t=open('$K').read(); sys.exit(0 if 'Approved\nContacted\nEngaged\nOpen Deal\nNurture\nCustomer\nDisqualified' in t else 1)" && _report ok "status order" || _report no "status order"
+assert_contains "$K" 'A lead holds exactly one of these ten statuses'
 assert_contains "$K" 'Revisit On'
 assert_not_contains "$K" 'Call Scheduled'
 assert_not_contains "$K" 'Call Held'
@@ -349,7 +349,7 @@ echo "-- 6.0.0: final review fixes"
 PR="$SP/subagents/prospector.md"
 assert_contains "$PR" 'leave it untouched unless its status is `New`, or `Nurture` with a Revisit On date in the past'
 assert_contains "$PR" '- CRM `get_lead`'
-assert_contains "$SP/capabilities/crm/tools/attio/usage.md" 'then move the lead to `Ready to Send`: that approves it'
+assert_contains "$SP/capabilities/crm/tools/attio/usage.md" 'move the lead to `Approved`: that approves it'
 assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'then move the company to'
 assert_not_contains "$SP/context/operating-config.md" '`approved`'
 assert_contains "$SP/context/operating-config.md" 'only the operator approves a lead'
@@ -396,10 +396,34 @@ assert_not_contains "$SP/README.md" 'enroll'
 assert_not_contains "$SP/guard.yaml" 'InvokeIQ'
 assert_contains "$SP/guard.yaml" '"*_workflow*"'
 
-echo "-- 6.0.0: the agent stops at Approach Drafted"
+echo "-- 8.0.0: the agent stops at Researched"
 K="$SP/capabilities/crm/contract.md"
-assert_contains "$K" '**The agent'"'"'s job ends at `Approach Drafted`.**'
-assert_contains "$K" '| `log_draft` | `lead_id, contact_id, channel, body` |'
+assert_contains "$K" '**The agent'"'"'s job ends at `Researched`.**'
+assert_contains "$K" '| `log_talking_points` | `lead_id, contact_id, body` |'
+assert_contains "$K" '`query_by_stage` | `stage, limit, next_action_due_before, idle_days, research_anyway`'
+assert_contains "$K" '`approval_only` — the agent never writes `Approved` or any later'
+assert_contains "$K" '=== YYYY-MM-DD · talking points ==='
+assert_contains "$K" 'Rejects any attempt to write `stage` through this operation'
+assert_contains "$K" 'and any attempt to write `research_anyway`, which is the operator'"'"'s'
+assert_contains "$K" 'Research Anyway (checkbox) | the operator only'
+for f in "$K" "$SP/capabilities/crm/tools/attio/usage.md" "$SP/capabilities/crm/tools/hubspot/usage.md"; do
+  assert_not_contains "$f" 'log_draft'
+  assert_not_contains "$f" 'draft_only'
+  assert_not_contains "$f" 'Approacher'
+  assert_not_contains "$f" 'approach_threshold'
+  assert_not_contains "$f" 'Channel:'
+  assert_not_contains "$f" '`Ready to Send`'
+done
+for lbl in 'For:' 'Offer:' 'Opener:' 'Points:' 'Avoid:' 'Contact routes:'; do
+  assert_contains "$K" "$lbl"
+  assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" "\`${lbl}\`"
+  assert_contains "$SP/capabilities/crm/tools/attio/usage.md" "\`${lbl}\`"
+done
+for c in attio hubspot; do
+  assert_contains "./capabilities/crm/tools/$c/guard.yaml" 'covers: [approval_only, dnc_one_way, no_delete]'
+done
+assert_contains "./capabilities/crm/tools/attio/guard.yaml" 'field: research_anyway'
+assert_contains "./capabilities/crm/tools/hubspot/guard.yaml" 'field: sp_research_anyway'
 assert_contains "$K" 'the owner'"'"'s automation'
 assert_contains "$K" '**Instruction, not a mechanism.** The operator records an opt-out'
 assert_not_contains "$K" 'enroll'
@@ -407,7 +431,7 @@ assert_not_contains "$K" 'sync-replies'
 assert_not_contains "$K" 'a bounced email returns it'
 for c in attio hubspot; do
   G="./capabilities/crm/tools/$c/guard.yaml"
-  grep -qF 'update: [Scored, Researched, "Approach Drafted", Disqualified]' "$G" && _report ok "$c guard: agent statuses end at Approach Drafted" || _report no "$c guard stage update list"
+  grep -qF 'update: [Scored, Researched, Disqualified]' "$G" && _report ok "$c guard: agent statuses end at Researched" || _report no "$c guard stage update list"
   U="./capabilities/crm/tools/$c/usage.md"
   assert_not_contains "$U" 'enroll'
   assert_not_contains "$U" 'sync-replies'
@@ -461,7 +485,7 @@ if grep -rlE "enroll|sync-replies|InvokeIQ|invokeiq|sequence_bands|bind_sequence
 echo "-- 6.0.0: final review of the scope cut"
 K="$SP/capabilities/crm/contract.md"
 assert_contains "$K" '`Disqualified` with reason `opt-out` and writes nothing else'
-assert_contains "$K" 'When the Prospector (on a lead it re-finds),'
+assert_contains "$K" 'When the Prospector (on a lead it re-finds)'
 assert_not_contains "$K" '`sent` and `voided` by `update_activity`'
 AP="$SP/subagents/approacher.md"
 assert_contains "$AP" 'No reachable channel'
@@ -705,21 +729,21 @@ assert_contains "$SP/README.md" 'Upgrading from 7.2'
 
 
 echo "-- 7.4: one Attio list"
-assert_contains "$C" '| `log_draft` |'
+assert_contains "$C" '| `log_talking_points` |'
 assert_contains "$C" 'log_research(lead_id, findings[])'
 assert_contains "$C" 'the nine operations'
 assert_not_contains "$C" 'update_activity'
 assert_not_contains "$C" 'query_activities'
 assert_not_contains "$C" 'log_activity'
 assert_not_contains "$C" 'recommended'
-assert_contains "$C" 'drafts are append-only'
+assert_contains "$C" 'talking points are append-only'
 assert_contains "$C" 'a tool with no home for them skips them'
 
 AU="$SP/capabilities/crm/tools/attio/usage.md"
 AB=./capabilities/crm/tools/attio/bootstrap.py
 assert_contains "$AU" '`Sales Partner · Research`'
-assert_contains "$AU" '`Sales Partner · Email`'
-assert_contains "$AU" '=== YYYY-MM-DD · draft ==='
+assert_contains "$AU" '`Sales Partner · Talking Points`'
+assert_contains "$AU" '=== YYYY-MM-DD · talking points ==='
 assert_contains "$AU" '## Reading notes from an automation'
 assert_contains "$AU" 'append to the oldest'
 assert_contains "$AU" 'exact title'
@@ -732,9 +756,8 @@ for gone in sales_partner_research sales_partner_outreach draft_body 'attr("phon
 done
 
 HU="$SP/capabilities/crm/tools/hubspot/usage.md"
-assert_contains "$HU" 'Channel: email'
 assert_contains "$HU" 'hs_note_body'
-assert_contains "$HU" '=== YYYY-MM-DD · draft ==='
+assert_contains "$HU" '=== YYYY-MM-DD · talking points ==='
 assert_contains "$HU" 'forbidden outright: the agent uses no Tasks'
 assert_contains "$HU" 'by `hs_createdate` (stamped by HubSpot, never by the agent)'
 for gone in update_activity query_activities log_activity 'Outcome for task' recommended; do

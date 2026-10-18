@@ -193,18 +193,18 @@ and says nothing; that is not a failure.
   Offer: <the hero offer's name> (or "none matched")
   Opener: <one observation specific to this lead>
   Points:
-  - <two or three points tied to the hero offer, each from a research finding>
+  - <two or three points tied to the hero offer, each from a research finding; fewer, or "none", when research is thin>
   Avoid:
   - <what not to say, or "none">
   Contact routes:
-  - <the phone, email and LinkedIn found, each sourced>
+  - <the phone, email and LinkedIn found, each sourced, or "none">
   ```
 
   `For:`, `Offer:` and `Opener:` are one line each. `Points:`, `Avoid:`
   and `Contact routes:` are each followed by a bulleted list, one item
-  per line; `Avoid:` may be `- none`. With no hero offer the Offer line
-  reads `Offer: none matched` and the points stay general to the
-  segment. A workflow reads the newest section, which is the last one.
+  per line; an empty list is the one line `- none`. With no hero offer the Offer line
+  reads `Offer: none matched` and the points draw only on the research
+  findings, naming no offer. A workflow reads the newest section, which is the last one.
 - **`log_research(lead_id, findings[])`** adds one section to the lead's research record:
   a header line with today's date, then one block per finding with its
   `type`, `date` (the finding's own date), `summary`, `source_url` and

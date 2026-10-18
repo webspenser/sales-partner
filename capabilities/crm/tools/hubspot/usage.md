@@ -60,7 +60,8 @@ block per finding (`Type:`, `Date:`, `Summary:`, `Source:`, `Hook:`). A
 talking points Note's first line is `=== YYYY-MM-DD · talking points ===`,
 then the six labels `For:`, `Offer:`, `Opener:`, `Points:`, `Avoid:` and
 `Contact routes:`, one `<p>` per line, with the three list labels each
-followed by `- ` item lines. `hs_timestamp` is the moment of the write.
+followed by `- ` item lines; an empty list is the one line `- none`.
+`hs_timestamp` is the moment of the write.
 
 The guard refuses any change to `hs_note_body` after create, so talking
 points can't be rewritten after the operator read them: a redo is a new

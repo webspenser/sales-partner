@@ -40,16 +40,17 @@ For: <name, title> (or "owner, name not found")
 Offer: <the hero offer's name> (or "none matched")
 Opener: <one observation specific to this lead>
 Points:
-- <two or three points tied to the hero offer, each from a research finding>
+- <two or three points tied to the hero offer, each from a research finding; fewer, or "none", when research is thin>
 Avoid:
 - <what not to say, or "none">
 Contact routes:
-- <the phone, email and LinkedIn found, each sourced>
+- <the phone, email and LinkedIn found, each sourced, or "none">
 ```
 
 `For:`, `Offer:` and `Opener:` are one line each. `Points:`, `Avoid:`
 and `Contact routes:` are each followed by a bulleted list, one `- `
-item per line; `Avoid:` may be `- none`. Every line is plain text: no
+item per line; a list with nothing in it is the one line `- none`, never
+another wording. Every line is plain text: no
 tables, no bold, no links in Markdown syntax. A source URL goes in
 square brackets after the claim it backs.
 
@@ -70,18 +71,27 @@ square brackets after the claim it backs.
 4. **Offer:** the hero offer's `name` from the catalog, not its id, so
    the note reads on its own. With `hero_offer` empty, write exactly
    `Offer: none matched`.
-5. **Opener:** the strongest hook from the research, one line, with its
-   source: specific to this lead, under 90 days old, something the
-   operator could have an opinion about. Prefer a hook that is also one
-   of the hero offer's signals. Never open on a complaint review; that
-   belongs in `Avoid:` (see below).
+5. **Opener:** the strongest usable hook from the research, one line,
+   with its source: specific to this lead, under 90 days old, something
+   the operator could have an opinion about. Prefer a hook that is also
+   one of the hero offer's signals. Never the Opener:
+   - a finding whose `Hook` is one of the placeholders `contact route`,
+     `offer signal`, `rule-out` or `no hooks found`;
+   - a complaint review, which belongs in `Avoid:` (see below).
+   With no usable hook left, write exactly `Opener: unverified — no
+   recent hook found`.
 6. **Points:** two or three, each joining one research finding to what
-   the hero offer does (its `what` in the catalog). Each names the
-   finding with its source URL, then the link to the offer. A claim
-   about results or proof is used only when `business-profile.md`'s
-   Proof section states it; a price only when Pricing does. With `Offer:
-   none matched`, the points stay general to the segment: they draw on
-   the findings and the segment's needs, and name no offer.
+   the hero offer does, in the words of its `what` in the catalog. Each
+   quotes or states the finding as research recorded it, with its source
+   URL, adding nothing the finding doesn't say, then links it to the
+   offer. An `offer signal` finding is good material here even without a
+   usable hook; `contact route`, `rule-out` and `no hooks found` findings
+   are not. With fewer findings to draw on, write fewer points: one
+   finding, one point; none, `- none`. A claim about results or proof
+   is used only when `business-profile.md`'s Proof section states it; a
+   price only when Pricing does. With `Offer: none matched`, the points
+   draw only on the findings and name no offer; they say nothing about
+   what the business does beyond `business-profile.md`.
 7. **Avoid:** what the operator should not say to this lead, each with
    its reason and source where one exists. For example: a recent bad
    review not to quote back at them; an offer research ruled out (the
@@ -92,7 +102,7 @@ square brackets after the claim it backs.
    line, each with whose it is and its source: the Contacts' sourced
    routes, then the business's main line and general inbox from the
    `listing` findings with `Hook: contact route`. A pattern-guessed
-   email is never a route. With none found, write `- none found`.
+   email is never a route. With none found, write `- none`.
 9. **Check before writing.** The header is first, with today's date; the
    six labels are present, in order, each spelled exactly as above; every
    factual claim has a source URL in brackets or the word `unverified`;
@@ -110,35 +120,40 @@ square brackets after the claim it backs.
 Fictional lead **Brightwater Accounting**, matched by `match-offer` to
 Invoice Reconciliation (`ps-invoice-reconciliation`, `strong`), with
 Inbound Lead Qualification ruled out. `tone`: "plain, warm, direct".
-Proof in `business-profile.md` is empty. Contacts: Priya Nandakumar,
-Managing Partner (`decision-maker`, verified on her public LinkedIn
-profile). Research also holds the firm's main line and info@ address as
-`listing` findings with `Hook: contact route`.
+Proof in `business-profile.md` is empty. The research is the three
+findings in `match-offer`'s worked example (the 2026-09-21 billing
+review, the 2026-10-02 accounts clerk post, the contact page's 24/7
+answering service) plus two `listing` findings with `Hook: contact
+route`: the main line on the Google listing and the info@ address on
+the contact page. Contacts: Priya Nandakumar, Managing Partner
+(`decision-maker`), named on the firm's team page, which links her
+LinkedIn profile.
 
 ```
 === 2026-10-18 · talking points ===
 For: Priya Nandakumar, Managing Partner
 Offer: Invoice Reconciliation
-Opener: Brightwater posted an accounts clerk role on 2026-10-02 to chase and reconcile client invoices by hand [https://jobs.example/brightwater-clerk]
+Opener: Brightwater posted an accounts clerk role on 2026-10-02 to "chase and reconcile client invoices" [https://jobs.example/brightwater-clerk]
 Points:
-- The clerk post describes matching client invoices to payments manually [https://jobs.example/brightwater-clerk]; Invoice Reconciliation matches them and flags only the differences.
-- A 2026-09-21 review says a client was billed twice for one quarter and the fix took weeks [https://maps.example/brightwater]; flagged differences surface a double bill before the client does.
-- Their site lists bookkeeping for 40-plus small-business clients [https://brightwater.example/services]; reconciliation volume grows with every client added.
+- The 2026-10-02 accounts clerk post asks for someone to "chase and reconcile client invoices" [https://jobs.example/brightwater-clerk]; Invoice Reconciliation matches invoices to payments and flags the differences.
+- A 2026-09-21 review says "they billed me twice for the same quarter and it took weeks to fix" [https://maps.example/brightwater]; Invoice Reconciliation flags the differences, so the books close without manual checking.
 Avoid:
-- Don't quote the double-billing review back to them; use it only to understand the problem [https://maps.example/brightwater].
-- Don't pitch call answering: they already advertise a 24/7 answering service [https://brightwater.example/contact].
-- Don't cite results or client names: the business profile has no Proof yet.
+- Don't quote the double-billing review back to them; it is a complaint, there only to show the problem [https://maps.example/brightwater].
+- Don't pitch call answering: their contact page says "calls answered 24/7 by our answering service" [https://brightwater.example/contact].
+- Don't cite results or client names: Proof in the business profile is empty.
 Contact routes:
 - LinkedIn: https://linkedin.example/in/priya-nandakumar (Priya Nandakumar) [https://brightwater.example/team]
 - Phone: +1 555 0100, main line [https://maps.example/brightwater]
 - Email: info@brightwater.example, general inbox [https://brightwater.example/contact]
 ```
 
+Two points, because research holds two findings that bear on the offer;
+the answering-service finding is a rule-out and goes to `Avoid:`.
 Written with `log_talking_points(lead_id, contact_id = <Priya's
 contact_id>, body = <the section above>)`. Had `match-offer` found every
 offer ruled out, the Offer line would read `Offer: none matched` and the
-points would stay with what the research shows about the firm's
-billing and clients, naming no offer.
+points would state the clerk post and the review as found, naming no
+offer.
 
 ## Failure modes
 

@@ -122,11 +122,14 @@ advertises a scheduling platform`.
    Usable hook #1.
 3. Funding and hiring signals: the company's LinkedIn jobs tab shows
    four "Clinical Operations Coordinator" postings opened in the last
-   two weeks. Written to Research: `Type: hire`, `Summary: "Four
-   Clinical Operations Coordinator roles opened on Fennimore's
-   LinkedIn jobs tab between 2026-08-14 and 2026-08-21. Signal for
-   ho-clinical-scheduling: "hiring for clinical operations roles"."`,
-   `Source URL:` the jobs tab URL, `Date: 2026-08-21`, `Hook: "they
+   two weeks. Written to Research: `Type: hire`, and the `Summary`
+   (one line in the record):
+
+   ```
+   Four Clinical Operations Coordinator roles opened on Fennimore's LinkedIn jobs tab between 2026-08-14 and 2026-08-21. Signal for ho-clinical-scheduling: "hiring for clinical operations roles".
+   ```
+
+   Then `Source URL:` the jobs tab URL, `Date: 2026-08-21`, `Hook: "they
    posted four clinical-ops roles in one week, directly following the
    Series A — open by asking how they're structuring that team as it
    scales."` — usable hook #2, and the offer's signal.

@@ -65,12 +65,19 @@ caller for `write-talking-points`:
    A rule-out needs a sourced finding, the same as a signal; a hunch with
    no source rules nothing out. A ruled-out offer is never picked,
    however many signals point to it.
+   A finding whose `Summary` marks the claim `unverified` counts as
+   neither a rule-out nor a signal (step 4). It may be named in
+   `offer_reason`, marked `unverified`, but it never moves the pick or
+   the grade.
 4. **Signals.** For each offer still in, count the findings that show one
-   of its `signals` entries, each with its source URL. Count each
-   finding once, even when it fits two entries, and count the same fact
-   found on two sites once. Only the catalog's signals count: a finding
-   that seems to point to the offer but matches none of its `signals` is
-   not a signal.
+   of its `signals` entries, each with its source URL. Signals are
+   counted per distinct finding, not per `signals` entry: two separate
+   reviews that both match `billing or invoicing complaints in reviews`
+   are two signals. A single finding counts once, even when it fits two
+   entries, and the same fact found on two sites (one review shown on
+   two review sites) is one finding. Only the catalog's signals count: a
+   finding that seems to point to the offer but matches none of its
+   `signals` is not a signal.
 5. **Pick.** If every offer in the segment is ruled out, write
    `hero_offer` and `offer_evidence` empty and an `offer_reason` that
    names each rule-out with its source (form below). Otherwise always

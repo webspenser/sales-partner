@@ -275,7 +275,8 @@ only with a version bump and an upgrade note in the README.
   is `<person, title>` or `owner, name not found`; `Offer:` is the hero
   offer's name, or `none matched`; `Opener:` is one line. `Points:`,
   `Avoid:` and `Contact routes:` are each followed by a list, one
-  `- ` item per line; `Avoid:` may be `- none`.
+  `- ` item per line; an empty list (no points, nothing to avoid, no
+  contact route found) is the one line `- none`.
 - Every line is plain text: no tables, no markdown that renders only in
   a note's first section.
 

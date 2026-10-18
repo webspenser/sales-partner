@@ -790,6 +790,18 @@ echo "-- 8.0.0: match-offer, write-talking-points and catalog-aware research"
 MO="$SP/skills/match-offer/SKILL.md"
 WT="$SP/skills/write-talking-points/SKILL.md"
 TP_HEADER='=== YYYY-MM-DD · talking points ==='
+# The first fenced block holding the format header, indentation stripped.
+tp_block() {
+  awk -v h="$TP_HEADER" '
+    /^[[:space:]]*```/ { if (inb) { if (has) { printf "%s", buf; exit } inb=0; buf=""; has=0; next } inb=1; next }
+    inb { l=$0; sub(/^[[:space:]]+/, "", l); buf = buf l "\n"; if (l == h) has=1 }
+  ' "$1"
+}
+WT_BLOCK=$(tp_block "$WT")
+K_BLOCK=$(tp_block "$SP/capabilities/crm/contract.md")
+[ -n "$WT_BLOCK" ] && [ "$WT_BLOCK" = "$K_BLOCK" ] && _report ok "write-talking-points format block is identical to the contract's" || _report no "write-talking-points format block differs from the contract's"
+labels=$(printf '%s\n' "$K_BLOCK" | grep -oE '^(===|For:|Offer:|Opener:|Points:|Avoid:|Contact routes:)' | tr '\n' '|')
+[ "$labels" = '===|For:|Offer:|Opener:|Points:|Avoid:|Contact routes:|' ] && _report ok "contract format block: header then the six labels, in order" || _report no "contract format block label order: $labels"
 for f in "$WT" "$SP/capabilities/crm/contract.md" "$SP/capabilities/crm/tools/attio/usage.md" "$SP/capabilities/crm/tools/hubspot/usage.md"; do
   assert_contains "$f" "$TP_HEADER"
   for lbl in 'For:' 'Offer:' 'Opener:' 'Points:' 'Avoid:' 'Contact routes:'; do

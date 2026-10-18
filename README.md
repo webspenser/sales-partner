@@ -231,21 +231,30 @@ the website, and caps each lead's Apify spend. In order:
 
 1. Optional: re-run the interview's offer catalog round to add research
    tips to each offer (the signals that tell the research where to look).
-2. Update `context/operating-config.md`: add `apify_reviews`,
-   `apify_ads`, `apify_jobs` and `apify_site_reader` to
-   `prospecting_sources`, add `apify_cap_usd_per_lead: 0.50`, and set
-   `research_budget_per_lead_minutes: 15`.
-3. Re-run setup's tools step. It adds the `research_capped` field (Research
-   Capped), asks for the twelve new scraping bindings and pushes
-   `bindings/scraping.md`; an 8.0 instance's scheduled runs fail the
-   schedule gate until it does. The Apify connector's restricted URL must
-   now list all seven actors, so replace the connector's URL with:
+2. Replace the Apify connector's URL and re-run setup's tools step. The
+   connector's restricted URL must now list all seven actors, so replace
+   it with:
 
    `https://mcp.apify.com?tools=compass/crawler-google-places,vdrmota/contact-info-scraper,compass/Google-Maps-Reviews-Scraper,scrapesage/google-ads-transparency-scraper,apify/facebook-ads-scraper,valig/indeed-jobs-scraper,apify/website-content-crawler`
 
    The connector may now appear as "Apify Actors", with its tools
    prefixed `mcp__claude_ai_Apify_Actors__`; the guard still matches it.
+   Then re-run setup's tools step. It adds the `research_capped` field
+   (Research Capped), asks for the twelve new scraping bindings and
+   pushes `bindings/scraping.md`.
+3. Update `context/operating-config.md`: add `apify_reviews`,
+   `apify_ads`, `apify_jobs` and `apify_site_reader` to
+   `prospecting_sources`, add `apify_cap_usd_per_lead: 0.50`, and set
+   `research_budget_per_lead_minutes: 15`.
 4. Re-run `/sales-partner:schedule`.
+
+Your scheduled routines install the latest plugin, so they run this
+release before you finish. Research goes on: a missing
+`apify_cap_usd_per_lead` uses `0.50`. Until the tools step pushes the
+new bindings, the new sources are skipped and you get an error
+notification naming the missing bindings. Re-run
+`/sales-partner:schedule` afterwards (step 4): it checks the new
+bindings.
 
 ## Developing
 

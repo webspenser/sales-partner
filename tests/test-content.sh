@@ -1068,7 +1068,7 @@ assert_contains "$PP" 'A source not listed in `prospecting_sources` never runs, 
 assert_contains "$PP" 'Before each Apify call for a lead, the Preparer checks the call'"'"'s worst-case estimate against what remains'
 assert_contains "$PP" 'never raised from a session prompt'
 assert_contains "$PP" 'Continue research on a capped lead'
-assert_contains "$PP" 'Research Capped stays false'
+assert_not_contains "$PP" 'Research Capped stays false'
 assert_contains "$PP" 'never in a scheduled run'
 assert_contains "$PP" 'always passes `personalData: false`'
 PR="$SP/subagents/prospector.md"
@@ -1084,7 +1084,7 @@ assert_contains "$PP" 'Every lead the run still researches after the stop gets `
 assert_contains "$PP" 'read from the lead'"'"'s current stage reason'
 assert_contains "$PP" 'End with `update_stage(lead_id, "Researched", reason)`.'
 assert_contains "$PP" 'then re-run `score-lead` (`rubric:'
-assert_contains "$PP" 'Before each Apify call, check the 7-day cap first, then the per-lead cap. When the 7-day check fails, the 7-day cap'"'"'s handling and reason start apply, and the per-lead prompt is not asked.'
+assert_contains "$PP" 'Before each Apify call, check the 7-day cap first, then the per-lead cap. When the 7-day check fails, the 7-day cap'"'"'s handling and reason start apply, not the per-lead cap'"'"'s.'
 assert_contains "$PP" 'name every listed source this lead'"'"'s research picked and did not complete'
 assert_contains "$PP" '`apify_contact_info` when a refused `find_contacts` batch left the lead'
 assert_contains "$PP" '`apify_ads` when either of `find_ads`'"'"' two calls was due and did'
@@ -1150,5 +1150,71 @@ APIFY_URL=$(grep -o 'https://mcp\.apify\.com?tools=[^`]*' "$SP/capabilities/scra
 [ -n "$APIFY_URL" ] && printf '%s' "$UP81" | grep -qF -- "$APIFY_URL" \
   && _report ok "8.0 upgrade note carries the connector URL from the Apify usage file" \
   || _report no "8.0 upgrade note lacks the connector URL from the Apify usage file"
+
+echo "-- 8.1.0: final-review fixes: the cap follow-up, the 8.0 upgrade path, the site root"
+# flat_has / flat_lacks match a phrase with the file's line breaks read as spaces.
+flat_has() { tr '\n' ' ' < "$1" | tr -s ' ' | grep -qF -- "$2" && _report ok "$1 says '$2'" || _report no "$1 does not say '$2'"; }
+flat_lacks() { tr '\n' ' ' < "$1" | tr -s ' ' | grep -qF -- "$2" && _report no "$1 still says '$2'" || _report ok "$1 does not say '$2'"; }
+SPEC81="$SP/docs/superpowers/specs/2026-10-18-research-scrapers-design.md"
+# I1: a capped lead is completed the same way in every run; the main session asks about continuing
+flat_has "$PP" 'The lead is then completed the same way in every run, scheduled or interactive'
+flat_has "$PP" 'The Preparer never pauses to ask whether to go on: a dispatched sub-agent cannot reach the operator mid-run.'
+flat_has "$PP" 'the main session then asks the operator, for each of those leads, whether to continue and with how much more'
+flat_has "$PP" 'The lead'"'"'s cap for the continue is the amount the operator gave, or a fresh `apify_cap_usd_per_lead` when they named none'
+assert_not_contains "$PP" 'Pause and ask'
+assert_not_contains "$PP" '**Interactive session.**'
+flat_lacks "$PP" 'the same continue prompt'
+assert_contains "$SP/AGENT.md" '**Capped leads.**'
+flat_has "$SP/AGENT.md" 'ask the operator, per lead, whether to continue and with how much more; on a yes, run its "Continue research on a capped lead" with that amount. Never in a scheduled run.'
+flat_has "$SP/AGENT.md" 'Never exceed the weekly Apify spend cap (`apify_spend_cap_usd_per_week`)'
+flat_has "$SP/AGENT.md" 'The weekly Apify spend cap (`apify_spend_cap_usd_per_week`) is reached mid-run. The per-lead cap only flags the lead.'
+assert_not_contains "$SP/AGENT.md" 'Never exceed the Apify spend cap.'
+flat_has "$SPEC81" '*As built:* the continue prompt moved from the Preparer to the main session, because a dispatched sub-agent can'"'"'t ask the operator anything mid-run.'
+C26=$(awk '/^## Case 26:/ { f=1; next } f && /^## Case / { f=0 } f' "$SP/evals/cases.md" | tr '\n' ' ' | tr -s ' ')
+for t in 'The Preparer asks nothing mid-run.' 'the main session, not the Preparer, asks the operator' 'with a $0.05 cap' 'naming no amount'; do
+  printf '%s' "$C26" | grep -qF -- "$t" && _report ok "Case 26 says '$t'" || _report no "Case 26 does not say '$t'"
+done
+printf '%s' "$C26" | grep -qF 'Preparer pauses' && _report no "Case 26 still has the Preparer pause" || _report ok "Case 26 has no Preparer pause"
+# I2a: an 8.0 config's missing keys use their defaults
+flat_has "$PP" 'A missing `apify_cap_usd_per_lead` uses its default `0.50`, and a missing `research_budget_per_lead_minutes` uses `15`: neither is a missing input'
+flat_has "$OC" 'Default `0.50`, which also applies when the key is missing'
+flat_has "$OC" 'Default `15`, which also applies when the key is missing'
+# I2b: a listed source without its bindings is skipped for the run, not a stop
+flat_has "$PP" 'that source is skipped for this run and never called. It is recorded as not run'
+flat_has "$PP" '`detail` `<source>; bindings missing: <keys>`'
+flat_has "$PP" 'The run calls `notify_owner(kind: error)` once, naming the missing bindings'
+flat_has "$PP" 'This is not a stop: the activity carries on with the other sources and web search.'
+MB=$(awk '/^\*\*Missing bindings\.\*\*/ { f=1 } f && /^$/ { exit } f' "$PP")
+for b in max_reviews max_review_places max_ads max_ad_queries max_ad_advertisers ads_result_type max_jobs \
+         max_site_pages max_site_depth max_site_urls site_crawler_type site_html_transformer; do
+  printf '%s' "$MB" | grep -qF -- "\`$b\`" && _report ok "Missing bindings names $b" || _report no "Missing bindings lacks $b"
+  assert_contains "$SU" "\`$b\` —"
+done
+# I2c: the 8.0 note's four steps put the connector and the tools step before the new source names
+n_url=$(printf '%s\n' "$UP81" | grep -nF 'https://mcp.apify.com?tools=' | head -1 | cut -d: -f1)
+n_tools=$(printf '%s\n' "$UP81" | grep -nF 'Then re-run setup'"'"'s tools step' | head -1 | cut -d: -f1)
+n_src=$(printf '%s\n' "$UP81" | grep -nF '`prospecting_sources`' | head -1 | cut -d: -f1)
+[ -n "$n_url" ] && [ -n "$n_tools" ] && [ -n "$n_src" ] && [ "$n_url" -lt "$n_src" ] && [ "$n_tools" -lt "$n_src" ] \
+  && _report ok "8.0 upgrade note: connector URL and tools step come before the new source names" \
+  || _report no "8.0 upgrade note: the new source names come before the connector URL or the tools step"
+[ "$(printf '%s\n' "$UP81" | grep -cE '^[0-9]+\. ')" = 4 ] && _report ok "8.0 upgrade note has four steps" || _report no "8.0 upgrade note does not have four steps"
+printf '%s' "$UP81" | grep -qF 'schedule gate' && _report no "8.0 upgrade note still says the schedule gate fails" || _report ok "8.0 upgrade note has no schedule-gate claim"
+UP81F=$(printf '%s' "$UP81" | tr '\n' ' ' | tr -s ' ')
+for t in 'Your scheduled routines install the latest plugin' 'a missing `apify_cap_usd_per_lead` uses `0.50`' \
+  'Until the tools step pushes the new bindings, the new sources are skipped and you get an error notification naming the missing bindings'; do
+  printf '%s' "$UP81F" | grep -qF -- "$t" && _report ok "8.0 upgrade note says '$t'" || _report no "8.0 upgrade note does not say '$t'"
+done
+# Minors: find_ads' Google call, the site root, first-run checks, the not-run list, a continue's reason
+assert_contains "$SU" 'Run the Google call whenever `find_ads` runs'
+assert_not_contains "$SU" 'Run the Google call for every lead'
+flat_has "$SU" 'the site root of the `website` the Maps listing gives: its scheme and host, with no path or query'
+flat_has "$PP" 'the site root of the `website` the Maps listing gives, as the start URL: its scheme and host only, with any path or query dropped'
+flat_has "$SU" 'Check on the first live run: the probe never ran a page-URL call'
+flat_has "$SU" 'Check on the first live run: the Google Ads, Facebook and Indeed `fields` above come from the actors'"'"' item schemas'
+flat_has "$PP" 'A lead is marked Research Capped (the flag, a capped reason start and a `stop_condition`) only when this list is not empty'
+flat_has "$PP" 'A later lead whose research picked no Apify source has no source not run, so it is not capped'
+flat_has "$PP" 'up to the next `; ` or the end of the reason'
+flat_has "$PP" 'rewrite the reason with only the capped start (the start and its list) dropped, keeping every other start'
+flat_has "$PP" 'the other starts stay'
 
 finish

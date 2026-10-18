@@ -92,9 +92,9 @@ Segment and offer).
 - `Hero Offer`, `Offer Evidence` and `Offer Reason`, written by
   `match-offer`
 - `Research Capped` (`research_capped`), set true on a lead whose
-  scraping stopped at an Apify cap (per-lead or 7-day, or the operator
-  declined to continue), and false once a continue completes it
-  (Scraping, Interactive requests)
+  scraping stopped at an Apify cap (per-lead or 7-day) with at least one
+  source not run, and false once a continue completes it (Scraping,
+  Interactive requests)
 - One talking points section added to the lead's Talking Points record,
   written by `write-talking-points` with `log_talking_points`
 - `Stage = Researched`, or `Stage = Disqualified` if research surfaces
@@ -145,10 +145,14 @@ nothing else is written.
 
 In a scheduled (unattended) run, never ask the operator a question; if
 a required input is missing, call `notify_owner(kind: error)` with
-what is missing, then stop and report it. Scheduled and interactive runs
-use the same sources: whatever `prospecting_sources` lists. The per-lead
-cap's continue prompt (Per-lead cap) is asked only in an interactive
-session.
+what is missing, then stop and report it. A missing
+`apify_cap_usd_per_lead` uses its default `0.50`, and a missing
+`research_budget_per_lead_minutes` uses `15`: neither is a missing
+input (an 8.0 config has no `apify_cap_usd_per_lead`). Scheduled and
+interactive runs use the same sources: whatever `prospecting_sources`
+lists. In no run does the Preparer stop to ask the operator about a cap:
+a lead that reaches one is completed the same way in every run (Per-lead
+cap).
 
 ## Scraping
 When `apify_contact_info` is listed, gather the websites of the leads
@@ -181,17 +185,38 @@ usually come first. Each call counts against
   with none, only the Google call runs, and there is no Facebook finding.
 - `find_jobs`: the company's name and the lead's city, state and
   country. Zero listings is a result: no open listings under that name.
-- `read_site`: the `website` the Maps listing gives, as the start URL;
-  skip it when the lead has no website.
+- `read_site`: the site root of the `website` the Maps listing gives,
+  as the start URL: its scheme and host only, with any path or query
+  dropped (`https://example.com/locations/alameda?utm_source=gbp`
+  starts at `https://example.com/`), and the host as the listing gives
+  it, `www` or not. Skip it when the lead has no website.
+
+**Missing bindings.** Before a picked source's first call in a run,
+check that `bindings/scraping.md` has every binding the source passes:
+`apify_reviews` needs `max_reviews` and `max_review_places`;
+`apify_ads` needs `max_ads`, `max_ad_queries`, `max_ad_advertisers` and
+`ads_result_type`; `apify_jobs` needs `max_jobs`; `apify_site_reader`
+needs `max_site_pages`, `max_site_depth`, `max_site_urls`,
+`site_crawler_type` and `site_html_transformer`. When one is missing (an
+8.0 instance whose setup tools step has not run yet), that source is
+skipped for this run and never called. It is recorded as not run: each
+lead that picked it gets a ledger `step` with `outcome` `skipped`,
+`subject` the lead id and `detail` `<source>; bindings missing: <keys>`,
+and a capped lead lists it among its sources not run. The run calls
+`notify_owner(kind: error)` once, naming the missing bindings and asking
+for setup's tools step to be re-run. This is not a stop: the activity
+carries on with the other sources and web search.
 
 **Sources not run**, in a stage reason or a `stop_condition`, name every listed source this lead's research picked and did not complete, joined by `, `:
 `apify_contact_info` when a refused `find_contacts` batch left the lead
 out, `apify_ads` when either of `find_ads`' two calls was due and did
 not run (a Facebook call skipped for want of the lead's own page URL
 was never due), `apify_reviews` with no `query_place_id`, and each other
-picked source that never ran.
+picked source that never ran. A lead is marked Research Capped (the
+flag, a capped reason start and a `stop_condition`) only when this list
+is not empty: a lead with no source left to run is not capped.
 
-Before each Apify call, check the 7-day cap first, then the per-lead cap. When the 7-day check fails, the 7-day cap's handling and reason start apply, and the per-lead prompt is not asked.
+Before each Apify call, check the 7-day cap first, then the per-lead cap. When the 7-day check fails, the 7-day cap's handling and reason start apply, not the per-lead cap's.
 
 ### Per-lead cap
 The Preparer keeps a running total for each lead: the estimated cost of
@@ -204,19 +229,23 @@ estimate in `usage.md`'s `## Cost` for an evidence call, each of
 `find_contacts` (a lead with no room for its share is left out of the
 batch). When the call does not fit, stop scraping that lead; web search
 carries on within the time budget.
-- **Scheduled run.** Complete the lead with what it has: `log_research`,
-  `score-lead`, `match-offer`, `write-talking-points`, then
-  `Researched`. Set `research_capped: true` with `update_lead`, start
-  the stage reason with `research capped at $<cap>; <sources not run>`
-  (for example `research capped at $0.50; apify_jobs, apify_ads`), and
-  write a ledger `stop_condition` event for the lead. The next lead
-  starts a fresh total.
-- **Interactive session.** Pause and ask the operator whether to
-  continue, and with how much more, naming the lead, its total, the
-  cap, and the sources not yet run with their worst-case estimates. If
-  the operator agrees, continue up to the new amount (for this lead
-  only), then complete the lead as usual: Research Capped stays false.
-  If the operator declines, complete it as in a scheduled run.
+
+The lead is then completed the same way in every run, scheduled or
+interactive, with what it has: `log_research`, `score-lead`,
+`match-offer`, `write-talking-points`, then `Researched`. Set
+`research_capped: true` with `update_lead`, start the stage reason with
+`research capped at $<cap>; <sources not run>` (for example `research
+capped at $0.50; apify_jobs, apify_ads`), and write a ledger
+`stop_condition` event for the lead. The next lead starts a fresh total.
+
+The Preparer never pauses to ask whether to go on: a dispatched
+sub-agent cannot reach the operator mid-run. Its run report lists each
+lead it capped at `apify_cap_usd_per_lead`, with the lead's total, the
+cap, and the sources not run with their worst-case estimates. In an
+interactive session the main session then asks the operator, for each
+of those leads, whether to continue and with how much more; on a yes it
+runs Continue research on a capped lead (Interactive requests) with that
+amount (`AGENT.md`, Capped leads).
 
 Continuing past the per-lead cap is interactive only: a scheduled run
 never asks and never continues. A lead that research moves to
@@ -239,9 +268,10 @@ batch, each lead in it) and each later lead in the queue. Its stage
 reason starts `research capped by the 7-day Apify cap; <sources not
 run>` (for a later lead, every Apify source its research picked), and it gets
 its own `stop_condition` event, so it shows in the digest and can be
-continued later. The 7-day cap is never raised from a session prompt, even when the operator asks: it changes
+continued later. A later lead whose research picked no Apify source has
+no source not run, so it is not capped (Sources not run). The 7-day cap is never raised from a session prompt, even when the operator asks: it changes
 only by editing `apify_spend_cap_usd_per_week` in `operating-config.md`,
-and room granted at the per-lead prompt never lifts it.
+and room the operator grants for a continue never lifts it.
 
 If a call is blocked by the guard, stop the activity and call
 `notify_owner(kind: error)` with the block's message. Never retry a guard
@@ -310,19 +340,25 @@ In an interactive session the operator can ask for three things:
   report its status and do nothing.
 - **Continue research on a capped lead**: a lead at `Researched` with
   Research Capped true; otherwise report its status and do nothing.
-  Run only the sources not yet run, read from the lead's current stage reason (the list after its `research capped …;` start; every capped
-  run and every continue rewrites that reason, so it is always
-  current), with a fresh `apify_cap_usd_per_lead`, the same 7-day check
-  and the same continue prompt. Write their findings as one new research
+  The operator asks for it, or says yes when the main session asks
+  after a run (Per-lead cap).
+  Run only the sources not yet run, read from the lead's current stage reason (the list after its `research capped …;` start, up to the
+  next `; ` or the end of the reason; every capped run and every
+  continue rewrites that reason, so it is always current). The lead's
+  cap for the continue is the amount the operator gave, or a fresh
+  `apify_cap_usd_per_lead` when they named none, with the same 7-day
+  check. Write their findings as one new research
   section with `log_research`, then re-run `score-lead` (`rubric:
   approach`), `match-offer` and `write-talking-points`, each from all of
   the lead's research. End with `update_stage(lead_id, "Researched", reason)`. When every source has run, or could not for want of its input (no
   `query_place_id`, no website), clear the flag with `update_lead`
-  (`research_capped: false`) and write the reason without the capped
-  start. If it stops at a cap again, the flag stays true and the reason
-  starts with that cap's start and a fresh list of the sources still
-  not run. The agent does this only when the operator asks in a session,
-  never in a scheduled run.
+  (`research_capped: false`) and rewrite the reason with only the
+  capped start (the start and its list) dropped, keeping every other
+  start, such as a Segment change or `researched by operator request;
+  …`. If it stops at a cap again, the flag stays true and the capped
+  start is replaced by that cap's start with a fresh list of the
+  sources still not run; the other starts stay. The agent does this
+  only when the operator asks in a session, never in a scheduled run.
 
 ## Ledger
 Call `ledger_status` first; write `run_started` first and `run_finished` last, numbering events with `seq` per `capabilities/ledger/contract.md` (Run bracketing, Failure policy). Write `stop_condition`, `notify_sent` and `error` events when they happen.

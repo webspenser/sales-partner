@@ -74,18 +74,21 @@ tone: "[three adjectives from the interview]"
 - **`apify_cap_usd_per_lead`** — the ceiling on Apify spend for
   researching a single lead, in US dollars, summed over the estimated
   cost of each Apify call for that lead (the contact scraper included).
-  Default `0.50`. Before each call the Preparer checks that the call's
+  Default `0.50`, which also applies when the key is missing (an 8.0
+  config). Before each call the Preparer checks that the call's
   worst-case estimate fits in what remains; if it doesn't, it stops
   scraping that lead, completes it with what it has, sets Research
   Capped, and starts the stage reason with `research capped at
-  $<cap>; <sources not run>`. In an interactive session it asks the
-  operator whether to continue instead. It sits inside
+  $<cap>; <sources not run>`. That happens in every run; in an
+  interactive session the operator is then asked whether to continue
+  the lead, and with how much more. It sits inside
   `apify_spend_cap_usd_per_week`, which stays the ceiling for the week.
 - **`research_budget_per_lead_minutes`** — the time budget the Preparer
   spends researching a single lead before it stops and hands off with
   whatever hooks it has found; see `subagents/preparer.md`'s `Stop
-  conditions`. Default `15`: a scraping call can wait up to 45 seconds,
-  and a lead may use several.
+  conditions`. Default `15`, which also applies when the key is
+  missing: a scraping call can wait up to 45 seconds, and a lead may
+  use several.
 - **`tone`** — three adjectives describing how the talking points should
   read, filled in by the interview from `business-profile.md`'s Voice
   section. Read by `write-talking-points` when it writes the opener.

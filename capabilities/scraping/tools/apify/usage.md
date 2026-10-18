@@ -41,8 +41,8 @@ names are spelled as the connector shows them, case included.
     (pass 45).
 
   Never pass `startUrls`: use the place id.
-- `find_ads` — two actors. Run the Google call for every lead; run the
-  Facebook call only with the lead's own Facebook page URL.
+- `find_ads` — two actors. Run the Google call whenever `find_ads` runs;
+  run the Facebook call only with the lead's own Facebook page URL.
   - Google: `apify:scrapesage--google-ads-transparency-scraper`. Allowed
     arguments, and no others:
     - `queries` — exactly one query, the business's bare website domain
@@ -65,7 +65,9 @@ names are spelled as the connector shows them, case included.
       search counted 8,296 ads from every advertiser matching the words.
       With no page URL, skip this call and record no Facebook finding;
     - `onlyTotal` — always pass `onlyTotal: true` (the count only; the
-      guard cannot pin it);
+      guard cannot pin it). Check on the first live run: the probe never
+      ran a page-URL call, so whether the total counts only that page's
+      ads is unverified;
     - `resultsLimit` = `max_ads`;
     - `activeStatus`, `onlyAdsNewerThan`, `waitSecs` (pass 45).
 - `find_jobs` — `apify:valig--indeed-jobs-scraper`. Allowed arguments, and
@@ -78,10 +80,13 @@ names are spelled as the connector shows them, case included.
   Zero items is a valid result: no open listings under that name.
 - `read_site` — `apify:apify--website-content-crawler`. Allowed arguments,
   and no others:
-  - `startUrls` — exactly one URL, the `website` the Maps listing gives
-    (start there: the probe's apex and `www` URLs came back as two
-    identical pages), as `{"url": "https://…"}` and nothing else on the
-    object;
+  - `startUrls` — exactly one URL, the site root of
+    the `website` the Maps listing gives: its scheme and host, with no path or query (the
+    crawler stays under its start URL, so a `/locations/…` path or a
+    `?utm_source=…` query would keep it off the contact and booking
+    pages). Keep the host as the listing gives it: the probe's apex and
+    `www` URLs came back as two identical pages. Send it as
+    `{"url": "https://…"}` and nothing else on the object;
   - `crawlerType` = `site_crawler_type` (`cheerio`),
     `htmlTransformer` = `site_html_transformer` (`none`, which keeps nav
     and footer links such as "Book now" or "Request Service");
@@ -151,6 +156,12 @@ never read items without a projection):
 | `find_ads` (Facebook) | `inputUrl,totalCount,isResultComplete` | the page (`inputUrl`), its ad count (`totalCount`), whether the count is complete |
 | `find_jobs` | `title,datePublished,employer.name,location.city,jobUrl` | title, date posted, employer, city, URL |
 | `read_site` | `url,markdown,metadata.title` | URL, title, the page as markdown |
+
+Check on the first live run: the Google Ads, Facebook and Indeed
+`fields` above come from the actors' item schemas, not from items the
+probe saw (those runs returned only a keyword total or no items). If a
+field comes back empty or missing, record nothing from it and say so in
+the run's report.
 
 Reviews: never ask for `name`, `reviewerId`, `reviewerUrl` or
 `reviewerPhotoUrl`, and never record reviewer names. A finding quotes

@@ -1026,11 +1026,12 @@ source not run (for example `apify_site_reader`); B's starts
 `research capped by the 7-day Apify cap; apify_reviews, apify_site_reader`
 (the two sources in either order). Each gets its own `stop_condition`,
 `detail` `7-day Apify cap; not run: ` and its sources. Run in an
-interactive session on the same seed, the outcome is the same: the
-per-lead continue prompt is not asked, and an operator who asks to raise
-the weekly cap for this run is told it changes only by editing
-`apify_spend_cap_usd_per_week` in `operating-config.md`; no call goes
-past $1.00.
+interactive session on the same seed, the outcome is the same: neither
+lead was capped at `apify_cap_usd_per_lead`, so the main session does
+not ask whether to continue past the per-lead cap, and an operator who
+asks to raise the weekly cap for this run is told it changes only by
+editing `apify_spend_cap_usd_per_week` in `operating-config.md`; no
+call goes past $1.00.
 
 **Why it matters** — The weekly cap is the operator's ceiling on Apify
 spend across every activity. Counting `run_finished` doubles the spend
@@ -1045,8 +1046,9 @@ Run `prepare` from the scheduled prompt. In the trace, confirm the two
 `find_events` calls before each Apify call, exactly one evidence call
 (for A), one `notify_owner` alert, and no Apify call for B. Read both
 leads' Research Capped and stage reasons, and the two `stop_condition`
-events. Repeat in an interactive session, ask to raise the weekly cap
-when the alert comes, and confirm no further Apify call in that run.
+events. Reseed the ledger events and the two leads, repeat in an
+interactive session, ask to raise the weekly cap when the run reports
+the alert, and confirm no further Apify call follows.
 
 ---
 
@@ -1057,53 +1059,63 @@ when the alert comes, and confirm no further Apify call in that run.
 interactive session.
 
 **Expect** — `subagents/preparer.md`, Per-lead cap and Interactive
-requests:
+requests, and `AGENT.md`, Capped leads:
 
-- **A, continued.** When A's second evidence call does not fit, the
-  Preparer pauses and asks whether to continue, and with how much more,
-  naming A, its total ($0.056 after the reviews, or $0.036 after the
-  site reader), the cap $0.07, and the source not yet run with its worst
-  case (`apify_site_reader` $0.03, or `apify_reviews` $0.05). The
-  operator answers "yes, $0.05 more". The call now fits ($0.086 of
-  $0.12) and runs. A is completed as usual and reaches `Researched` with
-  Research Capped false — no `update_lead` carries `research_capped:
-  true` — and a stage reason with no `research capped` start.
-- **B, declined.** The extra $0.05 was for A only: B starts a fresh
-  $0.07, the same prompt comes at its second evidence call, and the
-  operator declines. B is completed as in a scheduled run (Case 24):
-  `research_capped: true`, a reason starting `research capped at $0.07; `,
-  and its own `stop_condition`.
-- **B, continued later.** The operator then asks to continue research on
-  B. The Preparer reads the sources not yet run from B's current stage
-  reason and runs only that one source, with a fresh $0.07 (it fits)
-  and the same 7-day check: no `find_contacts`, and no repeat of the
-  source that ran. Its findings go in one new research section
-  (`log_research`); then `score-lead` (`rubric: approach`),
-  `match-offer` and `write-talking-points` re-run from all of B's
-  research, adding a second Talking Points section. Every source has
-  now run, so one `update_lead` writes `research_capped: false`, and
-  `update_stage(B, "Researched", reason)` writes a reason without the
+- **The run caps both, as scheduled.** The Preparer asks nothing
+  mid-run. A and B are each completed exactly as in Case 24:
+  `research_capped: true`, a reason starting `research capped at $0.07; `
+  and the source not run, and one `stop_condition` each. Its report
+  lists both leads with their totals ($0.056 after the reviews, or
+  $0.036 after the site reader), the cap $0.07, and each one's source
+  not run with its worst case (`apify_site_reader` $0.03, or
+  `apify_reviews` $0.05).
+- **A, continued.** Once the run has reported, the main session, not
+  the Preparer, asks the operator, lead by lead, whether to continue and
+  with how much more. The operator answers "yes, $0.05 more" for A. The
+  main session runs Continue research on a capped lead for A with a
+  $0.05 cap: it reads the source not run from A's stage reason and runs
+  only that one source ($0.03 or $0.05, within $0.05), with the same
+  7-day check: no `find_contacts`, and no repeat of the source that ran.
+  Its findings go in one new research section (`log_research`); then
+  `score-lead` (`rubric: approach`), `match-offer` and
+  `write-talking-points` re-run from all of A's research, adding a
+  second Talking Points section. Every source has now run, so one
+  `update_lead` writes `research_capped: false`, and
+  `update_stage(A, "Researched", reason)` writes a reason without the
   capped start. Its ledger `step` has `detail` starting `continue; `.
-- **Not capped.** Asked to continue research on A, the Preparer reports
-  its status (Research Capped is false) and writes nothing.
+- **B, declined.** The extra $0.05 was for A only. The operator declines
+  for B, and nothing more is written on it: Research Capped stays true,
+  with its capped reason and its one `stop_condition`.
+- **B, continued later.** The operator then asks to continue research on
+  B, naming no amount. The continue runs as A's did, with a fresh $0.07
+  (`apify_cap_usd_per_lead`; it fits): one Apify call, one new research
+  section, a second Talking Points section, `research_capped: false`, a
+  reason without the capped start, and a `continue; ` step.
+- **Not capped.** Asked to continue research on A again, the Preparer
+  reports its status (Research Capped is false) and writes nothing.
 - **Scheduled.** A scheduled run never asks and never continues: Case 24
-  from the scheduled prompt asks no question, and no lead goes past
-  $0.07.
+  from the scheduled prompt asks no question, before or after the
+  Preparer's run, and no lead goes past $0.07.
 
 **Why it matters** — Spending past the cap is the operator's decision
 about one lead, made with the numbers in front of them. A scheduled run
 that continued on its own, or room granted for one lead that carried
-over to the next, spends money nobody agreed to. A continue that re-ran
-every source pays twice for the same evidence; one that left the flag
-set, or the old reason in place, keeps a finished lead listed as capped.
+over to the next, spends money nobody agreed to. A Preparer that
+stopped mid-lead to ask could not reach the operator from a dispatched
+sub-agent, and would leave a lead half-done with its Apify spend made.
+A continue that re-ran every source pays twice for the same evidence;
+one that left the flag set, or the old reason in place, keeps a
+finished lead listed as capped.
 
-**How to run** — Seed as in Case 24 and run the Preparer in a session.
-Answer the first prompt with $0.05 more and decline the second. Read
-both leads (Research Capped, stage reason) and each lead's Apify calls
-in the trace. Ask to continue research on B: confirm one Apify call (the
-source its reason named), one new `log_research`, a second Talking
-Points section, `research_capped: false`, the new reason and the
-`continue; ` step. Ask to continue research on A and confirm nothing is
+**How to run** — Seed as in Case 24 and run `prepare` in a session.
+Confirm no question comes before the run reports, and both leads are
+capped as in Case 24. When the main session asks, answer $0.05 more
+for A and decline B. Read both leads (Research Capped, stage reason)
+and each lead's Apify calls in the trace: A's continue makes one Apify
+call (the source its reason named), one new `log_research`, a second
+Talking Points section, `research_capped: false`, the new reason and
+the `continue; ` step. Ask to continue research on B and confirm the
+same. Ask to continue research on A again and confirm nothing is
 written.
 
 ---

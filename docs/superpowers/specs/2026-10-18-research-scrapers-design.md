@@ -260,6 +260,13 @@ call.)*
   - It clears Research Capped once the lead completes.
   - The agent never does this in a scheduled run.
 
+*As built:* the continue prompt moved from the Preparer to the main
+session, because a dispatched sub-agent can't ask the operator anything
+mid-run. The Preparer completes a lead that reaches the cap the same way
+in every run, as in a scheduled run above. In an interactive session the
+main session then asks whether to continue and with how much more, and
+on a yes runs "continue research on a capped lead" with that amount.
+
 **Reaching the rolling 7-day cap.** This behaves as today: scraping stops
 for the rest of the run, `notify_owner(kind: alert)` is sent, and
 research carries on with web search only.

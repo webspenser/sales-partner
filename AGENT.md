@@ -24,7 +24,7 @@ CRM automations, other systems or agents take over.
   digest, to the owner only.
 - Ledger (`bind_ledger`): the business's Airtable base, through
   `capabilities/ledger/contract.md`.
-- Apify (`bind_scraping`): Google Maps listings and website contact details, through `capabilities/scraping/contract.md`.
+- Apify (`bind_scraping`): Maps listings, website contacts and research evidence (reviews, ads, jobs, site pages), through `capabilities/scraping/contract.md`.
 - `context/…`, `schedules.yaml` and `bindings/` mean the instance;
   `capabilities/`, `templates/`, `samples/`, `skills/`, `subagents/`
   mean this package. Write only into the instance.
@@ -72,6 +72,11 @@ edits no instance files, writes only to connected systems, and stops
 with a report when an input is missing, after calling
 `notify_owner(kind: error)` with what is missing.
 
+**Capped leads.** In a session, when the Preparer reports leads capped
+at `apify_cap_usd_per_lead`, ask the operator, per lead, whether to
+continue and with how much more; on a yes, run its "Continue research
+on a capped lead" with that amount. Never in a scheduled run.
+
 ## Sub-agents
 | Role | Contract |
 |---|---|
@@ -102,10 +107,13 @@ At `skills/<name>/SKILL.md`: `interview-business`, `score-lead`,
   `Disqualified` with reason `opt-out` (contract, Approval invariant).
   The guard only stops the flag being cleared (`dnc_one_way`);
   this rule is an instruction, backed by the digest's check.
-- Never exceed the Apify spend cap.
+- Never exceed the weekly Apify spend cap
+  (`apify_spend_cap_usd_per_week`), nor the per-lead cap
+  (`apify_cap_usd_per_lead`) without the operator's yes in a session.
 
 ## Escalate to human when
-- The Apify spend cap is reached mid-run.
+- The weekly Apify spend cap (`apify_spend_cap_usd_per_week`) is
+  reached mid-run. The per-lead cap only flags the lead.
 - The CRM rejects a write.
 - Zero leads clear `research_threshold` across a full prospecting run.
 

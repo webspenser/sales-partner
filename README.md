@@ -192,8 +192,16 @@ Upgrading from 7.4: Sales Partner no longer drafts first touches. It
 stops at `Researched`, matching each lead to an offer from your catalog
 and writing talking points. In order:
 
-1. Update the plugin. Re-run the interview's offer catalog round, or
-   the whole interview, to create `context/offer-catalog.md`.
+1. Update the plugin. Re-run the interview's offer catalog round and
+   Round 2 (the customer and both rubrics), or the whole interview, to
+   create `context/offer-catalog.md` and bring `context/icp.md` in line
+   with it; the catalog round alone leaves `icp.md` as it was. Then
+   check the instance's `icp.md` against the package's: Firmographics
+   keeps no industry list, Industry fit scores against the catalog's
+   `industries`, and Thresholds names only `research_threshold` (drop
+   the `approach_threshold` bullet). Delete `approach_threshold`,
+   `enabled_channels`, `sending_identity` and `callback_phone` from the
+   instance's `context/operating-config.md`; nothing reads them now.
 2. Re-run setup's tools step, so the bootstrap adds the new fields
    (Segment, Hero Offer, Offer Reason, Offer Evidence, Research Anyway),
    the catalog options and the `Approved` stage.
@@ -205,8 +213,9 @@ and writing talking points. In order:
    stale entry.
 5. For leads already at `Researched` with no Hero Offer, ask Sales
    Partner in an interactive session to match offers for them. That
-   runs the re-match path. Old Email, LinkedIn and Call draft notes are
-   left in place.
+   runs the re-match path, which first fills each lead's empty Segment
+   from its Industry, or from its research. Old Email, LinkedIn and Call
+   draft notes are left in place.
 
 ## Developing
 

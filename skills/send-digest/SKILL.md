@@ -138,7 +138,7 @@ stage moves, no field edits, no talking-points or research section, not even a
 
 Every one of the above is a call through `capabilities/crm/contract.md`'s nine
 provider-neutral operations — none of the six sections reads a
-CRM view directly. Any named views a CRM tool offers (Review, Approved, My touches, Research Queue, Due Today, Nurture) are
+CRM view directly. Any named views a CRM tool offers (Review, Approved, Research Queue, Due Today, Nurture) are
 a convenience for the operator looking at the CRM by hand, and are
 defined to compute exactly what the operations above return, but this
 skill does not depend on them: swap the tool for a different CRM
@@ -343,7 +343,7 @@ matches the wall clock exactly this week. Anchor: Monday, 2026-08-24,
 
 ## Next actions due today (2)
 - Fennimore Health — Send onboarding proposal — due 2026-08-28 (3 days overdue)
-- Corvid Analytics — Await reply to approach; re-engage if none by 2026-08-31 — due 2026-08-31
+- Corvid Analytics — Call the COO about the onboarding audit — due 2026-08-31
 
 ## New leads scored (5, top 5 since last digest)
 1. Harrow Analytics — Approach 80 · Fit 70 — buying trigger: posted six ops-eng roles in two weeks after a Series B

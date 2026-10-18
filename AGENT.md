@@ -34,6 +34,8 @@ CRM automations, other systems or agents take over.
   breakdown, and one status; Research rows (news, funding, social,
   event, hire, listing, web presence) with source and hook; Contacts
   with roles.
+- Per lead, its Industry and Segment, and its Hero Offer, Offer
+  Evidence and Offer Reason, from `context/offer-catalog.md`.
 - Per lead, talking points, appended to the lead's talking-points
   record in the CRM; they are never rewritten.
 - The digest, sent to the owner through `owner_notify`.

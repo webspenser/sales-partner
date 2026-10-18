@@ -276,7 +276,9 @@ only with a version bump and an upgrade note in the README.
 - A talking points section holds six labels, in this order: `For:`,
   `Offer:`, `Opener:`, `Points:`, `Avoid:` and `Contact routes:`. `For:`
   is `<person, title>` or `owner, name not found`; `Offer:` is the hero
-  offer's name, or `none matched`; `Opener:` is one line. `Points:`,
+  offer's name, or `none matched`; `Opener:` is one line, or exactly
+  `Opener: unverified — no recent hook found` when research found no
+  usable hook. `Points:`,
   `Avoid:` and `Contact routes:` are each followed by a list, one
   `- ` item per line; an empty list (no points, nothing to avoid, no
   contact route found) is the one line `- none`.
@@ -342,7 +344,8 @@ can't):
   `approach_score`, highest first. Open a lead's company to read its
   research note and its Talking Points note, then
   move the lead to `Approved`: that approves it. Show `do_not_contact`, so an opted-out
-  lead is obvious, and `hero_offer`, `offer_reason` and `offer_evidence`.
+  lead is obvious, and `segment`, `hero_offer`, `offer_reason` and
+  `offer_evidence`.
 - **Approved** — filtered on `stage` is `Approved`: approved, waiting
   for your workflow or your own touch. The agent never acts on them;
   move a lead back to `Researched` to cancel.

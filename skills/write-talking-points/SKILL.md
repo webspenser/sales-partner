@@ -78,8 +78,8 @@ square brackets after the claim it backs.
    - a finding whose `Hook` is one of the placeholders `contact route`,
      `offer signal`, `rule-out` or `no hooks found`;
    - a complaint review, which belongs in `Avoid:` (see below).
-   With no usable hook left, write exactly `Opener: unverified — no
-   recent hook found`.
+   With no usable hook left, write exactly
+   `Opener: unverified — no recent hook found`.
 6. **Points:** two or three, each joining one research finding to what
    the hero offer does, in the words of its `what` in the catalog. Each
    quotes or states the finding as research recorded it, with its source

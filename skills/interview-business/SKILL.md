@@ -52,7 +52,11 @@ files exists because a human has to answer it in their own words.
 
    Then read the draft catalog back to the operator, segment by segment:
    names, industries, and for each offer its what, suits, signals and
-   rule_out, with the ids. Get an explicit confirmation or correction of
+   rule_out, with the ids. If an industry appears in two segments'
+   `industries`, say so at the readback and ask the operator which one
+   segment keeps it: a lead in an industry two segments list gets no
+   Segment, and the Preparer skips it on every run unless the operator
+   ticks Research Anyway. Get an explicit confirmation or correction of
    each before writing anything, the same way the rubrics are confirmed.
    Only after the operator confirms, write `context/offer-catalog.md`
    in the instance: keep the template's first paragraph and "Rules for
@@ -132,7 +136,12 @@ files exists because a human has to answer it in their own words.
    Scoring rubric (both tables, the anchor guidance and the threshold) —
    including the "who did you decline" answers as concrete Anti-signals
    — and `research_threshold` to `context/operating-config.md`, before
-   starting Round 3.
+   starting Round 3. On a re-run over an `icp.md` written before the
+   offer catalog existed, rewrite those sections rather than keep their
+   old text: remove any industry list from Firmographics, word the
+   Industry fit criterion and its anchor as the package's
+   `context/icp.md` does (scored against the catalog's `industries`),
+   and keep only `research_threshold` in Thresholds.
 6. **Round 3 — the proof.** Ask, one at a time: what results can you
    name, with numbers; who will take a reference call. If the operator
    offers a sample email, social post, or web page as evidence, ask

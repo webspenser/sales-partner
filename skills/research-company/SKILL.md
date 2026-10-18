@@ -82,12 +82,14 @@ only gathers and records.
    first ends the run; a thorough search that blows the time budget is
    still a failure of this skill.
 7. If the full search order is exhausted inside the budget and zero
-   usable hooks were found, write a single finding recording that
-   explicitly (`Summary: "No hooks found — searched company site,
-   news, funding/hiring signals, and social within budget"`, `Hook:
-   "no hooks found"`, with whatever `Source URL` best represents the
-   search — e.g. the company's own site) rather than leaving the lead
-   with no research trail at all.
+   usable hooks were found, write one more finding recording that
+   explicitly, alongside any step-5 findings (`Summary: "No hooks found
+   — searched company site, news, funding/hiring signals, and social
+   within budget"`, `Hook: "no hooks found"`, with whatever `Source URL`
+   best represents the search — e.g. the company's own site) rather than
+   leaving the lead with no research trail at all. The contact routes,
+   signals and rule-outs step 5 records are kept beside it, never
+   dropped for it.
 
 ## What makes a hook usable
 

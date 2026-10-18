@@ -61,6 +61,9 @@ talking points Note's first line is `=== YYYY-MM-DD · talking points ===`,
 then the six labels `For:`, `Offer:`, `Opener:`, `Points:`, `Avoid:` and
 `Contact routes:`, one `<p>` per line, with the three list labels each
 followed by `- ` item lines; an empty list is the one line `- none`.
+With no hero offer the Offer line is `Offer: none matched`, and with no
+usable hook the Opener line is, exactly,
+`Opener: unverified — no recent hook found`.
 `hs_timestamp` is the moment of the write.
 
 The guard refuses any change to `hs_note_body` after create, so talking
@@ -256,7 +259,10 @@ the date (for `next_action_due_before`). With no stage, add
 `sp_stage` `HAS_PROPERTY` so only pipeline companies return. For
 `idle_days`: keep a lead when now minus its `sp_stage_changed_at` is
 greater than `idle_days`. When `research_anyway` is given, add the
-filter `sp_research_anyway` `EQ` `"true"` (or `"false"`).
+filter `sp_research_anyway` `EQ` `"true"`. For `false`, use two filter
+groups (HubSpot ORs them), each holding the filters above: one adds
+`sp_research_anyway` `EQ` `"false"`, the other `sp_research_anyway`
+`NOT_HAS_PROPERTY`, so a checkbox never set counts as unticked.
 Page with `offset` until the results run out; apply `limit` last.
 
 ### `query_by_score`
@@ -321,7 +327,10 @@ Create these once in HubSpot. The connector can't create views.
   by `Approach score`, highest first. Open a company to read its
   research and Talking Points Notes, and `Do Not Contact`
   (`sp_do_not_contact`), then move the company to `Approved`: that
-  approves the lead.
+  approves the lead. Show `Do Not Contact`, `Segment` (`sp_segment`),
+  `Hero offer` (`sp_hero_offer`), `Offer evidence` (`sp_offer_evidence`)
+  and `Offer reason` (`sp_offer_reason`) as columns, so you approve on
+  the match you can see.
 - **Approved** — Companies filtered on `sp_stage` is `Approved`:
   approved, waiting for your workflow or your own touch. The agent never
   acts on them; move a company back to `Researched` to cancel.

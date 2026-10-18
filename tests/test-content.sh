@@ -951,4 +951,39 @@ assert_contains "$SP/subagents/preparer.md" 'A re-query leaves out every'
 assert_contains "$SP/subagents/preparer.md" 'gets one skipped `step` per run'
 assert_contains "$SP/context/icp.md" 'a ticked lead is researched'
 
+echo "-- 8.0.0: final-review fixes"
+# I1: a re-match fills an empty Segment before match-offer runs.
+for w in 'When the lead'"'"'s Segment is empty (a lead researched before' 'first apply Segment fill (Trigger)' 'Only then call `match-offer`' 'run no new search'; do
+  assert_contains "$PP" "$w"
+done
+assert_contains "$EV" 'Asked to match offers for (f) and (g)'
+assert_contains "$EV" 'never `No segment:`'
+# I2: the 7.4 upgrade brings icp.md and operating-config.md in line with the catalog.
+UP=$(awk '/^Upgrading from 7\.4/ { f=1; next } f && /^## / { f=0 } f' "$SP/README.md")
+for t in 'Round 2 (the customer and both rubrics)' 'the catalog round alone leaves `icp.md` as it was' 'keeps no industry list' 'Delete `approach_threshold`,' '`enabled_channels`, `sending_identity` and `callback_phone` from the' 'first fills each lead'"'"'s empty Segment'; do
+  printf '%s' "$UP" | grep -qF -- "$t" && _report ok "upgrade note: '$t'" || _report no "upgrade note missing '$t'"
+done
+n=$(printf '%s\n' "$UP" | grep -cE '^[1-9]\. ')
+[ "$n" -eq 5 ] && _report ok "upgrade note keeps the spec's five steps" || _report no "upgrade note has $n steps, not 5"
+assert_contains "$IV" 'On a re-run over an `icp.md` written before the'
+assert_contains "$IV" 'and keep only `research_threshold` in Thresholds.'
+# Minors.
+assert_contains "$IV" 'If an industry appears in two segments'"'"''
+assert_contains "$SP/context/icp.md" 'in exactly one segment'"'"'s `industries`, and that segment is the lead'"'"'s'
+assert_not_contains "$SP/context/icp.md" 'aimed at at'
+assert_contains "$RC" 'alongside any step-5 findings'
+assert_not_contains "$RC" 'write a single finding'
+assert_contains "$SP/templates/research-summary.md" 'research-company step 7'
+for f in "$SP/capabilities/crm/contract.md" "$SP/capabilities/crm/tools/attio/usage.md" "$SP/capabilities/crm/tools/hubspot/usage.md" "$WT"; do
+  assert_contains "$f" 'Opener: unverified — no recent hook found'
+done
+assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" '`NOT_HAS_PROPERTY`, so a checkbox never set counts as unticked.'
+assert_not_contains "$SP/capabilities/crm/tools/hubspot/usage.md" '(or `"false"`)'
+assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" '`Hero offer` (`sp_hero_offer`), `Offer evidence` (`sp_offer_evidence`)'
+assert_contains "$SP/capabilities/crm/tools/attio/usage.md" '`segment`, `hero_offer`, `offer_reason` and'
+assert_not_contains "$SP/guard.yaml" 'drafts go to the CRM'
+assert_not_contains "$SD" 'My touches'
+assert_not_contains "$SD" 'Await reply to approach'
+assert_contains "$A" 'Per lead, its Industry and Segment, and its Hero Offer, Offer'
+
 finish

@@ -204,7 +204,8 @@ and says nothing; that is not a failure.
   and `Contact routes:` are each followed by a bulleted list, one item
   per line; an empty list is the one line `- none`. With no hero offer the Offer line
   reads `Offer: none matched` and the points draw only on the research
-  findings, naming no offer. A workflow reads the newest section, which is the last one.
+  findings, naming no offer. With no usable hook the Opener line reads,
+  exactly, `Opener: unverified — no recent hook found`. A workflow reads the newest section, which is the last one.
 - **`log_research(lead_id, findings[])`** adds one section to the lead's research record:
   a header line with today's date, then one block per finding with its
   `type`, `date` (the finding's own date), `summary`, `source_url` and

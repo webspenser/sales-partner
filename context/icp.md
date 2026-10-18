@@ -71,7 +71,7 @@ above exactly as before.
 
 [Interview: get the job titles and functions that make a real buyer or
 influencer for this business — the person the talking points should
-be aimed at at a company that scores well. Distinguish
+be aimed at in a company that scores well. Distinguish
 decision-makers from influencers and gatekeepers, since Contacts in the
 CRM carry that same three-way role tag.]
 
@@ -174,7 +174,9 @@ Fit score:
   industry appears in no segment's list and has no reasonable adjacency
   to one; 50 if it's a neighboring industry the business has served
   before but the catalog doesn't name; 100 only if the industry is named
-  in a segment's `industries`, which is also the lead's Segment.
+  in exactly one segment's `industries`, and that segment is the lead's
+  Segment. An industry named in two segments' `industries` scores 50:
+  the lead gets no Segment until the catalog keeps the industry in one.
 - **Company size** — measured against the bands in `size_measure`: 0
   if the lead's size falls outside every band in Firmographics; 50 if
   it falls within one band's boundary but outside the sweet spot

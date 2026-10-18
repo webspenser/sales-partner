@@ -6,8 +6,8 @@ negative — a thing the agent must refrain from doing — on purpose;
 Cases 4, 11, 14 and 15 are positive checks on the hero offer
 `match-offer` picks and the grade it gives, Case 19 a positive check
 that the research gate reads the Fit score, Cases 20 and 22 positive
-checks on the Preparer's queue, and Case 23 a positive check on the
-shape of the talking points.
+checks on the Preparer's queue (Case 22 on its re-match too), and
+Case 23 a positive check on the shape of the talking points.
 "Finds good leads" or "writes a compelling opener" are not testable
 without a human's judgment call on quality; there is no mechanical
 check for "good." A refusal is binary: either the lead was written as
@@ -805,7 +805,12 @@ Preparer, and read its Segment and offer fields.
 `Scored`, Fit above the threshold, Segment empty, Industry as the old
 Prospector wrote it: (b) `Medical`, Fit 90; (c) `Home repair`, Fit 85;
 (a) `Plumber`, Fit 80; (e) `HVAC`, Fit 70. In a second run, a fifth
-such lead (d), Industry `Plumber`, with `Do Not Contact` ticked.
+such lead (d), Industry `Plumber`, with `Do Not Contact` ticked. In an
+interactive session, two leads researched before 8.0, at `Researched`
+with Segment, Hero Offer and Offer Evidence empty and a research record
+holding two separate sourced reviews saying calls went unanswered:
+(f) Industry `Plumber`; (g) Industry `Electrician`, its research showing
+a trade with crews on site.
 
 **Expect** — `subagents/preparer.md`, Segment fill, applied to each
 lead in its turn, after the `get_lead`, status and opt-out checks:
@@ -826,12 +831,26 @@ lead in its turn, after the `get_lead`, status and opt-out checks:
   worked with a quota of 2.
 - (d) goes to `Disqualified` with reason `opt-out`, and its Segment is
   never written: the fill comes after the checks.
+- Asked to match offers for (f) and (g) (`subagents/preparer.md`,
+  Interactive requests, Re-match), the Preparer fills the Segment before
+  it calls `match-offer`, and runs no new search and no `log_research`.
+  (f): one `update_lead` writes `industry: Plumbing` and `segment:
+  home-auto-services`, then `match-offer` runs on the existing findings
+  and writes a `home-auto-services` offer, never `No segment:`. (g): the
+  fill fails, so the Preparer assigns `home-auto-services` from the
+  existing research, writes it with `update_lead`, and calls
+  `match-offer` with Segment chosen by the Preparer: yes; `offer_evidence`
+  is `weak` and `offer_reason` starts `Segment chosen by the Preparer:`.
+  Each gets one new Talking Points section, stays at `Researched`, and
+  has one ledger `step` whose `detail` starts `re-match; `.
 
 **Why it matters** — Leads scored before 8.0 have no Segment. Skipping
 them all would empty the queue on upgrade; filling them by guesswork
 would match them to the wrong segment's offers; and a fill written
 before the opt-out check is a write on a lead that asked to be left
-alone.
+alone. A re-match that skipped the fill would write `No segment:` on
+every lead researched before the upgrade, and route all of them to the
+operator as unmatched.
 
 **How to run** — Seed the catalog and the four leads with
 `create_lead` and no `segment`, then `update_stage` to `Scored`. Run the
@@ -842,7 +861,12 @@ no write on (b) or (c), and exactly two `skipped` steps, one each for
 already skipped this run (`subagents/preparer.md`, Trigger), so neither
 is read twice. Seed (d), run
 again, and confirm one `update_stage(lead_id, "Disqualified",
-"opt-out")` and no `update_lead`.
+"opt-out")` and no `update_lead`. Seed (f) and (g) with `create_lead`
+and no `segment`, one `log_research` call each holding the two reviews,
+and `update_stage` to `Researched`; ask the Preparer to match offers for
+them. Check the trace for the `update_lead` writing `segment` before
+`match-offer`'s own `update_lead` on each, no `log_research`, and read
+the three offer fields.
 
 ---
 

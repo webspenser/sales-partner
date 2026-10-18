@@ -199,10 +199,18 @@ In an interactive session the operator can ask for two things:
   research it again; otherwise report its status and do nothing.
 - **Re-match a lead at `Researched`**, or refresh its talking points.
   From the existing research in `get_lead`, re-run only `match-offer`
-  (with Segment chosen by the Preparer: yes when the lead's Industry
-  matches no segment, as in Segment fill) and then `write-talking-points`, unless
-  the operator asks to research again. `match-offer` overwrites the three
-  offer fields, clearing them when nothing matches now, and
+  and then `write-talking-points`, unless the operator asks to research
+  again. When the lead's Segment is empty (a lead researched before
+  8.0), first apply Segment fill (Trigger) and write `industry` and
+  `segment` as there. If the fill fails, assign the segment from the
+  existing research as in Segment and offer, No segment, and write it
+  with `update_lead`: pass Segment chosen by the Preparer: yes when the
+  Industry matches no segment (Offer Evidence is capped at `weak`), or
+  no when it matched two. Only then call `match-offer`; when no segment
+  fits at all, Segment stays empty and `match-offer` writes its `No
+  segment:` reason. The fill and the assignment run no new search.
+  `match-offer` overwrites the three offer fields, clearing them when
+  nothing matches now, and
   `write-talking-points` adds a new section; earlier sections stay. The
   stage stays `Researched`. A lead not at `Researched` is not re-matched:
   report its status and do nothing.

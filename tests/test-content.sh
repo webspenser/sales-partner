@@ -55,7 +55,7 @@ echo "-- evals"
 E="$SP/evals/cases.md"
 assert_contains "$E" '## Case 9: A lead with no sourced address never scores inside the service area'
 assert_contains "$E" '## Case 10: A business with no website is deduped on phone, then name and address'
-assert_contains "$E" '## Case 11: A lead with no sourced phone never gets a call draft'
+assert_contains "$E" '## Case 11: With no catalog signal, the pick is `weak`, never empty'
 assert_contains "$E" '## Case 12: A source outside `prospecting_sources` is never used'
 assert_contains "$E" 'These refusals are also'
 assert_not_contains "$E" 'These twelve refusals'
@@ -82,7 +82,7 @@ assert_contains "$I" 'Target roles, Buying triggers, Anti-signals'
 echo "-- evals widened (I6)"
 assert_contains "$E" '`100×0.30=30`'
 assert_contains "$E" 'same normalized company and address'
-assert_contains "$E" 'gets a Call draft that prints that number'
+assert_contains "$E" 'segment fit alone (Home & Auto Services, industry Plumbing); no catalog signal found in research.'
 assert_contains "$E" 'then_prospect: prepare'
 
 echo "-- minors (M1-M11, D1-D2)"
@@ -236,7 +236,9 @@ assert_contains "$K" 'talking points are append-only (see Approval invariant)'
 assert_not_contains "$K" '`approved`'
 assert_not_contains "$SP/AGENT.md" 'twelve lead stages'
 assert_contains "$SP/AGENT.md" 'The lead statuses and their transitions'
-assert_not_contains "$SP/evals/cases.md" 'approved'
+# The evals may name the stage `Approved`, but never say the agent approved a lead.
+assert_not_contains "$SP/evals/cases.md" '`approved`'
+if grep -qiE '(agent|preparer|prospector)( has| had)? approv(ed|es)|approved by the (agent|preparer|prospector)|auto-?approv' "$SP/evals/cases.md"; then _report no "evals say the agent approved a lead"; else _report ok "evals never say the agent approved a lead"; fi
 
 echo "-- 6.0.0: CRM tools"
 assert_contains "$SP/capabilities/crm/tools/attio/usage.md" 'Approved'
@@ -337,7 +339,7 @@ assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'then move the com
 assert_not_contains "$SP/context/operating-config.md" '`approved`'
 assert_contains "$SP/context/operating-config.md" 'only the operator approves a lead'
 E="$SP/evals/cases.md"
-assert_contains "$E" 'at `Contacted` and one at `Ready to Send`'
+assert_contains "$E" 'at `Contacted` and one at `Approved`'
 
 echo "-- 6.0.0: lead generation and personalization (sending leaves)"
 for f in capabilities/sequences skills/enroll skills/sync-replies; do
@@ -450,14 +452,14 @@ assert_not_contains "$K" '`sent` and `voided` by `update_activity`'
 D="$SP/skills/send-digest/SKILL.md"
 assert_contains "$D" '(now <status>)'
 E="$SP/evals/cases.md"
-assert_contains "$E" 'one `log_draft` call with `channel ='
+assert_contains "$E" 'one `log_talking_points` call'
 assert_not_contains "$E" 'two separate `log_activity` calls'
 for c in attio hubspot; do
   assert_not_contains "./capabilities/crm/tools/$c/usage.md" 'wait for you on their dates'
 done
 
-echo "-- 6.0.0: LinkedIn needs a sourced profile"
-assert_contains "$SP/evals/cases.md" '## Case 15: No LinkedIn profile means no LinkedIn draft'  # pins eval text; rewritten in Task 8
+echo "-- 6.0.0: LinkedIn needs a sourced profile (8.0.0: the LinkedIn draft case is retired)"
+assert_not_contains "$SP/evals/cases.md" '## Case 15: No LinkedIn profile means no LinkedIn draft'
 
 echo "-- 6.0.0: company profile fields"
 K="$SP/capabilities/crm/contract.md"
@@ -485,7 +487,7 @@ assert_contains "$D" 'researched N days ago'
 assert_not_contains "$SP/capabilities/crm/contract.md" '`send-digest` needed to find'
 assert_not_contains "$SP/capabilities/crm/tools/hubspot/usage.md" '|LINKED_IN_CONNECT|TODO>'
 assert_not_contains "$SP/evals/cases.md" 'thirteen'
-assert_contains "$SP/evals/cases.md" 'Case 14 is a positive check'
+assert_contains "$SP/evals/cases.md" 'Cases 4, 11, 14 and 15 are positive checks'
 A="$SP/AGENT.md"
 assert_contains "$A" 'except a `Nurture` lead past its Revisit On date'
 assert_contains "$SP/subagents/prospector.md" 'Never re-score or move any other lead'
@@ -665,7 +667,7 @@ U="$SP/capabilities/scraping/tools/apify/usage.md"
 assert_contains "$U" 'postalCode,location,phone,website,totalScore,reviewsCount,reviewsDistribution,openingHours,placeId'
 assert_contains "$U" 'claimed = `not claimThisBusiness`'
 assert_contains "$SP/capabilities/scraping/contract.md" 'per-star review counts (one to five stars), opening hours (per day), claimed (true or false), temporarily closed (true or false)'
-assert_contains "$SP/evals/cases.md" '## Case 19: Each gate reads its own score'
+assert_contains "$SP/evals/cases.md" '## Case 19: The research gate reads the Fit score, and research never rewrites it'
 assert_contains "$SP/README.md" 'Upgrading from 7.2'
 
 
@@ -733,8 +735,8 @@ assert_not_contains "$SP/templates/digest.md" 'the Call note'
 assert_not_contains "$SP/templates/digest.md" 'recommended'
 
 EV="$SP/evals/cases.md"
-assert_contains "$EV" '## Case 14: Every reachable channel gets a full draft'
-assert_contains "$EV" '## Case 20: A redraft appends and never rewrites'
+assert_not_contains "$EV" '## Case 14: Every reachable channel gets a full draft'
+assert_not_contains "$EV" '## Case 20: A redraft appends and never rewrites'
 for gone in update_activity query_activities log_activity 'recommended:'; do
   assert_not_contains "$EV" "$gone"
 done
@@ -759,7 +761,7 @@ assert_contains "$AU2" 'create the note with the header line alone, then append'
 assert_contains "$AU2" '`do_not_contact` is not true'
 assert_contains "$SP/skills/send-digest/SKILL.md" 'In Section 2 too, mark every lead whose `Do Not Contact` is true'
 assert_contains "$SP/README.md" 'otherwise it is recorded as a `listing` finding in the research note'
-assert_contains "$SP/evals/cases.md" 'only email is a general inbox recorded in its research'
+assert_contains "$SP/evals/cases.md" 'the general inbox recorded in its research'
 
 echo "-- 8.0.0: the Approacher path is retired"
 for f in subagents/approacher.md skills/write-cold-email skills/write-linkedin-touch skills/write-call-opener templates/cold-email.md templates/cold-call-opener.md templates/linkedin-dm.md templates/linkedin-connection-note.md templates/personalized-statements.md; do
@@ -783,7 +785,6 @@ while IFS= read -r f; do
     if grep -qiF -- "$t" "$f"; then _report no "$f still contains '$t'"; else _report ok "$f free of '$t'"; fi
   done
 done < <(find AGENT.md README.md subagents skills templates context capabilities evals -type f \
-  -not -path 'evals/*' `# Task 8` \
   -not -path 'README.md' `# Task 9` \
   -not -name '*.pyc')
 
@@ -897,5 +898,32 @@ assert_contains "$DT" '## Review ([count])'
 assert_contains "$DT" 'ordered by Approach score'
 assert_not_contains "$SD" 'log_draft'
 assert_not_contains "$SD" 'Drafts on DNC'
+
+echo "-- 8.0.0: evals for offer matching, talking points and Research Anyway"
+EV="$SP/evals/cases.md"
+for h in \
+  '## Case 4: A strong match rests on two sourced signals' \
+  '## Case 11: With no catalog signal, the pick is `weak`, never empty' \
+  '## Case 14: A sourced rule-out takes an offer out, whatever its signals' \
+  '## Case 15: Every offer ruled out leaves Hero Offer empty, and the lead still reaches `Researched`' \
+  '## Case 20: A Research Anyway lead below the threshold is researched first' \
+  '## Case 21: An industry that fits no segment is never guessed into one' \
+  '## Case 22: A lead scored before 8.0 gets its Segment from its Industry, or is skipped' \
+  '## Case 23: Talking points stay sourced and claim only what the business files hold' \
+  '## Case 7: A claim absent from `business-profile.md` and `offer-catalog.md` is omitted, not inferred' \
+  '## Case 5: An opted-out lead is disqualified and gets nothing new' \
+  '## Case 13: A scheduled activity runs its `then` steps and nothing else'; do
+  assert_contains "$EV" "$h"
+done
+for gone in '## Case 4: LinkedIn output is copy-paste text' '## Case 11: A lead with no sourced phone' log_draft draft_only 'Personalized statements' 'Draft Body' '`channel' 'first touch'; do
+  assert_not_contains "$EV" "$gone"
+done
+for w in '`strong`' '`moderate`' '`weak`' '`Offer: none matched`' '`- none`' 'Segment chosen by the Preparer:' 'Every offer ruled out:' 'Ruled out: Inbound Lead Qualification & Appointment Setting' \
+  'researched by operator request; Fit 45 below research_threshold 60' 'researched by operator request; no Fit score' 'matches no single segment' \
+  '`hero_offer=none; offer_evidence=none`' 'hero_offer=ha-inbound-lead-qualification; offer_evidence=strong' 'counts as neither' 'a clear synonym' 'matches two segments' \
+  '=== <today> · talking points ===' 'For:`, `Offer:`, `Opener:`, `Points:`, `Avoid:`, `Contact routes:' 'Opener: unverified — no recent hook found' \
+  'traces to `business-profile.md` or `offer-catalog.md`' 'Run **Case 1** (Prospector), **Case 4** (Preparer, a strong match)'; do
+  assert_contains "$EV" "$w"
+done
 
 finish

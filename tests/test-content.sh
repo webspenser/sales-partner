@@ -115,7 +115,7 @@ SP_VERSION=$(sed -n 's/^version: //p' "$SP/agent.yaml" | head -n 1)
 assert_contains "$SP/README.md" "Version $SP_VERSION."
 assert_not_contains "$SP/skills/setup/SKILL.md" '<interview-skill>'
 assert_not_contains "$SP/skills/setup/SKILL.md" '<context-files>'
-assert_contains "$SP/skills/setup/SKILL.md" '`context/business-profile.md`, `context/icp.md`, `context/operating-config.md`'
+assert_contains "$SP/skills/setup/SKILL.md" '`context/business-profile.md`, `context/offer-catalog.md`, `context/icp.md`, `context/operating-config.md`'
 assert_contains "$SP/skills/interview-business/SKILL.md" 'into the instance'"'"'s `context/samples/`'
 assert_not_contains "$SP/skills/interview-business/SKILL.md" 'artifacts supplied into `samples/`'
 echo "-- capabilities"
@@ -649,7 +649,7 @@ assert_contains "$SP/subagents/preparer.md" 'most recent'
 assert_contains "$SP/subagents/preparer.md" '`Fit Breakdown` are never written'
 assert_contains "$SP/skills/send-digest/SKILL.md" '`score: fit`, `min_score: 0`'
 assert_contains "$SP/skills/send-digest/SKILL.md" 'Approach <a> · Fit <f>'
-assert_contains "$SP/skills/interview-business/SKILL.md" 'two draft rubrics, one per gate'
+assert_contains "$SP/skills/interview-business/SKILL.md" 'two draft rubrics, each with 0/50/100'
 assert_contains "$SP/capabilities/crm/contract.md" '### Scores'
 assert_contains "$SP/capabilities/crm/contract.md" '`score, min_score, stage, limit`'
 for t in attio hubspot; do
@@ -779,7 +779,6 @@ while IFS= read -r f; do
     if grep -qiF -- "$t" "$f"; then _report no "$f still contains '$t'"; else _report ok "$f free of '$t'"; fi
   done
 done < <(find AGENT.md README.md subagents skills templates context capabilities evals -type f \
-  -not -path 'skills/interview-business/*' `# Task 6` \
   -not -path 'skills/send-digest/*' `# Task 7` \
   -not -path 'templates/digest.md' `# Task 7` \
   -not -path 'evals/*' `# Task 8` \
@@ -862,5 +861,23 @@ for t in attio hubspot; do
 done
 assert_contains "$SP/capabilities/crm/tools/attio/usage.md" 'write it as `[]`'
 assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'write it as `""`'
+
+echo "-- 8.0.0: the interview builds the catalog and setup copies it"
+IV="$SP/skills/interview-business/SKILL.md"
+assert_contains "$IV" 'context/offer-catalog.md'
+assert_contains "$IV" 'only writer of `context/business-profile.md`,'
+assert_contains "$IV" '`signals`'
+assert_contains "$IV" '`rule_out`'
+assert_contains "$IV" '**Round 1b — the offer catalog.**'
+assert_contains "$IV" 'whose info string is `yaml`'
+assert_contains "$IV" 'unique across the whole'
+assert_contains "$IV" 'named after the'
+assert_contains "$IV" 'come from the segments'"'"' `industries` in the offer catalog'
+assert_contains "$IV" 'explicit confirmation or correction'
+assert_contains "$IV" 're-run setup'"'"'s tools step'
+assert_not_contains "$IV" 'approach_threshold'
+assert_contains "$SP/skills/setup/SKILL.md" '`context/offer-catalog.md`, `context/icp.md`'
+assert_contains "$SP/skills/setup/SKILL.md" 'bootstrap reads the instance'"'"'s `context/offer-catalog.md`'
+assert_contains "$SP/skills/setup/SKILL.md" 'Re-run this step after the catalog'
 
 finish

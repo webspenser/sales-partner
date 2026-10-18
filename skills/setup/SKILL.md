@@ -59,7 +59,7 @@ skill, if this agent has one.
 8. **Context.** In the instance folder (the subfolder, if step 3
    created one), copy only the context files the interview fills from
    the package's `context/` into the instance's `context/`, skipping
-   any that already exist: `context/business-profile.md`, `context/icp.md`, `context/operating-config.md`. Other files in the
+   any that already exist: `context/business-profile.md`, `context/offer-catalog.md`, `context/icp.md`, `context/operating-config.md`. Other files in the
    package's `context/` stay in the package and are read from there.
    Create `context/samples/` in the instance: the user's own examples
    go there (the package's `samples/` holds only the examples the
@@ -67,7 +67,11 @@ skill, if this agent has one.
    agent has one, to fill the copied files with the user. The interview
    also writes `schedules.yaml` at the instance root (timezone and
    `schedule_*` lines) when the agent declares activities.
-9. **Tools.** Skip if `agent.yaml` lists no `capabilities`. For each
+9. **Tools.** Skip if `agent.yaml` lists no `capabilities`. The CRM
+   bootstrap reads the instance's `context/offer-catalog.md` to fill the
+   Segment and Hero Offer choice lists, so the interview (step 8) must
+   have written it before this step. Re-run this step after the catalog
+   changes so the lists pick up new segments and offers. For each
    capability listed there:
    1. List the shipped tools (`capabilities/<capability>/tools/`
       in the package) and ask which system the user uses. If none

@@ -28,7 +28,9 @@ The Preparer's queue, built in this order and capped per run at
 The queue is worked in order, one lead at a time. A skipped lead does
 not count against the cap: the next threshold lead takes its place, and
 when the list runs out, query again with a larger `limit` until the
-queue is full or no more leads come back.
+queue is full or no more leads come back. A re-query leaves out every
+lead already worked or skipped this run, so a skipped lead is read once
+and gets one skipped `step` per run.
 
 ### Segment fill
 When a lead's turn comes, after the `get_lead`, status and opt-out

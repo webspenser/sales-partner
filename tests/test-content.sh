@@ -238,7 +238,7 @@ assert_not_contains "$SP/AGENT.md" 'twelve lead stages'
 assert_contains "$SP/AGENT.md" 'The lead statuses and their transitions'
 # The evals may name the stage `Approved`, but never say the agent approved a lead.
 assert_not_contains "$SP/evals/cases.md" '`approved`'
-if grep -qiE '(agent|preparer|prospector)( has| had)? approv(ed|es)|approved by the (agent|preparer|prospector)|auto-?approv' "$SP/evals/cases.md"; then _report no "evals say the agent approved a lead"; else _report ok "evals never say the agent approved a lead"; fi
+if grep -qiE '(agent|preparer|prospector)( has| had| is| was)? approv(e|ed|es|ing)|approved by the (agent|preparer|prospector)|auto-?approv|(agent|preparer|prospector) (moves|moved|moving) (it|the lead|a lead|leads)( straight)? to `Approved`' "$SP/evals/cases.md"; then _report no "evals say the agent approved a lead"; else _report ok "evals never say the agent approved a lead"; fi
 
 echo "-- 6.0.0: CRM tools"
 assert_contains "$SP/capabilities/crm/tools/attio/usage.md" 'Approved'
@@ -925,5 +925,9 @@ for w in '`strong`' '`moderate`' '`weak`' '`Offer: none matched`' '`- none`' 'Se
   'traces to `business-profile.md` or `offer-catalog.md`' 'Run **Case 1** (Prospector), **Case 4** (Preparer, a strong match)'; do
   assert_contains "$EV" "$w"
 done
+# The instructions the evals rely on.
+assert_contains "$SP/subagents/preparer.md" 'A re-query leaves out every'
+assert_contains "$SP/subagents/preparer.md" 'gets one skipped `step` per run'
+assert_contains "$SP/context/icp.md" 'a ticked lead is researched'
 
 finish

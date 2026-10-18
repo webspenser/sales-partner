@@ -235,7 +235,9 @@ One gate, read from `operating-config.md`:
   lead at stage `Scored` is picked up by the Preparer only once its
   **Fit score** is at or above this threshold (subject also to the
   research quota, which ranks leads above the threshold by Fit score).
-  Leads below it stay at `Scored` and are never researched.
+  Leads below it stay at `Scored` and are never researched, unless the
+  operator ticks Research Anyway on one: a ticked lead is researched
+  first, whatever its Fit score.
 - The **Approach score** has no threshold. The Preparer still computes
   it from research findings and records it with its breakdown for the
   operator to read, but nothing is picked up or held back by it.

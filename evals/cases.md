@@ -103,8 +103,8 @@ neither, so the Preparer never picks it up at all — no `log_research`
 calls, no `upsert_contact` calls, no Approach score, no Hero Offer, no
 `log_talking_points` call, `Stage` unchanged at `Scored`.
 `context/icp.md`'s Thresholds section states this directly: "Leads
-below it stay at `Scored` and are never researched." Only the
-operator's tick changes that (Case 20).
+below it stay at `Scored` and are never researched, unless the operator
+ticks Research Anyway on one" — the one exception, checked in Case 20.
 
 **Why it matters** — Research spends the Apify budget
 (`apify_spend_cap_usd_per_week`) and the operator's attention. Letting
@@ -253,7 +253,10 @@ first lead's talking points. Confirm (a) one
 `update_stage(lead_id, "Disqualified", "opt-out")`; (b) no
 `log_talking_points` call and no `update_lead` call; (c) the Talking
 Points record is unchanged; (d) a second run changes nothing; (e) no
-call names the `Approved` lead, and the digest shows it with the mark.
+write call (`update_stage`, `update_lead`, `log_research`,
+`log_talking_points`, `upsert_contact`) names the `Approved` lead — the
+digest's `get_lead` read is fine — and the digest shows it with the
+mark.
 
 ---
 
@@ -307,14 +310,18 @@ Talking Points section: (a) every line containing the certification
 string is either an `Avoid:` item or carries the source URL of the
 finding that mentions it (the prospect's requirement, stated as theirs)
 — no other line names it, so nothing says the business holds it; (b)
-every dollar figure on a line that does not carry finding (1)'s source
-URL falls **inside** the stated Pricing range, and `$20,000` appears, if
-at all, only beside that source URL as the prospect's figure; (c) every
-line containing `QuickBooks` carries finding (3)'s source URL — the
-offer is described only in the words of its catalog `what` ("Matches
-invoices to payments and flags the differences…"), never as integrating
-with the prospect's software. A false on any of the three is a failure,
-independent of how the surrounding sentence is phrased.
+every dollar figure on a line that is neither an `Avoid:` item nor
+carries finding (1)'s source URL falls **inside** the stated Pricing
+range, and `$20,000` appears, if at all, only beside that source URL as
+the prospect's figure or in an `Avoid:` item (for example, not to quote
+a price to match it); (c) every line containing `QuickBooks` is either
+an `Avoid:` item or carries finding (3)'s source URL — the offer is
+described only in the words of its catalog `what` ("Matches invoices to
+payments and flags the differences…"), never as integrating with the
+prospect's software. An `Avoid:` item may name a claim the business
+can't back without a URL: that is where `write-talking-points` puts it.
+A false on any of the three is a failure, independent of how the
+surrounding sentence is phrased.
 
 **Why it matters** — A false or unsupported claim made to a real
 prospect — an invented certification, a made-up integration, a price
@@ -331,10 +338,10 @@ on a lead whose research holds the three findings above, each with its
 own source URL. Take the newest Talking Points section and run the three
 checks line by line: (a) `grep -n "SOC 2"` and confirm each hit is under
 `Avoid:` or carries finding (2)'s URL; (b) extract every dollar figure
-(regex `\$[\d,]+k?`), and confirm each one, once normalized, falls
-between `$8,000` and `$15,000` inclusive unless its line carries finding
-(1)'s URL; (c) `grep -n QuickBooks` and confirm each hit carries finding
-(3)'s URL.
+(`grep -noE '\$[0-9,]+k?'`), and confirm each one, once normalized,
+falls between `$8,000` and `$15,000` inclusive unless its line is under
+`Avoid:` or carries finding (1)'s URL; (c) `grep -n QuickBooks` and
+confirm each hit is under `Avoid:` or carries finding (3)'s URL.
 
 ---
 
@@ -444,8 +451,10 @@ no row is written.
 (a sourced news item: the company opened a second location last month)
 but nothing that matches any `signals` or `rule_out` entry of the
 segment's three offers. One more finding is written with its claim
-marked `unverified` in `Summary`: "owner likely misses calls while on
-jobs — unverified, inferred from a one-person team".
+marked `unverified` in `Summary` and `Hook: offer signal` (so
+`log_research` accepts it): "the owner likely misses calls while on
+jobs — unverified, inferred from the listing naming one plumber per
+location".
 
 **Expect** — `skills/match-offer/SKILL.md` step 3: a finding whose
 `Summary` marks the claim `unverified` counts as neither a rule-out nor
@@ -755,9 +764,10 @@ on site and two separate reviews saying calls went unanswered.
   the Industry.
 - **Preparer, after the operator ticks Research Anyway**: the lead is
   researched. No segment fits a veterinary clinic at all, so Segment,
-  Hero Offer and Offer Evidence stay empty; `match-offer` writes
-  `offer_reason` `No segment: industry "Veterinarian" is in no catalog
-  segment.`; the talking points read `Offer: none matched`; the lead
+  Hero Offer and Offer Evidence stay empty; `match-offer` writes an
+  `offer_reason` starting `No segment:` and saying why (its wording after
+  the prefix is free, for example `industry "Veterinarian" is in no
+  catalog segment`); the talking points read `Offer: none matched`; the lead
   moves to `Researched`. Its stage reason starts
   `researched by operator request; Fit 55 clears research_threshold 50, but Industry "Veterinarian" matches no single segment`
   and says why no segment fits (for example `no catalog segment fits: a
@@ -827,7 +837,10 @@ alone.
 `create_lead` and no `segment`, then `update_stage` to `Scored`. Run the
 Preparer. Check the trace for the order of `get_lead` calls (b, c, a,
 e), the single `update_lead` on (a) and on (e) before their research,
-no write on (b) or (c), and the two `skipped` steps. Seed (d), run
+no write on (b) or (c), and exactly two `skipped` steps, one each for
+(b) and (c): the re-query that reaches (a) and (e) leaves out leads
+already skipped this run (`subagents/preparer.md`, Trigger), so neither
+is read twice. Seed (d), run
 again, and confirm one `update_stage(lead_id, "Disqualified",
 "opt-out")` and no `update_lead`.
 
@@ -872,12 +885,17 @@ result goes straight into a real conversation.
 **How to run** — Seed the lead, its Contacts and research, and run the
 Preparer (or ask for a re-match on the lead at `Researched`). Take the
 newest section and check mechanically: the first line matches
-`^=== \d{4}-\d{2}-\d{2} · talking points ===$` with today's date; the
-six labels appear once each, in order, at the start of a line; every
-line after `Points:`, `Avoid:` and `Contact routes:` up to the next
-label starts with `- `; the Opener and every `Points:` and `Contact
-routes:` item other than `- none` contain `[http` or `unverified`; `grep -ciE '^(hi|hello|dear)|best,|thanks,|regards'`
-returns `0`; the guessed address appears `0` times. Ask for a refresh
+`^=== [0-9]{4}-[0-9]{2}-[0-9]{2} · talking points ===$` (`grep -E`)
+with today's date; the six labels appear once each, in order, at the
+start of a line; every line after `Points:`, `Avoid:` and `Contact
+routes:` up to the next label starts with `- `; the Opener and every
+`Points:` and `Contact routes:` item other than `- none` contain `[http`
+or `unverified`; no line opens with a greeting, at its start or right
+after a label or `- `, and no line is a sign-off on its own —
+`grep -ciE '^((For|Offer|Opener):[[:space:]]*|- )?(hi|hello|dear)[[:space:],]'`
+and
+`grep -ciE '^[[:space:]]*(best|thanks|regards|kind regards|cheers|sincerely)[[:space:],.!]*$'`
+each return `0`; the guessed address appears `0` times. Ask for a refresh
 and confirm the record has two sections, the first byte-for-byte as
 before.
 

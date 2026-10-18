@@ -1,7 +1,7 @@
 # Research actors probe (Task 1, 8.1)
 
 Probed on 2026-10-18, with the operator present.
-- **Connector.** The operator re-added the claude.ai Apify connector with a restricted URL listing all six actors.
+- **Connector.** The operator re-added the claude.ai Apify connector with a restricted URL listing all seven actors.
 - **Tool prefix.** Tools now appear as `mcp__claude_ai_Apify_Actors__<tool>`. The server segment, lowercased, is `claude_ai_apify_actors`, and the existing `server_match: apify` still covers it, being a substring.
 - **Where it ran.** Schemas were captured, and the live calls run, in fresh headless sessions, because the controller session only saw the old connector. Raw outputs are summarized below; reviewer data never left Apify.
 - **Target.** Big Brothers Plumbing Inc, Alameda, CA (place ID `ChIJkyhXi8iHj4ARLP5o2YRo-iY`, `bigbrothersplumbinginc.com`).

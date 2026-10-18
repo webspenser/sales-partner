@@ -655,7 +655,7 @@ for t in attio hubspot; do
   U="$SP"/capabilities/crm/tools/$t/usage.md
   assert_contains "$U" "Reject a \`score\` other than \`fit\` or"
 done
-for slug in fit_score fit_breakdown approach_score approach_breakdown segment hero_offer offer_reason offer_evidence research_anyway; do
+for slug in fit_score fit_breakdown approach_score approach_breakdown segment hero_offer offer_reason offer_evidence research_anyway research_capped; do
   assert_contains "$SP/capabilities/crm/tools/attio/usage.md" "\`$slug\`"
   grep -qF "attr(\"$slug\"" ./capabilities/crm/tools/attio/bootstrap.py && _report ok "attio bootstrap creates $slug" || _report no "attio bootstrap misses $slug"
   assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" "\`sp_$slug\`"
@@ -1022,5 +1022,21 @@ for c in '`find_reviews` | $0.05' '`find_ads`, Google | $0.01' '`find_ads`, Face
   assert_contains "$SU" "$c"
 done
 assert_not_contains "$SU" 'reviewerId,'
+
+# Research Capped: an agent-written checkbox in both CRMs, unlike research_anyway
+CT="$SP/capabilities/crm/contract.md"
+assert_contains "$CT" 'Research Capped (checkbox)'
+assert_contains "$CT" '`offer_evidence` and `research_capped` among its fields'
+assert_contains "$CT" 'no guard policy forbids it'
+assert_not_contains "$SP/capabilities/crm/tools/attio/guard.yaml" 'research_capped'
+assert_not_contains "$SP/capabilities/crm/tools/hubspot/guard.yaml" 'research_capped'
+assert_contains "$SP/capabilities/crm/tools/attio/usage.md" '`offer_evidence` and `research_capped`'
+assert_contains "$SP/capabilities/crm/tools/attio/usage.md" '| Research Capped | `research_capped` | Checkbox | |'
+assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" '`research_capped` maps to'
+assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" '(`sp_research_capped`) as columns'
+assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" '"sp_research_anyway", "sp_research_capped"]'
+assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" '| `sp_research_capped` | Research capped | Single checkbox |'
+grep -qF 'attr("research_capped", "Research Capped", "checkbox"' ./capabilities/crm/tools/attio/bootstrap.py && _report ok "attio research_capped is a checkbox" || _report no "attio research_capped is not a checkbox"
+grep -qF 'prop("sp_research_capped", "Research capped", "bool", "booleancheckbox"' ./capabilities/crm/tools/hubspot/bootstrap.py && _report ok "hubspot sp_research_capped is a checkbox" || _report no "hubspot sp_research_capped is not a checkbox"
 
 finish

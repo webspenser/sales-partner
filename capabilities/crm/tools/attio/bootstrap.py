@@ -124,6 +124,8 @@ def build_lists(segment_ids, offer_ids):
             attr("offer_evidence", "Offer Evidence", "select", ["strong", "moderate", "weak"]),
             attr("research_anyway", "Research Anyway", "checkbox",
                  description="Operator only: research this lead although its Fit score or Segment would skip it."),
+            attr("research_capped", "Research Capped", "checkbox",
+                 description="Set by the agent when a scheduled run stopped at the per-lead Apify cap; cleared once an interactive continue completes."),
             attr("size", "Size", "text"),
             attr("source", "Source", "text"),
             attr("source_url", "Source URL", "text"),

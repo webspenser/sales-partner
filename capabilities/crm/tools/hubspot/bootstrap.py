@@ -127,6 +127,7 @@ def build_properties(segment_ids, offer_ids):
             prop("sp_offer_evidence", "Offer evidence", "enumeration", "select",
                  opts(["strong", "moderate", "weak"])),
             prop("sp_research_anyway", "Research anyway", "bool", "booleancheckbox", YESNO),
+            prop("sp_research_capped", "Research capped", "bool", "booleancheckbox", YESNO),
             prop("sp_size", "Size", "string", "text"),
             prop("sp_source", "Source", "string", "text"),
             prop("sp_source_url", "Source URL", "string", "text"),

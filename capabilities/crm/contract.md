@@ -22,7 +22,7 @@ behavior only; it names no provider table or field.
 | `create_lead` | `company, location, industry, size, source, source_url`, plus optional `domain, address, phone, email, fit_score, fit_breakdown, segment` and the company profile fields | `lead_id`, on a record created at `Stage = New` with `Stage Changed At` stamped at creation | A lead matching an existing one by the dedupe order (domain, then phone, then company + address, each where the tool stores it) returns the existing `lead_id` and writes nothing; rejects a call with none of `domain`, `phone`, or `address` |
 | `get_lead` | `lead_id` | full lead record with linked Contacts, its research record and its Talking Points record, the newest section of each identified | Missing id is an error, not an empty record |
 | `update_stage` | `lead_id, stage, reason` | updated lead, with `stage_changed_at` set to the moment of this call | Rejects any stage outside the enumerated list |
-| `update_lead` | `lead_id, fields` | updated lead | Accepts `segment`, `industry`, `hero_offer`, `offer_reason` and `offer_evidence` among its fields. Rejects any attempt to write `stage` through this operation — stage changes go only through `update_stage` — and any attempt to write `research_anyway`, which is the operator's. May set `Do Not Contact` to true; rejects any attempt to clear it once true |
+| `update_lead` | `lead_id, fields` | updated lead | Accepts `segment`, `industry`, `hero_offer`, `offer_reason`, `offer_evidence` and `research_capped` among its fields. Rejects any attempt to write `stage` through this operation — stage changes go only through `update_stage` — and any attempt to write `research_anyway`, which is the operator's. May set `Do Not Contact` to true; rejects any attempt to clear it once true |
 | `log_talking_points` | `lead_id, contact_id, body` | the Talking Points record the section was added to | Create or append only: adds one dated section to the lead's Talking Points record, creating the record when it has none; never edits, replaces or removes earlier text. Takes no channel argument. The agent writes no talking points for a lead whose `Do Not Contact` is true — an instruction the guard does not enforce |
 | `log_research` | `lead_id, findings[]` (each `type, summary, source_url, date, hook`) | the research record the section was added to | Adds one dated section holding the whole run's findings; rejects the call when any finding has an empty `source_url` or `hook`, or a `type` outside the seven |
 | `upsert_contact` | `lead_id, name, title, email, phone, linkedin_url, role, verified, notes` | `contact_id` | Matches an existing Contact on `email` when present, otherwise on `name` plus `title`, and updates it rather than creating a duplicate; rejects a `role` outside decision-maker / influencer / gatekeeper |
@@ -46,8 +46,8 @@ Score`; a lead with no value for that score is never returned.
 
 ### Offer fields
 
-Six lead fields carry the offer match (`context/offer-catalog.md`). The
-Segment and Hero Offer choices are the catalog's ids, never the display
+Seven lead fields carry the offer match (`context/offer-catalog.md`) and
+whether research ran in full. The Segment and Hero Offer choices are the catalog's ids, never the display
 names, so a workflow routing on them is unaffected by a rename.
 
 | Field | Written by |
@@ -58,6 +58,7 @@ names, so a workflow routing on them is unaffected by a rename.
 | Offer Reason (text) | the Preparer, with `update_lead` |
 | Offer Evidence (`strong`, `moderate` or `weak`) | the Preparer, with `update_lead`; empty when every offer in the segment is ruled out, or no segment fits |
 | Research Anyway (checkbox) | the operator only; no operation writes it, and every tool's guard policy refuses it to the agent |
+| Research Capped (checkbox) | the Preparer, with `update_lead`: `true` when a scheduled run stopped at the per-lead Apify cap, `false` after an interactive continue completes. Unlike Research Anyway, no guard policy forbids it |
 
 `Offer Evidence` is `strong` with two or more sourced signals,
 `moderate` with one, and `weak` when only the segment or industry fits.
@@ -148,7 +149,7 @@ and says nothing; that is not a failure.
   `update_stage` runs, and never otherwise.
 - **`update_lead`** writes every non-stage field on a lead — the four
   score fields, `segment`, `industry`, `hero_offer`, `offer_reason`,
-  `offer_evidence`, `Do Not Contact`, `Next Action`, `Next Action Due`,
+  `offer_evidence`, `research_capped`, `Do Not Contact`, `Next Action`, `Next Action Due`,
   and any other lead-level field outside the stage itself. It **rejects
   any attempt to write `stage`** through this operation, and it never
   writes `stage_changed_at` either — both belong to `update_stage`

@@ -51,10 +51,6 @@ assert_contains "$SP/subagents/preparer.md" 'email, phone, linkedin_url'
 assert_contains "$SP/subagents/prospector.md" '`Address`, `Phone`, `Email`'
 assert_contains "$SP/AGENT.md" 'hire, listing, web presence'
 
-echo "-- call channel"
-assert_contains "$SP/skills/send-digest/SKILL.md" 'the number it uses'
-assert_contains "$SP/templates/digest.md" 'the number from the Call note'
-
 echo "-- evals"
 E="$SP/evals/cases.md"
 assert_contains "$E" '## Case 9: A lead with no sourced address never scores inside the service area'
@@ -308,12 +304,12 @@ assert_contains "$SP/agent.yaml" 'finds, scores and researches fresh leads'
 echo "-- 6.0.0: digest, channel filter"
 D="$SP/skills/send-digest/SKILL.md"
 assert_contains "$D" '**Section 1 — Review.**'
-assert_contains "$D" '**Section 2 — Ready to Send.**'
+assert_contains "$D" '**Section 2 — Approved, not yet contacted.**'
 assert_not_contains "$D" 'Awaiting approval'
 assert_not_contains "$D" 'Call Scheduled'
 T="$SP/templates/digest.md"
 assert_contains "$T" '## Review ([count])'
-assert_contains "$T" '## Ready to Send ([count])'
+assert_contains "$T" '## Approved, not yet contacted ([count])'
 assert_not_contains "$T" 'Won:'
 K="$SP/capabilities/crm/contract.md"
 assert_contains "$K" '| `log_research` | `lead_id, findings[]`'
@@ -485,7 +481,7 @@ done
 D="$SP/skills/send-digest/SKILL.md"
 assert_not_contains "$D" 'check the'
 assert_not_contains "$SP/templates/digest.md" 'check the hand-off'
-assert_contains "$D" 'drafted N days ago'
+assert_contains "$D" 'researched N days ago'
 assert_not_contains "$SP/capabilities/crm/contract.md" '`send-digest` needed to find'
 assert_not_contains "$SP/capabilities/crm/tools/hubspot/usage.md" '|LINKED_IN_CONNECT|TODO>'
 assert_not_contains "$SP/evals/cases.md" 'thirteen'
@@ -719,13 +715,21 @@ assert_contains "$SP/subagents/preparer.md" 'log_research(lead_id, findings[])'
 assert_contains "$SP/subagents/preparer.md" 'main line and general inbox'
 
 SD="$SP/skills/send-digest/SKILL.md"
-assert_contains "$SD" 'drafted:'
-assert_contains "$SD" 'the Call note'
+assert_contains "$SD" 'Approved, not yet contacted'
+assert_contains "$SD" 'researched N days ago'
+assert_contains "$SD" 'no offer'
 assert_contains "$SD" 'nine operations'
+assert_not_contains "$SD" 'drafted:'
+assert_not_contains "$SD" 'drafted N days ago'
+assert_not_contains "$SD" 'the Call note'
 assert_not_contains "$SD" 'recommended'
 assert_not_contains "$SD" 'opt-out logged — Do Not Contact not set'
 assert_not_contains "$SD" 'eleven operations'
-assert_contains "$SP/templates/digest.md" 'drafted: <channels>'
+assert_contains "$SP/templates/digest.md" 'Approved, not yet contacted'
+assert_contains "$SP/templates/digest.md" 'researched N days ago'
+assert_contains "$SP/templates/digest.md" 'no offer'
+assert_not_contains "$SP/templates/digest.md" 'drafted: <channels>'
+assert_not_contains "$SP/templates/digest.md" 'the Call note'
 assert_not_contains "$SP/templates/digest.md" 'recommended'
 
 EV="$SP/evals/cases.md"
@@ -779,8 +783,6 @@ while IFS= read -r f; do
     if grep -qiF -- "$t" "$f"; then _report no "$f still contains '$t'"; else _report ok "$f free of '$t'"; fi
   done
 done < <(find AGENT.md README.md subagents skills templates context capabilities evals -type f \
-  -not -path 'skills/send-digest/*' `# Task 7` \
-  -not -path 'templates/digest.md' `# Task 7` \
   -not -path 'evals/*' `# Task 8` \
   -not -path 'README.md' `# Task 9` \
   -not -name '*.pyc')
@@ -879,5 +881,21 @@ assert_not_contains "$IV" 'approach_threshold'
 assert_contains "$SP/skills/setup/SKILL.md" '`context/offer-catalog.md`, `context/icp.md`'
 assert_contains "$SP/skills/setup/SKILL.md" 'bootstrap reads the instance'"'"'s `context/offer-catalog.md`'
 assert_contains "$SP/skills/setup/SKILL.md" 'Re-run this step after the catalog'
+
+echo "-- 8.0.0: the digest shows offers and the approved queue"
+SD="$SP/skills/send-digest/SKILL.md"
+DT="$SP/templates/digest.md"
+assert_contains "$SD" '`query_by_stage("Researched")`'
+assert_contains "$SD" '`query_by_stage("Approved")`'
+assert_contains "$SD" '<company> — <segment> · <hero offer or'
+assert_contains "$SD" 'Order the list by `Approach'
+assert_contains "$SD" '(weak: segment fit only)'
+assert_contains "$SD" 'New, Scored, Researched, Approved,'
+assert_contains "$SD" 'not time since approval'
+assert_contains "$SD" '`<Company>: → Researched (now <status>)`'
+assert_contains "$DT" '## Review ([count])'
+assert_contains "$DT" 'ordered by Approach score'
+assert_not_contains "$SD" 'log_draft'
+assert_not_contains "$SD" 'Drafts on DNC'
 
 finish

@@ -16,7 +16,7 @@ their prefix (for example `mcp__claude_ai_HubSpot__search_crm_objects`).
 ## Data model
 
 Every lead is a HubSpot **Company**, with a custom `sp_stage` dropdown
-holding the eleven statuses. People at the lead are **Contacts**
+holding the ten statuses. People at the lead are **Contacts**
 associated with that company. The research record and the draft
 records are **Notes** associated with the company: one Note per
 `log_research` call and one per `log_draft` call. HubSpot notes have no
@@ -338,8 +338,11 @@ what they find to `bindings/crm.md` in the instance:
    show `write: AVAILABLE`; report any that don't.
 2. `hubspot:get_properties`:
    - on `companies`, `["sp_stage", "sp_stage_changed_at", "sp_do_not_contact",
-     "sp_fit_score", "sp_fit_breakdown", "sp_approach_score", "sp_approach_breakdown"]`:
-     all seven exist, and `sp_stage` has the eleven status options;
+     "sp_fit_score", "sp_fit_breakdown", "sp_approach_score", "sp_approach_breakdown",
+     "sp_segment", "sp_hero_offer", "sp_offer_reason", "sp_offer_evidence",
+     "sp_research_anyway"]`: all of them exist, `sp_stage` has the ten status
+     options, and `sp_segment` and `sp_hero_offer` hold every segment id and
+     offer id in `context/offer-catalog.md`;
    - on `contacts`, `["sp_role"]`: it has the three role options;
 3. Report every missing property or option by name.
 
@@ -375,7 +378,7 @@ both equal to the text shown.
 
 | Internal name | Label | Field type | Options |
 |---|---|---|---|
-| `sp_stage` | Sales Partner stage | Dropdown select | New, Scored, Researched, Approach Drafted, Ready to Send, Contacted, Engaged, Open Deal, Nurture, Customer, Disqualified |
+| `sp_stage` | Sales Partner stage | Dropdown select | New, Scored, Researched, Approved, Contacted, Engaged, Open Deal, Nurture, Customer, Disqualified |
 | `sp_stage_changed_at` | Stage changed at | Date and time picker | |
 | `sp_stage_reason` | Stage reason | Multi-line text | |
 | `sp_fit_score` | Fit score | Number | |
@@ -383,6 +386,11 @@ both equal to the text shown.
 | `sp_approach_score` | Approach score | Number | |
 | `sp_approach_breakdown` | Approach breakdown | Multi-line text | |
 | `sp_industry` | Industry (Sales Partner) | Single-line text | |
+| `sp_segment` | Segment | Dropdown select | the segment ids in `context/offer-catalog.md` |
+| `sp_hero_offer` | Hero offer | Dropdown select | the offer ids in `context/offer-catalog.md` |
+| `sp_offer_reason` | Offer reason | Multi-line text | |
+| `sp_offer_evidence` | Offer evidence | Dropdown select | strong, moderate, weak |
+| `sp_research_anyway` | Research anyway | Single checkbox | Yes = `true`, No = `false` |
 | `sp_size` | Size | Single-line text | |
 | `sp_source` | Source | Single-line text | |
 | `sp_source_url` | Source URL | Single-line text | |
@@ -405,7 +413,14 @@ When you are done, tell the agent and it probes again.
 ### Choice 2: run the script with an API key
 
 `bootstrap.py` creates everything in Choice 1 and only adds what is
-missing; it never deletes or renames anything.
+missing; it never deletes or renames anything. It reads the Segment and
+Hero offer options from the instance's offer catalog before it makes any
+API call, and uses each id as both the option's label and its value. Run
+it from the instance folder, where the default
+`context/offer-catalog.md` is found, or pass `--catalog <path>`. After
+you change the catalog, run it again: re-running only adds the new
+options. It also leaves the old stages `Approach Drafted` and `Ready to
+Send` in place; archive them by hand in HubSpot.
 
 1. In HubSpot, create a private app (Settings → Integrations → Private
    Apps → Create a private app) with these scopes:
@@ -419,7 +434,7 @@ missing; it never deletes or renames anything.
    only; never paste it into the chat or a file:
 
        read -rs HUBSPOT_TOKEN && export HUBSPOT_TOKEN
-       python3 "<package>/capabilities/crm/tools/hubspot/bootstrap.py"
+       python3 "<package>/capabilities/crm/tools/hubspot/bootstrap.py" --catalog context/offer-catalog.md
 
    The environment variable the script reads is `HUBSPOT_TOKEN`.
 3. Tell the agent it is done, and it probes again. You can delete the

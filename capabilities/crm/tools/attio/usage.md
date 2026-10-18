@@ -68,7 +68,7 @@ findings in the research note.
 | Slug | Type | Contract field |
 |---|---|---|
 | `lead` | record-reference → companies | the lead itself (equals the parent) |
-| `stage` | status — exactly the eleven statuses | `Stage` |
+| `stage` | status — exactly the ten statuses | `Stage` |
 | `stage_changed_at` | timestamp | `Stage Changed At` |
 | `stage_reason` | text | the `reason` from the latest `update_stage` call |
 | `fit_score` | number | `Fit Score` |
@@ -76,6 +76,11 @@ findings in the research note.
 | `approach_score` | number | `Approach Score` |
 | `approach_breakdown` | text | `Approach Breakdown` |
 | `industry` | text | `Industry` |
+| `segment` | select — the catalog's segment ids | `Segment` |
+| `hero_offer` | select — the catalog's offer ids | `Hero Offer` |
+| `offer_reason` | text | `Offer Reason` |
+| `offer_evidence` | select — `strong`, `moderate`, `weak` | `Offer Evidence` |
+| `research_anyway` | checkbox | `Research Anyway` — set by the operator only; the agent reads it, never writes it |
 | `size` | text | `Size` |
 | `source` | text | `Source` |
 | `source_url` | text | `Source URL` |
@@ -87,6 +92,12 @@ findings in the research note.
 `industry` and `size` are text rather than select. Their values come
 from the band names in `icp.md`, which the interview sets, and an
 Attio select rejects any option that doesn't exist yet.
+
+`segment` and `hero_offer` are selects whose options are the ids in the
+YAML block of `context/offer-catalog.md`, so the options are the same
+ids the catalog uses, and never the display names. `bootstrap.py` adds
+the options and never removes any: an offer dropped from the catalog
+stays selectable on the leads already matched to it.
 
 ### People (standard object) — the Contacts table
 
@@ -344,8 +355,11 @@ what they find to `bindings/crm.md` in the instance:
 2. `attio:list-objects` — record `companies_object_id:` and
    `people_object_id:`.
 3. `attio:list-list-attribute-definitions` on `sales_partner_pipeline`
-   — every slug in its Schema table above must exist, and `stage` must
-   hold the eleven statuses.
+   — every slug in its Schema table above must exist (including
+   `segment`, `hero_offer`, `offer_reason`, `offer_evidence` and
+   `research_anyway`), `stage` must hold the ten statuses, and `segment` and
+   `hero_offer` must hold every segment id and offer id in
+   `context/offer-catalog.md`.
 4. `attio:list-attribute-definitions` on `people` — `sp_role`,
    `sp_verified`, and `sp_notes` must exist. Record
    `lead_source_outbound: yes` if `lead_source` exists with an
@@ -386,7 +400,7 @@ for the workspace. Then add its attributes in the list's settings:
 
 | Title | Slug | Type | Options |
 |---|---|---|---|
-| Stage | `stage` | Status | New, Scored, Researched, Approach Drafted, Ready to Send, Contacted, Engaged, Open Deal, Nurture, Customer, Disqualified |
+| Stage | `stage` | Status | New, Scored, Researched, Approved, Contacted, Engaged, Open Deal, Nurture, Customer, Disqualified |
 | Stage Changed At | `stage_changed_at` | Timestamp | |
 | Stage Reason | `stage_reason` | Text | |
 | Fit Score | `fit_score` | Number | |
@@ -394,6 +408,11 @@ for the workspace. Then add its attributes in the list's settings:
 | Approach Score | `approach_score` | Number | |
 | Approach Breakdown | `approach_breakdown` | Text | |
 | Industry | `industry` | Text | |
+| Segment | `segment` | Select | the segment ids in `context/offer-catalog.md` |
+| Hero Offer | `hero_offer` | Select | the offer ids in `context/offer-catalog.md` |
+| Offer Reason | `offer_reason` | Text | |
+| Offer Evidence | `offer_evidence` | Select | strong, moderate, weak |
+| Research Anyway | `research_anyway` | Checkbox | |
 | Size | `size` | Text | |
 | Source | `source` | Text | |
 | Source URL | `source_url` | Text | |
@@ -409,7 +428,13 @@ Notes need no setup. When you are done, tell the agent and it probes again.
 ### Choice 2: run the script with an API key
 
 `bootstrap.py` creates everything in Choice 1 and only adds what is
-missing; it never deletes or renames anything.
+missing; it never deletes or renames anything. It reads the Segment and
+Hero Offer options from the instance's offer catalog before it makes any
+API call. Run it from the instance folder, where the default
+`context/offer-catalog.md` is found, or pass `--catalog <path>`. After
+you change the catalog, run it again: re-running only adds the new
+options. It also leaves the old stages `Approach Drafted` and `Ready to
+Send` in place and prints a note; archive them by hand in Attio.
 
 1. In Attio, create an API key (Settings, then Developers) with these
    scopes, all read-write: `object_configuration`, `list_configuration`,
@@ -420,7 +445,7 @@ missing; it never deletes or renames anything.
    never paste it into the chat or a file:
 
        read -rs ATTIO_API_KEY && export ATTIO_API_KEY
-       python3 "<package>/capabilities/crm/tools/attio/bootstrap.py"
+       python3 "<package>/capabilities/crm/tools/attio/bootstrap.py" --catalog context/offer-catalog.md
 
    The environment variable the script reads is `ATTIO_API_KEY`.
 3. Tell the agent it is done, and it probes again.

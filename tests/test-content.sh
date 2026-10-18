@@ -180,6 +180,7 @@ u=$(awk '/^### Choice 1/,/^### Choice 2/' "$HT/usage.md" | grep -oE '^\| `sp_[a-
 b=$(python3 -B -c "
 import importlib.util,sys
 sp=importlib.util.spec_from_file_location('b','$HT/bootstrap.py'); m=importlib.util.module_from_spec(sp); sp.loader.exec_module(m)
+m.PROPERTIES=m.build_properties(*m.read_catalog('$SP/context/offer-catalog.md'))
 print(sorted(m.PROPERTIES)==['companies','contacts'] and ''.join(n+',' for n in sorted(p['name'] for o in m.PROPERTIES.values() for p in o)) or 'unexpected objects: '+','.join(m.PROPERTIES))")
 [ -n "$u" ] && [ "$b" = "$u" ] && _report ok "Setup tables and bootstrap.py create the same properties, companies and contacts only" || _report no "Setup vs bootstrap.py: usage.md=$u bootstrap.py=$b"
 assert_contains "$HT/usage.md" 'Notes need no custom fields.'
@@ -263,8 +264,16 @@ assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'Ready to Send'
 assert_not_contains "$SP/capabilities/crm/tools/hubspot/usage.md" '`approved`'
 assert_not_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'Awaiting Approval'
 assert_not_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'twelve'
-grep -q '"Ready to Send"' "$SP/capabilities/crm/tools/attio/bootstrap.py" && _report ok "attio bootstrap has Ready to Send" || _report no "attio bootstrap lacks Ready to Send"
-grep -q '"Ready to Send"' "$SP/capabilities/crm/tools/hubspot/bootstrap.py" && _report ok "hubspot bootstrap has Ready to Send" || _report no "hubspot bootstrap lacks Ready to Send"
+for t in attio hubspot; do
+  python3 -B -c "
+import importlib.util, sys
+s = importlib.util.spec_from_file_location('b', '$SP/capabilities/crm/tools/$t/bootstrap.py')
+m = importlib.util.module_from_spec(s); s.loader.exec_module(m)
+sys.exit(0 if m.STAGES == 'New, Scored, Researched, Approved, Contacted, Engaged, Open Deal, Nurture, Customer, Disqualified'.split(', ') else 1)" && _report ok "$t bootstrap STAGES: the ten stages in order" || _report no "$t bootstrap STAGES are not the ten stages in order"
+  assert_not_contains "$SP"/capabilities/crm/tools/$t/bootstrap.py '"Ready to Send"'
+  assert_not_contains "$SP"/capabilities/crm/tools/$t/bootstrap.py '"Approach Drafted"'
+  assert_contains "$SP"/capabilities/crm/tools/$t/usage.md 'New, Scored, Researched, Approved, Contacted, Engaged, Open Deal, Nurture, Customer, Disqualified'
+done
 assert_not_contains "$SP/capabilities/crm/tools/attio/bootstrap.py" '"approved"'
 
 echo "-- 6.0.0: personalization and config"
@@ -291,8 +300,8 @@ assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'Engaged'
 assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'sp_revisit_on'
 assert_not_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'Call Scheduled'
 assert_not_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'thirteen'
-grep -q '"Engaged"' "$SP/capabilities/crm/tools/attio/bootstrap.py" && grep -q 'revisit_on' "$SP/capabilities/crm/tools/attio/bootstrap.py" && ! grep -q '"Call Scheduled"' "$SP/capabilities/crm/tools/attio/bootstrap.py" && _report ok "attio bootstrap: eleven statuses, revisit_on" || _report no "attio bootstrap statuses"
-grep -q '"Engaged"' "$SP/capabilities/crm/tools/hubspot/bootstrap.py" && grep -q 'sp_revisit_on' "$SP/capabilities/crm/tools/hubspot/bootstrap.py" && ! grep -q '"Call Scheduled"' "$SP/capabilities/crm/tools/hubspot/bootstrap.py" && _report ok "hubspot bootstrap: eleven statuses, sp_revisit_on" || _report no "hubspot bootstrap statuses"
+grep -q '"Engaged"' "$SP/capabilities/crm/tools/attio/bootstrap.py" && grep -q 'revisit_on' "$SP/capabilities/crm/tools/attio/bootstrap.py" && ! grep -q '"Call Scheduled"' "$SP/capabilities/crm/tools/attio/bootstrap.py" && _report ok "attio bootstrap: ten statuses, revisit_on" || _report no "attio bootstrap statuses"
+grep -q '"Engaged"' "$SP/capabilities/crm/tools/hubspot/bootstrap.py" && grep -q 'sp_revisit_on' "$SP/capabilities/crm/tools/hubspot/bootstrap.py" && ! grep -q '"Call Scheduled"' "$SP/capabilities/crm/tools/hubspot/bootstrap.py" && _report ok "hubspot bootstrap: ten statuses, sp_revisit_on" || _report no "hubspot bootstrap statuses"
 
 
 echo "-- 6.0.0: call and follow-up stages removed"
@@ -678,7 +687,7 @@ for t in attio hubspot; do
   U="$SP"/capabilities/crm/tools/$t/usage.md
   assert_contains "$U" "Reject a \`score\` other than \`fit\` or"
 done
-for slug in fit_score fit_breakdown approach_score approach_breakdown; do
+for slug in fit_score fit_breakdown approach_score approach_breakdown segment hero_offer offer_reason offer_evidence research_anyway; do
   assert_contains "$SP/capabilities/crm/tools/attio/usage.md" "\`$slug\`"
   grep -qF "attr(\"$slug\"" ./capabilities/crm/tools/attio/bootstrap.py && _report ok "attio bootstrap creates $slug" || _report no "attio bootstrap misses $slug"
   assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" "\`sp_$slug\`"

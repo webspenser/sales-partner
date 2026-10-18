@@ -269,6 +269,7 @@ bt=$(python3 -B - <<'PY' 2>&1
 import importlib.util, io, contextlib
 sp = importlib.util.spec_from_file_location("b", "capabilities/crm/tools/hubspot/bootstrap.py")
 b = importlib.util.module_from_spec(sp); sp.loader.exec_module(b)
+b.PROPERTIES = b.build_properties(*b.read_catalog("context/offer-catalog.md"))
 import os
 os.environ["HUBSPOT_TOKEN"] = "t"
 

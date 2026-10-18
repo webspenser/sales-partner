@@ -10,10 +10,17 @@ Reads HUBSPOT_TOKEN (a private app access token) from the environment. Set it
 in your own terminal only — never in a file, never in a chat. Required
 scopes are listed in SCOPES.
 
-    python3 capabilities/crm/tools/hubspot/bootstrap.py
+    python3 capabilities/crm/tools/hubspot/bootstrap.py [--catalog context/offer-catalog.md]
+
+The Segment and Hero Offer dropdowns come from the offer catalog in the
+instance (run this from the instance folder, or pass --catalog). The catalog
+is read first, before the token and any API call. Re-run after changing the
+catalog: it only adds options.
 """
+import argparse
 import json
 import os
+import re
 import sys
 import urllib.error
 import urllib.request
@@ -24,8 +31,11 @@ SCOPES = ["crm.schemas.companies.read", "crm.schemas.companies.write",
           "crm.schemas.contacts.read", "crm.schemas.contacts.write",
           "crm.objects.companies.read", "crm.objects.contacts.read"]
 
-STAGES = ["New", "Scored", "Researched", "Approach Drafted", "Ready to Send", "Contacted",
+STAGES = ["New", "Scored", "Researched", "Approved", "Contacted",
           "Engaged", "Open Deal", "Nurture", "Customer", "Disqualified"]
+
+DEFAULT_CATALOG = "context/offer-catalog.md"
+ID_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 
 
 def opts(values):
@@ -43,32 +53,95 @@ def prop(name, label, type_, field, options=None):
     return p
 
 
-PROPERTIES = {
-    "companies": [
-        prop("sp_stage", "Sales Partner stage", "enumeration", "select", opts(STAGES)),
-        prop("sp_stage_changed_at", "Stage changed at", "datetime", "date"),
-        prop("sp_stage_reason", "Stage reason", "string", "textarea"),
-        prop("sp_fit_score", "Fit score", "number", "number"),
-        prop("sp_fit_breakdown", "Fit breakdown", "string", "textarea"),
-        prop("sp_approach_score", "Approach score", "number", "number"),
-        prop("sp_approach_breakdown", "Approach breakdown", "string", "textarea"),
-        prop("sp_industry", "Industry (Sales Partner)", "string", "text"),
-        prop("sp_size", "Size", "string", "text"),
-        prop("sp_source", "Source", "string", "text"),
-        prop("sp_source_url", "Source URL", "string", "text"),
-        prop("sp_email", "General inbox", "string", "text"),
-        prop("sp_next_action", "Next action", "string", "text"),
-        prop("sp_next_action_due", "Next action due", "date", "date"),
-        prop("sp_revisit_on", "Revisit on", "date", "date"),
-        prop("sp_do_not_contact", "Do not contact", "bool", "booleancheckbox", YESNO),
-    ],
-    "contacts": [
-        prop("sp_role", "Sales role", "enumeration", "select",
-             opts(["decision-maker", "influencer", "gatekeeper"])),
-        prop("sp_verified", "Contact verified", "bool", "booleancheckbox", YESNO),
-        prop("sp_notes", "Contact notes", "string", "textarea"),
-    ],
-}
+def read_catalog(path):
+    """Return (segment_ids, offer_ids), in file order, from the one fenced YAML
+    block in the offer catalog. Exits with a message naming offer-catalog.md on
+    a missing file, no YAML block, a bad ID or a duplicate ID."""
+    try:
+        with open(path, encoding="utf-8") as f:
+            lines = f.read().splitlines()
+    except OSError as e:
+        sys.exit(f"offer-catalog.md: cannot read {path}: {e.strerror}. "
+                 "Run the interview to write it, or pass --catalog <path>.")
+    blocks, cur = [], None
+    for line in lines:
+        if cur is None:
+            if re.match(r"^\s*```ya?ml\s*$", line):
+                cur = []
+        elif re.match(r"^\s*```\s*$", line):
+            blocks.append(cur)
+            cur = None
+        else:
+            cur.append(line)
+    if len(blocks) != 1:
+        sys.exit(f"offer-catalog.md: {path} must hold exactly one fenced yaml block "
+                 f"(found {len(blocks)}).")
+    segments, offers, seen, stack = [], [], set(), []  # stack: (indent, key)
+    for raw in blocks[0]:
+        line = re.sub(r"(^|\s)#.*$", "", raw).rstrip()
+        text = line.lstrip()
+        if not text:
+            continue
+        indent = len(line) - len(text)
+        if text in ("segments:", "offers:"):
+            while stack and stack[-1][0] >= indent:
+                stack.pop()
+            stack.append((indent, text[:-1]))
+            continue
+        m = re.match(r"^-\s+id:\s*(.*)$", text)
+        if not m:
+            continue
+        while stack and stack[-1][0] > indent:
+            stack.pop()
+        if not stack:
+            sys.exit(f"offer-catalog.md: an id outside segments: or offers: ({text!r}).")
+        ident = m.group(1).strip().strip("\"'")
+        if not ID_RE.match(ident):
+            sys.exit(f"offer-catalog.md: id '{ident}' must be lowercase kebab-case "
+                     "(letters, digits, single hyphens).")
+        if ident in seen:
+            sys.exit(f"offer-catalog.md: id '{ident}' appears twice; ids are unique "
+                     "across the whole catalog (segments and offers).")
+        seen.add(ident)
+        (segments if stack[-1][1] == "segments" else offers).append(ident)
+    if not segments or not offers:
+        sys.exit(f"offer-catalog.md: {path} needs at least one segment and one offer.")
+    return segments, offers
+
+
+def build_properties(segment_ids, offer_ids):
+    return {
+        "companies": [
+            prop("sp_stage", "Sales Partner stage", "enumeration", "select", opts(STAGES)),
+            prop("sp_stage_changed_at", "Stage changed at", "datetime", "date"),
+            prop("sp_stage_reason", "Stage reason", "string", "textarea"),
+            prop("sp_fit_score", "Fit score", "number", "number"),
+            prop("sp_fit_breakdown", "Fit breakdown", "string", "textarea"),
+            prop("sp_approach_score", "Approach score", "number", "number"),
+            prop("sp_approach_breakdown", "Approach breakdown", "string", "textarea"),
+            prop("sp_industry", "Industry (Sales Partner)", "string", "text"),
+            prop("sp_segment", "Segment", "enumeration", "select", opts(segment_ids)),
+            prop("sp_hero_offer", "Hero offer", "enumeration", "select", opts(offer_ids)),
+            prop("sp_offer_reason", "Offer reason", "string", "textarea"),
+            prop("sp_offer_evidence", "Offer evidence", "enumeration", "select",
+                 opts(["strong", "moderate", "weak"])),
+            prop("sp_research_anyway", "Research anyway", "bool", "booleancheckbox", YESNO),
+            prop("sp_size", "Size", "string", "text"),
+            prop("sp_source", "Source", "string", "text"),
+            prop("sp_source_url", "Source URL", "string", "text"),
+            prop("sp_email", "General inbox", "string", "text"),
+            prop("sp_next_action", "Next action", "string", "text"),
+            prop("sp_next_action_due", "Next action due", "date", "date"),
+            prop("sp_revisit_on", "Revisit on", "date", "date"),
+            prop("sp_do_not_contact", "Do not contact", "bool", "booleancheckbox", YESNO),
+        ],
+        "contacts": [
+            prop("sp_role", "Sales role", "enumeration", "select",
+                 opts(["decision-maker", "influencer", "gatekeeper"])),
+            prop("sp_verified", "Contact verified", "bool", "booleancheckbox", YESNO),
+            prop("sp_notes", "Contact notes", "string", "textarea"),
+        ],
+    }
 
 
 class Stop(Exception):
@@ -107,10 +180,10 @@ def check_group(token, obj):
     return False
 
 
-def check(token, obj):
+def check(token, obj, props):
     """Pass 1, read-only. Returns (missing property defs, enum props with missing options, problems)."""
     missing, to_patch, problems = [], [], []
-    for p in PROPERTIES[obj]:
+    for p in props:
         status, have = call(token, "GET", f"/{obj}/{p['name']}")
         if status == 404:
             missing.append(p)
@@ -148,7 +221,13 @@ def create(token, obj, group_missing, missing, to_patch):
         print(f"added {len(add)} option(s) to {obj}.{p['name']}")
 
 
-def main():
+def main(argv=None):
+    ap = argparse.ArgumentParser(description="Create the HubSpot properties for Sales Partner.")
+    ap.add_argument("--catalog", default=DEFAULT_CATALOG,
+                    help=f"offer catalog (default {DEFAULT_CATALOG}, relative to the working directory)")
+    args = ap.parse_args(argv)
+    segment_ids, offer_ids = read_catalog(args.catalog)  # before the token and any API call
+    properties = build_properties(segment_ids, offer_ids)
     token = os.environ.get("HUBSPOT_TOKEN", "").strip()
     if not token:
         print("HUBSPOT_TOKEN is not set. Create a HubSpot private app with these scopes:\n  "
@@ -159,9 +238,9 @@ def main():
         return 2
     try:
         plan, problems = {}, []
-        for obj in PROPERTIES:  # pass 1: read only
+        for obj, props in properties.items():  # pass 1: read only
             group_missing = check_group(token, obj)
-            missing, to_patch, probs = check(token, obj)
+            missing, to_patch, probs = check(token, obj, props)
             plan[obj] = (group_missing, missing, to_patch)
             problems += probs
         if problems:

@@ -56,11 +56,14 @@ Segment and offer).
 - `context/icp.md` — buying triggers, target roles, anti-signals, and
   the Approach score rubric
 - `context/offer-catalog.md` — the segments, each one's `industries`,
-  and each offer's `signals` and `rule_out` entries, read fresh for each
-  run
+  and each offer's `signals`, `rule_out` entries and optional
+  `research_tips`, read fresh for each run
 - `context/operating-config.md` — `research_threshold`,
   `research_quota_per_week`, `research_budget_per_lead_minutes`,
-  `prospecting_sources`, `apify_spend_cap_usd_per_week`, `tone`
+  `prospecting_sources`, `apify_spend_cap_usd_per_week`,
+  `apify_cap_usd_per_lead`, `tone`
+- `capabilities/scraping/tools/apify/usage.md`'s `## Cost` — the
+  estimate for each Apify call
 
 ## Outputs
 - One research section per run, written once with
@@ -88,6 +91,9 @@ Segment and offer).
   and offer
 - `Hero Offer`, `Offer Evidence` and `Offer Reason`, written by
   `match-offer`
+- `Research Capped` (`research_capped`), set true on a lead whose
+  scraping stopped at an Apify cap, and false once an interactive
+  continue completes it (Scraping, Interactive requests)
 - One talking points section added to the lead's Talking Points record,
   written by `write-talking-points` with `log_talking_points`
 - `Stage = Researched`, or `Stage = Disqualified` if research surfaces
@@ -97,14 +103,20 @@ Segment and offer).
 - Web search
 - Map and directory listings, read through web search
 - Scraping `find_contacts`, when `apify_contact_info` is listed in
-  `prospecting_sources` — within `apify_spend_cap_usd_per_week`
+  `prospecting_sources`
+- Scraping `find_reviews` (`apify_reviews`), `find_ads` (`apify_ads`),
+  `find_jobs` (`apify_jobs`) and `read_site` (`apify_site_reader`), each
+  only when its source is listed in `prospecting_sources`
+- Every scraping call stays within `apify_cap_usd_per_lead` and
+  `apify_spend_cap_usd_per_week` (Scraping)
 - CRM `get_lead`
 - CRM `query_by_stage` (`stage = "Scored"`, `research_anyway=true`)
 - CRM `query_by_score`
 - CRM `log_research`
 - CRM `upsert_contact`
 - CRM `update_lead` (`Approach Score`, `Approach Breakdown`, company
-  profile fields, `Next Action`, `segment`, `industry`, `hero_offer`, `offer_reason`, `offer_evidence`)
+  profile fields, `Next Action`, `segment`, `industry`, `hero_offer`, `offer_reason`, `offer_evidence`,
+  `research_capped`)
 - CRM `log_talking_points`
 - CRM `update_stage`
 - Owner notify `notify_owner`
@@ -126,11 +138,16 @@ nothing else is written.
   `operating-config.md`) for this lead is spent
 - The `apify_spend_cap_usd_per_week` cap would be passed by the next
   scrape: stop scraping and carry on with web search
+- The next Apify call's worst-case estimate does not fit in what
+  remains of the lead's `apify_cap_usd_per_lead`: stop scraping that
+  lead (Per-lead cap)
 
 In a scheduled (unattended) run, never ask the operator a question; if
 a required input is missing, call `notify_owner(kind: error)` with
 what is missing, then stop and report it. Scheduled and interactive runs
-use the same sources: whatever `prospecting_sources` lists.
+use the same sources: whatever `prospecting_sources` lists. The per-lead
+cap's continue prompt (Per-lead cap) is asked only in an interactive
+session.
 
 ## Scraping
 When `apify_contact_info` is listed, gather the websites of the leads
@@ -138,6 +155,62 @@ being researched (skip a lead with no website) and call `find_contacts`
 once per batch of up to 10. Add each email, phone and social link to its
 lead's Contacts with its source URL.
 
+### Evidence sources
+After the Maps listing and website contact steps, read the
+`research_tips` of every offer in the lead's segment (a segment set
+later, as in Segment and offer, has its tips read then). Pick the
+sources the tips point to (reviews: `apify_reviews`; ads: `apify_ads`;
+job posts: `apify_jobs`; the website's pages and features:
+`apify_site_reader`), from those listed in `prospecting_sources`. A source not listed in `prospecting_sources` never runs, even when a tip points to it.
+An offer with no tips is researched from its `signals` and `rule_out`
+entries alone, as in 8.0: a source runs for it only when an entry names
+what that source reads. Run the picked sources in the order that gives
+the most evidence for the least cost; reviews and the website check
+usually come first. Each call counts against
+`research_budget_per_lead_minutes` (it can wait 45 seconds), and
+`research-company` turns each result into findings.
+- `find_reviews`: the place id from the lead's Google Maps listing (its
+  Maps `Source URL`); skip it when the lead has none. The Preparer
+  always passes `personalData: false`, so no reviewer's name comes back.
+- `find_ads`: the website's bare domain (the brand name when there is
+  no website). The Facebook call runs only with the lead's own Facebook
+  page URL (from the contact scraper's social links or `facebook_url`);
+  with none, only the Google call runs, and there is no Facebook finding.
+- `find_jobs`: the company's name and the lead's city, state and
+  country. Zero listings is a result: no open listings under that name.
+- `read_site`: the `website` the Maps listing gives, as the start URL;
+  skip it when the lead has no website.
+
+### Per-lead cap
+The Preparer keeps a running total for each lead: the estimated cost of
+every Apify call made for it this run, the contact scraper included (a
+`find_contacts` batch counts against each of its leads as
+`max_pages_per_site` times the per-page estimate). Before each Apify call for a lead, the Preparer checks the call's worst-case estimate against what remains of
+`apify_cap_usd_per_lead` after that total. The worst case is the flat
+estimate in `usage.md`'s `## Cost` for an evidence call, each of
+`find_ads`' two calls checked on its own, and the lead's share for
+`find_contacts` (a lead with no room for its share is left out of the
+batch). When the call does not fit, stop scraping that lead; web search
+carries on within the time budget.
+- **Scheduled run.** Complete the lead with what it has: `log_research`,
+  `score-lead`, `match-offer`, `write-talking-points`, then
+  `Researched`. Set `research_capped: true` with `update_lead`, start
+  the stage reason with `research capped at $<cap>; <sources not run>`
+  (for example `research capped at $0.50; apify_jobs, apify_ads`; the
+  sources the tips picked that did not run), and write a ledger
+  `stop_condition` event. The next lead starts a fresh total.
+- **Interactive session.** Pause and ask the operator whether to
+  continue, and with how much more, naming the lead, its total, the
+  cap, and the sources not yet run with their worst-case estimates. If
+  the operator agrees, continue up to the new amount (for this lead
+  only), then complete the lead as usual: Research Capped stays false.
+  If the operator declines, complete it as in a scheduled run.
+
+Continuing past the per-lead cap is interactive only: a scheduled run
+never asks and never continues. A lead that research moves to
+`Disqualified` is not marked Research Capped.
+
+### 7-day cap
 Before each call, add up the Apify spend of the last 7 days (a rolling
 window, not the calendar week): call `find_events` twice, with
 `activity: prospect, event: step` and `activity: prepare, event: step`,
@@ -145,10 +218,17 @@ window, not the calendar week): call `find_events` twice, with
 events only (`run_finished` repeats the run's total, so counting it would
 double the spend). Add this run's own steps not yet written (queued or
 pending). Estimate the next call from `usage.md`'s `## Cost`: for contact
-info, `max_pages_per_call` times the per-page estimate. If the spend plus
+info, `max_pages_per_call` times the per-page estimate; for an evidence
+call, its flat estimate. If the spend plus
 that estimate would pass `apify_spend_cap_usd_per_week`, write a
 `stop_condition` event, call `notify_owner(kind: alert)` naming the cap,
-and stop scraping for this run.
+and stop scraping for this run; research carries on with web search
+only. The lead in progress (for a refused `find_contacts` batch, each
+lead in it) gets `research_capped: true`, and its stage reason starts
+`research capped by the 7-day Apify cap; <sources not run>`, so it
+shows in the digest and can be continued later. The 7-day cap is never raised from a session prompt, even when the operator asks: it changes
+only by editing `apify_spend_cap_usd_per_week` in `operating-config.md`,
+and room granted at the per-lead prompt never lifts it.
 
 If a call is blocked by the guard, stop the activity and call
 `notify_owner(kind: error)` with the block's message. Never retry a guard
@@ -178,7 +258,8 @@ the end. Before that call, the Preparer settles the Segment:
   still moves to `Researched` with its research and talking points.
 
 Whenever the Segment is set or changed after `research-company` read the
-catalog (its step 2), read that segment's offers and run its search (step 3) for that segment's signals and rule-outs before the
+catalog (its step 2), read that segment's offers and run its search (step 3) for that segment's signals and rule-outs, with the
+sources its tips point to (Evidence sources), before the
 `log_research` call, so they are looked for and recorded in the same one
 section; `match-offer` misses a rule-out nobody searched for. This
 search counts against the lead's `research_budget_per_lead_minutes`;
@@ -192,7 +273,7 @@ With the Segment still empty, `match-offer` writes the two empty and
 says why in `offer_reason`.
 
 ## Interactive requests
-In an interactive session the operator can ask for two things:
+In an interactive session the operator can ask for three things:
 - **Research a named lead.** Treated as a Research Anyway tick: the lead
   is researched whatever its Fit Score, with the same stage reason. It
   must be at `Scored`, or at `Researched` when the operator asks to
@@ -214,6 +295,18 @@ In an interactive session the operator can ask for two things:
   `write-talking-points` adds a new section; earlier sections stay. The
   stage stays `Researched`. A lead not at `Researched` is not re-matched:
   report its status and do nothing.
+- **Continue research on a capped lead**: a lead at `Researched` with
+  Research Capped true; otherwise report its status and do nothing.
+  Run only the sources not yet run (the ones its stage reason names
+  after `research capped …;`), with a fresh `apify_cap_usd_per_lead`,
+  the same 7-day check and the same continue prompt. Write their
+  findings as one new research section with `log_research`, then
+  re-match: `match-offer` from all of the lead's research, then
+  `write-talking-points`. Once the lead completes, clear the flag with
+  `update_lead` (`research_capped: false`); if it stops at a cap again,
+  the flag stays true and the report names the sources still not run.
+  The stage stays `Researched`. The agent does this only when the
+  operator asks in a session, never in a scheduled run.
 
 ## Ledger
 Call `ledger_status` first; write `run_started` first and `run_finished` last, numbering events with `seq` per `capabilities/ledger/contract.md` (Run bracketing, Failure policy). Write `stop_condition`, `notify_sent` and `error` events when they happen.
@@ -229,7 +322,18 @@ skipped for having no Segment is a `step` with `outcome` `skipped`,
 `find_contacts` call is a `step` with `subject` the website domains joined
 by `,` (truncated to 100 characters), `items_in` the URLs sent,
 `items_out` the contacts written, and `cost_usd` (an estimate; `detail`
-says `estimated`).
+says `estimated`). Each `find_reviews`, `find_jobs` and `read_site` call,
+and each of `find_ads`' two calls, is a `step` with `subject` the CRM
+lead id, `items_in` 1, `items_out` the items read (reviews,
+advertisers, the Facebook count, job listings or pages), `cost_usd` its
+estimate, and `detail` the call and `estimated` (for example
+`find_reviews; estimated`, `find_ads google; estimated`).
+A continue on a capped lead is one `step` like a lead researched, with
+`detail` starting `continue; `. Reaching the per-lead cap is a
+`stop_condition` with `subject` the lead id and `detail` `per-lead cap
+$<cap>; not run: <sources>`; the 7-day cap's `stop_condition` names the
+lead in progress the same way, with `detail` `7-day Apify cap; not run:
+<sources>`.
 
 ## Handoff
 For each lead in the queue: writes each person with CRM
@@ -242,7 +346,8 @@ approach`), which writes `Approach Score` and `Approach Breakdown`, then
 calls CRM `update_lead(lead_id, fields)` to write
 the company profile fields it confirmed
 (`description`, `address`, `company_linkedin_url`, `facebook_url`,
-`instagram_url`; see `capabilities/crm/contract.md`, each one sourced).
+`instagram_url`; see `capabilities/crm/contract.md`, each one sourced),
+with `research_capped: true` on a lead whose scraping stopped at a cap.
 Runs `match-offer`, which writes the three offer fields, then
 `write-talking-points`, which adds one section with CRM
 `log_talking_points(lead_id, contact_id, body)`. Then calls CRM
@@ -253,7 +358,8 @@ If an anti-signal was found, it calls `update_stage(lead_id,
 points.
 
 The stage reason names any Segment or Industry change and, when Segment
-stays empty, why. A lead researched only because of Research Anyway, or
+stays empty, why. A capped lead's reason starts with its cap's start
+(Scraping), ahead of any start below. A lead researched only because of Research Anyway, or
 a named lead, starts with the first of these that applies:
 - Fit Score below `research_threshold`: `researched by operator request; Fit <n> below research_threshold <t>`
   (for example `researched by operator request; Fit 45 below
@@ -293,3 +399,6 @@ same context, then advance the stage before moving to the next phase.
   writes `research_anyway`: the tick is the operator's.
 - Talking points are only ever added: a redo is a new section, never an
   edit of an earlier one.
+- Only the operator, in a session, takes a lead past
+  `apify_cap_usd_per_lead`; nothing raises `apify_spend_cap_usd_per_week`
+  but an edit of `operating-config.md`.

@@ -1058,4 +1058,28 @@ for k in apify_reviews apify_ads apify_jobs apify_site_reader; do
 done
 assert_not_contains "$SP/skills/interview-business/SKILL.md" 'Apify connector URL'
 
+echo "-- 8.1.0: the Preparer's evidence sources, the per-lead cap, findings and review recency"
+PP="$SP/subagents/preparer.md"
+for w in apify_cap_usd_per_lead 'research capped at $' 'research capped by the 7-day Apify cap' research_capped research_tips \
+         '`find_reviews`' '`find_ads`' '`find_jobs`' '`read_site`'; do
+  assert_contains "$PP" "$w"
+done
+assert_contains "$PP" 'A source not listed in `prospecting_sources` never runs, even when a tip points to it.'
+assert_contains "$PP" 'Before each Apify call for a lead, the Preparer checks the call'"'"'s worst-case estimate against what remains'
+assert_contains "$PP" 'never raised from a session prompt'
+assert_contains "$PP" 'Continue research on a capped lead'
+assert_contains "$PP" 'Research Capped stays false'
+assert_contains "$PP" 'never in a scheduled run'
+assert_contains "$PP" 'always passes `personalData: false`'
+PR="$SP/subagents/prospector.md"
+assert_contains "$PR" 'Every source listed in `prospecting_sources` is exhausted'
+assert_contains "$PR" 'ignores the Preparer-only sources `apify_reviews`, `apify_ads`, `apify_jobs` and `apify_site_reader`'
+RC="$SP/skills/research-company/SKILL.md"
+assert_contains "$RC" 'personalData: false'
+assert_contains "$RC" 'A review finding never carries a reviewer'"'"'s name'
+assert_contains "$RC" 'lacks chat'
+assert_contains "$RC" 'only after the home page and the relevant page'
+assert_contains "$SP/skills/match-offer/SKILL.md" '12 months'
+assert_contains "$SP/skills/match-offer/SKILL.md" 'An old review alone still counts'
+
 finish

@@ -438,7 +438,8 @@ assert_not_contains "$A" 'enroll'
 assert_not_contains "$A" 'sync-replies'
 assert_not_contains "$A" 'sequence'
 D=$(grep '^description: ' "$SP/agent.yaml" | sed 's/^description: //')
-case "$D" in *"personalized statements"*) _report ok "agent.yaml description names personalized statements" ;; *) _report no "agent.yaml description: $D" ;; esac
+EXPECTED_DESC="Interviews a business, then finds, scores and researches fresh leads that fit its ideal customer and matches each one to the offer most likely to land, with sourced talking points the owner's own sequences can use"
+[ "$D" = "$EXPECTED_DESC" ] && _report ok "agent.yaml description is the 8.0.0 string" || _report no "agent.yaml description: $D"
 for m in .claude-plugin/plugin.json .codex-plugin/plugin.json gemini-extension.json .claude-plugin/marketplace.json; do
   grep -qF "$D" "./$m" && _report ok "$m description matches agent.yaml" || _report no "$m description differs from agent.yaml"
 done
@@ -529,9 +530,9 @@ assert_contains "$SP/README.md" 'messages only you, through Resend'
 assert_contains "$SP/evals/cases.md" 'A notification never reaches anyone but the owner'
 
 echo "-- 7.0.0: release"
-assert_contains "$SP/agent.yaml" 'version: 7.4.0'
+assert_contains "$SP/agent.yaml" 'version: 8.0.0'
 for m in agent.yaml .claude-plugin/plugin.json .claude-plugin/marketplace.json .codex-plugin/plugin.json gemini-extension.json; do
-  grep -qF 'prepares each first touch in the CRM:' "./$m" && _report ok "$m: description says drafts stay in the CRM" || _report no "$m: description does not say the CRM"
+  grep -qF "$EXPECTED_DESC" "./$m" && _report ok "$m: description is the 8.0.0 string" || _report no "$m: description is not the 8.0.0 string"
 done
 
 echo "-- 7.0.0: setup pushes before the test notification"
@@ -742,11 +743,11 @@ for gone in update_activity query_activities log_activity 'recommended:'; do
 done
 
 for m in agent.yaml .claude-plugin/plugin.json .claude-plugin/marketplace.json .codex-plugin/plugin.json gemini-extension.json; do
-  grep -qF 'prepares each first touch in the CRM: a full draft with personalized statements for every channel it can reach' "./$m" && _report ok "$m: description, every channel" || _report no "$m: description still old"
+  grep -qF 'matches each one to the offer most likely to land' "./$m" && _report ok "$m: description names offer matching" || _report no "$m: description does not name offer matching"
+  grep -qF 'personalized statements' "./$m" && _report no "$m: description still names personalized statements" || _report ok "$m: no personalized statements"
   grep -qF 'recommended channel' "./$m" && _report no "$m still says recommended channel" || _report ok "$m: no recommended channel"
 done
 assert_contains "$SP/README.md" 'Upgrading from 7.3'
-assert_contains "$SP/README.md" 'Version 7.4.0.'
 assert_not_contains "$SP/README.md" 'recommends the best'
 
 echo "-- 7.4: final review fixes"
@@ -776,17 +777,37 @@ assert_contains "$SP/context/operating-config.md" 'write-talking-points'
 for k in research_threshold research_quota_per_week research_budget_per_lead_minutes leads_per_week prospecting_sources apify_spend_cap_usd_per_week tone; do
   assert_contains "$SP/context/operating-config.md" "$k:"
 done
-# The retired terms appear nowhere in the package. The files still holding them are
-# skipped here, each until the task that rewrites it; that task deletes its line below.
+# The retired terms appear nowhere in the package, except in the README's "Upgrading from
+# 7.4" note, which has to name the retired stages and schedule key so operators can migrate.
+# That note is stripped (from its heading to the next "## " heading) before the README is checked.
+README_NO_UPGRADE=$(mktemp)
+awk '/^Upgrading from 7\.4/ { skip=1; next } skip && /^## / { skip=0 } !skip' "$SP/README.md" > "$README_NO_UPGRADE"
 while IFS= read -r f; do
+  src="$f"; [ "$f" = README.md ] && src="$README_NO_UPGRADE"
   for t in approacher approach_threshold enabled_channels callback_phone sending_identity write-cold-email write-linkedin-touch write-call-opener 'Approach Drafted' 'Ready to Send'; do
     # The CRM usage.md files name the two old stages once, in the note about the stages the bootstrap leaves in place.
     case "$f:$t" in capabilities/crm/tools/*/usage.md:'Approach Drafted'|capabilities/crm/tools/*/usage.md:'Ready to Send') continue ;; esac
-    if grep -qiF -- "$t" "$f"; then _report no "$f still contains '$t'"; else _report ok "$f free of '$t'"; fi
+    if grep -qiF -- "$t" "$src"; then _report no "$f still contains '$t'"; else _report ok "$f free of '$t'"; fi
   done
 done < <(find AGENT.md README.md subagents skills templates context capabilities evals -type f \
-  -not -path 'README.md' `# Task 9` \
   -not -name '*.pyc')
+rm -f "$README_NO_UPGRADE"
+
+echo "-- 8.0.0: release: version, README flow and the upgrade note"
+assert_contains "$SP/agent.yaml" 'version: 8.0.0'
+assert_contains "$SP/README.md" 'Version 8.0.0.'
+for m in .claude-plugin/plugin.json .codex-plugin/plugin.json gemini-extension.json; do
+  assert_contains "./$m" '"version": "8.0.0"'
+done
+assert_contains "$SP/README.md" 'Upgrading from 7.4'
+for t in 'Approved' 'Research Anyway' 'Talking Points' 'offer catalog' 'Hero Offer' 'schedule_approach'; do
+  assert_contains "$SP/README.md" "$t"
+done
+# The README's retired stage names sit only inside the upgrade note (the strip above leaves none).
+UP=$(awk '/^Upgrading from 7\.4/ { f=1; next } f && /^## / { f=0 } f' "$SP/README.md")
+for t in 'Ready to Send' 'Approach Drafted' 'schedule_approach'; do
+  printf '%s' "$UP" | grep -qF -- "$t" && _report ok "upgrade note names '$t'" || _report no "upgrade note does not name '$t'"
+done
 
 echo "-- 8.0.0: match-offer, write-talking-points and catalog-aware research"
 MO="$SP/skills/match-offer/SKILL.md"

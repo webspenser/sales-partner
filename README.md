@@ -2,15 +2,16 @@
 
 # Sales Partner
 
-**Fresh, researched leads every week, each with its first touch ready
-for you to approve.**
+**Fresh, researched leads every week, each matched to the offer most
+likely to land, with sourced talking points ready for you to approve.**
 
 Most small businesses know they should be doing outreach. Few have the
-hours to find the right businesses, look into each one, and write
-something worth reading. Sales Partner does that groundwork for you:
-it finds businesses that fit your ideal customer, checks them against
-your own criteria, researches the promising ones, and prepares a first
-message that sounds like you. You stay in charge of who gets contacted
+hours to find the right businesses, look into each one, and work out
+what to say. Sales Partner does that groundwork for you: it finds
+businesses that fit your ideal customer, checks them against your own
+criteria, researches the promising ones, picks the one offer from your
+own catalog that suits each, and writes talking points your own
+sequences and calls can use. You stay in charge of who gets contacted
 and when.
 
 ## What you get each week
@@ -21,47 +22,57 @@ and when.
 - **Real research on the best ones.** What's changing at each business
   (new hires, a new location, a missing website, recent news), who the
   decision-maker is, and how to reach them. Every fact links to where
-  it was found. A second score, from that research, decides which leads
-  are ready for a first touch.
-- **A first touch, ready to go.** For each lead it writes a full
-  message for every channel it can reach them on (an email, a LinkedIn
-  note, talking points for a call), each with short personalized
-  lines: an opener, why it matters to them, a proof point from your own
-  results, and one simple ask. Everything sits in notes on the company
-  in your CRM.
+  it was found. A second score, from that research, is recorded for
+  you to read; it doesn't trigger anything.
+- **The offer most likely to land.** Each lead gets a Segment, an
+  Industry, and a Hero Offer from your offer catalog, with an Offer
+  Reason and an Offer Evidence rating (strong, moderate or weak) that
+  say how well the research backs the pick. When your rules rule out
+  every offer, the Hero Offer stays empty and says why.
+- **Talking points to work from.** For each researched lead it writes a
+  `Sales Partner · Talking Points` note on the company in your CRM: who
+  it is for, the offer, an opener, sourced points, what to avoid, and
+  the ways to reach them. Your own sequences, automations or calls use
+  them. Each run adds a dated section and never rewrites an earlier one.
 - **A weekly summary** sent to you: what's waiting for your
-  review, what's approved, what moved, and what research tools cost.
+  review, what's approved but not yet contacted, what moved, and what
+  research tools cost.
 
 ## How it works
 
 1. **A short interview.** It learns your business, your ideal customer,
-   the results you can point to, and how you like to sound.
+   the offers you sell and the signals that point to each one, the
+   results you can point to, and how you like to sound.
 2. **It works on a schedule.** Each week it finds, scores and researches
-   new leads and prepares their first touch, all inside your CRM.
-3. **You review.** Read the drafts, edit anything, and move the leads you
-   like to **Ready to Send**.
+   new leads, matches each to an offer and writes its talking points,
+   all inside your CRM. It stops at **Researched**.
+3. **You review.** Read the research, the offer and the talking points,
+   and drag the leads you like to **Approved**. If a lead below the
+   research bar deserves a look, tick **Research Anyway** and it is
+   researched on the next run.
 4. **Your process takes over.** From there, your own CRM automations,
-   email tool, or you yourself send the message. Sales Partner's job is
-   done.
+   sequences, email tool, or you yourself make contact. Sales Partner's
+   job is done, and it never touches a lead at Approved or later.
 
 ## Why you can trust it
 
 - **It never sends anything to a prospect.** It has no ability to email,
-  message or post to them on your behalf. Every message waits for your
-  approval, and sending stays with you and the tools you already use.
+  message or post to them on your behalf. Nothing goes further than
+  Researched until you approve it, and contact stays with you and the
+  tools you already use.
   It messages only you, through Resend, from a no-reply address on
   your domain.
 - **You can see everything it did.** Every run writes a record to an Airtable base you own. The agent can add to that record but never change or delete it.
 - **It never makes things up.** Facts about a prospect come with a source
   link or are marked unverified. Claims about your business come only
   from what you told it.
-- **It respects "no."** A business marked Do Not Contact is never drafted
-  for again, and the agent can't remove that mark.
+- **It respects "no."** A business marked Do Not Contact is never
+  prepared again, and the agent can't remove that mark.
 - **It's safe to leave running.** Every system it uses has written rules
   it cannot break, checked on every action rather than just promised in
   its instructions. If a rule can't be checked, it won't run on a
   schedule.
-- **LinkedIn stays human.** LinkedIn lines are text for you to paste. It
+- **LinkedIn stays human.** Talking points are text for you to use. It
   never automates anything on LinkedIn.
 - **Your data stays yours.** Leads live in your CRM, your business notes
   live in your own private folder, and passwords and keys never go into
@@ -98,7 +109,7 @@ in that folder loads the agent. Plugin updates never touch your folder.
 
 Built on the [Agent Standard](https://github.com/webspenser/agent-builder/blob/main/STANDARD.md)
 with [Agent Builder](https://github.com/webspenser/agent-builder).
-Version 7.4.0.
+Version 8.0.0.
 
 ## Use it from source
 
@@ -135,8 +146,8 @@ Upgrading from 7.1: re-run setup's tools step to bind scraping, commit and push 
 
 Upgrading from 7.2: the single Score is now two scores. The Fit score
 comes from the map listing and decides which leads get researched
-(`research_threshold`); the Approach score comes from research and
-decides which leads get a drafted touch (`approach_threshold`).
+(`research_threshold`); the Approach score comes from research (since
+8.0 it is recorded for you to read and gates nothing).
 
 1. Rewrite the Scoring rubric in your `context/icp.md` as the two tables
    the shipped `context/icp.md` shows (Fit score, Approach score), or
@@ -176,6 +187,26 @@ and every channel a lead can be reached on gets a full draft.
 - **HubSpot.** New research and drafts are Notes on the company;
   existing draft Tasks stay as history.
 - Commit and push the instance.
+
+Upgrading from 7.4: Sales Partner no longer drafts first touches. It
+stops at `Researched`, matching each lead to an offer from your catalog
+and writing talking points. In order:
+
+1. Update the plugin. Re-run the interview's offer catalog round, or
+   the whole interview, to create `context/offer-catalog.md`.
+2. Re-run setup's tools step, so the bootstrap adds the new fields
+   (Segment, Hero Offer, Offer Reason, Offer Evidence, Research Anyway),
+   the catalog options and the `Approved` stage.
+3. In the CRM, move leads at `Ready to Send` to `Approved`, and leads at
+   `Approach Drafted` back to `Researched`. Then archive those two old
+   stages.
+4. Remove `schedule_approach` from `schedules.yaml`, then re-run
+   `/sales-partner:schedule`. Until then, the schedule check refuses the
+   stale entry.
+5. For leads already at `Researched` with no Hero Offer, ask Sales
+   Partner in an interactive session to match offers for them. That
+   runs the re-match path. Old Email, LinkedIn and Call draft notes are
+   left in place.
 
 ## Developing
 

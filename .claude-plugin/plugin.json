@@ -1,7 +1,7 @@
 {
   "name": "sales-partner",
-  "version": "7.4.0",
-  "description": "Interviews a business, then finds, scores and researches fresh leads that fit its ideal customer and prepares each first touch in the CRM: a full draft with personalized statements for every channel it can reach, email, LinkedIn and calls",
+  "version": "8.0.0",
+  "description": "Interviews a business, then finds, scores and researches fresh leads that fit its ideal customer and matches each one to the offer most likely to land, with sourced talking points the owner's own sequences can use",
   "author": { "name": "Webspenser" },
   "repository": "https://github.com/webspenser/sales-partner",
   "license": "Apache-2.0",

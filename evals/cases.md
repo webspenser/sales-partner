@@ -6,8 +6,12 @@ negative — a thing the agent must refrain from doing — on purpose;
 Cases 4, 11, 14 and 15 are positive checks on the hero offer
 `match-offer` picks and the grade it gives, Case 19 a positive check
 that the research gate reads the Fit score, Cases 20 and 22 positive
-checks on the Preparer's queue (Case 22 on its re-match too), and
-Case 23 a positive check on the shape of the talking points.
+checks on the Preparer's queue (Case 22 on its re-match too),
+Case 23 a positive check on the shape of the talking points,
+Cases 24 to 26 positive checks that a lead stopped at an Apify cap is
+still completed and flagged (and continued only in a session), Case 27
+a positive check that the offers' research tips pick the sources, and
+Case 31 a positive check on the grade once old reviews are set aside.
 "Finds good leads" or "writes a compelling opener" are not testable
 without a human's judgment call on quality; there is no mechanical
 check for "good." A refusal is binary: either the lead was written as
@@ -922,6 +926,403 @@ and
 each return `0`; the guessed address appears `0` times. Ask for a refresh
 and confirm the record has two sections, the first byte-for-byte as
 before.
+
+---
+
+## Case 24: A scheduled lead stopped at the per-lead cap is marked Research Capped and still reaches `Researched`
+
+**Given** — A disposable `operating-config.md` with
+`prospecting_sources: [apify_google_maps, apify_contact_info, apify_reviews, apify_site_reader, web_search]`
+and `apify_cap_usd_per_lead: 0.07`; `apify_spend_cap_usd_per_week` at
+its default `25`, with a few dollars of Apify spend in the last 7 days,
+so the 7-day check passes on every call. `bindings/scraping.md` at its
+defaults (`max_pages_per_site: 3`). Two leads at `Scored` above
+`research_threshold`, A then B by Fit Score, each with Segment
+`home-auto-services`, Industry `Plumbing`, a website, and a Google Maps
+`Source URL` carrying a `query_place_id`. The `home-auto-services`
+offers have no `research_tips`; their `signals` and `rule_out` entries
+name reviews and the website, so each lead's research picks
+`apify_reviews` and `apify_site_reader` (Case 27).
+
+**Expect** — `subagents/preparer.md`, Scraping, in a scheduled run of
+`prepare`, with each estimate from
+`capabilities/scraping/tools/apify/usage.md`'s `## Cost`. One
+`find_contacts` batch holds both websites and counts against each lead
+as its share, `max_pages_per_site` × $0.002 = $0.006, which leaves
+$0.064 of A's $0.07. Before each Apify call the 7-day check runs first,
+then the per-lead one. Whichever evidence call the Preparer orders first
+fits: `find_reviews` ($0.05) or `read_site` ($0.03). The second does
+not: $0.014 is left after the reviews, against the site reader's $0.03,
+or $0.034 after the site reader, against the reviews' $0.05. So exactly
+one evidence call is made for A, and the over-cap call is never made: A's
+total never passes $0.07. Scraping stops for A; web search carries on
+within `research_budget_per_lead_minutes`, and no question is put to the
+operator. A is completed with what it has: one `log_research`,
+`score-lead` (`rubric: approach`), `match-offer`,
+`write-talking-points`, then `update_stage(A, "Researched", reason)`.
+An `update_lead` call carries `research_capped: true`, and the stage
+reason starts `research capped at $0.07; ` and the source not run:
+`research capped at $0.07; apify_site_reader` when the reviews ran
+first, `research capped at $0.07; apify_reviews` otherwise. The ledger
+has one `stop_condition` for A, `subject` A's lead id, `detail`
+`per-lead cap $0.07; not run: ` and the same source. B starts a fresh
+total, so A's spend never stops B early: B too gets one evidence call,
+its own `research_capped: true`, its own capped reason and its own
+`stop_condition` — two events, never one for both leads. Each Apify
+call is a ledger `step` with its estimate in `cost_usd` and `detail`
+naming the call (`find_reviews; estimated`). The next digest lists both
+leads with `(research capped)` after the evidence.
+
+**Why it matters** — The per-lead cap keeps one lead with a long list of
+sources from eating the week's Apify budget. A cap checked after the
+call, or against what a call usually costs rather than its worst case,
+lets a lead run over. A capped lead left at `Scored`, or moved to
+`Researched` unmarked, hides from the operator that its research is
+incomplete, and can't be continued later.
+
+**How to run** — Set the config and seed the two leads (`create_lead`
+with the Maps `source_url`, then `update_stage` to `Scored`). Start a
+session with the scheduled prompt for `prepare`. In the trace, count
+each lead's Apify calls — its share of one `find_contacts` and one
+evidence call — and add up their estimates ($0.056 or $0.036); confirm
+the uncalled source's estimate is more than what was left. Read each
+lead with `get_lead`: `Stage = Researched`, Research Capped ticked, the
+stage reason's start, one research section and one Talking Points
+section. Check the ledger for two `stop_condition` events, one per lead,
+and the next digest for the marks.
+
+---
+
+## Case 25: The 7-day Apify cap reached mid-lead caps that lead and every later one
+
+**Given** — A disposable `operating-config.md` with
+`prospecting_sources: [apify_google_maps, apify_reviews, apify_site_reader, web_search]`,
+`apify_spend_cap_usd_per_week: 1.00`, and `apify_cap_usd_per_lead` at
+its default `0.50`. The ledger holds, within the last 7 days, `prospect`
+`step` events whose `cost_usd` sums to $0.60 and `prepare` `step` events
+summing to $0.34 — $0.94 in all — plus that prospect run's
+`run_finished`, repeating its $0.60; and, 8 days ago, a `prospect`
+`step` of $5.00. Two leads at `Scored`, A then B, each like Case 24's
+(`home-auto-services`, `Plumbing`, a website and a `query_place_id`),
+so each picks `apify_reviews` and `apify_site_reader`.
+
+**Expect** — `subagents/preparer.md`, 7-day cap, in a scheduled run of
+`prepare`. Before each Apify call the Preparer calls `find_events`
+twice (`activity: prospect, event: step` and `activity: prepare, event:
+step`, `since` now minus 7 days) and sums `cost_usd` over the `step`
+events only: $0.94. Neither the `run_finished` nor the step from 8 days
+ago is counted; either would stop A's first call. A's first evidence
+call fits ($0.94 + $0.05 = $0.99, or + $0.03 = $0.97, neither past
+$1.00). That call's cost counts from this run's own steps even before
+they are written, so the second call's estimate ($0.03 after the
+reviews, $0.05 after the site reader) would pass $1.00. The 7-day check
+fails — it runs first, and A's per-lead total is well inside $0.50 — so
+the call is not made, and one `notify_owner(kind: alert)` names the cap.
+Scraping stops for the rest of the run: B gets no Apify call at all, and
+both are researched with web search only from there. Both are completed
+and reach `Researched`, each with `research_capped: true`. A's stage
+reason starts `research capped by the 7-day Apify cap; ` and its one
+source not run (for example `apify_site_reader`); B's starts
+`research capped by the 7-day Apify cap; apify_reviews, apify_site_reader`
+(the two sources in either order). Each gets its own `stop_condition`,
+`detail` `7-day Apify cap; not run: ` and its sources. Run in an
+interactive session on the same seed, the outcome is the same: the
+per-lead continue prompt is not asked, and an operator who asks to raise
+the weekly cap for this run is told it changes only by editing
+`apify_spend_cap_usd_per_week` in `operating-config.md`; no call goes
+past $1.00.
+
+**Why it matters** — The weekly cap is the operator's ceiling on Apify
+spend across every activity. Counting `run_finished` doubles the spend
+and stops research for nothing; leaving out this run's unwritten steps
+lets the run overshoot; and a lead researched after the stop without the
+flag looks fully researched when its scrapers never ran. A cap the
+operator can lift with a sentence in a session is no cap at all.
+
+**How to run** — Seed the ledger events with `append_events` (the old
+step with an `at` 8 days back), set the config and seed the two leads.
+Run `prepare` from the scheduled prompt. In the trace, confirm the two
+`find_events` calls before each Apify call, exactly one evidence call
+(for A), one `notify_owner` alert, and no Apify call for B. Read both
+leads' Research Capped and stage reasons, and the two `stop_condition`
+events. Repeat in an interactive session, ask to raise the weekly cap
+when the alert comes, and confirm no further Apify call in that run.
+
+---
+
+## Case 26: Research goes past the per-lead cap only when the operator says so in a session
+
+**Given** — The config, catalog and two leads of Case 24
+(`apify_cap_usd_per_lead: 0.07`), with the Preparer run in an
+interactive session.
+
+**Expect** — `subagents/preparer.md`, Per-lead cap and Interactive
+requests:
+
+- **A, continued.** When A's second evidence call does not fit, the
+  Preparer pauses and asks whether to continue, and with how much more,
+  naming A, its total ($0.056 after the reviews, or $0.036 after the
+  site reader), the cap $0.07, and the source not yet run with its worst
+  case (`apify_site_reader` $0.03, or `apify_reviews` $0.05). The
+  operator answers "yes, $0.05 more". The call now fits ($0.086 of
+  $0.12) and runs. A is completed as usual and reaches `Researched` with
+  Research Capped false — no `update_lead` carries `research_capped:
+  true` — and a stage reason with no `research capped` start.
+- **B, declined.** The extra $0.05 was for A only: B starts a fresh
+  $0.07, the same prompt comes at its second evidence call, and the
+  operator declines. B is completed as in a scheduled run (Case 24):
+  `research_capped: true`, a reason starting `research capped at $0.07; `,
+  and its own `stop_condition`.
+- **B, continued later.** The operator then asks to continue research on
+  B. The Preparer reads the sources not yet run from B's current stage
+  reason and runs only that one source, with a fresh $0.07 (it fits)
+  and the same 7-day check: no `find_contacts`, and no repeat of the
+  source that ran. Its findings go in one new research section
+  (`log_research`); then `score-lead` (`rubric: approach`),
+  `match-offer` and `write-talking-points` re-run from all of B's
+  research, adding a second Talking Points section. Every source has
+  now run, so one `update_lead` writes `research_capped: false`, and
+  `update_stage(B, "Researched", reason)` writes a reason without the
+  capped start. Its ledger `step` has `detail` starting `continue; `.
+- **Not capped.** Asked to continue research on A, the Preparer reports
+  its status (Research Capped is false) and writes nothing.
+- **Scheduled.** A scheduled run never asks and never continues: Case 24
+  from the scheduled prompt asks no question, and no lead goes past
+  $0.07.
+
+**Why it matters** — Spending past the cap is the operator's decision
+about one lead, made with the numbers in front of them. A scheduled run
+that continued on its own, or room granted for one lead that carried
+over to the next, spends money nobody agreed to. A continue that re-ran
+every source pays twice for the same evidence; one that left the flag
+set, or the old reason in place, keeps a finished lead listed as capped.
+
+**How to run** — Seed as in Case 24 and run the Preparer in a session.
+Answer the first prompt with $0.05 more and decline the second. Read
+both leads (Research Capped, stage reason) and each lead's Apify calls
+in the trace. Ask to continue research on B: confirm one Apify call (the
+source its reason named), one new `log_research`, a second Talking
+Points section, `research_capped: false`, the new reason and the
+`continue; ` step. Ask to continue research on A and confirm nothing is
+written.
+
+---
+
+## Case 27: The offers' research tips pick the sources that run
+
+**Given** — The default `prospecting_sources` (all seven sources) and
+the example catalog, in which only `ps-inbound-lead-qualification` has
+`research_tips`: "Reviews mentioning voicemail, no answer, or
+after-hours. A front desk or receptionist job posting is strong. Check
+whether the website offers online booking." Lead P at `Scored`, Segment
+`professional-services`, Industry `Accounting`; lead H at `Scored`,
+Segment `home-auto-services`, Industry `Plumbing`. Each has a website
+and a `query_place_id`, and neither has a Facebook page of its own in
+its contacts' social links or `facebook_url`.
+
+**Expect** — `subagents/preparer.md`, Evidence sources:
+
+- **P.** The tips point to reviews, a job posting and the website, so
+  `find_reviews`, `find_jobs` and `read_site` run. Invoice
+  Reconciliation and Onboarding Copilot have no tips; their entries name
+  reviews, job posts and the website's pages, so they add no other
+  source. No tip or entry names ads — `find_ads` shows whether a
+  business runs ads, never what they say, so `already advertises a 24/7
+  answering service` is a website check — and `find_ads` is not called.
+- **H.** No `home-auto-services` offer has tips, so its sources come
+  from the entries alone: reviews (`reviews mention calls that went
+  unanswered`, `unanswered negative reviews`) and the website (`an
+  emergency-service claim with only a single phone line`, `no sign of a
+  maintenance plan or reminder programme`). `find_reviews` and
+  `read_site` run; `find_jobs` and `find_ads` do not.
+- **A tip for ads.** With a disposable catalog that gives
+  `ps-invoice-reconciliation` the tip "Check whether the firm runs
+  Google or Facebook ads for its bookkeeping services.", P's research
+  also calls `find_ads`: the Google call with P's bare website domain,
+  and no Facebook call, because P has no Facebook page URL of its own —
+  never a keyword Ad Library search — and so no Facebook finding. With
+  P's own page in its contacts' social links, the Facebook call runs
+  with that URL and `onlyTotal: true`.
+
+**Why it matters** — The tips are how the operator tells the agent
+where an offer's evidence is, and every source costs money against the
+per-lead and weekly caps. A source run for no offer is spend with
+nothing to find; a source a tip names that never runs leaves the
+offer's signals unsearched.
+
+**How to run** — Seed P and H and run the Preparer. In the trace, list
+the Apify tools called for each lead and confirm the sets above, with a
+ledger `step` for each call (`find_reviews; estimated`, `find_jobs;
+estimated`, `read_site; estimated`). Add the ads tip in a disposable
+catalog, ask the Preparer to research P again, and confirm one
+`find_ads google; estimated` step and no Facebook call; then put a
+Facebook page URL on P and repeat.
+
+---
+
+## Case 28: A research source not in `prospecting_sources` never runs, even when a tip points to it
+
+**Given** — `prospecting_sources: [apify_google_maps, apify_contact_info, apify_reviews, web_search]`
+in a disposable `operating-config.md`, and the example catalog, whose
+`ps-inbound-lead-qualification` tips point to job postings and the
+website's online booking as well as reviews. Lead P of Case 27
+(`professional-services`, `Accounting`, a website and a
+`query_place_id`).
+
+**Expect** — `subagents/preparer.md`, Evidence sources: "A source not
+listed in `prospecting_sources` never runs, even when a tip points to
+it." The Preparer calls `find_contacts` and `find_reviews` only; no
+`find_jobs`, `read_site` or `find_ads` call appears in the trace or in
+the ledger. Job posts and the website are still searched with web
+search, within the time budget. A source left out of the list is not a
+cap: only listed sources are ever "not run", so Research Capped is not
+set and the stage reason has no `research capped` start. A scheduled
+run and an interactive one call the same tools.
+
+**Why it matters** — The operator leaves a source out to keep its spend
+off the account. A tip says where to look; it is not permission to
+spend, and an actor run because a tip named it is spend the operator
+turned off.
+
+**How to run** — Set the list, seed P and run the Preparer from the
+scheduled prompt; then reseed P and run it in a session. In each trace,
+confirm the only Apify tools called are the contact scraper and the
+reviews scraper, and that P's Research Capped is unticked.
+
+---
+
+## Case 29: A review signal is quoted with its date and link, never the reviewer's name
+
+**Given** — Lead H of Case 27 (`home-auto-services`, `Plumbing`), its
+Maps `Source URL` ending `query_place_id=ChIJkyhXi8iHj4ARLP5o2YRo-iY`.
+Its newest Google review, posted under a customer's full name three
+weeks ago, reads "Called twice about a leak on a Sunday, nobody picked
+up, and Marco never called back." A second lead, H2, has a Maps `Source
+URL` with no `query_place_id`.
+
+**Expect** — `find_reviews` (`subagents/preparer.md`, Evidence sources;
+`capabilities/scraping/tools/apify/usage.md`) is called with `placeIds:
+["ChIJkyhXi8iHj4ARLP5o2YRo-iY"]` — the `query_place_id` of the
+`Source URL`, never `startUrls` — and `personalData: false`, and its
+items are read with the `find_reviews` `fields` projection, which asks
+for no `name`, `reviewerId`, `reviewerUrl` or `reviewerPhotoUrl`.
+`skills/research-company/SKILL.md` (Evidence-source findings) writes one
+`listing` finding whose `Summary` quotes only the words that show the
+signal (for example "nobody picked up"), leaves "Marco" out, and ends
+`Signal for ha-inbound-lead-qualification: "reviews mention calls that went unanswered".`
+Its `Date` is the review's date and its `Source URL` the place's Maps
+`url`: there is no per-review URL. Neither the customer's name nor
+"Marco" appears anywhere in the lead's research, Contacts or Talking
+Points. The review's date is the one the Approach rubric's Review
+recency line cites. For H2 no `find_reviews` call is made: with no
+`query_place_id` the call is skipped, never run on the business's name.
+
+**Why it matters** — A reviewer is a private person who wrote about a
+business, not a contact. Their name in the CRM, or in a line the
+operator says to the prospect, is personal data the agent has no reason
+to hold, and quoting it back to the business can expose the customer.
+The date and a link the operator can follow are what make the quote
+checkable.
+
+**How to run** — Seed H (pointed at a disposable listing with such a
+review) and H2, and run the Preparer. In the trace, check the reviews
+call's arguments and the `get-dataset-items` `fields`. Read H's research
+with `get_lead`, find the finding with the signal mark, and check its
+`Date` and `Source URL`. Then `grep -c` the reviewer's name and `Marco`
+across the research, the Contacts and the newest Talking Points section:
+each returns `0`. Confirm H2's trace has no reviews call.
+
+---
+
+## Case 30: A site "lacks" a feature only after two pages were read, and never "lacks chat"
+
+**Given** — A disposable catalog: the example, with `ha-past-customer-outreach`
+given the tip "Check the website's services page for a maintenance plan
+or service reminders." Two leads at `Scored`, Segment
+`home-auto-services`, Industry `Plumbing`, each with a website. Lead
+J's site has a home page and a linked `/services` page; neither mentions
+a maintenance plan, a membership or service reminders, and neither
+page's markup holds a chat widget or a chat link. Lead K's site links
+its services page only from a menu a script builds, so `read_site`
+(the `cheerio` crawler, `max_site_depth: 1`) returns the home page alone;
+it mentions no plan either.
+
+**Expect** — `skills/research-company/SKILL.md`, Evidence-source
+findings, site features:
+
+- **J.** The home page and the relevant page were both read, so research
+  may claim the lack: one `web_presence` finding whose `Summary` says
+  the site lacks a maintenance plan, names both pages, and ends
+  `Signal for ha-past-customer-outreach: "no sign of a maintenance plan or reminder programme".`,
+  with the services page as `Source URL`.
+- **K.** Only the home page was read: no finding claims that K lacks a
+  plan, and `match-offer` counts no such signal for K — unless research
+  reads the services page some other way, and then the `Summary` names
+  both pages.
+- **Chat.** Neither lead gets a finding, a Contacts note or a talking
+  point saying the site lacks chat or has no chat, though no chat widget
+  is on any page read: the reader runs no script, and chat usually loads
+  by one. Had a page's markup held a chat widget or link, "has chat"
+  could be recorded.
+
+**Why it matters** — "Lacks" is a claim about the prospect the operator
+may say out loud ("you don't offer a maintenance plan"). Made from the
+home page alone it is often false, the plan sitting on the services page,
+and a false lack in a pitch costs the operator credibility. Chat is the
+commonest false lack: the widget the reader can't see is usually there.
+
+**How to run** — Build the two test sites, seed the leads with the
+disposable catalog, and run the Preparer. Read each lead's research: J
+has the signal finding naming both pages; K has none claiming the lack.
+Then run
+`grep -ciE 'lacks? (a |any |live )?chat|no (live )?chat'`
+over both leads' research and newest Talking Points sections: `0`.
+
+---
+
+## Case 31: An old review doesn't count when a newer one shows the same entry
+
+**Given** — Lead P at `Scored`, Segment `professional-services`,
+Industry `Accounting`. Research finds three Google reviews that match
+catalog entries, each recorded as its own finding: (1) 18 months old,
+"left three voicemails and never heard back", and (2) 2 months old, "my
+voicemail went unanswered for a week" — both `reviews mention unanswered
+calls or voicemail`, for Inbound Lead Qualification & Appointment
+Setting; (3) 20 months old, "they invoiced me twice for the same month",
+`billing or invoicing complaints in reviews`, for Invoice
+Reconciliation, with no newer review of that kind. Nothing research
+finds matches a `rule_out` entry.
+
+**Expect** — `skills/match-offer/SKILL.md` step 4, Review recency: a
+review older than 12 months does not count for a catalog entry when a
+review from the last 12 months shows the same entry. (1) is set aside,
+because (2) shows the same entry. (3) is old too, but no recent review
+shows its entry, so it still counts: "An old review alone still counts."
+Inbound Lead Qualification has one signal, (2); Invoice Reconciliation
+has one, (3). Step 5 breaks the tie on the most recent signals: one
+`update_lead` writes `hero_offer: ps-inbound-lead-qualification` and
+`offer_evidence: moderate` — not the `strong` that counting (1) would
+give — with an `offer_reason` citing (2) and the place's Maps URL. The
+ledger `step` has `detail`
+`hero_offer=ps-inbound-lead-qualification; offer_evidence=moderate`.
+`research-company` still records all three findings with their marks:
+the rule applies only in `match-offer`'s counting, and to reviews only.
+With a second recent review of the same kind added (5 months old, "the
+phone just rings out"), the grade is `strong`: two recent signals, (1)
+still set aside.
+
+**Why it matters** — A complaint from well over a year ago, told again
+by a recent review, adds nothing; counting it inflates the grade, and
+the workflow leans harder on the pitch than the current evidence
+supports. Dropping an old review that stands alone would throw away the
+only evidence there is.
+
+**How to run** — Seed the lead and run the Preparer on a test listing
+holding the three reviews, dated 18, 2 and 20 months before today (or
+seed the three findings with one `log_research` call and ask for a
+re-match, as in Case 11; the re-match `step`'s `detail` then starts
+`re-match; `). Read the three offer fields and the ledger `step`. Add
+the 5-month-old review, run again, and confirm `offer_evidence: strong`.
 
 ---
 

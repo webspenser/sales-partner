@@ -1114,4 +1114,24 @@ assert_contains "$SD" 'apify_cap_usd_per_lead'
 assert_contains "$DT" 'per-lead cap'
 assert_contains "$SD" 'per lead'
 
+echo "-- 8.1.0: evals for the research sources and the per-lead cap"
+EV="$SP/evals/cases.md"
+for h in \
+  '## Case 24: A scheduled lead stopped at the per-lead cap is marked Research Capped and still reaches `Researched`' \
+  '## Case 25: The 7-day Apify cap reached mid-lead caps that lead and every later one' \
+  '## Case 26: Research goes past the per-lead cap only when the operator says so in a session' \
+  '## Case 27: The offers'"'"' research tips pick the sources that run' \
+  '## Case 28: A research source not in `prospecting_sources` never runs, even when a tip points to it' \
+  '## Case 29: A review signal is quoted with its date and link, never the reviewer'"'"'s name' \
+  '## Case 30: A site "lacks" a feature only after two pages were read, and never "lacks chat"' \
+  '## Case 31: An old review doesn'"'"'t count when a newer one shows the same entry'; do
+  assert_contains "$EV" "$h"
+done
+for w in 'Cases 24 to 26 positive checks' 'research capped at $0.07; ' 'per-lead cap $0.07; not run: ' \
+  'research capped by the 7-day Apify cap; apify_reviews, apify_site_reader' '7-day Apify cap; not run: ' \
+  '`research_capped: false`' '`continue; `' '`personalData: false`' '`query_place_id`' 'lacks chat' \
+  'hero_offer=ps-inbound-lead-qualification; offer_evidence=moderate'; do
+  assert_contains "$EV" "$w"
+done
+
 finish

@@ -831,4 +831,32 @@ assert_contains "$SP/context/icp.md" 'offer-catalog.md'
 assert_contains "$SP/context/business-profile.md" 'offer-catalog.md'
 wc -c < "$A" | awk '{exit !($1 < 6000)}' && _report ok "AGENT.md under 6000 bytes" || _report no "AGENT.md 6000 bytes or more"
 
+echo "-- 8.0.0: the Preparer matches the hero offer; the Prospector sets the segment"
+PP="$SP/subagents/preparer.md"
+for w in 'research_anyway=true' '`match-offer`' '`write-talking-points`' 'log_talking_points' 'researched by operator request; Fit <n> below research_threshold <t>' 'context/offer-catalog.md'; do
+  assert_contains "$PP" "$w"
+done
+# Review Focus 4: an empty Segment is filled from Industry, or the lead is skipped.
+assert_contains "$PP" 'an empty Segment is first filled from Industry, using the catalog'"'"'s `industries` lists; if that fails, the lead is skipped'
+assert_contains "$PP" 'never writes `hero_offer`, `offer_evidence` or `offer_reason` itself'
+assert_contains "$PP" 'Segment chosen by the Preparer'
+assert_contains "$PP" 'run its catalog search (step 2) for that segment'
+assert_contains "$PP" '`segment`, `industry`, `hero_offer`, `offer_reason`, `offer_evidence`'
+assert_contains "$PP" 'Re-match a lead at `Researched`'
+assert_contains "$PP" 'never acts on a lead at `Approved` or later'
+assert_contains "$PP" 'hero_offer=<id or none>; offer_evidence=<grade or none>'
+for gone in approach_threshold log_draft 'the drafts'; do
+  assert_not_contains "$PP" "$gone"
+done
+PR="$SP/subagents/prospector.md"
+assert_contains "$PR" '`Segment`'
+assert_contains "$PR" 'context/offer-catalog.md'
+assert_contains "$PR" 'in the catalog'"'"'s wording where one fits'
+assert_contains "$PR" 'the catalog segment whose `industries` include it'
+for t in attio hubspot; do
+  assert_contains "$SP"/capabilities/crm/tools/$t/usage.md 'To clear a select or text field'
+done
+assert_contains "$SP/capabilities/crm/tools/attio/usage.md" 'write it as `[]`'
+assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'write it as `""`'
+
 finish

@@ -189,7 +189,9 @@ Reject if `fields` contains `stage`, `sp_stage`,
 `sp_stage_changed_at`, `research_anyway` or `sp_research_anyway`. The
 properties `sp_segment`, `sp_industry`, `sp_hero_offer`,
 `sp_offer_reason` and `sp_offer_evidence` are written like any other
-lead property. Read the company first
+lead property. To clear a select or text field (for example
+`sp_hero_offer` and `sp_offer_evidence` when every offer is ruled out),
+write it as `""`: HubSpot stores an empty string as no value. Read the company first
 (`hubspot:get_crm_objects`, property `sp_do_not_contact`). If it is
 already `true`, reject any `fields` that sets it to `false`. Otherwise
 one `updateRequest` on `companies` with the mapped properties. Setting

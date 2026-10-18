@@ -204,6 +204,8 @@ check 0 "write segment"             $AT ${P}update-list-entry-by-id "{$X,\"entry
 check 0 "write hero_offer"          $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"hero_offer\":\"ps-invoice-reconciliation\"}}"
 check 0 "write offer_reason"        $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"offer_reason\":\"Two reviews mention slow invoicing\"}}"
 check 0 "write offer_evidence"      $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"offer_evidence\":\"strong\"}}"
+check 0 "clear the offer fields"    $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"hero_offer\":[],\"offer_evidence\":[],\"offer_reason\":\"Every offer ruled out\"}}"
+check 0 "clear segment"             $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"segment\":[]}}"
 check 2 "agent can't mark Engaged"    $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"stage\":\"Engaged\"}}" "stage may only be written as"
 check 0 "agent disqualifies"          $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"stage\":\"Disqualified\"}}"
 check 2 "agent can't open a deal"     $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"stage\":\"Open Deal\"}}" "stage may only be written as"
@@ -233,6 +235,8 @@ check 0 "write sp_segment"            $HS ${H}manage_crm_objects '{"updateReques
 check 0 "write sp_hero_offer"         $HS ${H}manage_crm_objects '{"updateRequest":{"objects":[{"objectType":"companies","objectId":202,"properties":{"sp_hero_offer":"ps-invoice-reconciliation"}}]}}'
 check 0 "write sp_offer_reason"       $HS ${H}manage_crm_objects '{"updateRequest":{"objects":[{"objectType":"companies","objectId":202,"properties":{"sp_offer_reason":"Two reviews mention slow invoicing"}}]}}'
 check 0 "write sp_offer_evidence"     $HS ${H}manage_crm_objects '{"updateRequest":{"objects":[{"objectType":"companies","objectId":202,"properties":{"sp_offer_evidence":"strong"}}]}}'
+check 0 "clear the sp_ offer fields"  $HS ${H}manage_crm_objects '{"updateRequest":{"objects":[{"objectType":"companies","objectId":202,"properties":{"sp_hero_offer":"","sp_offer_evidence":"","sp_offer_reason":"Every offer ruled out"}}]}}'
+check 0 "clear sp_segment"            $HS ${H}manage_crm_objects '{"updateRequest":{"objects":[{"objectType":"companies","objectId":202,"properties":{"sp_segment":""}}]}}'
 check 2 "agent can't mark Contacted"  $HS ${H}manage_crm_objects '{"updateRequest":{"objects":[{"objectType":"companies","objectId":202,"properties":{"sp_stage":"Contacted"}}]}}' "sp_stage may only be written as"
 check 0 "agent disqualifies"          $HS ${H}manage_crm_objects '{"updateRequest":{"objects":[{"objectType":"companies","objectId":202,"properties":{"sp_stage":"Disqualified"}}]}}'
 check 2 "agent can't mark Engaged"    $HS ${H}manage_crm_objects '{"updateRequest":{"objects":[{"objectType":"companies","objectId":202,"properties":{"sp_stage":"Engaged"}}]}}' "sp_stage may only be written as"

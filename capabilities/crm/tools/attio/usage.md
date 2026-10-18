@@ -192,7 +192,10 @@ write nothing) exactly where the contract says the operation rejects.
 - **`update_lead`** — Reject if `fields` contains `stage`,
   `stage_changed_at` or `research_anyway`. `segment`, `industry`,
   `hero_offer`, `offer_reason` and `offer_evidence` go to the Pipeline
-  entry like any other lead field. Read the Pipeline entry first. If
+  entry like any other lead field. To clear a select or text field (for
+  example `hero_offer` and `offer_evidence` when every offer is ruled
+  out), write it as `[]`: an entry value may be an array even for a
+  single-value attribute, and an empty one removes the value. Read the Pipeline entry first. If
   `do_not_contact` is already `true`, reject any `fields` that sets it
   to `false`. Otherwise, one `attio:update-list-entry-by-id` call. Company
   profile fields in `fields` go to the company instead: one

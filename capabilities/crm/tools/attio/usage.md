@@ -81,7 +81,7 @@ findings in the research note.
 | `offer_reason` | text | `Offer Reason` |
 | `offer_evidence` | select — `strong`, `moderate`, `weak` | `Offer Evidence` |
 | `research_anyway` | checkbox | `Research Anyway` — set by the operator only; the agent reads it, never writes it |
-| `research_capped` | checkbox | `Research Capped` — written by the agent: `true` when a scheduled run stopped at the per-lead Apify cap, `false` once an interactive continue completes |
+| `research_capped` | checkbox | `Research Capped` — written by the agent: `true` when research stopped at an Apify cap (per-lead or 7-day) or the operator declined to continue; cleared (`false`) when a continue completes |
 | `size` | text | `Size` |
 | `source` | text | `Source` |
 | `source_url` | text | `Source URL` |
@@ -347,7 +347,7 @@ can't):
   move the lead to `Approved`: that approves it. Show `do_not_contact`, so an opted-out
   lead is obvious, and `segment`, `hero_offer`, `offer_reason` and
   `offer_evidence`. Show `research_capped` too, so a lead whose research
-  stopped at the cap is obvious.
+  stopped at an Apify cap (per-lead or 7-day) is obvious.
 - **Approved** — filtered on `stage` is `Approved`: approved, waiting
   for your workflow or your own touch. The agent never acts on them;
   move a lead back to `Researched` to cancel.

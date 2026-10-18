@@ -1073,7 +1073,30 @@ assert_contains "$PP" 'never in a scheduled run'
 assert_contains "$PP" 'always passes `personalData: false`'
 PR="$SP/subagents/prospector.md"
 assert_contains "$PR" 'Every source listed in `prospecting_sources` is exhausted'
-assert_contains "$PR" 'ignores the Preparer-only sources `apify_reviews`, `apify_ads`, `apify_jobs` and `apify_site_reader`'
+assert_contains "$PR" 'ignores the Preparer-only sources `apify_contact_info`, `apify_reviews`, `apify_ads`, `apify_jobs` and `apify_site_reader`'
+assert_contains "$PR" 'its own sources are `apify_google_maps` and'
+assert_not_contains "$PR" '`apify_google_maps`, `apify_contact_info`,'
+assert_contains "$SP/context/operating-config.md" 'the Preparer, not the Prospector'
+# Fix round 1: rulings A-C, the cap order, the sources-not-run list, one stop_condition per lead
+assert_contains "$PP" 'the `query_place_id` parameter of the'
+assert_contains "$PP" 'With no such parameter, skip the call and list `apify_reviews` among the sources not run.'
+assert_contains "$PP" 'Every lead the run still researches after the stop gets `research_capped: true` and the 7-day reason start'
+assert_contains "$PP" 'read from the lead'"'"'s current stage reason'
+assert_contains "$PP" 'End with `update_stage(lead_id, "Researched", reason)`.'
+assert_contains "$PP" 'then re-run `score-lead` (`rubric:'
+assert_contains "$PP" 'Before each Apify call, check the 7-day cap first, then the per-lead cap. When the 7-day check fails, the 7-day cap'"'"'s handling and reason start apply, and the per-lead prompt is not asked.'
+assert_contains "$PP" 'name every listed source this lead'"'"'s research picked and did not complete'
+assert_contains "$PP" '`apify_contact_info` when a refused `find_contacts` batch left the lead'
+assert_contains "$PP" '`apify_ads` when either of `find_ads`'"'"' two calls was due and did'
+assert_contains "$PP" 'skipping any source already run for this lead in this run'
+assert_contains "$PP" 'Each capped lead gets one `stop_condition` of its own, never one event for several leads'
+assert_not_contains "$PP" 'the report names the sources still not run'
+for f in "$SP/capabilities/crm/contract.md" "$SP/capabilities/crm/tools/attio/usage.md"; do
+  assert_contains "$f" 'when research stopped at an Apify cap (per-lead or 7-day) or the operator declined to continue; cleared (`false`) when a continue completes'
+done
+grep -qF 'Set by the agent when research stopped at an Apify cap (per-lead or 7-day) or the operator declined to continue; cleared when a continue completes.' ./capabilities/crm/tools/attio/bootstrap.py \
+  && _report ok "attio research_capped description covers both caps" || _report no "attio research_capped description is narrow"
+assert_not_contains "$SP/capabilities/crm/contract.md" 'a scheduled run stopped at the per-lead Apify cap'
 RC="$SP/skills/research-company/SKILL.md"
 assert_contains "$RC" 'personalData: false'
 assert_contains "$RC" 'A review finding never carries a reviewer'"'"'s name'

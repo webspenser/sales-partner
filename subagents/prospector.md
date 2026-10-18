@@ -48,10 +48,11 @@ A scheduled prospecting run, or the count of leads at stages `New` and
 
 ## Tools allowed
 - Sourcing tools — only the sources listed in `prospecting_sources`
-  (`operating-config.md`): `apify_google_maps`, `apify_contact_info`,
-  `web_search`. A source not in that list is never used, even when it
-  would find more leads. The Prospector ignores the Preparer-only sources `apify_reviews`, `apify_ads`, `apify_jobs` and `apify_site_reader`:
-  they research leads already found, and never source new ones.
+  (`operating-config.md`): its own sources are `apify_google_maps` and
+  `web_search` (and the `apollo` stub; Guardrails). A source not in that list is never used, even when it
+  would find more leads. The Prospector ignores the Preparer-only sources `apify_contact_info`, `apify_reviews`, `apify_ads`, `apify_jobs` and `apify_site_reader`
+  (as `operating-config.md` says): they research leads already found,
+  and never source new ones.
 - Scraping `find_businesses`
 - CRM `create_lead`
 - CRM `get_lead`
@@ -68,8 +69,7 @@ A scheduled prospecting run, or the count of leads at stages `New` and
 - Every source listed in `prospecting_sources` is exhausted — no
   further candidates are returned by any listed query or scrape. Only
   the Prospector's own sources count (`apify_google_maps`,
-  `apify_contact_info`, `web_search`); the Preparer-only names are
-  skipped, never waited on
+  `web_search`); the Preparer-only names are skipped, never waited on
 - The `apify_spend_cap_usd_per_week` cap (from `operating-config.md`) is
   hit
 

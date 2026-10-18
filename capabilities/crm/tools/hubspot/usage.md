@@ -333,7 +333,8 @@ Create these once in HubSpot. The connector can't create views.
   `Hero offer` (`sp_hero_offer`), `Offer evidence` (`sp_offer_evidence`)
   `Offer reason` (`sp_offer_reason`) and `Research capped`
   (`sp_research_capped`) as columns, so you approve on the match you can
-  see and a lead whose research stopped at the cap is obvious.
+  see and a lead whose research stopped at an Apify cap (per-lead or
+  7-day) is obvious.
 - **Approved** — Companies filtered on `sp_stage` is `Approved`:
   approved, waiting for your workflow or your own touch. The agent never
   acts on them; move a company back to `Researched` to cancel.

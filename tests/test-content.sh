@@ -52,15 +52,8 @@ assert_contains "$SP/subagents/prospector.md" '`Address`, `Phone`, `Email`'
 assert_contains "$SP/AGENT.md" 'hire, listing, web presence'
 
 echo "-- call channel"
-assert_contains "$SP/skills/write-call-opener/SKILL.md" 'name: write-call-opener'
-assert_contains "$SP/skills/write-call-opener/SKILL.md" 'channel="call"'
-assert_contains "$SP/templates/cold-call-opener.md" 'Voicemail:'
-assert_contains "$SP/context/operating-config.md" '`call` in this list'
 assert_contains "$SP/skills/send-digest/SKILL.md" 'the number it uses'
 assert_contains "$SP/templates/digest.md" 'the number from the Call note'
-assert_contains "$SP/AGENT.md" '`write-call-opener`'
-assert_contains "$SP/context/operating-config.md" 'callback_phone:'
-assert_contains "$SP/skills/write-call-opener/SKILL.md" '`callback_phone`'
 
 echo "-- evals"
 E="$SP/evals/cases.md"
@@ -104,13 +97,9 @@ assert_contains "$SP/context/icp.md" 'a sourced direct phone number'
 assert_contains "$SP/skills/find-decision-makers/SKILL.md" 'public business registries'
 assert_contains "$SP/skills/find-decision-makers/SKILL.md" 'an owner is written with `role: decision-maker`'
 assert_contains "$SP/AGENT.md" 'a phone number, an address, a distance'
-assert_contains "$SP/subagents/approacher.md" '`callback_phone`'
 assert_contains "$SP/subagents/prospector.md" 'Existing leads, read via CRM'
 assert_contains "$SP/subagents/prospector.md" 'Every source listed in `prospecting_sources` is exhausted'
 assert_contains "$SP/subagents/preparer.md" '`apify_contact_info`'
-assert_contains "$SP/skills/write-call-opener/SKILL.md" 'never dials'
-assert_contains "$SP/skills/write-call-opener/SKILL.md" 'never an invented number'
-assert_contains "$SP/subagents/approacher.md" 'places, schedules, or records a call'
 assert_contains docs/superpowers/specs/2026-09-01-sales-partner-agent-design.md 'holds thirteen cases'
 assert_contains "$SP/AGENT.md" '`schedule_digest` in the instance'"'"'s `schedules.yaml`'
 assert_not_contains "$SP/AGENT.md" 'on the schedule in'
@@ -129,7 +118,6 @@ assert_not_contains "$SP/skills/setup/SKILL.md" '<context-files>'
 assert_contains "$SP/skills/setup/SKILL.md" '`context/business-profile.md`, `context/icp.md`, `context/operating-config.md`'
 assert_contains "$SP/skills/interview-business/SKILL.md" 'into the instance'"'"'s `context/samples/`'
 assert_not_contains "$SP/skills/interview-business/SKILL.md" 'artifacts supplied into `samples/`'
-assert_contains "$SP/subagents/approacher.md" 'the instance'"'"'s `context/samples/` first, then the package'"'"'s `samples/`'
 echo "-- capabilities"
 assert_contains "$SP/capabilities/crm/contract.md" '## Invariants'
 assert_contains "$SP/capabilities/crm/contract.md" '- `approval_only` —'
@@ -215,7 +203,6 @@ done
 
 echo "-- scheduled runs"
 assert_contains "$SP/agent.yaml" 'activity_digest: crm'
-assert_contains "$SP/agent.yaml" 'activity_approach: crm'
 assert_contains "$SP/skills/send-digest/SKILL.md" 'DO NOT SEND — lead is Do Not Contact'
 assert_contains "$SP/skills/send-digest/SKILL.md" 'Possible duplicate leads'
 assert_contains "$SP/AGENT.md" 'this rule is an instruction'
@@ -337,7 +324,7 @@ A="$SP/AGENT.md"
 wc -c < "$A" | awk '{exit !($1 < 6000)}' && _report ok "AGENT.md under 6000 bytes" || _report no "AGENT.md 6000 bytes or more"
 assert_contains "$A" 'Engaged'
 assert_contains "$A" 'Open Deal'
-assert_contains "$A" 'Ready to Send'
+assert_contains "$A" 'Approved'
 assert_not_contains "$A" 'Sales call specialist'
 assert_not_contains "$A" 'Follow-up'
 assert_not_contains "$A" 'max_touches'
@@ -353,10 +340,6 @@ assert_contains "$SP/capabilities/crm/tools/attio/usage.md" 'move the lead to `A
 assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" 'then move the company to'
 assert_not_contains "$SP/context/operating-config.md" '`approved`'
 assert_contains "$SP/context/operating-config.md" 'only the operator approves a lead'
-AP="$SP/subagents/approacher.md"
-assert_not_contains "$AP" 'One opening touch per lead'
-assert_contains "$AP" 'drafts the lead'"'"'s first touch'
-assert_contains "$AP" 'redraft'
 E="$SP/evals/cases.md"
 assert_contains "$E" 'at `Contacted` and one at `Ready to Send`'
 
@@ -438,39 +421,20 @@ for c in attio hubspot; do
   assert_not_contains "$U" 'sequences'
 done
 grep -qF 'update: [append]' "$SP/capabilities/crm/tools/attio/guard.yaml" && _report ok "attio guard: notes are append-only" || _report no "attio guard: note append rule"
-assert_contains "$SP/context/operating-config.md" 'Drafts are append-only'
+assert_contains "$SP/context/operating-config.md" 'Talking points are append-only'
 E="$SP/evals/cases.md"
 assert_contains "$E" '## Case 5: An opted-out lead is disqualified and gets nothing new'
 assert_not_contains "$E" 'enroll'
 assert_not_contains "$E" 'sync-replies'
 assert_not_contains "$E" 'suppress'
 
-echo "-- 6.0.0: recommendation and personalized statements"
-AP="$SP/subagents/approacher.md"
-assert_contains "$AP" 'templates/personalized-statements.md'
-assert_not_contains "$AP" 'touch_spacing_days'
-assert_not_contains "$AP" 'sequences'
-assert_not_contains "$AP" 'sequence platform'
-assert_not_contains "$AP" 'variables:'
-assert_not_contains "$AP" 'enroll'
-assert_not_contains "$AP" 'moves to `Contacted`'
-PS="$SP/templates/personalized-statements.md"
-for l in 'opener:' 'relevance:' 'proof:' 'ask:'; do assert_contains "$PS" "$l"; done
-assert_contains "$PS" 'Personalized statements'
-assert_contains "$PS" 'two to four lines'
-for w in write-cold-email write-linkedin-touch write-call-opener; do
-  assert_contains "./skills/$w/SKILL.md" '## Personalized statements'
-  assert_contains "./skills/$w/SKILL.md" 'templates/personalized-statements.md'
-done
-assert_not_contains "$SP/skills/write-cold-email/SKILL.md" 'sequences'
-assert_not_contains "$SP/skills/write-cold-email/SKILL.md" 'variables:'
-assert_not_contains "$SP/templates/cold-email.md" 'sequences'
-assert_contains "$SP/skills/write-linkedin-touch/SKILL.md" 'Log one draft holding both'
-
 echo "-- 6.0.0: AGENT.md and manifests describe lead generation and personalization"
 A="$SP/AGENT.md"
 assert_contains "$A" 'lead generation and personalization'
-assert_contains "$A" 'stops at `Approach Drafted`'
+assert_contains "$A" 'stops at'
+assert_contains "$A" '`Researched`: once the operator moves a lead to `Approved`'
+assert_contains "$A" 'talking points'
+assert_contains "$A" '| Prepare | `Scored`, Fit ≥ `research_threshold` with a Segment, or Research Anyway |'
 assert_contains "$A" 'never act on a lead at'
 assert_not_contains "$A" 'enroll'
 assert_not_contains "$A" 'sync-replies'
@@ -487,9 +451,6 @@ K="$SP/capabilities/crm/contract.md"
 assert_contains "$K" '`Disqualified` with reason `opt-out` and writes nothing else'
 assert_contains "$K" 'When the Prospector (on a lead it re-finds)'
 assert_not_contains "$K" '`sent` and `voided` by `update_activity`'
-AP="$SP/subagents/approacher.md"
-assert_contains "$AP" 'No reachable channel'
-assert_contains "$AP" 'reason `no reachable channel`'
 D="$SP/skills/send-digest/SKILL.md"
 assert_contains "$D" '(now <status>)'
 E="$SP/evals/cases.md"
@@ -500,13 +461,7 @@ for c in attio hubspot; do
 done
 
 echo "-- 6.0.0: LinkedIn needs a sourced profile"
-AP="$SP/subagents/approacher.md"
-assert_contains "$AP" '`linkedin` only when the chosen Contact has a sourced `linkedin_url`'
-assert_contains "$AP" 'a company page does not count'
-assert_not_contains "$AP" '`linkedin` with a named'
-LI="$SP/skills/write-linkedin-touch/SKILL.md"
-assert_contains "$LI" '**The chosen Contact has a sourced `linkedin_url`.**'
-assert_contains "$SP/evals/cases.md" '## Case 15: No LinkedIn profile means no LinkedIn draft'
+assert_contains "$SP/evals/cases.md" '## Case 15: No LinkedIn profile means no LinkedIn draft'  # pins eval text; rewritten in Task 8
 
 echo "-- 6.0.0: company profile fields"
 K="$SP/capabilities/crm/contract.md"
@@ -538,9 +493,6 @@ assert_contains "$SP/evals/cases.md" 'Case 14 is a positive check'
 A="$SP/AGENT.md"
 assert_contains "$A" 'except a `Nurture` lead past its Revisit On date'
 assert_contains "$SP/subagents/prospector.md" 'Never re-score or move any other lead'
-PS="$SP/templates/personalized-statements.md"
-assert_contains "$PS" 'one block per reachable channel'
-assert_contains "$PS" '`opener:` and `ask:` are always present'
 assert_contains "$D" 'Report only: the digest writes nothing'
 
 echo "-- 7.0: no Airtable CRM"
@@ -559,7 +511,6 @@ for f in agent.yaml AGENT.md README.md context/operating-config.md skills/send-d
   assert_not_contains "./$f" "digest_delivery"
   assert_not_contains "./$f" "digest_channel"
 done
-assert_contains "$SP/context/operating-config.md" 'sending_identity:'
 
 echo "-- 7.0: notify_owner callers"
 assert_contains "$SP/skills/send-digest/SKILL.md" 'notify_owner(kind: digest)'
@@ -573,8 +524,6 @@ assert_contains "$SP/subagents/prospector.md" 'notify_owner(kind: error)'
 assert_contains "$SP/subagents/prospector.md" '- Owner notify `notify_owner`'
 assert_contains "$SP/subagents/preparer.md" 'notify_owner(kind: error)'
 assert_contains "$SP/subagents/preparer.md" '- Owner notify `notify_owner`'
-assert_contains "$SP/subagents/approacher.md" 'notify_owner(kind: error)'
-assert_contains "$SP/subagents/approacher.md" '- Owner notify `notify_owner`'
 assert_contains "$SP/skills/setup/SKILL.md" 'recipient_email'
 assert_contains "$SP/skills/setup/SKILL.md" 'owner_only_send'
 assert_contains "$SP/skills/interview-business/SKILL.md" 'recipient_email'
@@ -601,6 +550,7 @@ echo "-- 7.1: ledger"
 assert_contains "$SP/agent.yaml" 'standard: "7.2"'
 assert_contains "$SP/agent.yaml" 'capabilities: crm, owner_notify, ledger'
 assert_contains "$SP/agent.yaml" 'activity_prospect: crm, owner_notify, ledger'
+assert_contains "$SP/agent.yaml" 'activity_prepare: crm, owner_notify, ledger, scraping'
 assert_contains "$SP/agent.yaml" 'activity_digest: crm, owner_notify, ledger'
 assert_contains "$SP/capabilities/ledger/tables.md" 'ledger_schema: 1'
 for f in contract.md tools/airtable/guard.yaml tools/airtable/usage.md tools/airtable/identity.yaml tools/airtable/bootstrap.py; do
@@ -615,7 +565,6 @@ assert_contains "$SP/AGENT.md" 'Every run records itself in the ledger'
 assert_contains "$SP/subagents/prospector.md" '## Ledger'
 assert_contains "$SP/subagents/prospector.md" 'find_events(since: 30 days ago, activity: prospect, event: step)'
 assert_contains "$SP/subagents/preparer.md" '## Ledger'
-assert_contains "$SP/subagents/approacher.md" '## Ledger'
 assert_contains "$SP/skills/send-digest/SKILL.md" '## Ledger'
 assert_contains "$SP/README.md" 'You can see everything it did.'
 assert_contains "$SP/README.md" 'Team plan'
@@ -629,9 +578,6 @@ assert_contains "$SP/subagents/prospector.md" 'Ledger `ledger_status`, `append_e
 assert_contains "$SP/subagents/preparer.md" 'ledger_status'
 assert_contains "$SP/subagents/preparer.md" '`run_started`'
 assert_contains "$SP/subagents/preparer.md" 'Ledger `ledger_status`, `append_events`'
-assert_contains "$SP/subagents/approacher.md" 'ledger_status'
-assert_contains "$SP/subagents/approacher.md" '`run_started`'
-assert_contains "$SP/subagents/approacher.md" 'Ledger `ledger_status`, `append_events`'
 assert_not_contains "$SP/skills/send-digest/SKILL.md" 'This skill reads; it never writes'
 assert_contains "$SP/README.md" 'Upgrading from 7.0'
 wc -c < "$SP/AGENT.md" | awk '{exit !($1 < 6000)}' && _report ok "AGENT.md under 6000 bytes" || _report no "AGENT.md 6000 bytes or more"
@@ -690,7 +636,7 @@ assert_contains "$SL" 'would be 25+30+20 = **75**'
 assert_not_contains "$SL" 'five-row'
 assert_not_contains "$SL" 'five weights'
 assert_contains "$SP/context/icp.md" '### Fit score (research gate)'
-assert_contains "$SP/context/icp.md" '### Approach score (approach gate)'
+assert_contains "$SP/context/icp.md" '### Approach score'
 assert_contains "$SP/context/icp.md" "**each table's weights must always sum to"
 assert_contains "$SP/context/icp.md" '**Temporarily closed**'
 assert_not_contains "$SP/context/icp.md" 'five weights'
@@ -701,7 +647,6 @@ assert_contains "$SP/subagents/preparer.md" 'query_by_score(score = fit, min_sco
 assert_contains "$SP/subagents/preparer.md" '(`rubric: approach`)'
 assert_contains "$SP/subagents/preparer.md" 'most recent'
 assert_contains "$SP/subagents/preparer.md" '`Fit Breakdown` are never written'
-assert_contains "$SP/subagents/approacher.md" 'query_by_score(score = approach, min_score = approach_threshold'
 assert_contains "$SP/skills/send-digest/SKILL.md" '`score: fit`, `min_score: 0`'
 assert_contains "$SP/skills/send-digest/SKILL.md" 'Approach <a> · Fit <f>'
 assert_contains "$SP/skills/interview-business/SKILL.md" 'two draft rubrics, one per gate'
@@ -770,14 +715,8 @@ while IFS= read -r f; do
     assert_not_contains "$f" "$gone"
   done
 done < <(find ./AGENT.md ./subagents ./skills ./templates ./context -name '*.md')
-assert_contains "$SP/subagents/approacher.md" 'a full draft for each enabled channel the lead is reachable on'
-assert_contains "$SP/subagents/approacher.md" 'a main line recorded in the research with its source URL'
 assert_contains "$SP/subagents/preparer.md" 'log_research(lead_id, findings[])'
 assert_contains "$SP/subagents/preparer.md" 'main line and general inbox'
-assert_contains "$SP/skills/write-cold-email/SKILL.md" 'log_draft(lead_id, contact_id, channel="email"'
-assert_contains "$SP/skills/write-linkedin-touch/SKILL.md" 'log_draft(lead_id, contact_id, channel="linkedin"'
-assert_contains "$SP/skills/write-call-opener/SKILL.md" 'log_draft(lead_id, contact_id, channel="call"'
-assert_contains "$SP/AGENT.md" 'a full draft and personalized statements for every channel it can reach'
 
 SD="$SP/skills/send-digest/SKILL.md"
 assert_contains "$SD" 'drafted:'
@@ -816,8 +755,35 @@ assert_contains "$AU2" 'create the note with the header line alone, then append'
 assert_contains "$AU2" '`do_not_contact` is not true'
 assert_contains "$SP/skills/send-digest/SKILL.md" 'In Section 2 too, mark every lead whose `Do Not Contact` is true'
 assert_contains "$SP/README.md" 'otherwise it is recorded as a `listing` finding in the research note'
-assert_contains "$SP/subagents/approacher.md" 'the lead'"'"'s own sourced `phone` where the CRM tool stores one'
-assert_contains "$SP/subagents/approacher.md" 'the lead'"'"'s own sourced `email` where the CRM tool stores one'
 assert_contains "$SP/evals/cases.md" 'only email is a general inbox recorded in its research'
+
+echo "-- 8.0.0: the Approacher path is retired"
+for f in subagents/approacher.md skills/write-cold-email skills/write-linkedin-touch skills/write-call-opener templates/cold-email.md templates/cold-call-opener.md templates/linkedin-dm.md templates/linkedin-connection-note.md templates/personalized-statements.md; do
+  [ ! -e "./$f" ] && _report ok "removed: $f" || _report no "still present: $f"  # ./ so the referenced-files check skips it
+done
+! grep -q '^activity_approach' "$SP/agent.yaml" && _report ok "no approach activity" || _report no "activity_approach still declared"
+! grep -q 'approacher' ./.claude-plugin/plugin.json && _report ok "plugin.json lists no Approacher" || _report no "plugin.json still lists the Approacher"
+for k in approach_threshold enabled_channels sending_identity callback_phone; do
+  assert_not_contains "$SP/context/operating-config.md" "$k"
+done
+assert_contains "$SP/context/operating-config.md" 'write-talking-points'
+for k in research_threshold research_quota_per_week research_budget_per_lead_minutes leads_per_week prospecting_sources apify_spend_cap_usd_per_week tone; do
+  assert_contains "$SP/context/operating-config.md" "$k:"
+done
+# The retired terms appear nowhere in the package. The files still holding them are
+# skipped here, each until the task that rewrites it; that task deletes its line below.
+while IFS= read -r f; do
+  for t in approacher approach_threshold enabled_channels callback_phone sending_identity write-cold-email write-linkedin-touch write-call-opener 'Approach Drafted' 'Ready to Send'; do
+    # The CRM usage.md files name the two old stages once, in the note about the stages the bootstrap leaves in place.
+    case "$f:$t" in capabilities/crm/tools/*/usage.md:'Approach Drafted'|capabilities/crm/tools/*/usage.md:'Ready to Send') continue ;; esac
+    if grep -qiF -- "$t" "$f"; then _report no "$f still contains '$t'"; else _report ok "$f free of '$t'"; fi
+  done
+done < <(find AGENT.md README.md subagents skills templates context capabilities evals -type f \
+  -not -path 'skills/interview-business/*' `# Task 6` \
+  -not -path 'skills/send-digest/*' `# Task 7` \
+  -not -path 'templates/digest.md' `# Task 7` \
+  -not -path 'evals/*' `# Task 8` \
+  -not -path 'README.md' `# Task 9` \
+  -not -name '*.pyc')
 
 finish

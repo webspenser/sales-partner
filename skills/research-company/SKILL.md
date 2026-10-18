@@ -39,8 +39,8 @@ only gathers and records.
    finding with no usable hook is left out of the call — see step 4.
 4. A contact route is always recorded when sourced, whatever the bar
    below: the business's main line or general inbox (info@) becomes a
-   `listing` finding with `Hook: contact route`, so the Approacher can
-   reach the lead through it. For every other finding, before writing,
+   `listing` finding with `Hook: contact route`, so the talking points can
+   name it as a route to the lead. For every other finding, before writing,
    decide whether the finding clears the bar for a
    usable hook. A hook is usable only if it is **all three**:
    - **Specific to this company** — not a fact true of the whole

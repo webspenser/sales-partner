@@ -6,7 +6,6 @@
   "repository": "https://github.com/webspenser/sales-partner",
   "license": "Apache-2.0",
   "agents": [
-    "./subagents/approacher.md",
     "./subagents/preparer.md",
     "./subagents/prospector.md"
   ]

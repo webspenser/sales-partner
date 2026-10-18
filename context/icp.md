@@ -63,8 +63,8 @@ above exactly as before.
 ## Target roles
 
 [Interview: get the job titles and functions that make a real buyer or
-influencer for this business — the person the Approacher should be
-trying to reach at a company that scores well. Distinguish
+influencer for this business — the person the talking points should
+be aimed at at a company that scores well. Distinguish
 decision-makers from influencers and gatekeepers, since Contacts in the
 CRM carry that same three-way role tag.]
 
@@ -106,15 +106,16 @@ adds:
 
 ## Scoring rubric
 
-Scoring is split into two rubrics, one per pipeline gate, so each gate
-scores only what can actually be observed at that stage:
+Scoring is split into two rubrics, so each scores only what can
+actually be observed at that stage:
 
 - **Fit score** — scored by the Prospector from the source listing
   alone (for a map find, the Google Maps listing), and compared against
   `research_threshold`.
 - **Approach score** — scored by the Preparer from research findings
-  only, and compared against `approach_threshold`. Fit already passed
-  the first gate, so it is not counted again here.
+  only. It no longer gates anything: it records how strong the research
+  found the lead to be. Fit already passed the first gate, so it is not
+  counted again here.
 
 `score-lead` applies the matching table mechanically and records a
 per-criterion breakdown, never a judgment call in place of it. Every
@@ -145,7 +146,7 @@ table so it still sums to 100):
 | Review sentiment | rating below 3.0 | rating 4.5 or higher | rating 3.0–4.4, or 15%+ of reviews are one-star |
 | Unclaimed listing | listing claimed | (not used) | listing unclaimed |
 
-### Approach score (approach gate)
+### Approach score
 
 Verification: 50 + 30 + 20 = **100**.
 
@@ -220,17 +221,13 @@ Approach score:
 
 ### Thresholds
 
-Two gates, at two pipeline stages, each with its own score, read from
-`operating-config.md`:
+One gate, read from `operating-config.md`:
 
 - **`research_threshold` (default 60)** — gates entry into research. A
   lead at stage `Scored` is picked up by the Preparer only once its
   **Fit score** is at or above this threshold (subject also to the
   research quota, which ranks leads above the threshold by Fit score).
   Leads below it stay at `Scored` and are never researched.
-- **`approach_threshold` (default 70)** — gates entry into outreach
-  drafting. A lead at stage `Researched` is picked up by the Approacher
-  only once its **Approach score**, computed by the Preparer from
-  research findings, is at or above this threshold. A lead that cleared
-  the Fit gate can still fail here when research finds no real trigger
-  or no reachable decision-maker.
+- The **Approach score** has no threshold. The Preparer still computes
+  it from research findings and records it with its breakdown for the
+  operator to read, but nothing is picked up or held back by it.

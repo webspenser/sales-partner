@@ -16,7 +16,7 @@ skill may use, and the fields it writes:
 | `rubric` | Table in `icp.md` | Scored by | Evidence | Writes | Gate |
 |---|---|---|---|---|---|
 | `fit` | `### Fit score` | Prospector | the source listing only | `Fit Score`, `Fit Breakdown` | `research_threshold` |
-| `approach` | `### Approach score` | Preparer | research findings only | `Approach Score`, `Approach Breakdown` | `approach_threshold` |
+| `approach` | `### Approach score` | Preparer | research findings only | `Approach Score`, `Approach Breakdown` | none (recorded for the operator) |
 
 Each run writes only its own rubric's two fields. An `approach` run
 never writes, overwrites or clears `Fit Score` or `Fit Breakdown`, and a
@@ -106,7 +106,7 @@ Fictional lead: **Harbor Line Plumbing**, scored against a
 | Review sentiment | 10 | | | |
 | Unclaimed listing | 10 | | | |
 
-with `research_threshold` 55 and `approach_threshold` 70.
+with `research_threshold` 55.
 
 **Fit — at prospecting**, from the Maps listing alone: a plumber (a
 target industry) 10 mi from the center, 80 reviews, a website and a
@@ -140,10 +140,9 @@ Total: 25+15+20=60
 ```
 
 Approach 60 is written through `update_lead`; `Fit Score` stays 80,
-untouched. 60 is below `approach_threshold` (70), so the Approacher
-does not pick the lead up. Had research found the owner's verified
-email, Decision-maker reachable would read `100×0.30=30` and the total
-would be 25+30+20 = **75**, which clears 70.
+untouched. Had research found the owner's verified email,
+Decision-maker reachable would read `100×0.30=30` and the total
+would be 25+30+20 = **75**.
 
 A score holds the exact value the arithmetic produces, including any
 half: an adjacent industry at weight 25 scores `50×0.25=12.5`, and a

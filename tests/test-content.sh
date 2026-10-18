@@ -530,7 +530,7 @@ assert_contains "$SP/README.md" 'messages only you, through Resend'
 assert_contains "$SP/evals/cases.md" 'A notification never reaches anyone but the owner'
 
 echo "-- 7.0.0: release"
-assert_contains "$SP/agent.yaml" 'version: 8.0.0'
+assert_contains "$SP/agent.yaml" 'version: 8.1.0'
 for m in agent.yaml .claude-plugin/plugin.json .claude-plugin/marketplace.json .codex-plugin/plugin.json gemini-extension.json; do
   grep -qF "$EXPECTED_DESC" "./$m" && _report ok "$m: description is the 8.0.0 string" || _report no "$m: description is not the 8.0.0 string"
 done
@@ -781,7 +781,7 @@ done
 # 7.4" note, which has to name the retired stages and schedule key so operators can migrate.
 # That note is stripped (from its heading to the next "## " heading) before the README is checked.
 README_NO_UPGRADE=$(mktemp)
-awk '/^Upgrading from 7\.4/ { skip=1; next } skip && /^## / { skip=0 } !skip' "$SP/README.md" > "$README_NO_UPGRADE"
+awk '/^Upgrading from 7\.4/ { skip=1; next } skip && (/^## / || /^Upgrading from 8\.0/) { skip=0 } !skip' "$SP/README.md" > "$README_NO_UPGRADE"
 while IFS= read -r f; do
   src="$f"; [ "$f" = README.md ] && src="$README_NO_UPGRADE"
   for t in approacher approach_threshold enabled_channels callback_phone sending_identity write-cold-email write-linkedin-touch write-call-opener 'Approach Drafted' 'Ready to Send'; do
@@ -794,17 +794,17 @@ done < <(find AGENT.md README.md subagents skills templates context capabilities
 rm -f "$README_NO_UPGRADE"
 
 echo "-- 8.0.0: release: version, README flow and the upgrade note"
-assert_contains "$SP/agent.yaml" 'version: 8.0.0'
-assert_contains "$SP/README.md" 'Version 8.0.0.'
+assert_contains "$SP/agent.yaml" 'version: 8.1.0'
+assert_contains "$SP/README.md" 'Version 8.1.0.'
 for m in .claude-plugin/plugin.json .codex-plugin/plugin.json gemini-extension.json; do
-  assert_contains "./$m" '"version": "8.0.0"'
+  assert_contains "./$m" '"version": "8.1.0"'
 done
 assert_contains "$SP/README.md" 'Upgrading from 7.4'
 for t in 'Approved' 'Research Anyway' 'Talking Points' 'offer catalog' 'Hero Offer' 'schedule_approach'; do
   assert_contains "$SP/README.md" "$t"
 done
 # The README's retired stage names sit only inside the upgrade note (the strip above leaves none).
-UP=$(awk '/^Upgrading from 7\.4/ { f=1; next } f && /^## / { f=0 } f' "$SP/README.md")
+UP=$(awk '/^Upgrading from 7\.4/ { f=1; next } f && (/^## / || /^Upgrading from 8\.0/) { f=0 } f' "$SP/README.md")
 for t in 'Ready to Send' 'Approach Drafted' 'schedule_approach'; do
   printf '%s' "$UP" | grep -qF -- "$t" && _report ok "upgrade note names '$t'" || _report no "upgrade note does not name '$t'"
 done
@@ -959,7 +959,7 @@ done
 assert_contains "$EV" 'Asked to match offers for (f) and (g)'
 assert_contains "$EV" 'never `No segment:`'
 # I2: the 7.4 upgrade brings icp.md and operating-config.md in line with the catalog.
-UP=$(awk '/^Upgrading from 7\.4/ { f=1; next } f && /^## / { f=0 } f' "$SP/README.md")
+UP=$(awk '/^Upgrading from 7\.4/ { f=1; next } f && (/^## / || /^Upgrading from 8\.0/) { f=0 } f' "$SP/README.md")
 for t in 'Round 2 (the customer and both rubrics)' 'the catalog round alone leaves `icp.md` as it was' 'keeps no industry list' 'Delete `approach_threshold`,' '`enabled_channels`, `sending_identity` and `callback_phone` from the' 'first fills each lead'"'"'s empty Segment'; do
   printf '%s' "$UP" | grep -qF -- "$t" && _report ok "upgrade note: '$t'" || _report no "upgrade note missing '$t'"
 done
@@ -1133,5 +1133,22 @@ for w in 'Cases 24 to 26 positive checks' 'research capped at $0.07; ' 'per-lead
   'hero_offer=ps-inbound-lead-qualification; offer_evidence=moderate'; do
   assert_contains "$EV" "$w"
 done
+
+echo "-- 8.1.0: release: research sources in the README flow and the upgrade note"
+for t in 'Upgrading from 8.0' 'Research Capped' 'reviews' 'Indeed' 'research tips'; do
+  assert_contains "$SP/README.md" "$t"
+done
+# The note names the config keys, the field, the bindings and the connector URL, and it
+# carries the exact connector URL from the Apify usage file's Setup.
+UP81=$(awk '/^Upgrading from 8\.0/ { f=1; next } f && (/^## / || /^Upgrading from 8\.0/) { f=0 } f' "$SP/README.md")
+for t in apify_reviews apify_ads apify_jobs apify_site_reader 'apify_cap_usd_per_lead: 0.50' \
+  'research_budget_per_lead_minutes: 15' research_capped 'bindings/scraping.md' 'Apify Actors' \
+  'mcp__claude_ai_Apify_Actors__' '/sales-partner:schedule'; do
+  printf '%s' "$UP81" | grep -qF -- "$t" && _report ok "8.0 upgrade note names '$t'" || _report no "8.0 upgrade note does not name '$t'"
+done
+APIFY_URL=$(grep -o 'https://mcp\.apify\.com?tools=[^`]*' "$SP/capabilities/scraping/tools/apify/usage.md" | head -1)
+[ -n "$APIFY_URL" ] && printf '%s' "$UP81" | grep -qF -- "$APIFY_URL" \
+  && _report ok "8.0 upgrade note carries the connector URL from the Apify usage file" \
+  || _report no "8.0 upgrade note lacks the connector URL from the Apify usage file"
 
 finish

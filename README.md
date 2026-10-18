@@ -24,6 +24,14 @@ and when.
   decision-maker is, and how to reach them. Every fact links to where
   it was found. A second score, from that research, is recorded for
   you to read; it doesn't trigger anything.
+- **Evidence from reviews, ads, jobs and the website.** It reads a
+  business's recent Google reviews (quoting a snippet with its date and
+  link, never the reviewer's name), checks whether it runs Google or
+  Facebook ads, looks for open jobs on Indeed, and reads its website,
+  guided by the research tips you gave for each offer. Each source is
+  capped, and a lead's Apify spend stops at $0.50 by default. A lead
+  that hit the cap carries a **Research Capped** flag and says which
+  sources it skipped, so you can decide whether to continue.
 - **The offer most likely to land.** Each lead gets a Segment, an
   Industry, and a Hero Offer from your offer catalog, with an Offer
   Reason and an Offer Evidence rating (strong, moderate or weak) that
@@ -87,7 +95,8 @@ and when.
 - **Claude Code** on a paid Claude plan, which runs the agent and its
   weekly schedule.
 - **Apify**, your own account, with a monthly usage limit you set in
-  Apify Console, for local-business listings and website contact details.
+  Apify Console, for local-business listings, website contact details,
+  reviews, ads, jobs and website reading.
 
 **Want it set up for you?** [Webspenser](https://www.webspenser.com/lp/agent-builder) offers
 a one-time, done-for-you setup: we connect your tools, run the
@@ -109,7 +118,7 @@ in that folder loads the agent. Plugin updates never touch your folder.
 
 Built on the [Agent Standard](https://github.com/webspenser/agent-builder/blob/main/STANDARD.md)
 with [Agent Builder](https://github.com/webspenser/agent-builder).
-Version 8.0.0.
+Version 8.1.0.
 
 ## Use it from source
 
@@ -216,6 +225,27 @@ and writing talking points. In order:
    runs the re-match path, which first fills each lead's empty Segment
    from its Industry, or from its research. Old Email, LinkedIn and Call
    draft notes are left in place.
+
+Upgrading from 8.0: Sales Partner now also reads reviews, ads, jobs and
+the website, and caps each lead's Apify spend. In order:
+
+1. Optional: re-run the interview's offer catalog round to add research
+   tips to each offer (the signals that tell the research where to look).
+2. Update `context/operating-config.md`: add `apify_reviews`,
+   `apify_ads`, `apify_jobs` and `apify_site_reader` to
+   `prospecting_sources`, add `apify_cap_usd_per_lead: 0.50`, and set
+   `research_budget_per_lead_minutes: 15`.
+3. Re-run setup's tools step. It adds the `research_capped` field (Research
+   Capped), asks for the twelve new scraping bindings and pushes
+   `bindings/scraping.md`; an 8.0 instance's scheduled runs fail the
+   schedule gate until it does. The Apify connector's restricted URL must
+   now list all seven actors, so replace the connector's URL with:
+
+   `https://mcp.apify.com?tools=compass/crawler-google-places,vdrmota/contact-info-scraper,compass/Google-Maps-Reviews-Scraper,scrapesage/google-ads-transparency-scraper,apify/facebook-ads-scraper,valig/indeed-jobs-scraper,apify/website-content-crawler`
+
+   The connector may now appear as "Apify Actors", with its tools
+   prefixed `mcp__claude_ai_Apify_Actors__`; the guard still matches it.
+4. Re-run `/sales-partner:schedule`.
 
 ## Developing
 

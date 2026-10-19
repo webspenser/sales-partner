@@ -186,12 +186,15 @@ refused() { # refused <label> <tool> <ok json> <key>...: each key blocked, even 
     check 2 "$label may not use $key (false)" $AG2 ${P2}$tool "$(jset "$ok" "$key" false)" "may not use $key" "$W/scraping.md"
   done
 }
-start_extras() { # start_extras <label> <tool> <ok json>: nothing but url on a start URL
+start_extras() { # start_extras <label> <tool> <ok json> <allowed url>: nothing but url on a start URL
   local a
-  for a in method headers payload userData; do
-    check 2 "$1 start URL $a" $AG2 ${P2}$2 "$(jset "$3" startUrls "[{\"url\":\"https://example.com\",\"$a\":\"x\"}]")" "may not use startUrls[].$a" "$W/scraping.md"
+  for a in requestsFromUrl method headers payload userData; do
+    check 2 "$1 start URL $a" $AG2 ${P2}$2 "$(jset "$3" startUrls "[{\"url\":\"$4\",\"$a\":\"x\"}]")" "may not use startUrls[].$a" "$W/scraping.md"
   done
-  check 2 "$1 start URL as a bare string" $AG2 ${P2}$2 "$(jset "$3" startUrls '["https://example.com"]')" "expected an object" "$W/scraping.md"
+  check 2 "$1 start URL as a bare string" $AG2 ${P2}$2 "$(jset "$3" startUrls "[\"$4\"]")" "expected an object" "$W/scraping.md"
+}
+start_url() { # start_url <rc> <label> <tool> <ok json> <url> [text]: the ok call with one start URL
+  check "$1" "$2" $AG2 ${P2}$3 "$(jset "$4" startUrls "[{\"url\":\"$5\"}]")" "${6:-}" "$W/scraping.md"
 }
 
 check 0 "maps on the Apify_Actors server passes" $AG2 ${P2}$MAPS "$MAPS_OK" "" "$W/scraping.md"
@@ -208,6 +211,10 @@ check 2 "reviews respelled key"    $AG2 ${P2}$REV "$(jset "$REV_OK" PlaceIds '["
 refused reviews $REV "$REV_OK" startUrls
 check 2 "reviews startUrls list"   $AG2 ${P2}$REV "$(jset "$REV_OK" startUrls '[{"url":"https://maps.google.com/?cid=1"}]')" "may not use startUrls" "$W/scraping.md"
 check 2 "reviews without bindings" $AG2 ${P2}$REV "$REV_OK" "no max_reviews line"
+check 2 "reviews personalData true"     $AG2 ${P2}$REV "$(jset "$REV_OK" personalData true)" "must send personalData = false (got true)" "$W/scraping.md"
+check 2 "reviews personalData omitted"  $AG2 ${P2}$REV "$(jdel "$REV_OK" personalData)" "names no personalData" "$W/scraping.md"
+check 2 "reviews personalData as a string" $AG2 ${P2}$REV "$(jset "$REV_OK" personalData '"false"')" "must send personalData = false" "$W/scraping.md"
+check 2 "reviews personalData null"     $AG2 ${P2}$REV "$(jset "$REV_OK" personalData null)" "must send personalData = false (got null)" "$W/scraping.md"
 
 GADS_OK='{"queries":["bigbrothersplumbinginc.com"],"resultType":"advertisers","maxAdvertisersPerQuery":1,"maxAdsPerSearch":5,"region":"US","waitSecs":45}'
 check 0 "google ads in limit"      $AG2 ${P2}$GADS "$GADS_OK" "" "$W/scraping.md"
@@ -230,7 +237,22 @@ lists   facebook $FB "$FB_OK" 'startUrls:max_ad_queries:[{"url":"https://www.fac
 check 2 "facebook respelled key"   $AG2 ${P2}$FB "$(jset "$FB_OK" ResultsLimit 5)" "may not use ResultsLimit" "$W/scraping.md"
 refused facebook $FB "$FB_OK" isDetailsPerAd includeAboutPage enrichWithEcommerceData sorting onlyAdsOlderThan proxyConfiguration
 check 2 "facebook enrichWithEcommerceData true" $AG2 ${P2}$FB "$(jset "$FB_OK" enrichWithEcommerceData true)" "may not use enrichWithEcommerceData" "$W/scraping.md"
-start_extras facebook $FB "$FB_OK"
+start_extras facebook $FB "$FB_OK" https://www.facebook.com/bigbrothersplumbinginc
+check 2 "facebook onlyTotal omitted" $AG2 ${P2}$FB "$(jdel "$FB_OK" onlyTotal)" "names no onlyTotal" "$W/scraping.md"
+check 2 "facebook onlyTotal false"   $AG2 ${P2}$FB "$(jset "$FB_OK" onlyTotal false)" "must send onlyTotal = true (got false)" "$W/scraping.md"
+start_url 0 "facebook page on facebook.com" $FB "$FB_OK" https://facebook.com/bigbrothersplumbinginc
+start_url 2 "facebook keyword Ad Library URL" $FB "$FB_OK" \
+  'https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=US&q=big%20brothers%20plumbing&search_type=keyword_unordered' "a query is not allowed"
+start_url 2 "facebook profile id page"  $FB "$FB_OK" 'https://www.facebook.com/profile.php?id=100064' "a query is not allowed"
+start_url 2 "facebook fragment"         $FB "$FB_OK" 'https://www.facebook.com/bigbrothersplumbinginc#about' "a fragment is not allowed"
+start_url 2 "facebook m. host"          $FB "$FB_OK" https://m.facebook.com/x "host m.facebook.com is not in the hosts list"
+start_url 2 "facebook web. host"        $FB "$FB_OK" https://web.facebook.com/x "is not in the hosts list"
+start_url 2 "facebook other host"       $FB "$FB_OK" https://evil.com/x "host evil.com is not in the hosts list"
+start_url 2 "facebook lookalike host"   $FB "$FB_OK" https://www.facebook.com.evil.com/x "is not in the hosts list"
+start_url 2 "facebook over http"        $FB "$FB_OK" http://www.facebook.com/x "scheme http is not allowed"
+start_url 2 "facebook user info"        $FB "$FB_OK" https://www.facebook.com@evil.com/x "user info (@) is not allowed"
+check 2 "facebook start URL without url" $AG2 ${P2}$FB "$(jset "$FB_OK" startUrls '[{}]')" "names no startUrls[].url" "$W/scraping.md"
+check 2 "facebook start URL not a string" $AG2 ${P2}$FB "$(jset "$FB_OK" startUrls '[{"url":5}]')" "startUrls[].url must be a URL string" "$W/scraping.md"
 
 JOBS_OK='{"title":"Big Brothers Plumbing","location":"Alameda, CA","country":"us","limit":20,"datePosted":"30","waitSecs":45}'
 check 0 "jobs in limit"            $AG2 ${P2}$JOBS "$JOBS_OK" "" "$W/scraping.md"
@@ -252,7 +274,33 @@ check 2 "site reader useSitemaps true"  $AG2 ${P2}$SITE "$(jset "$SITE_OK" useSi
 check 2 "site reader includeUrlGlobs list" $AG2 ${P2}$SITE "$(jset "$SITE_OK" includeUrlGlobs '[{"glob":"https://example.com/**"}]')" "may not use includeUrlGlobs" "$W/scraping.md"
 check 2 "site reader proxyConfiguration object" $AG2 ${P2}$SITE "$(jset "$SITE_OK" proxyConfiguration '{"useApifyProxy":true}')" "may not use proxyConfiguration" "$W/scraping.md"
 check 2 "site reader maxConcurrency 200" $AG2 ${P2}$SITE "$(jset "$SITE_OK" maxConcurrency 200)" "may not use maxConcurrency" "$W/scraping.md"
-start_extras "site reader" $SITE "$SITE_OK"
+start_extras "site reader" $SITE "$SITE_OK" https://bigbrothersplumbinginc.com
+start_url 0 "site reader root without a slash" $SITE "$SITE_OK" https://bigbrothersplumbinginc.com
+start_url 0 "site reader root with the default port" $SITE "$SITE_OK" https://bigbrothersplumbinginc.com:443/
+start_url 2 "site reader page path"   $SITE "$SITE_OK" https://bigbrothersplumbinginc.com/contact-us "only the site root is allowed"
+start_url 2 "site reader query"       $SITE "$SITE_OK" 'https://bigbrothersplumbinginc.com/?ref=x' "a query is not allowed"
+start_url 2 "site reader over http"   $SITE "$SITE_OK" http://bigbrothersplumbinginc.com "scheme http is not allowed"
+start_url 2 "site reader IP address"  $SITE "$SITE_OK" https://1.2.3.4 "the host is an IP address"
+start_url 2 "site reader local host"  $SITE "$SITE_OK" https://printer.local "is local"
+start_url 2 "site reader other port"  $SITE "$SITE_OK" https://bigbrothersplumbinginc.com:8443/ "port 8443 is not the default for https"
+start_url 2 "site reader single label" $SITE "$SITE_OK" https://intranet "the host needs at least two labels"
+check 2 "site reader saveMarkdown omitted" $AG2 ${P2}$SITE "$(jdel "$SITE_OK" saveMarkdown)" "names no saveMarkdown" "$W/scraping.md"
+check 2 "site reader saveMarkdown false"   $AG2 ${P2}$SITE "$(jset "$SITE_OK" saveMarkdown false)" "must send saveMarkdown = true (got false)" "$W/scraping.md"
+check 2 "site reader removeElementsCssSelector omitted" $AG2 ${P2}$SITE "$(jdel "$SITE_OK" removeElementsCssSelector)" "names no removeElementsCssSelector" "$W/scraping.md"
+check 2 "site reader removeElementsCssSelector changed" $AG2 ${P2}$SITE "$(jset "$SITE_OK" removeElementsCssSelector '"script"')" "must send removeElementsCssSelector = \"script, style, noscript, svg\"" "$W/scraping.md"
+check 2 "site reader removeElementsCssSelector empty" $AG2 ${P2}$SITE "$(jset "$SITE_OK" removeElementsCssSelector '""')" "must send removeElementsCssSelector" "$W/scraping.md"
+
+# The contact scraper on the Apify_Actors server: site roots only.
+CT_OK="{\"startUrls\":[{\"url\":\"https://bigbrothersplumbinginc.com\"}],$CT,\"sameDomain\":true,\"mergeContacts\":true,\"waitSecs\":45}"
+check 0 "contacts root on the Apify_Actors server" $AG2 ${P2}$CONTACTS "$CT_OK" "" "$W/scraping.md"
+start_url 0 "contacts root with a slash" $CONTACTS "$CT_OK" https://bigbrothersplumbinginc.com/
+start_url 2 "contacts page path"  $CONTACTS "$CT_OK" https://bigbrothersplumbinginc.com/contact-us "only the site root is allowed"
+start_url 2 "contacts query"      $CONTACTS "$CT_OK" 'https://bigbrothersplumbinginc.com?x=1' "a query is not allowed"
+start_url 2 "contacts over http"  $CONTACTS "$CT_OK" http://bigbrothersplumbinginc.com "scheme http is not allowed"
+start_url 2 "contacts IP address" $CONTACTS "$CT_OK" https://10.0.0.1 "the host is an IP address"
+check 2 "contacts one bad URL among roots" $AG2 ${P2}$CONTACTS "$(jset "$CT_OK" startUrls '[{"url":"https://a.com"},{"url":"https://b.com/x"}]')" "only the site root is allowed" "$W/scraping.md"
+check 2 "contacts start URL requestsFromUrl" $AG2 ${P2}$CONTACTS "$(jset "$CT_OK" startUrls '[{"url":"https://a.com","requestsFromUrl":"https://a.com/list.txt"}]')" "may not use startUrls[].requestsFromUrl" "$W/scraping.md"
+check 2 "contacts start URL without url" $AG2 ${P2}$CONTACTS "$(jset "$CT_OK" startUrls '[{"url":"https://a.com"},{}]')" "names no startUrls[].url" "$W/scraping.md"
 SM=
 
 echo "-- Attio"

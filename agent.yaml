@@ -1,7 +1,7 @@
 name: sales-partner
 version: 8.1.0
 description: Interviews a business, then finds, scores and researches fresh leads that fit its ideal customer and matches each one to the offer most likely to land, with sourced talking points the owner's own sequences can use
-standard: "7.2"
+standard: "7.3"
 capabilities: crm, owner_notify, ledger, scraping
 catalog: webspenser
 catalog_repo: webspenser/agent-library

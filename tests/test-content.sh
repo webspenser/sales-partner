@@ -500,7 +500,7 @@ echo "-- 7.0: no Airtable CRM"
 for f in capabilities/crm/contract.md capabilities/crm/tools/attio/usage.md skills/send-digest/SKILL.md; do
   assert_not_contains "./$f" "Airtable"
 done
-assert_contains "$SP/agent.yaml" 'standard: "7.2"'
+assert_contains "$SP/agent.yaml" 'standard: "7.3"'
 assert_contains "$SP/agent.yaml" 'capabilities: crm'
 
 echo "-- 7.0: no email_drafts"
@@ -546,7 +546,7 @@ printf '%s' "$after_tools" | grep -qF 'git push -u' && _report ok "version contr
 printf '%s' "$after_tools" | grep -qF 'offer one test notification' && _report ok "open step offers the test notification" || _report no "open step does not offer the test notification"
 
 echo "-- 7.1: ledger"
-assert_contains "$SP/agent.yaml" 'standard: "7.2"'
+assert_contains "$SP/agent.yaml" 'standard: "7.3"'
 assert_contains "$SP/agent.yaml" 'capabilities: crm, owner_notify, ledger'
 assert_contains "$SP/agent.yaml" 'activity_prospect: crm, owner_notify, ledger'
 assert_contains "$SP/agent.yaml" 'activity_prepare: crm, owner_notify, ledger, scraping'
@@ -582,7 +582,7 @@ assert_contains "$SP/README.md" 'Upgrading from 7.0'
 wc -c < "$SP/AGENT.md" | awk '{exit !($1 < 6000)}' && _report ok "AGENT.md under 6000 bytes" || _report no "AGENT.md 6000 bytes or more"
 
 echo "-- 7.2: scraping"
-assert_contains "$SP/agent.yaml" 'standard: "7.2"'
+assert_contains "$SP/agent.yaml" 'standard: "7.3"'
 assert_contains "$SP/agent.yaml" 'capabilities: crm, owner_notify, ledger, scraping'
 assert_contains "$SP/capabilities/scraping/contract.md" '`pinned_inputs`'
 assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" 'mcp.apify.com?tools=compass/crawler-google-places,vdrmota/contact-info-scraper'
@@ -1216,5 +1216,16 @@ flat_has "$PP" 'A later lead whose research picked no Apify source has no source
 flat_has "$PP" 'up to the next `; ` or the end of the reason'
 flat_has "$PP" 'rewrite the reason with only the capped start (the start and its list) dropped, keeping every other start'
 flat_has "$PP" 'the other starts stay'
+
+echo "-- 7.3: fixed values and URL rules on the Apify tools"
+assert_contains "$SP/agent.yaml" 'standard: "7.3"'
+AGD=capabilities/scraping/tools/apify/guard.yaml
+assert_contains "./$AGD" 'fixed:'
+assert_contains "./$AGD" 'urls:'
+comment_has() { tr '\n#' '  ' < "$1" | tr -s ' ' | grep -qF -- "$2"; } # the file with comment marks and line breaks flattened
+comment_has "$AGD" "can't be pinned" && _report no "$AGD still says the true/false inputs can't be pinned" || _report ok "$AGD no longer says the true/false inputs can't be pinned"
+for s in 'Four fixed values (Standard 7.3), each required' 'only_keys on startUrls[] still blocks requestsFromUrl'; do
+  comment_has "$AGD" "$s" && _report ok "$AGD says '$s'" || _report no "$AGD does not say '$s'"
+done
 
 finish

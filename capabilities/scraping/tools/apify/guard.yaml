@@ -14,10 +14,18 @@
 # compass--Google-Maps-Reviews-Scraper), and server_match apify covers the
 # connector's claude_ai_Apify_Actors server. Three text pins fix the Google
 # Ads mode (resultType), the crawler (crawlerType) and the HTML
-# transformer (htmlTransformer). True/false inputs and comma strings
-# (personalData, onlyTotal, saveMarkdown, removeElementsCssSelector) can't
-# be pinned; usage.md gives their values. No refuse_args: the allowlists
-# already block every argument not named, so a deny list would add nothing.
+# transformer (htmlTransformer). Four fixed values (Standard 7.3), each
+# required, hold the safety settings that are not operator choices:
+# personalData false on reviews, onlyTotal true on Facebook, and
+# saveMarkdown true and removeElementsCssSelector on the site reader.
+# URL rules check every start URL: Facebook takes https pages on
+# facebook.com or www.facebook.com with no query or fragment; the site
+# reader and the contact scraper take only an https site root on a public
+# host (no path, query, fragment, IP address, local name or odd port).
+# The URL rules check only url: only_keys on startUrls[] still blocks
+# requestsFromUrl and the other start URL fields. No refuse_args: the
+# allowlists already block every argument not named, so a deny list
+# would add nothing.
 covers: [no_external_send, allowlisted_actors, pinned_inputs]
 allow: [compass--crawler-google-places, vdrmota--contact-info-scraper, compass--Google-Maps-Reviews-Scraper,
   scrapesage--google-ads-transparency-scraper, apify--facebook-ads-scraper, valig--indeed-jobs-scraper,
@@ -55,6 +63,40 @@ only_keys:
   - tools: [get-actor-run]
     at: ["$"]
     keys: [runId, waitSecs]
+# Exact values, equal in type too (false is not "false"); leaving one out
+# is blocked.
+fixed:
+  - tools: [compass--Google-Maps-Reviews-Scraper]
+    at: [personalData]
+    value: false
+    required: true
+  - tools: [apify--facebook-ads-scraper]
+    at: [onlyTotal]
+    value: true
+    required: true
+  - tools: [apify--website-content-crawler]
+    at: [saveMarkdown]
+    value: true
+    required: true
+  - tools: [apify--website-content-crawler]
+    at: [removeElementsCssSelector]
+    value: 'script, style, noscript, svg'
+    required: true
+# Every start URL must name a url that passes these rules (query and
+# fragment are forbidden by default).
+urls:
+  - tools: [apify--facebook-ads-scraper]
+    at: ["startUrls[].url"]
+    schemes: [https]
+    hosts: [facebook.com, www.facebook.com]
+    path: any
+    required: true
+  - tools: [apify--website-content-crawler, vdrmota--contact-info-scraper]
+    at: ["startUrls[].url"]
+    schemes: [https]
+    hosts: public
+    path: root
+    required: true
 # One entry per argument, so leaving any one out is blocked ("names no
 # pinned value"), even where two arguments share a binding.
 recipients:

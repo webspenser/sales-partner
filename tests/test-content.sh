@@ -1230,16 +1230,40 @@ done
 
 echo "-- 7.3: URL normalization for the guarded scrapers; evals and README"
 SU="$SP/capabilities/scraping/tools/apify/usage.md"; PP="$SP/subagents/preparer.md"; EV="$SP/evals/cases.md"
+# The shared-platform host list: one sentence in each file, the same hosts in both
+spl() { local t; t=$(tr '\n' ' ' < "$1" | tr -s ' '); case "$t" in *'The shared-platform hosts are '*) ;; *) return ;; esac
+        t=${t#*The shared-platform hosts are }; t=${t%%" host."*}; printf '%s' "$t" | grep -o '`[^`]*`' | sort; }
+SPL_SU=$(spl "$SU"); SPL_PP=$(spl "$PP")
+[ -n "$SPL_SU" ] && [ "$SPL_SU" = "$SPL_PP" ] && _report ok "usage.md and preparer.md give the same shared-platform hosts" \
+  || _report no "the shared-platform host lists differ (or are missing) between usage.md and preparer.md"
+for h in facebook.com fb.com fb.me instagram.com linkedin.com x.com twitter.com tiktok.com youtube.com nextdoor.com houzz.com \
+         yelp.com linktr.ee sites.google.com business.google.com g.page business.site \
+         '*.wixsite.com' '*.square.site' '*.godaddysites.com' '*.weebly.com'; do
+  printf '%s\n' "$SPL_SU" | grep -qxF -- "\`$h\`" && _report ok "shared-platform list has $h" || _report no "shared-platform list lacks $h"
+done
+[ "$(printf '%s\n' "$SPL_SU" | grep -c .)" = 21 ] && _report ok "shared-platform list has 21 hosts" || _report no "shared-platform list does not have 21 hosts"
+# The refused-host list follows the engine's local suffixes
+LOCALS=$(grep -A1 '^URL_LOCAL = ' hooks/guard_policy.py | grep -oE '"\.[a-z.]+"' | tr -d '"')
+[ "$(printf '%s\n' "$LOCALS" | grep -c .)" -ge 11 ] && _report ok "read URL_LOCAL from the guard engine" || _report no "could not read URL_LOCAL"
 for f in "$SU" "$PP"; do
-  for h in '`facebook.com`' '`instagram.com`' '`linktr.ee`' '`sites.google.com`' '`business.site`' '`yelp.com`' \
-           '`*.wixsite.com`' '`*.square.site`' '`*.godaddysites.com`' '`*.weebly.com`' \
-           '`shared-platform website`' '`profile id page`' '`https fetch failed`'; do
+  for h in '`shared-platform website`' '`website host refused`' '`profile id page`' '`https fetch failed`' \
+           '`_host_reason`' '`URL_LOCAL`' '`localhost`' '`xn--`'; do
     assert_contains "$f" "$h"
   done
+  for s in $LOCALS; do assert_contains "$f" "\`$s\`"; done
+  flat_has "$f" 'with a single trailing dot dropped (`lakesidecpa.com.` is `lakesidecpa.com`; that is not a skip)'
+  flat_has "$f" 'whichever of `find_contacts` and `read_site` was due for the lead'
   flat_has "$f" 'An `http://` website is upgraded to `https://`, with the same host.'
+  flat_has "$f" 'If the https fetch of an upgraded website fails'
+  flat_has "$f" 'A website listed as `https://` that fails to load is an ordinary result'
   flat_has "$f" 'it is never retried over `http://`'
-  flat_has "$f" '`m.facebook.com` and `web.facebook.com` become `www.facebook.com`'
+  flat_has "$f" '`m.facebook.com` and `web.facebook.com` become `www.facebook.com`, as does any other subdomain'
+  flat_has "$f" '`business.facebook.com` and `l.facebook.com` are not page URLs'
+  flat_has "$f" 'Any `profile.php` URL names the page only in its query'
+  flat_has "$f" '(`sharer`, `sharer.php`, `plugins`, `dialog` or `tr`), is not a page URL'
+  flat_has "$f" 'any port, the query and the fragment are dropped'
   flat_has "$f" 'A Facebook-page website is still the lead'"'"'s own Facebook page'
+  flat_lacks "$f" 'both are recorded as not run'
 done
 # The guard now requires the four settings; usage.md no longer leaves them to instructions.
 for t in 'cannot pin' "can't pin" 'cannot be pinned'; do flat_lacks "$SU" "$t"; done
@@ -1255,24 +1279,30 @@ n_fc=$(grep -nF 'call `find_contacts`' "$PP" | head -1 | cut -d: -f1)
 [ -n "$n_wu" ] && [ -n "$n_fc" ] && [ "$n_wu" -lt "$n_fc" ] \
   && _report ok "preparer.md checks website URLs before the find_contacts batch" \
   || _report no "preparer.md does not check website URLs before the find_contacts batch"
-for t in '`find_contacts; shared-platform website`' '`read_site; https fetch failed`' '`find_ads facebook; profile id page`' \
-         '`apify_site_reader (shared-platform website)`' 'never sent as `https://www.facebook.com/profile.php`'; do
+for t in '`find_contacts; shared-platform website`' '`read_site; website host refused`' '`read_site; https fetch failed`' \
+         '`find_ads facebook; profile id page`' '`apify_site_reader (shared-platform website)`' \
+         'never sent as `https://www.facebook.com/profile.php`' 'out one with a shared-platform website or a refused host'; do
   flat_has "$PP" "$t"
 done
-flat_has "$PP" 'a shared-platform website, a profile id page or an https fetch that failed'
-# Evals: four cases, each matching the shipped calls
+flat_has "$PP" 'a shared-platform website, a refused website host, a profile id page or an https fetch that failed'
+# Evals: five cases, each matching the shipped calls
 for h in \
   '## Case 32: A shared-platform website never sends the platform'"'"'s home page to a scraper' \
   '## Case 33: An `http://` website is read over https, never over http' \
   '## Case 34: An `m.facebook.com` page is counted as its `www.facebook.com` page' \
-  '## Case 35: A `profile.php?id=` page skips the Facebook count'; do
+  '## Case 35: A `profile.php?id=` page skips the Facebook count' \
+  '## Case 36: A website host the guard refuses is never sent'; do
   assert_contains "$EV" "$h"
 done
 for w in 'Cases 33 and 34 positive checks' '`find_contacts; shared-platform website`' '`read_site; shared-platform website`' \
   '{"url": "https://www.facebook.com/harborbooks"}' '{"url": "https://smithbookkeeping.com/"}' '`read_site; https fetch failed`' \
-  '{"url": "https://www.facebook.com/smithbookkeeping/"}' '`find_ads facebook; profile id page`'; do
+  '{"url": "https://www.facebook.com/lakesidecpa/"}' '`find_ads facebook; profile id page`' \
+  '`find_contacts; website host refused`' '`read_site; website host refused`' '{"url": "https://lakesidecpa.com/"}'; do
   assert_contains "$EV" "$w"
 done
+flat_has "$EV" 'a test domain you control that serves only http (Apify fetches from its cloud'
+C34=$(awk '/^## Case 34:/ { f=1; next } f && /^## Case / { f=0 } f' "$EV")
+printf '%s' "$C34" | grep -qF smithbookkeeping && _report no "Case 34 reuses Case 33's smithbookkeeping" || _report ok "Case 34 has its own page name"
 # README: the standard and the one stated limit left
 assert_contains "$SP/README.md" 'Agent Standard](https://github.com/webspenser/agent-builder/blob/main/STANDARD.md) 7.3'
 flat_has "$SP/README.md" 'data could still leave in the hostname itself'

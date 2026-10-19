@@ -157,42 +157,64 @@ cap).
 ## Scraping
 **Website URLs** come first. The guard blocks a start URL that breaks
 its URL rule, and a block stops the activity (below), so before a lead's
-`website` goes to `find_contacts` or `read_site`, check it in this order
+`website` goes to `find_contacts` or `read_site`, read its host
+lowercased, with a single trailing dot dropped (`lakesidecpa.com.` is
+`lakesidecpa.com`; that is not a skip), and check it in this order
 (`capabilities/scraping/tools/apify/usage.md`, Website and Facebook
-URLs, keeps the list):
-1. **Shared platform.** When the host is `facebook.com`,
-   `instagram.com`, `linktr.ee`, `sites.google.com`, `business.site` or
-   `yelp.com`, or a subdomain of one (`www.facebook.com`,
-   `m.facebook.com`, `joes.business.site`), or any `*.wixsite.com`,
-   `*.square.site`, `*.godaddysites.com` or `*.weebly.com` host, the
-   website is a page on a platform's host. Its root is the platform's
+URLs, gives the same rules). Each skip applies to whichever of
+`find_contacts` and `read_site` was due for the lead (`find_contacts`
+when `apify_contact_info` is listed, `read_site` when the research
+picked it), and each one skipped is recorded as not run with the
+reason given.
+1. **Shared platform.** The shared-platform hosts are `facebook.com`,
+   `fb.com`, `fb.me`, `instagram.com`, `linkedin.com`, `x.com`,
+   `twitter.com`, `tiktok.com`, `youtube.com`, `nextdoor.com`,
+   `houzz.com`, `yelp.com`, `linktr.ee`, `sites.google.com`,
+   `business.google.com`, `g.page` and `business.site`, each with any
+   subdomain, and any `*.wixsite.com`, `*.square.site`,
+   `*.godaddysites.com` or `*.weebly.com` host. So `www.facebook.com`,
+   `m.yelp.com` and `joes.business.site` are shared platforms too. Such
+   a website is a page on a platform's host: its root is the platform's
    home page, and contacts read there are not the lead's. Neither
-   `find_contacts` nor `read_site` runs for the lead: both are recorded
-   as not run with the reason `shared-platform website`. A Facebook-page
-   website is still the lead's own Facebook page for `find_ads`
-   (Facebook page URLs, below), and the Google ads query is the brand
-   name, as for a lead with no website.
-2. **Scheme.** An `http://` website is upgraded to `https://`, with the
-   same host. If the https fetch fails (the run reads no page from that
-   URL), the source is recorded as not run with the reason
-   `https fetch failed`; it is never retried over `http://`.
-3. **Site root.** The start URL is the scheme and host only, with any
-   port, path, query and fragment dropped, and the host as the listing
-   gives it, `www` or not.
+   scraper runs for it: the reason is `shared-platform website`. A
+   Facebook-page website is still the lead's own Facebook page for
+   `find_ads` when Facebook page URLs (below) takes it, and the Google
+   ads query is the brand name, as for a lead with no website.
+2. **Host the guard refuses.** The guard refuses some hosts even as a
+   site root (`_host_reason` and `URL_LOCAL` in `hooks/guard_policy.py`
+   are the source of this list): a character other than an ASCII
+   letter, a digit, a hyphen or a dot (an underscore, an accented letter,
+   a `%`); fewer than two labels, an empty label, a label longer than 63
+   characters or starting or ending with a hyphen, or a host longer than
+   253 characters; an `xn--` label; an IP address (a last label all
+   digits, any label starting `0x`, or a bracketed host); `localhost`,
+   or a host ending `.localhost`, `.local`, `.internal`, `.lan`,
+   `.home.arpa`, `.test`, `.localdomain`, `.svc`, `.corp`, `.home` or
+   `.intranet`. Neither scraper runs for it: the reason is
+   `website host refused`.
+3. **Scheme.** An `http://` website is upgraded to `https://`, with the
+   same host. If the https fetch of an upgraded website fails (the run
+   reads no page from that URL), the source is recorded as not run with
+   the reason `https fetch failed`; it is never retried over `http://`.
+   A website listed as `https://` that fails to load is an ordinary
+   result: the run read nothing, and there is nothing to record from it.
+4. **Site root.** The start URL is the scheme and host only, with any
+   port, path, query and fragment dropped, and the host as read above,
+   `www` or not, as the listing gives it.
 
 A source recorded as not run for one of these reasons, or for a profile
 id page (Facebook page URLs), gets a ledger `step` with `outcome`
 `skipped`, `subject` the lead id, `items_in` and `items_out` 0, and
 `detail` the call and the reason (`find_contacts; shared-platform website`,
-`read_site; shared-platform website`, `read_site; https fetch failed`,
-`find_ads facebook; profile id page`). A call that ran and failed its
+`read_site; shared-platform website`, `read_site; website host refused`,
+`read_site; https fetch failed`, `find_ads facebook; profile id page`). A call that ran and failed its
 https fetch still has its own `step` with its estimate. A capped lead
 names the source among its sources not run with the reason in
 parentheses (`apify_site_reader (shared-platform website)`).
 
 When `apify_contact_info` is listed, gather the site roots of the leads
 being researched (Website URLs; skip a lead with no website, and leave
-out one with a shared-platform website) and call `find_contacts` once
+out one with a shared-platform website or a refused host) and call `find_contacts` once
 per batch of up to 10. Add each email, phone and social link to its
 lead's Contacts with its source URL.
 
@@ -228,21 +250,33 @@ usually come first. Each call counts against
   as the start URL: its scheme and host only, with any path or query
   dropped (`https://example.com/locations/alameda?utm_source=gbp`
   starts at `https://example.com/`), and the host as the listing gives
-  it, `www` or not (Website URLs). Skip it when the lead has no website
-  or a shared-platform website.
+  it, `www` or not (Website URLs). Skip it when the lead has no website,
+  a shared-platform website or a refused host.
 
 **Facebook page URLs.** Before the Facebook call, the page URL is
-checked for a `/profile.php?id=` page first: its identity is in the
-query, which the guard doesn't let through. The Facebook call is
-skipped for it and recorded as not run with the reason
-`profile id page`, and the page is never sent as
-`https://www.facebook.com/profile.php`, which is no one's page.
-Otherwise `m.facebook.com` and `web.facebook.com` become
-`www.facebook.com`, `http://` becomes `https://`, and the query and
-fragment are stripped
-(`https://m.facebook.com/smithbookkeeping/?ref=page_internal` is sent as
-`https://www.facebook.com/smithbookkeeping/`). A URL on any other host
-is not a page URL: the Facebook call is not due, as with no page URL.
+checked in this order:
+- **Host.** It must be `facebook.com` or a subdomain of it.
+  `business.facebook.com` and `l.facebook.com` are not page URLs, and
+  neither is any other host (`fb.com`, `fb.me`).
+- **Profile id.** Any `profile.php` URL names the page only in its
+  query, which the guard doesn't let through. The Facebook call is
+  skipped for it and recorded as not run with the reason
+  `profile id page`, and the page is never sent as
+  `https://www.facebook.com/profile.php`, which is no one's page.
+- **Endpoints.** A URL whose page identity is in its query
+  (`/plugins/page.php?href=…`, `/sharer/sharer.php?u=…`), or whose
+  path's first segment is a Facebook endpoint (`sharer`, `sharer.php`,
+  `plugins`, `dialog` or `tr`), is not a page URL.
+- **Normalize.** `m.facebook.com` and `web.facebook.com` become
+  `www.facebook.com`, as does any other subdomain (`mbasic.`, `touch.`,
+  `es-la.`, `de-de.`); `facebook.com` and `www.facebook.com` stay as
+  given. `http://` becomes `https://`, and any port, the query and the
+  fragment are dropped
+  (`https://m.facebook.com/lakesidecpa/?ref=page_internal` is sent as
+  `https://www.facebook.com/lakesidecpa/`).
+
+A URL that is not a page URL is treated as no page URL: the Facebook
+call is not due.
 
 **Missing bindings.** Before a picked source's first call in a run,
 check that `bindings/scraping.md` has every binding the source passes:
@@ -408,8 +442,9 @@ In an interactive session the operator can ask for three things:
   approach`), `match-offer` and `write-talking-points`, each from all of
   the lead's research. End with `update_stage(lead_id, "Researched", reason)`. A source named with a reason is not run again.
   When every source has run, or could not for want of its input (no
-  `query_place_id`, no website, a shared-platform website, a profile id
-  page or an https fetch that failed), clear the flag with `update_lead`
+  `query_place_id`, no website, a shared-platform website, a refused
+  website host, a profile id page or an https fetch that failed), clear
+  the flag with `update_lead`
   (`research_capped: false`) and rewrite the reason with only the
   capped start (the start and its list) dropped, keeping every other
   start, such as a Segment change or `researched by operator request;

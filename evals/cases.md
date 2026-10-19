@@ -1409,14 +1409,18 @@ site root. The `find_contacts` batch carries
 `startUrls: [{"url": "https://smithbookkeeping.com/"}]`: https, the
 host as the listing gives it, the path and query dropped. No Apify call
 in the trace carries an `http://` URL; the guard would block one, and a
-block stops the activity. In a second run, point the host at a test
-server that answers only over http, so the https fetch fails: each run
-reads no page from that URL, each call keeps its own `step` with its
-estimate, and the ledger has two `step`s with `outcome` `skipped`,
-`subject` S's id and `detail` `find_contacts; https fetch failed` and
+block stops the activity. In a second run, S's website is
+`http://` on a test domain you control that serves only http (Apify
+fetches from its cloud, so a local server won't do), so the https
+fetch of the upgraded website fails: each run reads no page from that
+URL, each call keeps its own `step` with its estimate, and the ledger
+has two `step`s with `outcome` `skipped`, `subject` S's id and `detail`
+`find_contacts; https fetch failed` and
 `read_site; https fetch failed`. Neither call is made again over
 `http://`, and research carries on with the other sources and web
-search.
+search. A website the listing gives as `https://` that fails to load
+gets no such step: only an upgraded website's failure is recorded this
+way.
 
 **Why it matters** — Many small-business listings still give an
 `http://` address. Sent as given, the call is blocked and the whole
@@ -1424,9 +1428,10 @@ activity stops for one old link; retried over http after a failure, the
 agent would be working around the guard's rule rather than within it.
 
 **How to run** — Seed S and run the Preparer. In the trace, read the
-start URL of the contact and site-reader calls. Then serve the host over
-http only, reseed S, run again, and confirm the two `skipped` steps and
-that no call's start URL begins `http://`.
+start URL of the contact and site-reader calls. Then give S the
+`http://` website on your http-only test domain, reseed it, run again,
+and confirm the two `skipped` steps and that no call's start URL begins
+`http://`.
 
 ---
 
@@ -1434,18 +1439,22 @@ that no call's start URL begins `http://`.
 
 **Given** — The disposable catalog of Case 27's "A tip for ads". Lead P
 of Case 27, whose contact scraper's social links give its own Facebook
-page as `https://m.facebook.com/smithbookkeeping/?ref=page_internal#about`.
+page as `https://m.facebook.com/lakesidecpa/?ref=page_internal#about`.
 
 **Expect** — `subagents/preparer.md`, Facebook page URLs:
 `m.facebook.com` becomes `www.facebook.com`, and the query and fragment
 are stripped. The Facebook call sends
-`startUrls: [{"url": "https://www.facebook.com/smithbookkeeping/"}]`
+`startUrls: [{"url": "https://www.facebook.com/lakesidecpa/"}]`
 with `onlyTotal: true`; no call carries `m.facebook.com`, `?ref=` or
 `#about`. The Google call runs with P's bare website domain. A Facebook
 finding, when the count gives one, cites
-`https://www.facebook.com/smithbookkeeping/`. With the link given as
-`http://web.facebook.com/smithbookkeeping?fref=ts` instead, the call
-sends `{"url": "https://www.facebook.com/smithbookkeeping"}`.
+`https://www.facebook.com/lakesidecpa/`. With the link given as
+`http://web.facebook.com/lakesidecpa?fref=ts` instead, the call
+sends `{"url": "https://www.facebook.com/lakesidecpa"}`, and so it does
+for `https://es-la.facebook.com:443/lakesidecpa` (another subdomain,
+and the port dropped). A link on `business.facebook.com` or
+`l.facebook.com` is not a page URL: no Facebook call, and no `skipped`
+step, because the call was never due.
 
 **Why it matters** — The guard takes Facebook pages only on
 `facebook.com` and `www.facebook.com`, with no query or fragment. A
@@ -1454,7 +1463,8 @@ tracking query left on is a channel the rule exists to close.
 
 **How to run** — Seed P with that social link (or set it as
 `facebook_url`) and the disposable catalog, run the Preparer, and read
-the Facebook call's `startUrls`. Repeat with the `web.facebook.com` link.
+the Facebook call's `startUrls`. Repeat with the `web.facebook.com`,
+`es-la.facebook.com` and `business.facebook.com` links.
 
 ---
 
@@ -1472,7 +1482,10 @@ ledger has a `step` with `outcome` `skipped`, `subject` P's id and
 `detail` `find_ads facebook; profile id page`. There is no Facebook
 finding, and no finding says P runs no Facebook ads. Research Capped is
 not ticked: the skip alone is not a cap. The same holds for
-`https://m.facebook.com/profile.php?id=100063512345678`.
+`https://m.facebook.com/profile.php?id=100063512345678`. A share link,
+`https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Flakesidecpa.com`,
+is not a page URL at all: no Facebook call and no `skipped` step, as
+with no page URL.
 
 **Why it matters** — Stripping the query to get past the guard would
 count the ads of a page that isn't the lead's, and the operator would
@@ -1482,6 +1495,46 @@ stops the activity.
 **How to run** — Seed P with that `facebook_url` and the disposable
 catalog, run the Preparer, and confirm the trace has a Google ads call
 and no Facebook call, and the ledger has the `skipped` step.
+
+---
+
+## Case 36: A website host the guard refuses is never sent
+
+**Given** — The default `prospecting_sources` and the example catalog,
+whose `ps-inbound-lead-qualification` tips point to the website's online
+booking. Three leads at `Scored`, Segment `professional-services`,
+Industry `Accounting`, each with a `query_place_id`: lead U, whose Maps
+`website` is `https://smith_cpa.webhost.com/` (an underscore); lead N,
+whose website is `https://xn--bcher-kva.com/` (an `xn--` label); and
+lead D, whose website is `https://lakesidecpa.com./about` (a trailing
+dot).
+
+**Expect** — `subagents/preparer.md`, Scraping, Website URLs, Host the
+guard refuses:
+
+- **U and N.** Both hosts are refused, so neither is sent: no
+  `find_contacts` or `read_site` start URL is on `smith_cpa.webhost.com`
+  or `xn--bcher-kva.com`. For each, the ledger has two `step`s with
+  `outcome` `skipped`, `subject` the lead id, and `detail`
+  `find_contacts; website host refused` and
+  `read_site; website host refused`. No guard block happens, so the
+  activity carries on: reviews, jobs and web search still run for U
+  and N, and both leads reach `Researched`.
+- **D.** A single trailing dot is dropped, not a skip: the
+  `find_contacts` batch carries `{"url": "https://lakesidecpa.com/"}`,
+  and `read_site` sends the same root.
+- **No cap.** The skips are not a cap: no lead's Research Capped is
+  ticked.
+
+**Why it matters** — The guard refuses these hosts even as a site root,
+and a block stops the whole activity. One odd listing would otherwise
+end research for every lead still in the queue.
+
+**How to run** — Seed U, N and D and run the Preparer. In the trace,
+list the start URLs of every `find_contacts` and `read_site` call and
+confirm none is on U's or N's host and D's is `https://lakesidecpa.com/`.
+Read the ledger for the four `skipped` steps and confirm there is no
+guard block.
 
 ---
 

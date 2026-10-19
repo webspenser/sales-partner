@@ -22,7 +22,7 @@ names are spelled as the connector shows them, case included.
   - `startUrls` — at most 10 site roots, one per lead, each the lead's
     website normalized as in Website and Facebook URLs (`https://` and
     the host, nothing more), sent exactly as `{"url": "https://…"}` and
-    nothing else on the object. Never a shared-platform website;
+    nothing else on the object. Never a shared-platform website or a refused host;
   - `maxRequestsPerStartUrl` = `max_pages_per_site`, `maxDepth` =
     `max_crawl_depth`, `maxRequests` = `max_pages_per_call`;
   - `mergeContacts`, `sameDomain`, `considerChildFrames`, `waitSecs` (pass 45).
@@ -91,7 +91,7 @@ names are spelled as the connector shows them, case included.
     `?utm_source=…` query would keep it off the contact and booking
     pages). Keep the host as the listing gives it: the probe's apex and
     `www` URLs came back as two identical pages. Always `https://`, and
-    never a shared-platform website (Website and Facebook URLs). Send it
+    never a shared-platform website or a refused host (Website and Facebook URLs). Send it
     as `{"url": "https://…"}` and nothing else on the object;
   - `crawlerType` = `site_crawler_type` (`cheerio`),
     `htmlTransformer` = `site_html_transformer` (`none`, which keeps nav
@@ -131,42 +131,85 @@ The guard requires every start URL to pass its URL rule: `find_contacts`
 and `read_site` take only an https site root on a public host, with no
 path, query or fragment; the Facebook call takes only an https page on
 `facebook.com` or `www.facebook.com`, with no query or fragment. A
-blocked call stops the activity, so normalize each URL before the call,
-checking a website in this order:
+blocked call stops the activity, so normalize each URL before the call.
+Read a website's host lowercased, with a single trailing dot dropped
+(`lakesidecpa.com.` is `lakesidecpa.com`; that is not a skip), then check
+it in this order. Each skip below applies to whichever of `find_contacts`
+and `read_site` was due for the lead (`find_contacts` when
+`apify_contact_info` is listed, `read_site` when the research picked
+it); each one skipped is recorded as not run with the reason given.
 
 1. **Shared-platform websites.** Some listings give a page on a
    platform's host as their website. Cut to its root, it would send the
    scraper to the platform's home page, and the platform's contacts would
-   be written to the lead. So when the website's host is `facebook.com`,
-   `instagram.com`, `linktr.ee`, `sites.google.com`, `business.site` or
-   `yelp.com`, or a subdomain of one (`www.facebook.com`,
-   `m.facebook.com`, `joes.business.site`), or any `*.wixsite.com`,
-   `*.square.site`, `*.godaddysites.com` or `*.weebly.com` host, neither
-   `find_contacts` nor `read_site` runs for the lead: both are recorded
-   as not run with the reason `shared-platform website`. This is the
-   list; add a platform here when one turns up. A Facebook-page website
-   is still the lead's own Facebook page for the Facebook call,
-   normalized as in 4, and the Google query is the brand name, as for a
-   lead with no website.
-2. **Scheme.** An `http://` website is upgraded to `https://`, with the
-   same host. If the https fetch fails (the run reads no page from that
-   URL), the source is recorded as not run with the reason
-   `https fetch failed`; it is never retried over `http://`.
-3. **Site root.** The root is the scheme and host only: drop any port,
-   path, query and fragment, and keep the host as the listing gives it,
-   `www` or not (`http://example.com/locations/alameda?utm_source=gbp`
-   starts at `https://example.com/`).
-4. **Facebook page URLs.** Check for a `/profile.php?id=` page first: its
-   identity is in the query, which the guard doesn't let through, and
-   cut to `https://www.facebook.com/profile.php` it is no one's page. Skip
-   the Facebook call for it, recorded as not run with the reason
-   `profile id page`. Otherwise `m.facebook.com` and `web.facebook.com`
-   become `www.facebook.com`, `http://` becomes `https://`, and the
-   query and fragment are stripped, which removes tracking such as
-   `?ref=…` (`https://m.facebook.com/smithbookkeeping/?ref=page_internal`
-   is sent as `https://www.facebook.com/smithbookkeeping/`). A URL on any
-   other host is not a page URL the call takes: skip the call, as with
-   no page URL.
+   be written to the lead. The shared-platform hosts are `facebook.com`,
+   `fb.com`, `fb.me`, `instagram.com`, `linkedin.com`, `x.com`,
+   `twitter.com`, `tiktok.com`, `youtube.com`, `nextdoor.com`,
+   `houzz.com`, `yelp.com`, `linktr.ee`, `sites.google.com`,
+   `business.google.com`, `g.page` and `business.site`, each with any
+   subdomain, and any `*.wixsite.com`, `*.square.site`,
+   `*.godaddysites.com` or `*.weebly.com` host. So `www.facebook.com`,
+   `m.yelp.com` and `joes.business.site` are shared platforms too. For
+   one of these, neither scraper runs: the reason is
+   `shared-platform website`. This is the list (`subagents/preparer.md`
+   repeats it word for word); add a platform to both when one turns up.
+   A Facebook-page website is still the lead's own Facebook page for the
+   Facebook call when 5 takes it, and the Google query is the brand
+   name, as for a lead with no website.
+2. **Hosts the guard refuses.** The guard refuses some hosts outright,
+   even as a site root (`_host_reason` and `URL_LOCAL` in
+   `hooks/guard_policy.py` are the source of this list). The host is
+   refused when it:
+   - has a character other than an ASCII letter, a digit, a hyphen or a
+     dot (an underscore, an accented letter, a `%`);
+   - has fewer than two labels, an empty label, a label longer than 63
+     characters or starting or ending with a hyphen, or is longer than
+     253 characters;
+   - has an `xn--` label;
+   - looks like an IP address: its last label is all digits, any label
+     starts `0x`, or it is bracketed (`[…]`);
+   - is `localhost`, or ends `.localhost`, `.local`, `.internal`,
+     `.lan`, `.home.arpa`, `.test`, `.localdomain`, `.svc`, `.corp`,
+     `.home` or `.intranet`.
+
+   For a refused host, neither scraper runs: the reason is
+   `website host refused`.
+3. **Scheme.** An `http://` website is upgraded to `https://`, with the
+   same host. If the https fetch of an upgraded website fails (the run
+   reads no page from that URL), the source is recorded as not run with
+   the reason `https fetch failed`; it is never retried over `http://`.
+   A website listed as `https://` that fails to load is an ordinary
+   result: the run read nothing, and there is nothing to record from it.
+4. **Site root.** The root is the scheme and host only: drop any port,
+   path, query and fragment, and keep the host as read above, `www` or
+   not, as the listing gives it
+   (`http://example.com/locations/alameda?utm_source=gbp` starts at
+   `https://example.com/`).
+5. **Facebook page URLs.** A page URL from the social links, the
+   research or a Facebook-page website, checked in this order:
+   - **Host.** It must be `facebook.com` or a subdomain of it.
+     `business.facebook.com` and `l.facebook.com` are not page URLs, and
+     neither is any other host (`fb.com`, `fb.me`).
+   - **Profile id.** Any `profile.php` URL names the page only in its
+     query, which the guard doesn't let through, and cut to
+     `https://www.facebook.com/profile.php` it is no one's page. Skip
+     the Facebook call for it, recorded as not run with the reason
+     `profile id page`.
+   - **Endpoints.** A URL whose page identity is in its query
+     (`/plugins/page.php?href=…`, `/sharer/sharer.php?u=…`), or whose
+     path's first segment is a Facebook endpoint (`sharer`,
+     `sharer.php`, `plugins`, `dialog` or `tr`), is not a page URL.
+   - **Normalize.** `m.facebook.com` and `web.facebook.com` become
+     `www.facebook.com`, as does any other subdomain (`mbasic.`,
+     `touch.`, `es-la.`, `de-de.`); `facebook.com` and
+     `www.facebook.com` stay as given. `http://` becomes `https://`, and
+     any port, the query and the fragment are dropped, which removes
+     tracking such as `?ref=…`
+     (`https://m.facebook.com/lakesidecpa/?ref=page_internal` is sent as
+     `https://www.facebook.com/lakesidecpa/`).
+
+   A URL that is not a page URL is skipped as if there were none: the
+   Facebook call is not due, and there is no Facebook finding.
 
 ## Results
 

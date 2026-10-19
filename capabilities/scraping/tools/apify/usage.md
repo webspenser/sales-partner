@@ -19,8 +19,10 @@ names are spelled as the connector shows them, case included.
   - `language`, `waitSecs` (pass 45).
 - `find_contacts` — `apify:vdrmota--contact-info-scraper`. Allowed
   arguments, and no others:
-  - `startUrls` — at most 10 website URLs, each exactly `{"url": "https://…"}`
-    and nothing else on the object;
+  - `startUrls` — at most 10 site roots, one per lead, each the lead's
+    website normalized as in Website and Facebook URLs (`https://` and
+    the host, nothing more), sent exactly as `{"url": "https://…"}` and
+    nothing else on the object. Never a shared-platform website;
   - `maxRequestsPerStartUrl` = `max_pages_per_site`, `maxDepth` =
     `max_crawl_depth`, `maxRequests` = `max_pages_per_call`;
   - `mergeContacts`, `sameDomain`, `considerChildFrames`, `waitSecs` (pass 45).
@@ -33,9 +35,10 @@ names are spelled as the connector shows them, case included.
   - `placeIds` — exactly one place id, the listing's `placeId`
     (`["ChIJ…"]`);
   - `maxReviews` = `max_reviews`;
-  - `personalData` — always pass `personalData: false`. The guard cannot
-    pin a true/false value, so this is on you: with `false` the actor
-    returns no reviewer name, id, profile or photo;
+  - `personalData` — always pass `personalData: false`; the guard requires
+    it, so a call with `true`, the string `"false"` or no `personalData`
+    is blocked. With `false` the actor returns no reviewer name, id,
+    profile or photo;
   - `reviewsSort` (pass `newest`), `reviewsStartDate`,
     `reviewsFilterString`, `reviewsOrigin`, `language`, `waitSecs`
     (pass 45).
@@ -47,7 +50,7 @@ names are spelled as the connector shows them, case included.
     arguments, and no others:
     - `queries` — exactly one query, the business's bare website domain
       (`["bigbrothersplumbinginc.com"]`), or its brand name when it has
-      no website;
+      no website or a shared-platform website;
     - `resultType` = `ads_result_type` (`advertisers`);
     - `maxAdvertisersPerQuery` = `max_ad_advertisers`, `maxAdsPerSearch`
       = `max_ads`;
@@ -60,12 +63,14 @@ names are spelled as the connector shows them, case included.
     no others:
     - `startUrls` — exactly one URL, the lead's own Facebook page
       (`[{"url": "https://www.facebook.com/<page>"}]`), from the contact
-      scraper's social links or the research, and nothing else on the
-      object. Never a keyword Ad Library search: the probe's keyword
+      scraper's social links, the research or a Facebook-page website,
+      normalized as in Website and Facebook URLs (https, `facebook.com`
+      or `www.facebook.com`, no query or fragment), and nothing else on
+      the object. Never a keyword Ad Library search: the probe's keyword
       search counted 8,296 ads from every advertiser matching the words.
       With no page URL, skip this call and record no Facebook finding;
     - `onlyTotal` — always pass `onlyTotal: true` (the count only; the
-      guard cannot pin it). Check on the first live run: the probe never
+      guard requires it). Check on the first live run: the probe never
       ran a page-URL call, so whether the total counts only that page's
       ads is unverified;
     - `resultsLimit` = `max_ads`;
@@ -85,15 +90,17 @@ names are spelled as the connector shows them, case included.
     crawler stays under its start URL, so a `/locations/…` path or a
     `?utm_source=…` query would keep it off the contact and booking
     pages). Keep the host as the listing gives it: the probe's apex and
-    `www` URLs came back as two identical pages. Send it as
-    `{"url": "https://…"}` and nothing else on the object;
+    `www` URLs came back as two identical pages. Always `https://`, and
+    never a shared-platform website (Website and Facebook URLs). Send it
+    as `{"url": "https://…"}` and nothing else on the object;
   - `crawlerType` = `site_crawler_type` (`cheerio`),
     `htmlTransformer` = `site_html_transformer` (`none`, which keeps nav
     and footer links such as "Book now" or "Request Service");
   - `maxCrawlPages` = `max_site_pages`, `maxResults` = `max_site_pages`,
     `maxCrawlDepth` = `max_site_depth`;
   - `saveMarkdown` — always `true`; `removeElementsCssSelector` — always
-    `"script, style, noscript, svg"` (the guard cannot pin either);
+    `"script, style, noscript, svg"` (the guard requires both, exactly as
+    written);
   - `waitSecs` (pass 45).
 
   Cheerio runs no JavaScript, so a widget a script injects (chat, most
@@ -113,7 +120,53 @@ argument not listed above (even with a `false` or empty value; leave it
 out entirely), and one whose lists run past `max_search_terms` search
 terms, `max_sites_per_call` URLs, `max_review_places` places,
 `max_ad_queries` Google queries or Facebook pages, or `max_site_urls`
-start URLs. Never call any other Apify tool.
+start URLs. It also refuses a call that leaves out or changes one of the
+four fixed values above (`personalData`, `onlyTotal`, `saveMarkdown`,
+`removeElementsCssSelector`), and a start URL that breaks its URL rule
+(Website and Facebook URLs). Never call any other Apify tool.
+
+## Website and Facebook URLs
+
+The guard requires every start URL to pass its URL rule: `find_contacts`
+and `read_site` take only an https site root on a public host, with no
+path, query or fragment; the Facebook call takes only an https page on
+`facebook.com` or `www.facebook.com`, with no query or fragment. A
+blocked call stops the activity, so normalize each URL before the call,
+checking a website in this order:
+
+1. **Shared-platform websites.** Some listings give a page on a
+   platform's host as their website. Cut to its root, it would send the
+   scraper to the platform's home page, and the platform's contacts would
+   be written to the lead. So when the website's host is `facebook.com`,
+   `instagram.com`, `linktr.ee`, `sites.google.com`, `business.site` or
+   `yelp.com`, or a subdomain of one (`www.facebook.com`,
+   `m.facebook.com`, `joes.business.site`), or any `*.wixsite.com`,
+   `*.square.site`, `*.godaddysites.com` or `*.weebly.com` host, neither
+   `find_contacts` nor `read_site` runs for the lead: both are recorded
+   as not run with the reason `shared-platform website`. This is the
+   list; add a platform here when one turns up. A Facebook-page website
+   is still the lead's own Facebook page for the Facebook call,
+   normalized as in 4, and the Google query is the brand name, as for a
+   lead with no website.
+2. **Scheme.** An `http://` website is upgraded to `https://`, with the
+   same host. If the https fetch fails (the run reads no page from that
+   URL), the source is recorded as not run with the reason
+   `https fetch failed`; it is never retried over `http://`.
+3. **Site root.** The root is the scheme and host only: drop any port,
+   path, query and fragment, and keep the host as the listing gives it,
+   `www` or not (`http://example.com/locations/alameda?utm_source=gbp`
+   starts at `https://example.com/`).
+4. **Facebook page URLs.** Check for a `/profile.php?id=` page first: its
+   identity is in the query, which the guard doesn't let through, and
+   cut to `https://www.facebook.com/profile.php` it is no one's page. Skip
+   the Facebook call for it, recorded as not run with the reason
+   `profile id page`. Otherwise `m.facebook.com` and `web.facebook.com`
+   become `www.facebook.com`, `http://` becomes `https://`, and the
+   query and fragment are stripped, which removes tracking such as
+   `?ref=…` (`https://m.facebook.com/smithbookkeeping/?ref=page_internal`
+   is sent as `https://www.facebook.com/smithbookkeeping/`). A URL on any
+   other host is not a page URL the call takes: skip the call, as with
+   no page URL.
 
 ## Results
 

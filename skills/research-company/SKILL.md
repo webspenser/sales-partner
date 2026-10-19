@@ -112,7 +112,8 @@ URL, under the step 5 and usable-hook rules above.
   name: it is not a finding.
 - **Ads (`find_ads`) → `web_presence`, presence only.** Whether the
   business runs Google ads (the advertiser's Ads Transparency URL) or
-  Facebook ads (its own page's ad count, with the page URL), never what
+  Facebook ads (its own page's ad count, with the page URL the call
+  sent, normalized and with no query), never what
   the ads say. No advertiser found is not a finding: the search may
   simply have missed one.
 - **Site features (`read_site`) → `web_presence`.** For each feature

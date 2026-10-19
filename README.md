@@ -116,7 +116,7 @@ where your data lives — and run `/sales-partner:setup`. It writes
 make the folder a private git repo. From then on, opening Claude Code
 in that folder loads the agent. Plugin updates never touch your folder.
 
-Built on the [Agent Standard](https://github.com/webspenser/agent-builder/blob/main/STANDARD.md)
+Built on [Agent Standard](https://github.com/webspenser/agent-builder/blob/main/STANDARD.md) 7.3
 with [Agent Builder](https://github.com/webspenser/agent-builder).
 Version 8.1.0.
 
@@ -139,6 +139,12 @@ Version 8.1.0.
 - Resend for owner notifications, on the client's own account (`capabilities/owner_notify/tools/resend/`); setup pins your address and a no-reply sender, and the guard refuses a send to anyone else.
 - Airtable for the ledger (`capabilities/ledger/tools/airtable/`); `bootstrap.py` creates the base, and the guard keeps the record append-only.
 - Apify for scraping (`capabilities/scraping/tools/apify/`): setup connects the restricted connector URL and pins the limits (results per search, pages per site, and so on) the guard enforces.
+  The guard also requires the safe settings, such as reviews without
+  reviewer names, and checks every start URL: Facebook pages only on
+  facebook.com, and only an https site root on a public host for the
+  contact scraper and the site reader. One limit remains: the guard
+  can't tie a website to a lead, so data could still leave in the
+  hostname itself (a made-up subdomain).
 
 Each tool's guard policy makes Attio, HubSpot, Resend, Airtable and Apify unattended-safe.
 

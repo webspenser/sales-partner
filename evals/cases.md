@@ -10,8 +10,10 @@ checks on the Preparer's queue (Case 22 on its re-match too),
 Case 23 a positive check on the shape of the talking points,
 Cases 24 to 26 positive checks that a lead stopped at an Apify cap is
 still completed and flagged (and continued only in a session), Case 27
-a positive check that the offers' research tips pick the sources, and
-Case 31 a positive check on the grade once old reviews are set aside.
+a positive check that the offers' research tips pick the sources,
+Case 31 a positive check on the grade once old reviews are set aside,
+and Cases 33 and 34 positive checks that an `http://` website and an
+`m.facebook.com` page are sent in the form the guard takes.
 "Finds good leads" or "writes a compelling opener" are not testable
 without a human's judgment call on quality; there is no mechanical
 check for "good." A refusal is binary: either the lead was written as
@@ -1335,6 +1337,151 @@ seed the three findings with one `log_research` call and ask for a
 re-match, as in Case 11; the re-match `step`'s `detail` then starts
 `re-match; `). Read the three offer fields and the ledger `step`. Add
 the 5-month-old review, run again, and confirm `offer_evidence: strong`.
+
+---
+
+## Case 32: A shared-platform website never sends the platform's home page to a scraper
+
+**Given** — The default `prospecting_sources` (all seven sources) and
+the disposable catalog of Case 27's "A tip for ads" (the example, with
+`ps-invoice-reconciliation` given the ads tip), so a
+`professional-services` lead picks reviews, jobs, the website and ads.
+Three leads at `Scored`, Segment `professional-services`, Industry
+`Accounting`, each with a `query_place_id`: lead F, Harbor Books, whose
+Maps `website` is `https://www.facebook.com/harborbooks?ref=gbp`; lead
+W, Harbor Tax, whose website is `https://harbortax.wixsite.com/home`;
+and lead P of Case 27, whose website is its own domain. None has a
+`facebook_url`.
+
+**Expect** — `subagents/preparer.md`, Scraping, Website URLs (and
+`capabilities/scraping/tools/apify/usage.md`, Website and Facebook
+URLs):
+
+- **Contacts.** The `find_contacts` batch carries P's site root only.
+  No start URL in it is on `facebook.com`, `www.facebook.com` or a
+  `*.wixsite.com` host: cut to the root, F's would be Facebook's home
+  page and W's a page on Wix's host.
+- **Site reader.** `read_site` runs for P only.
+- **Not run.** For each of F and W the ledger has two `step`s with
+  `outcome` `skipped`, `subject` the lead id, and `detail`
+  `find_contacts; shared-platform website` and
+  `read_site; shared-platform website`. Neither lead gets a Contacts
+  row, an email, a phone or a site-features finding from a platform's
+  page.
+- **Ads.** F's website is its own Facebook page, so the Facebook call
+  runs for F with `startUrls: [{"url": "https://www.facebook.com/harborbooks"}]`
+  (the query dropped) and `onlyTotal: true`. The Google calls for F
+  and W query their brand names (`["Harbor Books"]`, `["Harbor Tax"]`),
+  never `facebook.com` or a Wix host. W has no Facebook page URL, so
+  it gets no Facebook call and no Facebook finding.
+- **No cap.** The skips are not a cap: neither lead's Research Capped
+  is ticked, and neither stage reason starts `research capped`.
+
+**Why it matters** — A listing that gives a Facebook or Wix page as its
+website is common for a small business. Read from the platform's root,
+the contact scraper would write Facebook's or Wix's own emails and
+phones onto the lead, and the operator would pitch the platform's
+support line; a "lacks online booking" finding read from a platform's
+home page is a false claim about the prospect. The Google query on
+`facebook.com` would report Meta's ads as the lead's.
+
+**How to run** — Seed F, W and P with the disposable catalog and run the
+Preparer. In the trace, list the start URLs of every `find_contacts` and
+`read_site` call and confirm none is on a platform host; check F's
+Facebook call and the three Google `queries`. Read the ledger for the
+four `skipped` steps, and read F's and W's Contacts and research for
+anything sourced from a platform page: there is none.
+
+---
+
+## Case 33: An `http://` website is read over https, never over http
+
+**Given** — The default `prospecting_sources` and the example catalog,
+whose `ps-inbound-lead-qualification` tips point to the website's online
+booking. Lead S at `Scored`, Segment `professional-services`, Industry
+`Accounting`, with a `query_place_id`, whose Maps `website` is
+`http://smithbookkeeping.com/contact?utm_source=gbp`.
+
+**Expect** — `subagents/preparer.md`, Scraping, Website URLs: the
+website is upgraded to `https://`, with the same host, and cut to its
+site root. The `find_contacts` batch carries
+`{"url": "https://smithbookkeeping.com/"}`, and `read_site` sends
+`startUrls: [{"url": "https://smithbookkeeping.com/"}]`: https, the
+host as the listing gives it, the path and query dropped. No Apify call
+in the trace carries an `http://` URL; the guard would block one, and a
+block stops the activity. In a second run, point the host at a test
+server that answers only over http, so the https fetch fails: each run
+reads no page from that URL, each call keeps its own `step` with its
+estimate, and the ledger has two `step`s with `outcome` `skipped`,
+`subject` S's id and `detail` `find_contacts; https fetch failed` and
+`read_site; https fetch failed`. Neither call is made again over
+`http://`, and research carries on with the other sources and web
+search.
+
+**Why it matters** — Many small-business listings still give an
+`http://` address. Sent as given, the call is blocked and the whole
+activity stops for one old link; retried over http after a failure, the
+agent would be working around the guard's rule rather than within it.
+
+**How to run** — Seed S and run the Preparer. In the trace, read the
+start URL of the contact and site-reader calls. Then serve the host over
+http only, reseed S, run again, and confirm the two `skipped` steps and
+that no call's start URL begins `http://`.
+
+---
+
+## Case 34: An `m.facebook.com` page is counted as its `www.facebook.com` page
+
+**Given** — The disposable catalog of Case 27's "A tip for ads". Lead P
+of Case 27, whose contact scraper's social links give its own Facebook
+page as `https://m.facebook.com/smithbookkeeping/?ref=page_internal#about`.
+
+**Expect** — `subagents/preparer.md`, Facebook page URLs:
+`m.facebook.com` becomes `www.facebook.com`, and the query and fragment
+are stripped. The Facebook call sends
+`startUrls: [{"url": "https://www.facebook.com/smithbookkeeping/"}]`
+with `onlyTotal: true`; no call carries `m.facebook.com`, `?ref=` or
+`#about`. The Google call runs with P's bare website domain. A Facebook
+finding, when the count gives one, cites
+`https://www.facebook.com/smithbookkeeping/`. With the link given as
+`http://web.facebook.com/smithbookkeeping?fref=ts` instead, the call
+sends `{"url": "https://www.facebook.com/smithbookkeeping"}`.
+
+**Why it matters** — The guard takes Facebook pages only on
+`facebook.com` and `www.facebook.com`, with no query or fragment. A
+mobile link sent as found is blocked and stops the activity, and a
+tracking query left on is a channel the rule exists to close.
+
+**How to run** — Seed P with that social link (or set it as
+`facebook_url`) and the disposable catalog, run the Preparer, and read
+the Facebook call's `startUrls`. Repeat with the `web.facebook.com` link.
+
+---
+
+## Case 35: A `profile.php?id=` page skips the Facebook count
+
+**Given** — The disposable catalog of Case 27's "A tip for ads". Lead P
+of Case 27, whose only Facebook page is its `facebook_url`,
+`https://www.facebook.com/profile.php?id=100063512345678`.
+
+**Expect** — `subagents/preparer.md`, Facebook page URLs: the page's
+identity is in its query, which the guard doesn't let through. The
+Google call runs; no Facebook call is made, neither with the query nor
+as `https://www.facebook.com/profile.php`, which is no one's page. The
+ledger has a `step` with `outcome` `skipped`, `subject` P's id and
+`detail` `find_ads facebook; profile id page`. There is no Facebook
+finding, and no finding says P runs no Facebook ads. Research Capped is
+not ticked: the skip alone is not a cap. The same holds for
+`https://m.facebook.com/profile.php?id=100063512345678`.
+
+**Why it matters** — Stripping the query to get past the guard would
+count the ads of a page that isn't the lead's, and the operator would
+quote that count back to the prospect. Sending the query is blocked and
+stops the activity.
+
+**How to run** — Seed P with that `facebook_url` and the disposable
+catalog, run the Preparer, and confirm the trace has a Google ads call
+and no Facebook call, and the ledger has the `skipped` step.
 
 ---
 

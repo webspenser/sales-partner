@@ -1228,4 +1228,53 @@ for s in 'Four fixed values (Standard 7.3), each required' 'only_keys on startUr
   comment_has "$AGD" "$s" && _report ok "$AGD says '$s'" || _report no "$AGD does not say '$s'"
 done
 
+echo "-- 7.3: URL normalization for the guarded scrapers; evals and README"
+SU="$SP/capabilities/scraping/tools/apify/usage.md"; PP="$SP/subagents/preparer.md"; EV="$SP/evals/cases.md"
+for f in "$SU" "$PP"; do
+  for h in '`facebook.com`' '`instagram.com`' '`linktr.ee`' '`sites.google.com`' '`business.site`' '`yelp.com`' \
+           '`*.wixsite.com`' '`*.square.site`' '`*.godaddysites.com`' '`*.weebly.com`' \
+           '`shared-platform website`' '`profile id page`' '`https fetch failed`'; do
+    assert_contains "$f" "$h"
+  done
+  flat_has "$f" 'An `http://` website is upgraded to `https://`, with the same host.'
+  flat_has "$f" 'it is never retried over `http://`'
+  flat_has "$f" '`m.facebook.com` and `web.facebook.com` become `www.facebook.com`'
+  flat_has "$f" 'A Facebook-page website is still the lead'"'"'s own Facebook page'
+done
+# The guard now requires the four settings; usage.md no longer leaves them to instructions.
+for t in 'cannot pin' "can't pin" 'cannot be pinned'; do flat_lacks "$SU" "$t"; done
+flat_has "$SU" 'always pass `personalData: false`; the guard requires it'
+flat_has "$SU" 'always pass `onlyTotal: true` (the count only; the guard requires it)'
+flat_has "$SU" '(the guard requires both, exactly as written)'
+flat_has "$SU" 'The guard requires every start URL to pass its URL rule'
+flat_has "$SU" '`startUrls` — at most 10 site roots'
+# The Preparer: contact URLs at the site root, the website checks before the contact batch, the not-run records
+flat_has "$PP" 'gather the site roots of the leads being researched'
+n_wu=$(grep -nF '**Website URLs**' "$PP" | head -1 | cut -d: -f1)
+n_fc=$(grep -nF 'call `find_contacts`' "$PP" | head -1 | cut -d: -f1)
+[ -n "$n_wu" ] && [ -n "$n_fc" ] && [ "$n_wu" -lt "$n_fc" ] \
+  && _report ok "preparer.md checks website URLs before the find_contacts batch" \
+  || _report no "preparer.md does not check website URLs before the find_contacts batch"
+for t in '`find_contacts; shared-platform website`' '`read_site; https fetch failed`' '`find_ads facebook; profile id page`' \
+         '`apify_site_reader (shared-platform website)`' 'never sent as `https://www.facebook.com/profile.php`'; do
+  flat_has "$PP" "$t"
+done
+flat_has "$PP" 'a shared-platform website, a profile id page or an https fetch that failed'
+# Evals: four cases, each matching the shipped calls
+for h in \
+  '## Case 32: A shared-platform website never sends the platform'"'"'s home page to a scraper' \
+  '## Case 33: An `http://` website is read over https, never over http' \
+  '## Case 34: An `m.facebook.com` page is counted as its `www.facebook.com` page' \
+  '## Case 35: A `profile.php?id=` page skips the Facebook count'; do
+  assert_contains "$EV" "$h"
+done
+for w in 'Cases 33 and 34 positive checks' '`find_contacts; shared-platform website`' '`read_site; shared-platform website`' \
+  '{"url": "https://www.facebook.com/harborbooks"}' '{"url": "https://smithbookkeeping.com/"}' '`read_site; https fetch failed`' \
+  '{"url": "https://www.facebook.com/smithbookkeeping/"}' '`find_ads facebook; profile id page`'; do
+  assert_contains "$EV" "$w"
+done
+# README: the standard and the one stated limit left
+assert_contains "$SP/README.md" 'Agent Standard](https://github.com/webspenser/agent-builder/blob/main/STANDARD.md) 7.3'
+flat_has "$SP/README.md" 'data could still leave in the hostname itself'
+
 finish

@@ -155,9 +155,45 @@ a lead that reaches one is completed the same way in every run (Per-lead
 cap).
 
 ## Scraping
-When `apify_contact_info` is listed, gather the websites of the leads
-being researched (skip a lead with no website) and call `find_contacts`
-once per batch of up to 10. Add each email, phone and social link to its
+**Website URLs** come first. The guard blocks a start URL that breaks
+its URL rule, and a block stops the activity (below), so before a lead's
+`website` goes to `find_contacts` or `read_site`, check it in this order
+(`capabilities/scraping/tools/apify/usage.md`, Website and Facebook
+URLs, keeps the list):
+1. **Shared platform.** When the host is `facebook.com`,
+   `instagram.com`, `linktr.ee`, `sites.google.com`, `business.site` or
+   `yelp.com`, or a subdomain of one (`www.facebook.com`,
+   `m.facebook.com`, `joes.business.site`), or any `*.wixsite.com`,
+   `*.square.site`, `*.godaddysites.com` or `*.weebly.com` host, the
+   website is a page on a platform's host. Its root is the platform's
+   home page, and contacts read there are not the lead's. Neither
+   `find_contacts` nor `read_site` runs for the lead: both are recorded
+   as not run with the reason `shared-platform website`. A Facebook-page
+   website is still the lead's own Facebook page for `find_ads`
+   (Facebook page URLs, below), and the Google ads query is the brand
+   name, as for a lead with no website.
+2. **Scheme.** An `http://` website is upgraded to `https://`, with the
+   same host. If the https fetch fails (the run reads no page from that
+   URL), the source is recorded as not run with the reason
+   `https fetch failed`; it is never retried over `http://`.
+3. **Site root.** The start URL is the scheme and host only, with any
+   port, path, query and fragment dropped, and the host as the listing
+   gives it, `www` or not.
+
+A source recorded as not run for one of these reasons, or for a profile
+id page (Facebook page URLs), gets a ledger `step` with `outcome`
+`skipped`, `subject` the lead id, `items_in` and `items_out` 0, and
+`detail` the call and the reason (`find_contacts; shared-platform website`,
+`read_site; shared-platform website`, `read_site; https fetch failed`,
+`find_ads facebook; profile id page`). A call that ran and failed its
+https fetch still has its own `step` with its estimate. A capped lead
+names the source among its sources not run with the reason in
+parentheses (`apify_site_reader (shared-platform website)`).
+
+When `apify_contact_info` is listed, gather the site roots of the leads
+being researched (Website URLs; skip a lead with no website, and leave
+out one with a shared-platform website) and call `find_contacts` once
+per batch of up to 10. Add each email, phone and social link to its
 lead's Contacts with its source URL.
 
 ### Evidence sources
@@ -178,18 +214,35 @@ usually come first. Each call counts against
   lead's Google Maps `Source URL` (for example
   `https://www.google.com/maps/search/?api=1&query=…&query_place_id=ChIJkyhXi8iHj4ARLP5o2YRo-iY`).
   With no such parameter, skip the call and list `apify_reviews` among the sources not run. The Preparer
-  always passes `personalData: false`, so no reviewer's name comes back.
+  always passes `personalData: false` (the guard requires it), so no
+  reviewer's name comes back.
 - `find_ads`: the website's bare domain (the brand name when there is
-  no website). The Facebook call runs only with the lead's own Facebook
-  page URL (from the contact scraper's social links or `facebook_url`);
-  with none, only the Google call runs, and there is no Facebook finding.
+  no website or a shared-platform website). The Facebook call runs only
+  with the lead's own Facebook page URL (from the contact scraper's
+  social links, `facebook_url` or a Facebook-page website), normalized
+  first (Facebook page URLs, below); with none, only the Google call
+  runs, and there is no Facebook finding.
 - `find_jobs`: the company's name and the lead's city, state and
   country. Zero listings is a result: no open listings under that name.
 - `read_site`: the site root of the `website` the Maps listing gives,
   as the start URL: its scheme and host only, with any path or query
   dropped (`https://example.com/locations/alameda?utm_source=gbp`
   starts at `https://example.com/`), and the host as the listing gives
-  it, `www` or not. Skip it when the lead has no website.
+  it, `www` or not (Website URLs). Skip it when the lead has no website
+  or a shared-platform website.
+
+**Facebook page URLs.** Before the Facebook call, the page URL is
+checked for a `/profile.php?id=` page first: its identity is in the
+query, which the guard doesn't let through. The Facebook call is
+skipped for it and recorded as not run with the reason
+`profile id page`, and the page is never sent as
+`https://www.facebook.com/profile.php`, which is no one's page.
+Otherwise `m.facebook.com` and `web.facebook.com` become
+`www.facebook.com`, `http://` becomes `https://`, and the query and
+fragment are stripped
+(`https://m.facebook.com/smithbookkeeping/?ref=page_internal` is sent as
+`https://www.facebook.com/smithbookkeeping/`). A URL on any other host
+is not a page URL: the Facebook call is not due, as with no page URL.
 
 **Missing bindings.** Before a picked source's first call in a run,
 check that `bindings/scraping.md` has every binding the source passes:
@@ -211,10 +264,13 @@ carries on with the other sources and web search.
 `apify_contact_info` when a refused `find_contacts` batch left the lead
 out, `apify_ads` when either of `find_ads`' two calls was due and did
 not run (a Facebook call skipped for want of the lead's own page URL
-was never due), `apify_reviews` with no `query_place_id`, and each other
-picked source that never ran. A lead is marked Research Capped (the
-flag, a capped reason start and a `stop_condition`) only when this list
-is not empty: a lead with no source left to run is not capped.
+was never due), `apify_reviews` with no `query_place_id`, each source
+recorded as not run for a reason (Website URLs, Facebook page URLs),
+with that reason in parentheses, and each other picked source that never
+ran. A lead is marked Research Capped (the flag, a capped reason start and a `stop_condition`) only when this list
+is not empty: a lead with no source left to run is not capped. A source
+named with a reason could not run, so it doesn't make the list count:
+a lead whose list holds only such sources is not capped.
 
 Before each Apify call, check the 7-day cap first, then the per-lead cap. When the 7-day check fails, the 7-day cap's handling and reason start apply, not the per-lead cap's.
 
@@ -350,8 +406,10 @@ In an interactive session the operator can ask for three things:
   check. Write their findings as one new research
   section with `log_research`, then re-run `score-lead` (`rubric:
   approach`), `match-offer` and `write-talking-points`, each from all of
-  the lead's research. End with `update_stage(lead_id, "Researched", reason)`. When every source has run, or could not for want of its input (no
-  `query_place_id`, no website), clear the flag with `update_lead`
+  the lead's research. End with `update_stage(lead_id, "Researched", reason)`. A source named with a reason is not run again.
+  When every source has run, or could not for want of its input (no
+  `query_place_id`, no website, a shared-platform website, a profile id
+  page or an https fetch that failed), clear the flag with `update_lead`
   (`research_capped: false`) and rewrite the reason with only the
   capped start (the start and its list) dropped, keeping every other
   start, such as a Segment change or `researched by operator request;
@@ -370,7 +428,9 @@ or `disqualified; <reason>` for a lead disqualified after research.
 A re-match is one `step` too, with `items_in` the findings read,
 `items_out` 0, and `detail` starting `re-match; `. A threshold lead
 skipped for having no Segment is a `step` with `outcome` `skipped`,
-`items_in` and `items_out` 0, and `detail` naming its Industry. Each
+`items_in` and `items_out` 0, and `detail` naming its Industry. A source
+recorded as not run for a website or Facebook reason is a `skipped`
+`step` too, as in Scraping, Website URLs. Each
 `find_contacts` call is a `step` with `subject` the website domains joined
 by `,` (truncated to 100 characters), `items_in` the URLs sent,
 `items_out` the contacts written, and `cost_usd` (an estimate; `detail`

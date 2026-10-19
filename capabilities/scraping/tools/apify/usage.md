@@ -180,6 +180,10 @@ it); each one skipped is recorded as not run with the reason given.
    the reason `https fetch failed`; it is never retried over `http://`.
    A website listed as `https://` that fails to load is an ordinary
    result: the run read nothing, and there is nothing to record from it.
+   Before any of this, lowercase the scheme (`HTTPS://` is `https://`)
+   and treat a website with no scheme (`example.com`) or a
+   scheme-relative one (`//example.com`) as `https://`, then apply the
+   same host and root rules, so the guard never receives a form it refuses.
 4. **Site root.** The root is the scheme and host only: drop any port,
    path, query and fragment, and keep the host as read above, `www` or
    not, as the listing gives it

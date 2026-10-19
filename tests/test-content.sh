@@ -1306,5 +1306,9 @@ printf '%s' "$C34" | grep -qF smithbookkeeping && _report no "Case 34 reuses Cas
 # README: the standard and the one stated limit left
 assert_contains "$SP/README.md" 'Agent Standard](https://github.com/webspenser/agent-builder/blob/main/STANDARD.md) 7.3'
 flat_has "$SP/README.md" 'data could still leave in the hostname itself'
+# Odd website forms are normalized in both files, so the guard never receives one it refuses
+for f in "$SP/capabilities/scraping/tools/apify/usage.md" "$SP/subagents/preparer.md"; do
+  flat_has "$f" 'lowercase the scheme (`HTTPS://` is `https://`) and treat a website with no scheme (`example.com`) or a scheme-relative one (`//example.com`) as `https://`, then apply the same host and root rules'
+done
 
 finish

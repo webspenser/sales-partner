@@ -191,8 +191,10 @@ the guard.
 Reject if `fields` contains `stage`, `sp_stage`,
 `sp_stage_changed_at`, `research_anyway` or `sp_research_anyway`. The
 properties `sp_segment`, `sp_industry`, `sp_hero_offer`,
-`sp_offer_reason` and `sp_offer_evidence` are written like any other
-lead property. To clear a select or text field (for example
+`sp_offer_reason`, `sp_offer_evidence` and `sp_research_capped` are
+written like any other lead property; `research_capped` maps to
+`sp_research_capped`, written as `"true"` or `"false"`.
+To clear a select or text field (for example
 `sp_hero_offer` and `sp_offer_evidence` when every offer is ruled out),
 write it as `""`: HubSpot stores an empty string as no value. Read the company first
 (`hubspot:get_crm_objects`, property `sp_do_not_contact`). If it is
@@ -329,8 +331,10 @@ Create these once in HubSpot. The connector can't create views.
   (`sp_do_not_contact`), then move the company to `Approved`: that
   approves the lead. Show `Do Not Contact`, `Segment` (`sp_segment`),
   `Hero offer` (`sp_hero_offer`), `Offer evidence` (`sp_offer_evidence`)
-  and `Offer reason` (`sp_offer_reason`) as columns, so you approve on
-  the match you can see.
+  `Offer reason` (`sp_offer_reason`) and `Research capped`
+  (`sp_research_capped`) as columns, so you approve on the match you can
+  see and a lead whose research stopped at an Apify cap (per-lead or
+  7-day) is obvious.
 - **Approved** — Companies filtered on `sp_stage` is `Approved`:
   approved, waiting for your workflow or your own touch. The agent never
   acts on them; move a company back to `Researched` to cancel.
@@ -356,7 +360,7 @@ what they find to `bindings/crm.md` in the instance:
    - on `companies`, `["sp_stage", "sp_stage_changed_at", "sp_do_not_contact",
      "sp_fit_score", "sp_fit_breakdown", "sp_approach_score", "sp_approach_breakdown",
      "sp_segment", "sp_hero_offer", "sp_offer_reason", "sp_offer_evidence",
-     "sp_research_anyway"]`: all of them exist, `sp_stage` has the ten status
+     "sp_research_anyway", "sp_research_capped"]`: all of them exist, `sp_stage` has the ten status
      options, and `sp_segment` and `sp_hero_offer` hold every segment id and
      offer id in `context/offer-catalog.md`;
    - on `contacts`, `["sp_role"]`: it has the three role options;
@@ -407,6 +411,7 @@ both equal to the text shown.
 | `sp_offer_reason` | Offer reason | Multi-line text | |
 | `sp_offer_evidence` | Offer evidence | Dropdown select | strong, moderate, weak |
 | `sp_research_anyway` | Research anyway | Single checkbox | Yes = `true`, No = `false` |
+| `sp_research_capped` | Research capped | Single checkbox | Yes = `true`, No = `false` |
 | `sp_size` | Size | Single-line text | |
 | `sp_source` | Source | Single-line text | |
 | `sp_source_url` | Source URL | Single-line text | |

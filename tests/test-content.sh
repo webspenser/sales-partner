@@ -23,7 +23,7 @@ while IFS= read -r f; do
 done < <(find "$SP" -name '*.md' -not -path './docs/*' -not -path './tests/*' -not -path './.git/*' -not -name README.md -not -path './.claude/*' -not -path './CLAUDE.md' -not -path './GEMINI.md' -not -path './AGENTS.md')
 
 echo "-- prospecting sources"
-assert_contains "$SP/context/operating-config.md" 'prospecting_sources: [apify_google_maps, apify_contact_info, web_search]'
+assert_contains "$SP/context/operating-config.md" 'prospecting_sources: [apify_google_maps, apify_contact_info, apify_reviews, apify_ads, apify_jobs, apify_site_reader, web_search]'
 assert_contains "$SP/context/operating-config.md" '**`prospecting_sources`**'
 assert_contains "$SP/subagents/prospector.md" 'only the sources listed in `prospecting_sources`'
 assert_contains "$SP/subagents/prospector.md" '`apollo` is listed'
@@ -500,7 +500,7 @@ echo "-- 7.0: no Airtable CRM"
 for f in capabilities/crm/contract.md capabilities/crm/tools/attio/usage.md skills/send-digest/SKILL.md; do
   assert_not_contains "./$f" "Airtable"
 done
-assert_contains "$SP/agent.yaml" 'standard: "7.2"'
+assert_contains "$SP/agent.yaml" 'standard: "7.3"'
 assert_contains "$SP/agent.yaml" 'capabilities: crm'
 
 echo "-- 7.0: no email_drafts"
@@ -530,7 +530,7 @@ assert_contains "$SP/README.md" 'messages only you, through Resend'
 assert_contains "$SP/evals/cases.md" 'A notification never reaches anyone but the owner'
 
 echo "-- 7.0.0: release"
-assert_contains "$SP/agent.yaml" 'version: 8.0.0'
+assert_contains "$SP/agent.yaml" 'version: 8.1.0'
 for m in agent.yaml .claude-plugin/plugin.json .claude-plugin/marketplace.json .codex-plugin/plugin.json gemini-extension.json; do
   grep -qF "$EXPECTED_DESC" "./$m" && _report ok "$m: description is the 8.0.0 string" || _report no "$m: description is not the 8.0.0 string"
 done
@@ -546,7 +546,7 @@ printf '%s' "$after_tools" | grep -qF 'git push -u' && _report ok "version contr
 printf '%s' "$after_tools" | grep -qF 'offer one test notification' && _report ok "open step offers the test notification" || _report no "open step does not offer the test notification"
 
 echo "-- 7.1: ledger"
-assert_contains "$SP/agent.yaml" 'standard: "7.2"'
+assert_contains "$SP/agent.yaml" 'standard: "7.3"'
 assert_contains "$SP/agent.yaml" 'capabilities: crm, owner_notify, ledger'
 assert_contains "$SP/agent.yaml" 'activity_prospect: crm, owner_notify, ledger'
 assert_contains "$SP/agent.yaml" 'activity_prepare: crm, owner_notify, ledger, scraping'
@@ -582,7 +582,7 @@ assert_contains "$SP/README.md" 'Upgrading from 7.0'
 wc -c < "$SP/AGENT.md" | awk '{exit !($1 < 6000)}' && _report ok "AGENT.md under 6000 bytes" || _report no "AGENT.md 6000 bytes or more"
 
 echo "-- 7.2: scraping"
-assert_contains "$SP/agent.yaml" 'standard: "7.2"'
+assert_contains "$SP/agent.yaml" 'standard: "7.3"'
 assert_contains "$SP/agent.yaml" 'capabilities: crm, owner_notify, ledger, scraping'
 assert_contains "$SP/capabilities/scraping/contract.md" '`pinned_inputs`'
 assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" 'mcp.apify.com?tools=compass/crawler-google-places,vdrmota/contact-info-scraper'
@@ -655,7 +655,7 @@ for t in attio hubspot; do
   U="$SP"/capabilities/crm/tools/$t/usage.md
   assert_contains "$U" "Reject a \`score\` other than \`fit\` or"
 done
-for slug in fit_score fit_breakdown approach_score approach_breakdown segment hero_offer offer_reason offer_evidence research_anyway; do
+for slug in fit_score fit_breakdown approach_score approach_breakdown segment hero_offer offer_reason offer_evidence research_anyway research_capped; do
   assert_contains "$SP/capabilities/crm/tools/attio/usage.md" "\`$slug\`"
   grep -qF "attr(\"$slug\"" ./capabilities/crm/tools/attio/bootstrap.py && _report ok "attio bootstrap creates $slug" || _report no "attio bootstrap misses $slug"
   assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" "\`sp_$slug\`"
@@ -781,7 +781,7 @@ done
 # 7.4" note, which has to name the retired stages and schedule key so operators can migrate.
 # That note is stripped (from its heading to the next "## " heading) before the README is checked.
 README_NO_UPGRADE=$(mktemp)
-awk '/^Upgrading from 7\.4/ { skip=1; next } skip && /^## / { skip=0 } !skip' "$SP/README.md" > "$README_NO_UPGRADE"
+awk '/^Upgrading from 7\.4/ { skip=1; next } skip && (/^## / || /^Upgrading from 8\.0/) { skip=0 } !skip' "$SP/README.md" > "$README_NO_UPGRADE"
 while IFS= read -r f; do
   src="$f"; [ "$f" = README.md ] && src="$README_NO_UPGRADE"
   for t in approacher approach_threshold enabled_channels callback_phone sending_identity write-cold-email write-linkedin-touch write-call-opener 'Approach Drafted' 'Ready to Send'; do
@@ -794,17 +794,17 @@ done < <(find AGENT.md README.md subagents skills templates context capabilities
 rm -f "$README_NO_UPGRADE"
 
 echo "-- 8.0.0: release: version, README flow and the upgrade note"
-assert_contains "$SP/agent.yaml" 'version: 8.0.0'
-assert_contains "$SP/README.md" 'Version 8.0.0.'
+assert_contains "$SP/agent.yaml" 'version: 8.1.0'
+assert_contains "$SP/README.md" 'Version 8.1.0.'
 for m in .claude-plugin/plugin.json .codex-plugin/plugin.json gemini-extension.json; do
-  assert_contains "./$m" '"version": "8.0.0"'
+  assert_contains "./$m" '"version": "8.1.0"'
 done
 assert_contains "$SP/README.md" 'Upgrading from 7.4'
 for t in 'Approved' 'Research Anyway' 'Talking Points' 'offer catalog' 'Hero Offer' 'schedule_approach'; do
   assert_contains "$SP/README.md" "$t"
 done
 # The README's retired stage names sit only inside the upgrade note (the strip above leaves none).
-UP=$(awk '/^Upgrading from 7\.4/ { f=1; next } f && /^## / { f=0 } f' "$SP/README.md")
+UP=$(awk '/^Upgrading from 7\.4/ { f=1; next } f && (/^## / || /^Upgrading from 8\.0/) { f=0 } f' "$SP/README.md")
 for t in 'Ready to Send' 'Approach Drafted' 'schedule_approach'; do
   printf '%s' "$UP" | grep -qF -- "$t" && _report ok "upgrade note names '$t'" || _report no "upgrade note does not name '$t'"
 done
@@ -959,7 +959,7 @@ done
 assert_contains "$EV" 'Asked to match offers for (f) and (g)'
 assert_contains "$EV" 'never `No segment:`'
 # I2: the 7.4 upgrade brings icp.md and operating-config.md in line with the catalog.
-UP=$(awk '/^Upgrading from 7\.4/ { f=1; next } f && /^## / { f=0 } f' "$SP/README.md")
+UP=$(awk '/^Upgrading from 7\.4/ { f=1; next } f && (/^## / || /^Upgrading from 8\.0/) { f=0 } f' "$SP/README.md")
 for t in 'Round 2 (the customer and both rubrics)' 'the catalog round alone leaves `icp.md` as it was' 'keeps no industry list' 'Delete `approach_threshold`,' '`enabled_channels`, `sending_identity` and `callback_phone` from the' 'first fills each lead'"'"'s empty Segment'; do
   printf '%s' "$UP" | grep -qF -- "$t" && _report ok "upgrade note: '$t'" || _report no "upgrade note missing '$t'"
 done
@@ -985,5 +985,330 @@ assert_not_contains "$SP/guard.yaml" 'drafts go to the CRM'
 assert_not_contains "$SD" 'My touches'
 assert_not_contains "$SD" 'Await reply to approach'
 assert_contains "$A" 'Per lead, its Industry and Segment, and its Hero Offer, Offer'
+
+echo "-- 8.1: evidence scrapers (contract, Apify usage)"
+SC="$SP/capabilities/scraping/contract.md"; SU="$SP/capabilities/scraping/tools/apify/usage.md"
+for op in find_reviews find_ads find_jobs read_site; do
+  grep -qE "^\| \`$op\` \|" "$SC" && _report ok "contract.md has operation $op" || _report no "contract.md missing operation $op"
+  assert_contains "$SU" "\`$op\`"
+done
+SETUP=$(awk '/^## Setup/ { f=1; next } f && /^## / { f=0 } f' "$SU")
+for key in max_reviews max_ads max_jobs max_site_pages max_site_depth max_review_places max_ad_queries max_ad_advertisers \
+           ads_result_type site_crawler_type site_html_transformer max_site_urls; do
+  printf '%s' "$SETUP" | grep -qF -- "- \`$key\` — " && _report ok "usage.md Setup lists $key" || _report no "usage.md Setup missing $key"
+done
+for d in '`max_reviews` — reviews per reviews call (default 50)' '`max_ads` — ads per Google query, and the Facebook results limit (default 5)' \
+         '`max_jobs` — job listings per jobs call (default 20)' '`max_site_pages` — pages the site reader reads per call (default 5)' \
+         '`max_site_depth` — link depth for the site reader (default 1)'; do
+  printf '%s' "$SETUP" | grep -qF -- "$d" && _report ok "usage.md Setup: $d" || _report no "usage.md Setup missing: $d"
+done
+printf '%s' "$SETUP" | grep -qF 'mcp.apify.com?tools=compass/crawler-google-places,vdrmota/contact-info-scraper,compass/Google-Maps-Reviews-Scraper,scrapesage/google-ads-transparency-scraper,apify/facebook-ads-scraper,valig/indeed-jobs-scraper,apify/website-content-crawler`' \
+  && _report ok "usage.md Setup gives the seven-actor connector URL" || _report no "usage.md Setup lacks the seven-actor connector URL"
+assert_contains "$SU" 'always pass `personalData: false`'
+assert_contains "$SU" 'never record reviewer names'
+assert_contains "$SU" 'always pass `onlyTotal: true`'
+assert_contains "$SU" 'With no page URL, skip this call and record no Facebook finding'
+assert_contains "$SU" 'Zero items is a valid result: no open listings'
+assert_contains "$SU" 'the `website` the Maps listing gives'
+assert_contains "$SU" '`"script, style, noscript, svg"`'
+assert_contains "$SU" 'never claim a site lacks chat'
+assert_contains "$SU" 'Do not pass `proxyConfiguration`'
+for t in compass--Google-Maps-Reviews-Scraper scrapesage--google-ads-transparency-scraper apify--facebook-ads-scraper \
+         valig--indeed-jobs-scraper apify--website-content-crawler; do
+  assert_contains "$SU" "\`apify:$t\`"
+  grep -qF "$t" "$SP/capabilities/scraping/tools/apify/guard.yaml" && _report ok "guard.yaml allows $t" || _report no "guard.yaml missing $t"
+done
+for c in '`find_reviews` | $0.05' '`find_ads`, Google | $0.01' '`find_ads`, Facebook | $0.03' '`find_jobs` | $0.005' '`read_site` | $0.03'; do
+  assert_contains "$SU" "$c"
+done
+assert_not_contains "$SU" 'reviewerId,'
+
+# Research Capped: an agent-written checkbox in both CRMs, unlike research_anyway
+CT="$SP/capabilities/crm/contract.md"
+assert_contains "$CT" 'Research Capped (checkbox)'
+assert_contains "$CT" '`offer_evidence` and `research_capped` among its fields'
+assert_contains "$CT" 'no guard policy forbids it'
+assert_not_contains "$SP/capabilities/crm/tools/attio/guard.yaml" 'research_capped'
+assert_not_contains "$SP/capabilities/crm/tools/hubspot/guard.yaml" 'research_capped'
+assert_contains "$SP/capabilities/crm/tools/attio/usage.md" '`offer_evidence` and `research_capped`'
+assert_contains "$SP/capabilities/crm/tools/attio/usage.md" '| Research Capped | `research_capped` | Checkbox | |'
+assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" '`research_capped` maps to'
+assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" '(`sp_research_capped`) as columns'
+assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" '"sp_research_anyway", "sp_research_capped"]'
+assert_contains "$SP/capabilities/crm/tools/hubspot/usage.md" '| `sp_research_capped` | Research capped | Single checkbox |'
+grep -qF 'attr("research_capped", "Research Capped", "checkbox"' ./capabilities/crm/tools/attio/bootstrap.py && _report ok "attio research_capped is a checkbox" || _report no "attio research_capped is not a checkbox"
+grep -qF 'prop("sp_research_capped", "Research capped", "bool", "booleancheckbox"' ./capabilities/crm/tools/hubspot/bootstrap.py && _report ok "hubspot sp_research_capped is a checkbox" || _report no "hubspot sp_research_capped is not a checkbox"
+
+echo "-- 8.1.0: catalog research tips, new config keys, interview"
+OC="$SP/context/operating-config.md"
+assert_contains "$OC" 'apify_cap_usd_per_lead: 0.50'
+assert_contains "$OC" 'research_budget_per_lead_minutes: 15'
+assert_not_contains "$OC" 'research_budget_per_lead_minutes: 8'
+for k in apify_reviews apify_ads apify_jobs apify_site_reader; do
+  grep -E '^prospecting_sources:' "$OC" | grep -qF "$k" && _report ok "prospecting_sources lists $k" || _report no "prospecting_sources lacks $k"
+  assert_contains "$OC" "\`$k\`"
+done
+assert_contains "$OC" '**`apify_cap_usd_per_lead`**'
+assert_contains "$OC" '**`research_budget_per_lead_minutes`**'
+assert_contains "$SP/context/offer-catalog.md" 'research_tips'
+assert_contains "$SP/skills/interview-business/SKILL.md" 'research_tips'
+assert_contains "$SP/skills/interview-business/SKILL.md" 'research_tips: >'
+for k in apify_reviews apify_ads apify_jobs apify_site_reader; do
+  assert_contains "$SP/skills/interview-business/SKILL.md" "\`$k\`"
+done
+assert_not_contains "$SP/skills/interview-business/SKILL.md" 'Apify connector URL'
+
+echo "-- 8.1.0: the Preparer's evidence sources, the per-lead cap, findings and review recency"
+PP="$SP/subagents/preparer.md"
+for w in apify_cap_usd_per_lead 'research capped at $' 'research capped by the 7-day Apify cap' research_capped research_tips \
+         '`find_reviews`' '`find_ads`' '`find_jobs`' '`read_site`'; do
+  assert_contains "$PP" "$w"
+done
+assert_contains "$PP" 'A source not listed in `prospecting_sources` never runs, even when a tip points to it.'
+assert_contains "$PP" 'Before each Apify call for a lead, the Preparer checks the call'"'"'s worst-case estimate against what remains'
+assert_contains "$PP" 'never raised from a session prompt'
+assert_contains "$PP" 'Continue research on a capped lead'
+assert_not_contains "$PP" 'Research Capped stays false'
+assert_contains "$PP" 'never in a scheduled run'
+assert_contains "$PP" 'always passes `personalData: false`'
+PR="$SP/subagents/prospector.md"
+assert_contains "$PR" 'Every source listed in `prospecting_sources` is exhausted'
+assert_contains "$PR" 'ignores the Preparer-only sources `apify_contact_info`, `apify_reviews`, `apify_ads`, `apify_jobs` and `apify_site_reader`'
+assert_contains "$PR" 'its own sources are `apify_google_maps` and'
+assert_not_contains "$PR" '`apify_google_maps`, `apify_contact_info`,'
+assert_contains "$SP/context/operating-config.md" 'the Preparer, not the Prospector'
+# Fix round 1: rulings A-C, the cap order, the sources-not-run list, one stop_condition per lead
+assert_contains "$PP" 'the `query_place_id` parameter of the'
+assert_contains "$PP" 'With no such parameter, skip the call and list `apify_reviews` among the sources not run.'
+assert_contains "$PP" 'Every lead the run still researches after the stop gets `research_capped: true` and the 7-day reason start'
+assert_contains "$PP" 'read from the lead'"'"'s current stage reason'
+assert_contains "$PP" 'End with `update_stage(lead_id, "Researched", reason)`.'
+assert_contains "$PP" 'then re-run `score-lead` (`rubric:'
+assert_contains "$PP" 'Before each Apify call, check the 7-day cap first, then the per-lead cap. When the 7-day check fails, the 7-day cap'"'"'s handling and reason start apply, not the per-lead cap'"'"'s.'
+assert_contains "$PP" 'name every listed source this lead'"'"'s research picked and did not complete'
+assert_contains "$PP" '`apify_contact_info` when a refused `find_contacts` batch left the lead'
+assert_contains "$PP" '`apify_ads` when either of `find_ads`'"'"' two calls was due and did'
+assert_contains "$PP" 'skipping any source already run for this lead in this run'
+assert_contains "$PP" 'Each capped lead gets one `stop_condition` of its own, never one event for several leads'
+assert_not_contains "$PP" 'the report names the sources still not run'
+for f in "$SP/capabilities/crm/contract.md" "$SP/capabilities/crm/tools/attio/usage.md"; do
+  assert_contains "$f" 'when research stopped at an Apify cap (per-lead or 7-day) or the operator declined to continue; cleared (`false`) when a continue completes'
+done
+grep -qF 'Set by the agent when research stopped at an Apify cap (per-lead or 7-day) or the operator declined to continue; cleared when a continue completes.' ./capabilities/crm/tools/attio/bootstrap.py \
+  && _report ok "attio research_capped description covers both caps" || _report no "attio research_capped description is narrow"
+assert_not_contains "$SP/capabilities/crm/contract.md" 'a scheduled run stopped at the per-lead Apify cap'
+RC="$SP/skills/research-company/SKILL.md"
+assert_contains "$RC" 'personalData: false'
+assert_contains "$RC" 'A review finding never carries a reviewer'"'"'s name'
+assert_contains "$RC" 'lacks chat'
+assert_contains "$RC" 'only after the home page and the relevant page'
+assert_contains "$SP/skills/match-offer/SKILL.md" '12 months'
+assert_contains "$SP/skills/match-offer/SKILL.md" 'An old review alone still counts'
+# Task 6: the digest marks research-capped leads and shows the per-lead cap
+SD="$SP/skills/send-digest/SKILL.md"
+DT="$SP/templates/digest.md"
+assert_contains "$SD" '(research capped)'
+assert_contains "$DT" '(research capped)'
+assert_contains "$SD" 'Research Capped'
+assert_contains "$SD" 'apify_cap_usd_per_lead'
+assert_contains "$DT" 'per-lead cap'
+assert_contains "$SD" 'per lead'
+
+echo "-- 8.1.0: evals for the research sources and the per-lead cap"
+EV="$SP/evals/cases.md"
+for h in \
+  '## Case 24: A scheduled lead stopped at the per-lead cap is marked Research Capped and still reaches `Researched`' \
+  '## Case 25: The 7-day Apify cap reached mid-lead caps that lead and every later one' \
+  '## Case 26: Research goes past the per-lead cap only when the operator says so in a session' \
+  '## Case 27: The offers'"'"' research tips pick the sources that run' \
+  '## Case 28: A research source not in `prospecting_sources` never runs, even when a tip points to it' \
+  '## Case 29: A review signal is quoted with its date and link, never the reviewer'"'"'s name' \
+  '## Case 30: A site "lacks" a feature only after two pages were read, and never "lacks chat"' \
+  '## Case 31: An old review doesn'"'"'t count when a newer one shows the same entry'; do
+  assert_contains "$EV" "$h"
+done
+for w in 'Cases 24 to 26 positive checks' 'research capped at $0.07; ' 'per-lead cap $0.07; not run: ' \
+  'research capped by the 7-day Apify cap; apify_reviews, apify_site_reader' '7-day Apify cap; not run: ' \
+  '`research_capped: false`' '`continue; `' '`personalData: false`' '`query_place_id`' 'lacks chat' \
+  'hero_offer=ps-inbound-lead-qualification; offer_evidence=moderate'; do
+  assert_contains "$EV" "$w"
+done
+
+echo "-- 8.1.0: release: research sources in the README flow and the upgrade note"
+for t in 'Upgrading from 8.0' 'Research Capped' 'reviews' 'Indeed' 'research tips'; do
+  assert_contains "$SP/README.md" "$t"
+done
+# The note names the config keys, the field, the bindings and the connector URL, and it
+# carries the exact connector URL from the Apify usage file's Setup.
+UP81=$(awk '/^Upgrading from 8\.0/ { f=1; next } f && (/^## / || /^Upgrading from 8\.0/) { f=0 } f' "$SP/README.md")
+for t in apify_reviews apify_ads apify_jobs apify_site_reader 'apify_cap_usd_per_lead: 0.50' \
+  'research_budget_per_lead_minutes: 15' research_capped 'bindings/scraping.md' 'Apify Actors' \
+  'mcp__claude_ai_Apify_Actors__' '/sales-partner:schedule'; do
+  printf '%s' "$UP81" | grep -qF -- "$t" && _report ok "8.0 upgrade note names '$t'" || _report no "8.0 upgrade note does not name '$t'"
+done
+APIFY_URL=$(grep -o 'https://mcp\.apify\.com?tools=[^`]*' "$SP/capabilities/scraping/tools/apify/usage.md" | head -1)
+[ -n "$APIFY_URL" ] && printf '%s' "$UP81" | grep -qF -- "$APIFY_URL" \
+  && _report ok "8.0 upgrade note carries the connector URL from the Apify usage file" \
+  || _report no "8.0 upgrade note lacks the connector URL from the Apify usage file"
+
+echo "-- 8.1.0: final-review fixes: the cap follow-up, the 8.0 upgrade path, the site root"
+# flat_has / flat_lacks match a phrase with the file's line breaks read as spaces.
+flat_has() { tr '\n' ' ' < "$1" | tr -s ' ' | grep -qF -- "$2" && _report ok "$1 says '$2'" || _report no "$1 does not say '$2'"; }
+flat_lacks() { tr '\n' ' ' < "$1" | tr -s ' ' | grep -qF -- "$2" && _report no "$1 still says '$2'" || _report ok "$1 does not say '$2'"; }
+SPEC81="$SP/docs/superpowers/specs/2026-10-18-research-scrapers-design.md"
+# I1: a capped lead is completed the same way in every run; the main session asks about continuing
+flat_has "$PP" 'The lead is then completed the same way in every run, scheduled or interactive'
+flat_has "$PP" 'The Preparer never pauses to ask whether to go on: a dispatched sub-agent cannot reach the operator mid-run.'
+flat_has "$PP" 'the main session then asks the operator, for each of those leads, whether to continue and with how much more'
+flat_has "$PP" 'The lead'"'"'s cap for the continue is the amount the operator gave, or a fresh `apify_cap_usd_per_lead` when they named none'
+assert_not_contains "$PP" 'Pause and ask'
+assert_not_contains "$PP" '**Interactive session.**'
+flat_lacks "$PP" 'the same continue prompt'
+assert_contains "$SP/AGENT.md" '**Capped leads.**'
+flat_has "$SP/AGENT.md" 'ask the operator, per lead, whether to continue and with how much more; on a yes, run its "Continue research on a capped lead" with that amount. Never in a scheduled run.'
+flat_has "$SP/AGENT.md" 'Never exceed the weekly Apify spend cap (`apify_spend_cap_usd_per_week`)'
+flat_has "$SP/AGENT.md" 'The weekly Apify spend cap (`apify_spend_cap_usd_per_week`) is reached mid-run. The per-lead cap only flags the lead.'
+assert_not_contains "$SP/AGENT.md" 'Never exceed the Apify spend cap.'
+flat_has "$SPEC81" '*As built:* the continue prompt moved from the Preparer to the main session, because a dispatched sub-agent can'"'"'t ask the operator anything mid-run.'
+C26=$(awk '/^## Case 26:/ { f=1; next } f && /^## Case / { f=0 } f' "$SP/evals/cases.md" | tr '\n' ' ' | tr -s ' ')
+for t in 'The Preparer asks nothing mid-run.' 'the main session, not the Preparer, asks the operator' 'with a $0.05 cap' 'naming no amount'; do
+  printf '%s' "$C26" | grep -qF -- "$t" && _report ok "Case 26 says '$t'" || _report no "Case 26 does not say '$t'"
+done
+printf '%s' "$C26" | grep -qF 'Preparer pauses' && _report no "Case 26 still has the Preparer pause" || _report ok "Case 26 has no Preparer pause"
+# I2a: an 8.0 config's missing keys use their defaults
+flat_has "$PP" 'A missing `apify_cap_usd_per_lead` uses its default `0.50`, and a missing `research_budget_per_lead_minutes` uses `15`: neither is a missing input'
+flat_has "$OC" 'Default `0.50`, which also applies when the key is missing'
+flat_has "$OC" 'Default `15`, which also applies when the key is missing'
+# I2b: a listed source without its bindings is skipped for the run, not a stop
+flat_has "$PP" 'that source is skipped for this run and never called. It is recorded as not run'
+flat_has "$PP" '`detail` `<source>; bindings missing: <keys>`'
+flat_has "$PP" 'The run calls `notify_owner(kind: error)` once, naming the missing bindings'
+flat_has "$PP" 'This is not a stop: the activity carries on with the other sources and web search.'
+MB=$(awk '/^\*\*Missing bindings\.\*\*/ { f=1 } f && /^$/ { exit } f' "$PP")
+for b in max_reviews max_review_places max_ads max_ad_queries max_ad_advertisers ads_result_type max_jobs \
+         max_site_pages max_site_depth max_site_urls site_crawler_type site_html_transformer; do
+  printf '%s' "$MB" | grep -qF -- "\`$b\`" && _report ok "Missing bindings names $b" || _report no "Missing bindings lacks $b"
+  assert_contains "$SU" "\`$b\` —"
+done
+# I2c: the 8.0 note's four steps put the connector and the tools step before the new source names
+n_url=$(printf '%s\n' "$UP81" | grep -nF 'https://mcp.apify.com?tools=' | head -1 | cut -d: -f1)
+n_tools=$(printf '%s\n' "$UP81" | grep -nF 'Then re-run setup'"'"'s tools step' | head -1 | cut -d: -f1)
+n_src=$(printf '%s\n' "$UP81" | grep -nF '`prospecting_sources`' | head -1 | cut -d: -f1)
+[ -n "$n_url" ] && [ -n "$n_tools" ] && [ -n "$n_src" ] && [ "$n_url" -lt "$n_src" ] && [ "$n_tools" -lt "$n_src" ] \
+  && _report ok "8.0 upgrade note: connector URL and tools step come before the new source names" \
+  || _report no "8.0 upgrade note: the new source names come before the connector URL or the tools step"
+[ "$(printf '%s\n' "$UP81" | grep -cE '^[0-9]+\. ')" = 4 ] && _report ok "8.0 upgrade note has four steps" || _report no "8.0 upgrade note does not have four steps"
+printf '%s' "$UP81" | grep -qF 'schedule gate' && _report no "8.0 upgrade note still says the schedule gate fails" || _report ok "8.0 upgrade note has no schedule-gate claim"
+UP81F=$(printf '%s' "$UP81" | tr '\n' ' ' | tr -s ' ')
+for t in 'Your scheduled routines install the latest plugin' 'a missing `apify_cap_usd_per_lead` uses `0.50`' \
+  'Until the tools step pushes the new bindings, the new sources are skipped and you get an error notification naming the missing bindings'; do
+  printf '%s' "$UP81F" | grep -qF -- "$t" && _report ok "8.0 upgrade note says '$t'" || _report no "8.0 upgrade note does not say '$t'"
+done
+# Minors: find_ads' Google call, the site root, first-run checks, the not-run list, a continue's reason
+assert_contains "$SU" 'Run the Google call whenever `find_ads` runs'
+assert_not_contains "$SU" 'Run the Google call for every lead'
+flat_has "$SU" 'the site root of the `website` the Maps listing gives: its scheme and host, with no path or query'
+flat_has "$PP" 'the site root of the `website` the Maps listing gives, as the start URL: its scheme and host only, with any path or query dropped'
+flat_has "$SU" 'Check on the first live run: the probe never ran a page-URL call'
+flat_has "$SU" 'Check on the first live run: the Google Ads, Facebook and Indeed `fields` above come from the actors'"'"' item schemas'
+flat_has "$PP" 'A lead is marked Research Capped (the flag, a capped reason start and a `stop_condition`) only when this list is not empty'
+flat_has "$PP" 'A later lead whose research picked no Apify source has no source not run, so it is not capped'
+flat_has "$PP" 'up to the next `; ` or the end of the reason'
+flat_has "$PP" 'rewrite the reason with only the capped start (the start and its list) dropped, keeping every other start'
+flat_has "$PP" 'the other starts stay'
+
+echo "-- 7.3: fixed values and URL rules on the Apify tools"
+assert_contains "$SP/agent.yaml" 'standard: "7.3"'
+AGD=capabilities/scraping/tools/apify/guard.yaml
+assert_contains "./$AGD" 'fixed:'
+assert_contains "./$AGD" 'urls:'
+comment_has() { tr '\n#' '  ' < "$1" | tr -s ' ' | grep -qF -- "$2"; } # the file with comment marks and line breaks flattened
+comment_has "$AGD" "can't be pinned" && _report no "$AGD still says the true/false inputs can't be pinned" || _report ok "$AGD no longer says the true/false inputs can't be pinned"
+for s in 'Four fixed values (Standard 7.3), each required' 'only_keys on startUrls[] still blocks requestsFromUrl'; do
+  comment_has "$AGD" "$s" && _report ok "$AGD says '$s'" || _report no "$AGD does not say '$s'"
+done
+
+echo "-- 7.3: URL normalization for the guarded scrapers; evals and README"
+SU="$SP/capabilities/scraping/tools/apify/usage.md"; PP="$SP/subagents/preparer.md"; EV="$SP/evals/cases.md"
+# The shared-platform host list: one sentence in each file, the same hosts in both
+spl() { local t; t=$(tr '\n' ' ' < "$1" | tr -s ' '); case "$t" in *'The shared-platform hosts are '*) ;; *) return ;; esac
+        t=${t#*The shared-platform hosts are }; t=${t%%" host."*}; printf '%s' "$t" | grep -o '`[^`]*`' | sort; }
+SPL_SU=$(spl "$SU"); SPL_PP=$(spl "$PP")
+[ -n "$SPL_SU" ] && [ "$SPL_SU" = "$SPL_PP" ] && _report ok "usage.md and preparer.md give the same shared-platform hosts" \
+  || _report no "the shared-platform host lists differ (or are missing) between usage.md and preparer.md"
+for h in facebook.com fb.com fb.me instagram.com linkedin.com x.com twitter.com tiktok.com youtube.com nextdoor.com houzz.com \
+         yelp.com linktr.ee sites.google.com business.google.com g.page business.site \
+         '*.wixsite.com' '*.square.site' '*.godaddysites.com' '*.weebly.com'; do
+  printf '%s\n' "$SPL_SU" | grep -qxF -- "\`$h\`" && _report ok "shared-platform list has $h" || _report no "shared-platform list lacks $h"
+done
+[ "$(printf '%s\n' "$SPL_SU" | grep -c .)" = 21 ] && _report ok "shared-platform list has 21 hosts" || _report no "shared-platform list does not have 21 hosts"
+# The refused-host list follows the engine's local suffixes
+LOCALS=$(grep -A1 '^URL_LOCAL = ' hooks/guard_policy.py | grep -oE '"\.[a-z.]+"' | tr -d '"')
+[ "$(printf '%s\n' "$LOCALS" | grep -c .)" -ge 11 ] && _report ok "read URL_LOCAL from the guard engine" || _report no "could not read URL_LOCAL"
+for f in "$SU" "$PP"; do
+  for h in '`shared-platform website`' '`website host refused`' '`profile id page`' '`https fetch failed`' \
+           '`_host_reason`' '`URL_LOCAL`' '`localhost`' '`xn--`'; do
+    assert_contains "$f" "$h"
+  done
+  for s in $LOCALS; do assert_contains "$f" "\`$s\`"; done
+  flat_has "$f" 'with a single trailing dot dropped (`lakesidecpa.com.` is `lakesidecpa.com`; that is not a skip)'
+  flat_has "$f" 'whichever of `find_contacts` and `read_site` was due for the lead'
+  flat_has "$f" 'An `http://` website is upgraded to `https://`, with the same host.'
+  flat_has "$f" 'If the https fetch of an upgraded website fails'
+  flat_has "$f" 'A website listed as `https://` that fails to load is an ordinary result'
+  flat_has "$f" 'it is never retried over `http://`'
+  flat_has "$f" '`m.facebook.com` and `web.facebook.com` become `www.facebook.com`, as does any other subdomain'
+  flat_has "$f" '`business.facebook.com` and `l.facebook.com` are not page URLs'
+  flat_has "$f" 'Any `profile.php` URL names the page only in its query'
+  flat_has "$f" '(`sharer`, `sharer.php`, `plugins`, `dialog` or `tr`), is not a page URL'
+  flat_has "$f" 'any port, the query and the fragment are dropped'
+  flat_has "$f" 'A Facebook-page website is still the lead'"'"'s own Facebook page'
+  flat_lacks "$f" 'both are recorded as not run'
+done
+# The guard now requires the four settings; usage.md no longer leaves them to instructions.
+for t in 'cannot pin' "can't pin" 'cannot be pinned'; do flat_lacks "$SU" "$t"; done
+flat_has "$SU" 'always pass `personalData: false`; the guard requires it'
+flat_has "$SU" 'always pass `onlyTotal: true` (the count only; the guard requires it)'
+flat_has "$SU" '(the guard requires both, exactly as written)'
+flat_has "$SU" 'The guard requires every start URL to pass its URL rule'
+flat_has "$SU" '`startUrls` — at most 10 site roots'
+# The Preparer: contact URLs at the site root, the website checks before the contact batch, the not-run records
+flat_has "$PP" 'gather the site roots of the leads being researched'
+n_wu=$(grep -nF '**Website URLs**' "$PP" | head -1 | cut -d: -f1)
+n_fc=$(grep -nF 'call `find_contacts`' "$PP" | head -1 | cut -d: -f1)
+[ -n "$n_wu" ] && [ -n "$n_fc" ] && [ "$n_wu" -lt "$n_fc" ] \
+  && _report ok "preparer.md checks website URLs before the find_contacts batch" \
+  || _report no "preparer.md does not check website URLs before the find_contacts batch"
+for t in '`find_contacts; shared-platform website`' '`read_site; website host refused`' '`read_site; https fetch failed`' \
+         '`find_ads facebook; profile id page`' '`apify_site_reader (shared-platform website)`' \
+         'never sent as `https://www.facebook.com/profile.php`' 'out one with a shared-platform website or a refused host'; do
+  flat_has "$PP" "$t"
+done
+flat_has "$PP" 'a shared-platform website, a refused website host, a profile id page or an https fetch that failed'
+# Evals: five cases, each matching the shipped calls
+for h in \
+  '## Case 32: A shared-platform website never sends the platform'"'"'s home page to a scraper' \
+  '## Case 33: An `http://` website is read over https, never over http' \
+  '## Case 34: An `m.facebook.com` page is counted as its `www.facebook.com` page' \
+  '## Case 35: A `profile.php?id=` page skips the Facebook count' \
+  '## Case 36: A website host the guard refuses is never sent'; do
+  assert_contains "$EV" "$h"
+done
+for w in 'Cases 33 and 34 positive checks' '`find_contacts; shared-platform website`' '`read_site; shared-platform website`' \
+  '{"url": "https://www.facebook.com/harborbooks"}' '{"url": "https://smithbookkeeping.com/"}' '`read_site; https fetch failed`' \
+  '{"url": "https://www.facebook.com/lakesidecpa/"}' '`find_ads facebook; profile id page`' \
+  '`find_contacts; website host refused`' '`read_site; website host refused`' '{"url": "https://lakesidecpa.com/"}'; do
+  assert_contains "$EV" "$w"
+done
+flat_has "$EV" 'a test domain you control that serves only http (Apify fetches from its cloud'
+C34=$(awk '/^## Case 34:/ { f=1; next } f && /^## Case / { f=0 } f' "$EV")
+printf '%s' "$C34" | grep -qF smithbookkeeping && _report no "Case 34 reuses Case 33's smithbookkeeping" || _report ok "Case 34 has its own page name"
+# README: the standard and the one stated limit left
+assert_contains "$SP/README.md" 'Agent Standard](https://github.com/webspenser/agent-builder/blob/main/STANDARD.md) 7.3'
+flat_has "$SP/README.md" 'data could still leave in the hostname itself'
+# Odd website forms are normalized in both files, so the guard never receives one it refuses
+for f in "$SP/capabilities/scraping/tools/apify/usage.md" "$SP/subagents/preparer.md"; do
+  flat_has "$f" 'lowercase the scheme (`HTTPS://` is `https://`) and treat a website with no scheme (`example.com`) or a scheme-relative one (`//example.com`) as `https://`, then apply the same host and root rules'
+done
 
 finish

@@ -78,6 +78,11 @@ caller for `write-talking-points`:
    two review sites) is one finding. Only the catalog's signals count: a
    finding that seems to point to the offer but matches none of its
    `signals` is not a signal.
+   **Review recency.** A review older than 12 months (by its date, as of
+   today) does not count for a catalog entry when a review from the last
+   12 months shows the same entry: not as a signal here, nor as a
+   rule-out in step 3. An old review alone still counts. The rule is for
+   reviews only; job posts and ads are current by nature.
 5. **Pick.** If every offer in the segment is ruled out, write
    `hero_offer` and `offer_evidence` empty and an `offer_reason` that
    names each rule-out with its source (form below). Otherwise always

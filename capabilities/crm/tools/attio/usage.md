@@ -81,6 +81,7 @@ findings in the research note.
 | `offer_reason` | text | `Offer Reason` |
 | `offer_evidence` | select — `strong`, `moderate`, `weak` | `Offer Evidence` |
 | `research_anyway` | checkbox | `Research Anyway` — set by the operator only; the agent reads it, never writes it |
+| `research_capped` | checkbox | `Research Capped` — written by the agent: `true` when research stopped at an Apify cap (per-lead or 7-day) or the operator declined to continue; cleared (`false`) when a continue completes |
 | `size` | text | `Size` |
 | `source` | text | `Source` |
 | `source_url` | text | `Source URL` |
@@ -191,8 +192,8 @@ write nothing) exactly where the contract says the operation rejects.
   real task for the operator.
 - **`update_lead`** — Reject if `fields` contains `stage`,
   `stage_changed_at` or `research_anyway`. `segment`, `industry`,
-  `hero_offer`, `offer_reason` and `offer_evidence` go to the Pipeline
-  entry like any other lead field. To clear a select or text field (for
+  `hero_offer`, `offer_reason`, `offer_evidence` and `research_capped`
+  (`true` or `false`) go to the Pipeline entry like any other lead field. To clear a select or text field (for
   example `hero_offer` and `offer_evidence` when every offer is ruled
   out), write it as `[]`: an entry value may be an array even for a
   single-value attribute, and an empty one removes the value. Read the Pipeline entry first. If
@@ -345,7 +346,8 @@ can't):
   research note and its Talking Points note, then
   move the lead to `Approved`: that approves it. Show `do_not_contact`, so an opted-out
   lead is obvious, and `segment`, `hero_offer`, `offer_reason` and
-  `offer_evidence`.
+  `offer_evidence`. Show `research_capped` too, so a lead whose research
+  stopped at an Apify cap (per-lead or 7-day) is obvious.
 - **Approved** — filtered on `stage` is `Approved`: approved, waiting
   for your workflow or your own touch. The agent never acts on them;
   move a lead back to `Researched` to cancel.
@@ -367,7 +369,7 @@ what they find to `bindings/crm.md` in the instance:
 3. `attio:list-list-attribute-definitions` on `sales_partner_pipeline`
    — every slug in its Schema table above must exist (including
    `segment`, `hero_offer`, `offer_reason`, `offer_evidence` and
-   `research_anyway`), `stage` must hold the ten statuses, and `segment` and
+   `research_anyway` and `research_capped`), `stage` must hold the ten statuses, and `segment` and
    `hero_offer` must hold every segment id and offer id in
    `context/offer-catalog.md`.
 4. `attio:list-attribute-definitions` on `people` — `sp_role`,
@@ -423,6 +425,7 @@ for the workspace. Then add its attributes in the list's settings:
 | Offer Reason | `offer_reason` | Text | |
 | Offer Evidence | `offer_evidence` | Select | strong, moderate, weak |
 | Research Anyway | `research_anyway` | Checkbox | |
+| Research Capped | `research_capped` | Checkbox | |
 | Size | `size` | Text | |
 | Source | `source` | Text | |
 | Source URL | `source_url` | Text | |

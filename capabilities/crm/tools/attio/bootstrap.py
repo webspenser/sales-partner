@@ -73,12 +73,20 @@ def read_catalog(path):
                  f"(found {len(blocks)}). If this is the unfilled package template, run the "
                  "interview's offer catalog round first; it writes the catalog.")
     segments, offers, seen, stack = [], [], set(), []  # stack: (indent, key)
+    scalar = None  # indent a line must exceed to stay inside a block scalar (research_tips: >)
     for raw in blocks[0]:
+        if scalar is not None:
+            if not raw.strip() or len(raw) - len(raw.lstrip()) > scalar:
+                continue  # prose, whatever it looks like
+            scalar = None
         line = re.sub(r"(^|\s)#.*$", "", raw).rstrip()
         text = line.lstrip()
         if not text:
             continue
         indent = len(line) - len(text)
+        if re.match(r"^(-\s+)?[A-Za-z_][\w-]*:\s*[>|][+-]?\d*$", text):
+            scalar = indent + (2 if text.startswith("-") else 0)
+            continue
         if text in ("segments:", "offers:"):
             while stack and stack[-1][0] >= indent:
                 stack.pop()
@@ -124,6 +132,8 @@ def build_lists(segment_ids, offer_ids):
             attr("offer_evidence", "Offer Evidence", "select", ["strong", "moderate", "weak"]),
             attr("research_anyway", "Research Anyway", "checkbox",
                  description="Operator only: research this lead although its Fit score or Segment would skip it."),
+            attr("research_capped", "Research Capped", "checkbox",
+                 description="Set by the agent when research stopped at an Apify cap (per-lead or 7-day) or the operator declined to continue; cleared when a continue completes."),
             attr("size", "Size", "text"),
             attr("source", "Source", "text"),
             attr("source_url", "Source URL", "text"),

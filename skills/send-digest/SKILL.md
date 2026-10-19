@@ -120,7 +120,8 @@ stage moves, no field edits, no talking-points or research section, not even a
 - CRM **`query_by_stage`** on `Researched` — Section 1, Review — and on
   `Approved` — Section 2, Approved, not yet contacted.
 - CRM **`get_lead`**, once for each lead those two calls return (its
-  Segment, Hero Offer, Offer Evidence and Do Not Contact).
+  Segment, Hero Offer, Offer Evidence, Research Capped and Do Not
+  Contact).
 - CRM **`query_by_stage`** with its `next_action_due_before` filter
   (`stage` omitted, so leads across every stage are considered) —
   Section 3, Next actions due today.
@@ -178,6 +179,13 @@ First, call `ledger_status`, then write `run_started`
      offer position and `no evidence` in the evidence position; with no
      Segment either, the segment reads `no segment`. Marked leads keep
      their place in the Approach-score order.
+   - **Research capped leads.** Mark a lead whose `Research Capped` is
+     true with `(research capped)` after the evidence (after the `weak`
+     mark when it has one). The flag is true when research stopped at an
+     Apify cap, per lead or 7-day, or the operator declined to continue;
+     the lead's stage reason says which cap and which sources did not
+     run, and the digest does not repeat it. The mark changes neither
+     the order nor the count.
    - **Do Not Contact leads.** Mark every lead whose `Do Not Contact` is
      true `⚠ DO NOT SEND — lead is Do Not Contact` and list those first.
      Report only: the digest writes nothing to the CRM.
@@ -293,7 +301,9 @@ First, call `ledger_status`, then write `run_started`
    and `prepare` (`find_events`) — the same weekly boundary the anchor
    uses, so spend and digest windows line up. Compare it to
    `apify_spend_cap_usd_per_week` from `operating-config.md`. Report the
-   dollar amount spent, the cap, and the percentage. The amounts are
+   dollar amount spent, the weekly cap, and the percentage, then the
+   per-lead cap, `apify_cap_usd_per_lead` from the same file, next to
+   it as `$<cap> per lead`. The amounts are
    estimates (Apify does not return cost). This section does
    not touch the CRM.
 8. Render all six sections, in the fixed order above, every run — a
@@ -334,7 +344,7 @@ matches the wall clock exactly this week. Anchor: Monday, 2026-08-24,
 
 ## Review (4)
 - Harrow Analytics — saas-vendors · onboarding-audit · strong — [link]
-- Quill Systems — saas-vendors · onboarding-audit · moderate — [link]
+- Quill Systems — saas-vendors · onboarding-audit · moderate (research capped) — [link]
 - Thornfield Media — local-media · ad-teardown · weak (weak: segment fit only) — [link]
 - ⚠ Larkspur Dental — dental-clinics · no offer · no evidence — [link]
 
@@ -360,7 +370,7 @@ matches the wall clock exactly this week. Anchor: Monday, 2026-08-24,
 - Owner's pipeline now: Contacted 4, Engaged 1, Open Deal 1, Nurture 2, Customer 0
 
 ## Spend
-$18.40 of $25.00/week Apify cap (74%) — $6.60 remaining this cap week
+$18.40 of $25.00/week Apify cap (74%) — $6.60 remaining this cap week; per-lead cap $0.50
 ```
 
 Sent with `notify_owner(kind: digest)` to the owner's pinned address.

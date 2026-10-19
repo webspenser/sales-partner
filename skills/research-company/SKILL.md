@@ -34,6 +34,10 @@ only gathers and records.
       review count, hours, recent reviews, and the business's main line
       and general inbox → `listing`) and whether it has a website and
       what state it is in (`web_presence`)
+
+   The scraping sources the Preparer runs from the offers' tips
+   (reviews, ads, job posts, the website reader) feed items 1, 3 and 6;
+   record their results as in Evidence-source findings below.
 4. Collect each finding worth recording as you go, and write them all
    at the end of the run with one CRM `log_research(lead_id,
    findings[])` call, each finding with `type, summary, source_url,
@@ -90,6 +94,36 @@ only gathers and records.
    leaving the lead with no research trail at all. The contact routes,
    signals and rule-outs step 5 records are kept beside it, never
    dropped for it.
+
+## Evidence-source findings
+
+Each result becomes findings of the seven types, each with its source
+URL, under the step 5 and usable-hook rules above.
+
+- **Reviews (`find_reviews`) → `listing`.** The Preparer passes
+  `personalData: false`, so the reviews come back without their
+  reviewers. A finding quotes only the words of the review that show the
+  signal or rule-out, gives the review's date as `Date`, and links the
+  place's Maps URL as `Source URL` (there is no per-review URL). A review finding never carries a reviewer's name, and names of people in
+  the text (a technician's first name) are left out of the quote. The
+  newest review's date is the Approach rubric's review date.
+- **Job posts (`find_jobs`) → `hire`.** The title and date posted, with
+  the listing's URL. Zero listings means no open listings under that
+  name: it is not a finding.
+- **Ads (`find_ads`) → `web_presence`, presence only.** Whether the
+  business runs Google ads (the advertiser's Ads Transparency URL) or
+  Facebook ads (its own page's ad count, with the page URL the call
+  sent, normalized and with no query), never what
+  the ads say. No advertiser found is not a finding: the search may
+  simply have missed one.
+- **Site features (`read_site`) → `web_presence`.** For each feature
+  the tips name (online booking, a client portal, a quote form), say
+  "has" or "lacks", with the page checked as `Source URL`. "Lacks" is
+  claimed only after the home page and the relevant page (contact,
+  booking or services) were both read; the `Summary` names both. Never
+  claim "lacks chat": chat usually loads by script, which the reader
+  does not run. "Has chat" can be claimed when the widget's markup or
+  link is on the page.
 
 ## What makes a hook usable
 

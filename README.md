@@ -24,6 +24,14 @@ and when.
   decision-maker is, and how to reach them. Every fact links to where
   it was found. A second score, from that research, is recorded for
   you to read; it doesn't trigger anything.
+- **Evidence from reviews, ads, jobs and the website.** It reads a
+  business's recent Google reviews (quoting a snippet with its date and
+  link, never the reviewer's name), checks whether it runs Google or
+  Facebook ads, looks for open jobs on Indeed, and reads its website,
+  guided by the research tips you gave for each offer. Each source is
+  capped, and a lead's Apify spend stops at $0.50 by default. A lead
+  that hit the cap carries a **Research Capped** flag and says which
+  sources it skipped, so you can decide whether to continue.
 - **The offer most likely to land.** Each lead gets a Segment, an
   Industry, and a Hero Offer from your offer catalog, with an Offer
   Reason and an Offer Evidence rating (strong, moderate or weak) that
@@ -87,7 +95,8 @@ and when.
 - **Claude Code** on a paid Claude plan, which runs the agent and its
   weekly schedule.
 - **Apify**, your own account, with a monthly usage limit you set in
-  Apify Console, for local-business listings and website contact details.
+  Apify Console, for local-business listings, website contact details,
+  reviews, ads, jobs and website reading.
 
 **Want it set up for you?** [Webspenser](https://www.webspenser.com/lp/agent-builder) offers
 a one-time, done-for-you setup: we connect your tools, run the
@@ -107,9 +116,9 @@ where your data lives — and run `/sales-partner:setup`. It writes
 make the folder a private git repo. From then on, opening Claude Code
 in that folder loads the agent. Plugin updates never touch your folder.
 
-Built on the [Agent Standard](https://github.com/webspenser/agent-builder/blob/main/STANDARD.md)
+Built on [Agent Standard](https://github.com/webspenser/agent-builder/blob/main/STANDARD.md) 7.3
 with [Agent Builder](https://github.com/webspenser/agent-builder).
-Version 8.0.0.
+Version 8.1.0.
 
 ## Use it from source
 
@@ -130,6 +139,12 @@ Version 8.0.0.
 - Resend for owner notifications, on the client's own account (`capabilities/owner_notify/tools/resend/`); setup pins your address and a no-reply sender, and the guard refuses a send to anyone else.
 - Airtable for the ledger (`capabilities/ledger/tools/airtable/`); `bootstrap.py` creates the base, and the guard keeps the record append-only.
 - Apify for scraping (`capabilities/scraping/tools/apify/`): setup connects the restricted connector URL and pins the limits (results per search, pages per site, and so on) the guard enforces.
+  The guard also requires the safe settings, such as reviews without
+  reviewer names, and checks every start URL: Facebook pages only on
+  facebook.com, and only an https site root on a public host for the
+  contact scraper and the site reader. One limit remains: the guard
+  can't tie a website to a lead, so data could still leave in the
+  hostname itself (a made-up subdomain).
 
 Each tool's guard policy makes Attio, HubSpot, Resend, Airtable and Apify unattended-safe.
 
@@ -216,6 +231,36 @@ and writing talking points. In order:
    runs the re-match path, which first fills each lead's empty Segment
    from its Industry, or from its research. Old Email, LinkedIn and Call
    draft notes are left in place.
+
+Upgrading from 8.0: Sales Partner now also reads reviews, ads, jobs and
+the website, and caps each lead's Apify spend. In order:
+
+1. Optional: re-run the interview's offer catalog round to add research
+   tips to each offer (the signals that tell the research where to look).
+2. Replace the Apify connector's URL and re-run setup's tools step. The
+   connector's restricted URL must now list all seven actors, so replace
+   it with:
+
+   `https://mcp.apify.com?tools=compass/crawler-google-places,vdrmota/contact-info-scraper,compass/Google-Maps-Reviews-Scraper,scrapesage/google-ads-transparency-scraper,apify/facebook-ads-scraper,valig/indeed-jobs-scraper,apify/website-content-crawler`
+
+   The connector may now appear as "Apify Actors", with its tools
+   prefixed `mcp__claude_ai_Apify_Actors__`; the guard still matches it.
+   Then re-run setup's tools step. It adds the `research_capped` field
+   (Research Capped), asks for the twelve new scraping bindings and
+   pushes `bindings/scraping.md`.
+3. Update `context/operating-config.md`: add `apify_reviews`,
+   `apify_ads`, `apify_jobs` and `apify_site_reader` to
+   `prospecting_sources`, add `apify_cap_usd_per_lead: 0.50`, and set
+   `research_budget_per_lead_minutes: 15`.
+4. Re-run `/sales-partner:schedule`.
+
+Your scheduled routines install the latest plugin, so they run this
+release before you finish. Research goes on: a missing
+`apify_cap_usd_per_lead` uses `0.50`. Until the tools step pushes the
+new bindings, the new sources are skipped and you get an error
+notification naming the missing bindings. Re-run
+`/sales-partner:schedule` afterwards (step 4): it checks the new
+bindings.
 
 ## Developing
 

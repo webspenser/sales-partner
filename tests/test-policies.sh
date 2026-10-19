@@ -109,7 +109,10 @@ echo "-- scraping (apify)"
 AG2=capabilities/scraping/tools/apify/guard.yaml; P=mcp__claude_ai_Apify__; SM=apify
 MAPS=compass--crawler-google-places; CONTACTS=vdrmota--contact-info-scraper
 printf '%s\n' 'max_places_per_search: 60' 'max_pages_per_site: 3' 'max_crawl_depth: 1' 'max_pages_per_call: 30' \
-  'max_search_terms: 1' 'max_sites_per_call: 10' 'max_dataset_items: 100' > "$W/scraping.md"
+  'max_search_terms: 1' 'max_sites_per_call: 10' 'max_dataset_items: 100' \
+  'max_reviews: 50' 'max_ads: 5' 'max_jobs: 20' 'max_site_pages: 5' 'max_site_depth: 1' 'max_review_places: 1' \
+  'max_ad_queries: 1' 'max_ad_advertisers: 1' 'ads_result_type: advertisers' 'site_crawler_type: cheerio' \
+  'site_html_transformer: none' 'max_site_urls: 1' > "$W/scraping.md"
 MAPS_OK='{"maxCrawledPlacesPerSearch":60,"searchStringsArray":["HVAC contractor"],"city":"Alameda","state":"CA","countryCode":"us","language":"en","waitSecs":45}'
 CT='"maxRequestsPerStartUrl":3,"maxDepth":1,"maxRequests":30'
 U1='{"url":"https://example.com"}'
@@ -153,6 +156,151 @@ for t in call-actor search-actors add-actor fetch-actor-details abort-actor-run 
   check 2 "blocked: $t"            $AG2 ${P}$t '{}' "" "$W/scraping.md"
 done
 check 2 "another actor"            $AG2 ${P}apify-slash-instagram-scraper '{}' "" "$W/scraping.md"
+
+# 8.1 evidence actors, under the server name the restricted connector shows.
+P2=mcp__claude_ai_Apify_Actors__
+REV=compass--Google-Maps-Reviews-Scraper; GADS=scrapesage--google-ads-transparency-scraper
+FB=apify--facebook-ads-scraper; JOBS=valig--indeed-jobs-scraper; SITE=apify--website-content-crawler
+jset() { python3 -c 'import json,sys;d=json.loads(sys.argv[1]);d[sys.argv[2]]=json.loads(sys.argv[3]);print(json.dumps(d))' "$@"; }
+jdel() { python3 -c 'import json,sys;d=json.loads(sys.argv[1]);del d[sys.argv[2]];print(json.dumps(d))' "$@"; }
+pins() { # pins <label> <tool> <ok json> <key>:<bound>:<raised json>...: each pin raised, then omitted
+  local label=$1 tool=$2 ok=$3 spec key bound; shift 3
+  for spec in "$@"; do
+    key=${spec%%:*}; bound=${spec#*:}; bound=${bound%%:*}
+    check 2 "$label $key raised"  $AG2 ${P2}$tool "$(jset "$ok" "$key" "${spec#*:*:}")" "is not a pinned value ($bound)" "$W/scraping.md"
+    check 2 "$label $key omitted" $AG2 ${P2}$tool "$(jdel "$ok" "$key")" "names no pinned value at $key" "$W/scraping.md"
+  done
+}
+lists() { # lists <label> <tool> <ok json> <key>:<bound>:<over-bound list json>...: over, empty, omitted
+  local label=$1 tool=$2 ok=$3 spec key bound; shift 3
+  for spec in "$@"; do
+    key=${spec%%:*}; bound=${spec#*:}; bound=${bound%%:*}
+    check 2 "$label $key over $bound" $AG2 ${P2}$tool "$(jset "$ok" "$key" "${spec#*:*:}")" "exceeds $bound at $key" "$W/scraping.md"
+    check 2 "$label $key empty"       $AG2 ${P2}$tool "$(jset "$ok" "$key" '[]')" "names no $key" "$W/scraping.md"
+    check 2 "$label $key omitted"     $AG2 ${P2}$tool "$(jdel "$ok" "$key")" "names no $key" "$W/scraping.md"
+  done
+}
+refused() { # refused <label> <tool> <ok json> <key>...: each key blocked, even set to false
+  local label=$1 tool=$2 ok=$3 key; shift 3
+  for key in "$@"; do
+    check 2 "$label may not use $key (false)" $AG2 ${P2}$tool "$(jset "$ok" "$key" false)" "may not use $key" "$W/scraping.md"
+  done
+}
+start_extras() { # start_extras <label> <tool> <ok json> <allowed url>: nothing but url on a start URL
+  local a
+  for a in requestsFromUrl method headers payload userData; do
+    check 2 "$1 start URL $a" $AG2 ${P2}$2 "$(jset "$3" startUrls "[{\"url\":\"$4\",\"$a\":\"x\"}]")" "may not use startUrls[].$a" "$W/scraping.md"
+  done
+  check 2 "$1 start URL as a bare string" $AG2 ${P2}$2 "$(jset "$3" startUrls "[\"$4\"]")" "expected an object" "$W/scraping.md"
+}
+start_url() { # start_url <rc> <label> <tool> <ok json> <url> [text]: the ok call with one start URL
+  check "$1" "$2" $AG2 ${P2}$3 "$(jset "$4" startUrls "[{\"url\":\"$5\"}]")" "${6:-}" "$W/scraping.md"
+}
+
+check 0 "maps on the Apify_Actors server passes" $AG2 ${P2}$MAPS "$MAPS_OK" "" "$W/scraping.md"
+check 2 "Apify_Actors call-actor denied" $AG2 ${P2}call-actor '{}' "is denied" "$W/scraping.md"
+check 2 "reviews tool on another server not allowed" $AG2 mcp__claude_ai_Gmail__$REV '{}' "is not in the allow list" "$W/scraping.md"
+
+REV_OK='{"placeIds":["ChIJkyhXi8iHj4ARLP5o2YRo-iY"],"maxReviews":50,"reviewsSort":"newest","personalData":false,"language":"en","waitSecs":45}'
+check 0 "reviews in limit with personalData false" $AG2 ${P2}$REV "$REV_OK" "" "$W/scraping.md"
+check 0 "reviews tool name matches in any case"    $AG2 ${P2}compass--google-maps-reviews-scraper "$REV_OK" "" "$W/scraping.md"
+check 0 "reviews with date, keyword and origin"    $AG2 ${P2}$REV '{"placeIds":["ChIJkyhXi8iHj4ARLP5o2YRo-iY"],"maxReviews":50,"reviewsSort":"newest","reviewsStartDate":"2025-10-18","reviewsFilterString":"voicemail","reviewsOrigin":"google","personalData":false,"language":"en","waitSecs":45}' "" "$W/scraping.md"
+pins    reviews $REV "$REV_OK" 'maxReviews:max_reviews:10000000'
+lists   reviews $REV "$REV_OK" 'placeIds:max_review_places:["ChIJaaaaaaaaaaaaaaaaaaaaaaa","ChIJbbbbbbbbbbbbbbbbbbbbbbb"]'
+check 2 "reviews respelled key"    $AG2 ${P2}$REV "$(jset "$REV_OK" PlaceIds '["ChIJx"]')" "may not use PlaceIds" "$W/scraping.md"
+refused reviews $REV "$REV_OK" startUrls
+check 2 "reviews startUrls list"   $AG2 ${P2}$REV "$(jset "$REV_OK" startUrls '[{"url":"https://maps.google.com/?cid=1"}]')" "may not use startUrls" "$W/scraping.md"
+check 2 "reviews without bindings" $AG2 ${P2}$REV "$REV_OK" "no max_reviews line"
+check 2 "reviews personalData true"     $AG2 ${P2}$REV "$(jset "$REV_OK" personalData true)" "must send personalData = false (got true)" "$W/scraping.md"
+check 2 "reviews personalData omitted"  $AG2 ${P2}$REV "$(jdel "$REV_OK" personalData)" "names no personalData" "$W/scraping.md"
+check 2 "reviews personalData as a string" $AG2 ${P2}$REV "$(jset "$REV_OK" personalData '"false"')" "must send personalData = false" "$W/scraping.md"
+check 2 "reviews personalData null"     $AG2 ${P2}$REV "$(jset "$REV_OK" personalData null)" "must send personalData = false (got null)" "$W/scraping.md"
+
+GADS_OK='{"queries":["bigbrothersplumbinginc.com"],"resultType":"advertisers","maxAdvertisersPerQuery":1,"maxAdsPerSearch":5,"region":"US","waitSecs":45}'
+check 0 "google ads in limit"      $AG2 ${P2}$GADS "$GADS_OK" "" "$W/scraping.md"
+pins    "google ads" $GADS "$GADS_OK" 'maxAdsPerSearch:max_ads:100' 'maxAdvertisersPerQuery:max_ad_advertisers:5' 'resultType:ads_result_type:"ads"'
+lists   "google ads" $GADS "$GADS_OK" 'queries:max_ad_queries:["a.com","b.com"]'
+check 2 "google ads respelled key" $AG2 ${P2}$GADS "$(jset "$GADS_OK" max_ads_per_search 5)" "may not use max_ads_per_search" "$W/scraping.md"
+refused "google ads" $GADS "$GADS_OK" includeDetails onlyNewAds monitorStoreName includeRawData proxyConfiguration startUrls urlsFromFile domains advertiserIds
+check 2 "google ads proxyConfiguration object" $AG2 ${P2}$GADS "$(jset "$GADS_OK" proxyConfiguration '{"useApifyProxy":true,"apifyProxyGroups":["DATACENTER"]}')" "may not use proxyConfiguration" "$W/scraping.md"
+check 2 "google ads domains list"  $AG2 ${P2}$GADS "$(jset "$GADS_OK" domains '["bigbrothersplumbinginc.com"]')" "may not use domains" "$W/scraping.md"
+check 2 "google ads includeDetails true" $AG2 ${P2}$GADS "$(jset "$GADS_OK" includeDetails true)" "may not use includeDetails" "$W/scraping.md"
+grep -v '^ads_result_type:' "$W/scraping.md" > "$W/scraping-notext.md"
+check 2 "google ads without the text pin" $AG2 ${P2}$GADS "$GADS_OK" "no ads_result_type line" "$W/scraping-notext.md"
+
+FB_OK='{"startUrls":[{"url":"https://www.facebook.com/bigbrothersplumbinginc"}],"onlyTotal":true,"resultsLimit":5,"activeStatus":"active","onlyAdsNewerThan":"2026-01-01","waitSecs":45}'
+check 0 "facebook in limit"        $AG2 ${P2}$FB "$FB_OK" "" "$W/scraping.md"
+pins    facebook $FB "$FB_OK" 'resultsLimit:max_ads:100'
+check 2 "facebook resultsLimit empty (unlimited)" $AG2 ${P2}$FB "$(jset "$FB_OK" resultsLimit '""')" "is not a pinned value (max_ads)" "$W/scraping.md"
+check 2 "facebook resultsLimit null" $AG2 ${P2}$FB "$(jset "$FB_OK" resultsLimit null)" "names no pinned value at resultsLimit" "$W/scraping.md"
+lists   facebook $FB "$FB_OK" 'startUrls:max_ad_queries:[{"url":"https://www.facebook.com/a"},{"url":"https://www.facebook.com/b"}]'
+check 2 "facebook respelled key"   $AG2 ${P2}$FB "$(jset "$FB_OK" ResultsLimit 5)" "may not use ResultsLimit" "$W/scraping.md"
+refused facebook $FB "$FB_OK" isDetailsPerAd includeAboutPage enrichWithEcommerceData sorting onlyAdsOlderThan proxyConfiguration
+check 2 "facebook enrichWithEcommerceData true" $AG2 ${P2}$FB "$(jset "$FB_OK" enrichWithEcommerceData true)" "may not use enrichWithEcommerceData" "$W/scraping.md"
+start_extras facebook $FB "$FB_OK" https://www.facebook.com/bigbrothersplumbinginc
+check 2 "facebook onlyTotal omitted" $AG2 ${P2}$FB "$(jdel "$FB_OK" onlyTotal)" "names no onlyTotal" "$W/scraping.md"
+check 2 "facebook onlyTotal false"   $AG2 ${P2}$FB "$(jset "$FB_OK" onlyTotal false)" "must send onlyTotal = true (got false)" "$W/scraping.md"
+start_url 0 "facebook page on facebook.com" $FB "$FB_OK" https://facebook.com/bigbrothersplumbinginc
+start_url 2 "facebook keyword Ad Library URL" $FB "$FB_OK" \
+  'https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=US&q=big%20brothers%20plumbing&search_type=keyword_unordered' "a query is not allowed"
+start_url 2 "facebook profile id page"  $FB "$FB_OK" 'https://www.facebook.com/profile.php?id=100064' "a query is not allowed"
+start_url 2 "facebook fragment"         $FB "$FB_OK" 'https://www.facebook.com/bigbrothersplumbinginc#about' "a fragment is not allowed"
+start_url 2 "facebook m. host"          $FB "$FB_OK" https://m.facebook.com/x "host m.facebook.com is not in the hosts list"
+start_url 2 "facebook web. host"        $FB "$FB_OK" https://web.facebook.com/x "is not in the hosts list"
+start_url 2 "facebook other host"       $FB "$FB_OK" https://evil.com/x "host evil.com is not in the hosts list"
+start_url 2 "facebook lookalike host"   $FB "$FB_OK" https://www.facebook.com.evil.com/x "is not in the hosts list"
+start_url 2 "facebook over http"        $FB "$FB_OK" http://www.facebook.com/x "scheme http is not allowed"
+start_url 2 "facebook user info"        $FB "$FB_OK" https://www.facebook.com@evil.com/x "user info (@) is not allowed"
+check 2 "facebook start URL without url" $AG2 ${P2}$FB "$(jset "$FB_OK" startUrls '[{}]')" "names no startUrls[].url" "$W/scraping.md"
+check 2 "facebook start URL not a string" $AG2 ${P2}$FB "$(jset "$FB_OK" startUrls '[{"url":5}]')" "startUrls[].url must be a URL string" "$W/scraping.md"
+
+JOBS_OK='{"title":"Big Brothers Plumbing","location":"Alameda, CA","country":"us","limit":20,"datePosted":"30","waitSecs":45}'
+check 0 "jobs in limit"            $AG2 ${P2}$JOBS "$JOBS_OK" "" "$W/scraping.md"
+pins    jobs $JOBS "$JOBS_OK" 'limit:max_jobs:100'
+check 2 "jobs respelled key"       $AG2 ${P2}$JOBS "$(jset "$JOBS_OK" Title '"x"')" "may not use Title" "$W/scraping.md"
+refused jobs $JOBS "$JOBS_OK" maxItems proxyConfiguration startUrls
+
+SITE_OK='{"startUrls":[{"url":"https://bigbrothersplumbinginc.com/"}],"crawlerType":"cheerio","maxCrawlPages":5,"maxResults":5,"maxCrawlDepth":1,"htmlTransformer":"none","removeElementsCssSelector":"script, style, noscript, svg","saveMarkdown":true,"waitSecs":45}'
+check 0 "site reader in limit"     $AG2 ${P2}$SITE "$SITE_OK" "" "$W/scraping.md"
+pins    "site reader" $SITE "$SITE_OK" 'crawlerType:site_crawler_type:"playwright:firefox"' 'htmlTransformer:site_html_transformer:"readableText"' \
+  'maxCrawlPages:max_site_pages:9999999' 'maxResults:max_site_pages:9999999' 'maxCrawlDepth:max_site_depth:20'
+lists   "site reader" $SITE "$SITE_OK" 'startUrls:max_site_urls:[{"url":"https://example.com"},{"url":"https://www.example.com"}]'
+check 2 "site reader respelled key" $AG2 ${P2}$SITE "$(jset "$SITE_OK" maxCrawlpages 5)" "may not use maxCrawlpages" "$W/scraping.md"
+refused "site reader" $SITE "$SITE_OK" customHttpHeaders pageFunction initialCookies summarize saveScreenshots saveContentTypes \
+  saveFiles saveHtmlAsFile includeUrlGlobs useSitemaps useLlmsTxt clickElementsCssSelector waitForSelector maxConcurrency proxyConfiguration
+check 2 "site reader customHttpHeaders object" $AG2 ${P2}$SITE "$(jset "$SITE_OK" customHttpHeaders '{"Cookie":"session=x"}')" "may not use customHttpHeaders" "$W/scraping.md"
+check 2 "site reader summarize true"    $AG2 ${P2}$SITE "$(jset "$SITE_OK" summarize true)" "may not use summarize" "$W/scraping.md"
+check 2 "site reader useSitemaps true"  $AG2 ${P2}$SITE "$(jset "$SITE_OK" useSitemaps true)" "may not use useSitemaps" "$W/scraping.md"
+check 2 "site reader includeUrlGlobs list" $AG2 ${P2}$SITE "$(jset "$SITE_OK" includeUrlGlobs '[{"glob":"https://example.com/**"}]')" "may not use includeUrlGlobs" "$W/scraping.md"
+check 2 "site reader proxyConfiguration object" $AG2 ${P2}$SITE "$(jset "$SITE_OK" proxyConfiguration '{"useApifyProxy":true}')" "may not use proxyConfiguration" "$W/scraping.md"
+check 2 "site reader maxConcurrency 200" $AG2 ${P2}$SITE "$(jset "$SITE_OK" maxConcurrency 200)" "may not use maxConcurrency" "$W/scraping.md"
+start_extras "site reader" $SITE "$SITE_OK" https://bigbrothersplumbinginc.com
+start_url 0 "site reader root without a slash" $SITE "$SITE_OK" https://bigbrothersplumbinginc.com
+start_url 0 "site reader root with the default port" $SITE "$SITE_OK" https://bigbrothersplumbinginc.com:443/
+start_url 2 "site reader page path"   $SITE "$SITE_OK" https://bigbrothersplumbinginc.com/contact-us "only the site root is allowed"
+start_url 2 "site reader query"       $SITE "$SITE_OK" 'https://bigbrothersplumbinginc.com/?ref=x' "a query is not allowed"
+start_url 2 "site reader over http"   $SITE "$SITE_OK" http://bigbrothersplumbinginc.com "scheme http is not allowed"
+start_url 2 "site reader IP address"  $SITE "$SITE_OK" https://1.2.3.4 "the host is an IP address"
+start_url 2 "site reader local host"  $SITE "$SITE_OK" https://printer.local "is local"
+start_url 2 "site reader other port"  $SITE "$SITE_OK" https://bigbrothersplumbinginc.com:8443/ "port 8443 is not the default for https"
+start_url 2 "site reader single label" $SITE "$SITE_OK" https://intranet "the host needs at least two labels"
+check 2 "site reader saveMarkdown omitted" $AG2 ${P2}$SITE "$(jdel "$SITE_OK" saveMarkdown)" "names no saveMarkdown" "$W/scraping.md"
+check 2 "site reader saveMarkdown false"   $AG2 ${P2}$SITE "$(jset "$SITE_OK" saveMarkdown false)" "must send saveMarkdown = true (got false)" "$W/scraping.md"
+check 2 "site reader removeElementsCssSelector omitted" $AG2 ${P2}$SITE "$(jdel "$SITE_OK" removeElementsCssSelector)" "names no removeElementsCssSelector" "$W/scraping.md"
+check 2 "site reader removeElementsCssSelector changed" $AG2 ${P2}$SITE "$(jset "$SITE_OK" removeElementsCssSelector '"script"')" "must send removeElementsCssSelector = \"script, style, noscript, svg\"" "$W/scraping.md"
+check 2 "site reader removeElementsCssSelector empty" $AG2 ${P2}$SITE "$(jset "$SITE_OK" removeElementsCssSelector '""')" "must send removeElementsCssSelector" "$W/scraping.md"
+
+# The contact scraper on the Apify_Actors server: site roots only.
+CT_OK="{\"startUrls\":[{\"url\":\"https://bigbrothersplumbinginc.com\"}],$CT,\"sameDomain\":true,\"mergeContacts\":true,\"waitSecs\":45}"
+check 0 "contacts root on the Apify_Actors server" $AG2 ${P2}$CONTACTS "$CT_OK" "" "$W/scraping.md"
+start_url 0 "contacts root with a slash" $CONTACTS "$CT_OK" https://bigbrothersplumbinginc.com/
+start_url 2 "contacts page path"  $CONTACTS "$CT_OK" https://bigbrothersplumbinginc.com/contact-us "only the site root is allowed"
+start_url 2 "contacts query"      $CONTACTS "$CT_OK" 'https://bigbrothersplumbinginc.com?x=1' "a query is not allowed"
+start_url 2 "contacts over http"  $CONTACTS "$CT_OK" http://bigbrothersplumbinginc.com "scheme http is not allowed"
+start_url 2 "contacts IP address" $CONTACTS "$CT_OK" https://10.0.0.1 "the host is an IP address"
+check 2 "contacts one bad URL among roots" $AG2 ${P2}$CONTACTS "$(jset "$CT_OK" startUrls '[{"url":"https://a.com"},{"url":"https://b.com/x"}]')" "only the site root is allowed" "$W/scraping.md"
+check 2 "contacts start URL requestsFromUrl" $AG2 ${P2}$CONTACTS "$(jset "$CT_OK" startUrls '[{"url":"https://a.com","requestsFromUrl":"https://a.com/list.txt"}]')" "may not use startUrls[].requestsFromUrl" "$W/scraping.md"
+check 2 "contacts start URL without url" $AG2 ${P2}$CONTACTS "$(jset "$CT_OK" startUrls '[{"url":"https://a.com"},{}]')" "names no startUrls[].url" "$W/scraping.md"
 SM=
 
 echo "-- Attio"
@@ -206,6 +354,8 @@ check 0 "write offer_reason"        $AT ${P}update-list-entry-by-id "{$X,\"entry
 check 0 "write offer_evidence"      $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"offer_evidence\":\"strong\"}}"
 check 0 "clear the offer fields"    $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"hero_offer\":[],\"offer_evidence\":[],\"offer_reason\":\"Every offer ruled out\"}}"
 check 0 "clear segment"             $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"segment\":[]}}"
+check 0 "write research_capped true"  $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"research_capped\":true}}"
+check 0 "write research_capped false" $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"research_capped\":false}}"
 check 2 "agent can't mark Engaged"    $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"stage\":\"Engaged\"}}" "stage may only be written as"
 check 0 "agent disqualifies"          $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"stage\":\"Disqualified\"}}"
 check 2 "agent can't open a deal"     $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"stage\":\"Open Deal\"}}" "stage may only be written as"
@@ -237,6 +387,8 @@ check 0 "write sp_offer_reason"       $HS ${H}manage_crm_objects '{"updateReques
 check 0 "write sp_offer_evidence"     $HS ${H}manage_crm_objects '{"updateRequest":{"objects":[{"objectType":"companies","objectId":202,"properties":{"sp_offer_evidence":"strong"}}]}}'
 check 0 "clear the sp_ offer fields"  $HS ${H}manage_crm_objects '{"updateRequest":{"objects":[{"objectType":"companies","objectId":202,"properties":{"sp_hero_offer":"","sp_offer_evidence":"","sp_offer_reason":"Every offer ruled out"}}]}}'
 check 0 "clear sp_segment"            $HS ${H}manage_crm_objects '{"updateRequest":{"objects":[{"objectType":"companies","objectId":202,"properties":{"sp_segment":""}}]}}'
+check 0 "write sp_research_capped true"  $HS ${H}manage_crm_objects '{"updateRequest":{"objects":[{"objectType":"companies","objectId":202,"properties":{"sp_research_capped":"true"}}]}}'
+check 0 "write sp_research_capped false" $HS ${H}manage_crm_objects '{"updateRequest":{"objects":[{"objectType":"companies","objectId":202,"properties":{"sp_research_capped":"false"}}]}}'
 check 2 "agent can't mark Contacted"  $HS ${H}manage_crm_objects '{"updateRequest":{"objects":[{"objectType":"companies","objectId":202,"properties":{"sp_stage":"Contacted"}}]}}' "sp_stage may only be written as"
 check 0 "agent disqualifies"          $HS ${H}manage_crm_objects '{"updateRequest":{"objects":[{"objectType":"companies","objectId":202,"properties":{"sp_stage":"Disqualified"}}]}}'
 check 2 "agent can't mark Engaged"    $HS ${H}manage_crm_objects '{"updateRequest":{"objects":[{"objectType":"companies","objectId":202,"properties":{"sp_stage":"Engaged"}}]}}' "sp_stage may only be written as"

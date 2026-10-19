@@ -78,12 +78,20 @@ def read_catalog(path):
                  f"(found {len(blocks)}). If this is the unfilled package template, run the "
                  "interview's offer catalog round first; it writes the catalog.")
     segments, offers, seen, stack = [], [], set(), []  # stack: (indent, key)
+    scalar = None  # indent a line must exceed to stay inside a block scalar (research_tips: >)
     for raw in blocks[0]:
+        if scalar is not None:
+            if not raw.strip() or len(raw) - len(raw.lstrip()) > scalar:
+                continue  # prose, whatever it looks like
+            scalar = None
         line = re.sub(r"(^|\s)#.*$", "", raw).rstrip()
         text = line.lstrip()
         if not text:
             continue
         indent = len(line) - len(text)
+        if re.match(r"^(-\s+)?[A-Za-z_][\w-]*:\s*[>|][+-]?\d*$", text):
+            scalar = indent + (2 if text.startswith("-") else 0)
+            continue
         if text in ("segments:", "offers:"):
             while stack and stack[-1][0] >= indent:
                 stack.pop()
@@ -127,6 +135,7 @@ def build_properties(segment_ids, offer_ids):
             prop("sp_offer_evidence", "Offer evidence", "enumeration", "select",
                  opts(["strong", "moderate", "weak"])),
             prop("sp_research_anyway", "Research anyway", "bool", "booleancheckbox", YESNO),
+            prop("sp_research_capped", "Research capped", "bool", "booleancheckbox", YESNO),
             prop("sp_size", "Size", "string", "text"),
             prop("sp_source", "Source", "string", "text"),
             prop("sp_source_url", "Source URL", "string", "text"),

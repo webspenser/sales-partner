@@ -42,6 +42,14 @@ files exists because a human has to answer it in their own words.
       it a poor fit. Push for signals a researcher could actually read
       off a public page, not a sales opinion such as "needs help". The
       same product pitched differently to two segments is two offers.
+      Last for each offer, after its signals and rule-outs, ask an
+      optional question: do you have research tips for it, meaning what
+      the researcher should look for and where (for example "reviews
+      mentioning voicemail; a front desk job post is strong; check
+      whether the website offers online booking")? These are the
+      offer's `research_tips`. The operator may skip it; an offer
+      without tips is researched from its signals and rule-outs alone.
+      Never write tips the operator didn't give.
    4. Give every segment and every offer an `id`: lowercase kebab-case
       (`a-z`, `0-9`, single hyphens), for example
       `ps-invoice-reconciliation`. **Every id is unique across the whole
@@ -51,8 +59,8 @@ files exists because a human has to answer it in their own words.
       `name` only.
 
    Then read the draft catalog back to the operator, segment by segment:
-   names, industries, and for each offer its what, suits, signals and
-   rule_out, with the ids. If an industry appears in two segments'
+   names, industries, and for each offer its what, suits, signals,
+   rule_out and any research_tips, with the ids. If an industry appears in two segments'
    `industries`, say so at the readback and ask the operator which one
    segment keeps it: a lead in an industry two segments list gets no
    Segment, and the Preparer skips it on every run unless the operator
@@ -82,7 +90,13 @@ files exists because a human has to answer it in their own words.
              - <a signal research can find>
            rule_out:
              - <a signal that makes it a poor fit>
+           research_tips: >
+             <what the researcher should look for, and where; omit the key
+             when the operator gave none>
    ```
+
+   `research_tips` is prose: keep it inside the folded block, with every
+   line indented under the key, and the bootstraps will skip it.
 
    Then update `context/business-profile.md`'s "What we sell" if the
    catalog round changed the summary, so the two files agree, before
@@ -157,8 +171,12 @@ files exists because a human has to answer it in their own words.
    leads per week should the pipeline target; which sourcing tools may
    it use (`apify_google_maps` for local-business listings,
    `apify_contact_info` for contact details on business websites,
+   `apify_reviews` for a business's Google Maps reviews, `apify_ads`
+   for the ads it runs, `apify_jobs` for its job posts,
+   `apify_site_reader` for reading a few pages of its website,
    `web_search`; Apify needs the business's own Apify account with a
-   monthly usage limit); which activities should
+   monthly usage limit; do not ask about the Apify connection itself,
+   because setup's tools step owns it); which activities should
    run on a schedule (prospecting, research, the
    digest — the shipped default is prospecting
    then research on Monday at 07:00 and the digest on Monday at 08:00),
@@ -257,7 +275,8 @@ companies.
   operator's, read back and confirmed before `offer-catalog.md` is
   written. Never fill a `signals` or `rule_out` list with plausible
   entries the operator didn't give; an offer with no signals yet is
-  written with `signals: []` and flagged. Two offers sharing an `id`, or
+  written with `signals: []` and flagged; an offer the operator gave no
+  tips for is written without a `research_tips` key. Two offers sharing an `id`, or
   an `id` that is not kebab-case, breaks the CRM bootstrap — check every
   id before writing.
 - **Writing a rubric the operator has not confirmed.** Deriving weights

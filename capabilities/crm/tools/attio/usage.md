@@ -25,7 +25,7 @@ companies are leads; everything else sits on the company and its people:
 | Lead (pipeline state) | one entry in list `sales_partner_pipeline` on the company |
 | Company facts | the `companies` record, built-in attributes |
 | Research record | the note `Sales Partner · Research` on the company |
-| Draft records | the notes `Sales Partner · Email`, `Sales Partner · LinkedIn`, `Sales Partner · Call` on the company |
+| Talking Points record | the note `Sales Partner · Talking Points` on the company |
 | Contact | a `people` record, `company` = the lead's company |
 
 The list works on every Attio plan, including those with no custom-object
@@ -68,7 +68,7 @@ findings in the research note.
 | Slug | Type | Contract field |
 |---|---|---|
 | `lead` | record-reference → companies | the lead itself (equals the parent) |
-| `stage` | status — exactly the eleven statuses | `Stage` |
+| `stage` | status — exactly the ten statuses | `Stage` |
 | `stage_changed_at` | timestamp | `Stage Changed At` |
 | `stage_reason` | text | the `reason` from the latest `update_stage` call |
 | `fit_score` | number | `Fit Score` |
@@ -76,6 +76,11 @@ findings in the research note.
 | `approach_score` | number | `Approach Score` |
 | `approach_breakdown` | text | `Approach Breakdown` |
 | `industry` | text | `Industry` |
+| `segment` | select — the catalog's segment ids | `Segment` |
+| `hero_offer` | select — the catalog's offer ids | `Hero Offer` |
+| `offer_reason` | text | `Offer Reason` |
+| `offer_evidence` | select — `strong`, `moderate`, `weak` | `Offer Evidence` |
+| `research_anyway` | checkbox | `Research Anyway` — set by the operator only; the agent reads it, never writes it |
 | `size` | text | `Size` |
 | `source` | text | `Source` |
 | `source_url` | text | `Source URL` |
@@ -87,6 +92,12 @@ findings in the research note.
 `industry` and `size` are text rather than select. Their values come
 from the band names in `icp.md`, which the interview sets, and an
 Attio select rejects any option that doesn't exist yet.
+
+`segment` and `hero_offer` are selects whose options are the ids in the
+YAML block of `context/offer-catalog.md`, so the options are the same
+ids the catalog uses, and never the display names. `bootstrap.py` adds
+the options and never removes any: an offer dropped from the catalog
+stays selectable on the leads already matched to it.
 
 ### People (standard object) — the Contacts table
 
@@ -114,16 +125,14 @@ that person may have arrived through an inbound source
 that must be kept. The operator can add people to a company by hand;
 the agent treats them like any other Contact.
 
-### Notes — the research and draft records
+### Notes — the research and talking points records
 
 Each lead has at most one note per title, on the company:
 
 | Title, exactly | Holds | Written by |
 |---|---|---|
 | `Sales Partner · Research` | one section per research run | `log_research` |
-| `Sales Partner · Email` | one section per email draft | `log_draft` (`channel: email`) |
-| `Sales Partner · LinkedIn` | one section per LinkedIn draft | `log_draft` (`channel: linkedin`) |
-| `Sales Partner · Call` | one section per call draft | `log_draft` (`channel: call`) |
+| `Sales Partner · Talking Points` | one section per set of talking points | `log_talking_points` |
 
 A note is created with its first section and only ever appended to.
 The newest section is at the bottom. The format is in **Reading notes
@@ -167,21 +176,26 @@ write nothing) exactly where the contract says the operation rejects.
   `people`, filtered on `company` eq the same reference. Notes come from
   `attio:search-notes-by-metadata` (`parent_record_object: companies`,
   `parent_record_id: lead_id`, paging until the results run out); keep
-  those whose title equals one of the four titles exactly, and read each
+  those whose title equals one of the two titles exactly, and read each
   with `attio:get-note-body`. When more than one note has the same
   exact title, use the oldest (earliest `created_at`): it is the one the
   agent appends to. Split a note into sections on its header lines; the
   last section is the newest, and a header with nothing after it (a
   write cut short) is skipped. If there is no company or no
   Pipeline entry, that is an error, not an empty record.
-- **`update_stage`** — Reject a `stage` outside the eleven. Find the
+- **`update_stage`** — Reject a `stage` outside the ten. Find the
   Pipeline entry by `lead`, then call `attio:update-list-entry-by-id`
   with `stage`, `stage_changed_at` = now (read the clock right before
   the call), and `stage_reason` = `reason`, **all in the same call**.
   Never write the reason into `next_action`; that field holds only a
   real task for the operator.
-- **`update_lead`** — Reject if `fields` contains `stage` or
-  `stage_changed_at`. Read the Pipeline entry first. If
+- **`update_lead`** — Reject if `fields` contains `stage`,
+  `stage_changed_at` or `research_anyway`. `segment`, `industry`,
+  `hero_offer`, `offer_reason` and `offer_evidence` go to the Pipeline
+  entry like any other lead field. To clear a select or text field (for
+  example `hero_offer` and `offer_evidence` when every offer is ruled
+  out), write it as `[]`: an entry value may be an array even for a
+  single-value attribute, and an empty one removes the value. Read the Pipeline entry first. If
   `do_not_contact` is already `true`, reject any `fields` that sets it
   to `false`. Otherwise, one `attio:update-list-entry-by-id` call. Company
   profile fields in `fields` go to the company instead: one
@@ -194,10 +208,11 @@ write nothing) exactly where the contract says the operation rejects.
   `source_url` or `hook`, or a `type` outside the seven. Build one
   research section (format below), then write it to the note titled
   `Sales Partner · Research` (see **Writing a section**).
-- **`log_draft`** — Reject a `channel` other than `email`, `linkedin` or
-  `call`. Build one draft section (format below), then write it to the
-  note titled `Sales Partner · Email`, `Sales Partner · LinkedIn` or
-  `Sales Partner · Call` (see **Writing a section**).
+- **`log_talking_points`** — Build one talking points section (format
+  below), then write it to the note titled `Sales Partner · Talking
+  Points` (see **Writing a section**): create the note with the header
+  line, then append the rest; later calls only append. The call takes no
+  channel argument.
 - **Writing a section.** `attio:search-notes-by-metadata` on the company,
   paging with `limit: 100` and `offset` until the results run out (a
   company can hold many other notes, newest first), or reuse the note
@@ -231,8 +246,9 @@ write nothing) exactly where the contract says the operation rejects.
   `sales_partner_pipeline`, filtered on `stage` eq the stage (when
   given), plus `next_action_due` lte the date for
   `next_action_due_before`. For `idle_days`: keep a lead when now minus
-  its `stage_changed_at` is greater than `idle_days`. Page with `offset`
-  until the results run out.
+  its `stage_changed_at` is greater than `idle_days`. When
+  `research_anyway` is given, add a filter on `research_anyway` eq that
+  boolean. Page with `offset` until the results run out.
 - **`query_by_score`** — Reject a `score` other than `fit` or
   `approach`. `attio:list-records-in-list` on `sales_partner_pipeline`,
   filtered on `fit_score` (for `fit`) or `approach_score` (for
@@ -249,38 +265,43 @@ The note titles and the section format are fixed, so the operator's own
 automations (for example an n8n workflow) can read them. They change
 only with a version bump and an upgrade note in the README.
 
-- Titles, exactly: `Sales Partner · Research`, `Sales Partner · Email`,
-  `Sales Partner · LinkedIn`, `Sales Partner · Call`.
+- Titles, exactly: `Sales Partner · Research`, `Sales Partner · Talking
+  Points`.
 - Every section starts with a header alone on its line:
   `=== YYYY-MM-DD · research ===` in the research note,
-  `=== YYYY-MM-DD · draft ===` in the draft notes.
+  `=== YYYY-MM-DD · talking points ===` in the Talking Points note.
 - A research section holds one block per finding, each with the lines
   `Type:`, `Date:` (the finding's own date), `Summary:`, `Source:` (the
   URL) and `Hook:`, blocks separated by a blank line.
-- A draft section holds `For: <person, title>` (or `For: the
-  business`), then the full draft, then the block that starts with the
-  line `Personalized statements` and its `opener:`, `relevance:`,
-  `proof:` and `ask:` lines (`templates/personalized-statements.md`).
+- A talking points section holds six labels, in this order: `For:`,
+  `Offer:`, `Opener:`, `Points:`, `Avoid:` and `Contact routes:`. `For:`
+  is `<person, title>` or `owner, name not found`; `Offer:` is the hero
+  offer's name, or `none matched`; `Opener:` is one line, or exactly
+  `Opener: unverified — no recent hook found` when research found no
+  usable hook. `Points:`,
+  `Avoid:` and `Contact routes:` are each followed by a list, one
+  `- ` item per line; an empty list (no points, nothing to avoid, no
+  contact route found) is the one line `- none`.
 - Every line is plain text: no tables, no markdown that renders only in
   a note's first section.
 
-To read the current draft or research, list the notes on the company
+To read the current talking points or research, list the notes on the company
 (Attio API: notes filtered by parent record, paging until the results
 run out), pick the title, and take the last header line and everything
 after it. If more than one note has the exact title, use the oldest
 (earliest `created_at`), the one the agent appends to. Skip a header
 with nothing after it. To pick leads, list `sales_partner_pipeline`
-entries filtered on `approach_score`, on `stage` = `Ready to Send`, so
-only leads the operator approved go out, and on
-`do_not_contact` is not true, so a lead the operator opted out after approving is left out.
-A lead that was researched but not drafted (its Approach score is below
-`approach_threshold`) has a research note and no draft notes.
+entries filtered on `stage` = `Approved`, so only leads the operator
+approved go out, and on `do_not_contact` is not true, so a lead the
+operator opted out after approving is left out. A lead the operator
+pushed through with `research_anyway` and that found no matching offer
+has a Talking Points note whose `Offer:` line reads `none matched`.
 
 ## Approval invariant under Attio
 
 Attio's `update-list-entry-by-id` can write any value to any
 attribute, so the contract's guarantees are enforced by mechanism
-(approval, append-only drafts and `dnc_one_way`):
+(`approval_only`, `dnc_one_way` and `no_delete`):
 
 1. **`guard.yaml` in this folder**, enforced by the agent's guard policy
    engine before every Attio call inside an instance (the agent's
@@ -296,14 +317,15 @@ attribute, so the contract's guarantees are enforced by mechanism
    - `update-note` takes only `note_id` and `operation`, and
      `operation` only `type` and `content`, with `type` = `append`: a
      note can't be prepended to, retitled or rewritten;
-   - `stage` may only be written as `New` on create, and never as
-     `Ready to Send` or a later status: only the operator approves a
-     lead;
+   - `stage` may only be written as `New` on create, and as `Scored`,
+     `Researched` or `Disqualified` after; never as `Approved` or a later
+     status: only the operator approves a lead;
+   - `research_anyway` may not be written at all: it is the operator's;
    - `do_not_contact` may only be updated to `true`;
    - attribute keys given as IDs instead of slugs are refused.
 
    The operator's own edits in the Attio app never pass through it, so
-   approving a lead (moving the lead to `Ready to Send`) stays
+   approving a lead (moving the lead to `Approved`) stays
    operator-only. "Notes go on companies only" is an instruction: the
    guard can't see which record a note is attached to, and a note on the
    wrong record sends nothing and deletes nothing.
@@ -318,18 +340,17 @@ The operator arranges Attio's screens. Suggested views on
 can't):
 
 - **Pipeline board** — a Kanban view grouped by `stage`.
-- **Review** — filtered on `stage` is `Approach Drafted`. Open a lead's
-  company to read its research note and its draft notes, edit what you
-  want, then move the lead to `Ready to Send`: that approves it. Show
-  `do_not_contact`, so an opted-out lead is obvious.
-- **Ready to Send** — filtered on `stage` is `Ready to Send`: approved,
-  waiting for your automation or your own touch. The agent never acts
-  on them; move a lead back to `Approach Drafted` to cancel.
+- **Review** — filtered on `stage` is `Researched`, sorted by
+  `approach_score`, highest first. Open a lead's company to read its
+  research note and its Talking Points note, then
+  move the lead to `Approved`: that approves it. Show `do_not_contact`, so an opted-out
+  lead is obvious, and `segment`, `hero_offer`, `offer_reason` and
+  `offer_evidence`.
+- **Approved** — filtered on `stage` is `Approved`: approved, waiting
+  for your workflow or your own touch. The agent never acts on them;
+  move a lead back to `Researched` to cancel.
 - **Research Queue** — filtered on `stage` is `Scored`, sorted by
   `fit_score`, highest first.
-- **Approach Queue** — filtered on `stage` is `Researched`, sorted by
-  `approach_score`, highest first. Leads below `approach_threshold`
-  stay here, with the reason in `approach_breakdown`.
 - **Due Today** — filtered on `next_action_due` on or before today.
 - **Nurture** — filtered on `stage` is `Nurture`, sorted by
   `revisit_on`, soonest first. Leads you parked to come back to; the
@@ -344,8 +365,11 @@ what they find to `bindings/crm.md` in the instance:
 2. `attio:list-objects` — record `companies_object_id:` and
    `people_object_id:`.
 3. `attio:list-list-attribute-definitions` on `sales_partner_pipeline`
-   — every slug in its Schema table above must exist, and `stage` must
-   hold the eleven statuses.
+   — every slug in its Schema table above must exist (including
+   `segment`, `hero_offer`, `offer_reason`, `offer_evidence` and
+   `research_anyway`), `stage` must hold the ten statuses, and `segment` and
+   `hero_offer` must hold every segment id and offer id in
+   `context/offer-catalog.md`.
 4. `attio:list-attribute-definitions` on `people` — `sp_role`,
    `sp_verified`, and `sp_notes` must exist. Record
    `lead_source_outbound: yes` if `lead_source` exists with an
@@ -386,7 +410,7 @@ for the workspace. Then add its attributes in the list's settings:
 
 | Title | Slug | Type | Options |
 |---|---|---|---|
-| Stage | `stage` | Status | New, Scored, Researched, Approach Drafted, Ready to Send, Contacted, Engaged, Open Deal, Nurture, Customer, Disqualified |
+| Stage | `stage` | Status | New, Scored, Researched, Approved, Contacted, Engaged, Open Deal, Nurture, Customer, Disqualified |
 | Stage Changed At | `stage_changed_at` | Timestamp | |
 | Stage Reason | `stage_reason` | Text | |
 | Fit Score | `fit_score` | Number | |
@@ -394,6 +418,11 @@ for the workspace. Then add its attributes in the list's settings:
 | Approach Score | `approach_score` | Number | |
 | Approach Breakdown | `approach_breakdown` | Text | |
 | Industry | `industry` | Text | |
+| Segment | `segment` | Select | the segment ids in `context/offer-catalog.md` |
+| Hero Offer | `hero_offer` | Select | the offer ids in `context/offer-catalog.md` |
+| Offer Reason | `offer_reason` | Text | |
+| Offer Evidence | `offer_evidence` | Select | strong, moderate, weak |
+| Research Anyway | `research_anyway` | Checkbox | |
 | Size | `size` | Text | |
 | Source | `source` | Text | |
 | Source URL | `source_url` | Text | |
@@ -409,7 +438,13 @@ Notes need no setup. When you are done, tell the agent and it probes again.
 ### Choice 2: run the script with an API key
 
 `bootstrap.py` creates everything in Choice 1 and only adds what is
-missing; it never deletes or renames anything.
+missing; it never deletes or renames anything. It reads the Segment and
+Hero Offer options from the instance's offer catalog before it makes any
+API call. Run it from the instance folder, where the default
+`context/offer-catalog.md` is found, or pass `--catalog <path>`. After
+you change the catalog, run it again: re-running only adds the new
+options. It also leaves the old stages `Approach Drafted` and `Ready to
+Send` in place and prints a note; archive them by hand in Attio.
 
 1. In Attio, create an API key (Settings, then Developers) with these
    scopes, all read-write: `object_configuration`, `list_configuration`,
@@ -420,7 +455,7 @@ missing; it never deletes or renames anything.
    never paste it into the chat or a file:
 
        read -rs ATTIO_API_KEY && export ATTIO_API_KEY
-       python3 "<package>/capabilities/crm/tools/attio/bootstrap.py"
+       python3 "<package>/capabilities/crm/tools/attio/bootstrap.py" --catalog context/offer-catalog.md
 
    The environment variable the script reads is `ATTIO_API_KEY`.
 3. Tell the agent it is done, and it probes again.

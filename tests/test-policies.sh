@@ -177,8 +177,9 @@ check 0 "read tool allowed"         $AT ${P}list-records-in-list '{"list":"sales
 check 0 "find notes allowed"        $AT ${P}search-notes-by-metadata '{"parent_record_object":"companies","parent_record_id":"00000000-0000-0000-0000-000000000001"}'
 check 0 "read a note allowed"       $AT ${P}get-note-body "{$N}"
 check 0 "create a note"             $AT ${P}create-note '{"parent_object":"companies","parent_record_id":"00000000-0000-0000-0000-000000000001","title":"Sales Partner · Research","content":"=== 2026-10-16 · research ==="}'
-check 2 "create-note extra key refused" $AT ${P}create-note '{"parent_object":"companies","parent_record_id":"00000000-0000-0000-0000-000000000001","title":"Sales Partner · Call","content":"x","meeting_id":"00000000-0000-0000-0000-000000000009"}' "may not use"
-check 0 "append to a note"          $AT ${P}update-note "{$N,\"operation\":{\"type\":\"append\",\"content\":\"=== 2026-10-17 · draft ===\"}}"
+check 0 "create a talking points note" $AT ${P}create-note '{"parent_object":"companies","parent_record_id":"00000000-0000-0000-0000-000000000001","title":"Sales Partner · Talking Points","content":"=== 2026-10-18 · talking points ==="}'
+check 2 "create-note extra key refused" $AT ${P}create-note '{"parent_object":"companies","parent_record_id":"00000000-0000-0000-0000-000000000001","title":"Sales Partner · Talking Points","content":"x","meeting_id":"00000000-0000-0000-0000-000000000009"}' "may not use"
+check 0 "append to a note"          $AT ${P}update-note "{$N,\"operation\":{\"type\":\"append\",\"content\":\"=== 2026-10-18 · talking points ===\"}}"
 check 2 "prepend refused"           $AT ${P}update-note "{$N,\"operation\":{\"type\":\"prepend\",\"content\":\"x\"}}" "type may only be written as append"
 check 2 "retitle refused"           $AT ${P}update-note "{$N,\"updated_title\":\"x\"}" "may not use"
 check 2 "append and retitle refused" $AT ${P}update-note "{$N,\"operation\":{\"type\":\"append\",\"content\":\"x\"},\"updated_title\":\"x\"}" "may not use"
@@ -192,7 +193,19 @@ out=$(printf '{not json' | python3 -B "$E" "$AT" - x 2>&1); rc=$?
 check 2 "agent can't approve a lead"  $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"stage\":\"Ready to Send\"}}" "stage may only be written as"
 check 2 "agent can't mark Contacted"  $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"stage\":\"Contacted\"}}" "stage may only be written as"
 check 0 "agent marks Researched"      $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"stage\":\"Researched\"}}"
-check 0 "agent returns a lead to Approach Drafted" $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"stage\":\"Approach Drafted\"}}"
+check 2 "agent can't approve (Approved)" $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"stage\":\"Approved\"}}" "stage may only be written as"
+check 2 "Approach Drafted is gone"  $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"stage\":\"Approach Drafted\"}}" "stage may only be written as"
+check 0 "agent marks Scored"        $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"stage\":\"Scored\"}}"
+check 2 "research_anyway true"      $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"research_anyway\":true}}" "research_anyway may not be written"
+check 2 "research_anyway false"     $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"research_anyway\":false}}" "research_anyway may not be written"
+check 2 "research_anyway \"true\""   $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"research_anyway\":\"true\"}}" "research_anyway may not be written"
+check 2 "research_anyway on create" $AT ${P}add-record-to-list "{$L,\"entry_values\":{\"stage\":\"New\",\"research_anyway\":true}}" "research_anyway may not be written"
+check 0 "write segment"             $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"segment\":\"home-services\"}}"
+check 0 "write hero_offer"          $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"hero_offer\":\"ps-invoice-reconciliation\"}}"
+check 0 "write offer_reason"        $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"offer_reason\":\"Two reviews mention slow invoicing\"}}"
+check 0 "write offer_evidence"      $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"offer_evidence\":\"strong\"}}"
+check 0 "clear the offer fields"    $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"hero_offer\":[],\"offer_evidence\":[],\"offer_reason\":\"Every offer ruled out\"}}"
+check 0 "clear segment"             $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"segment\":[]}}"
 check 2 "agent can't mark Engaged"    $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"stage\":\"Engaged\"}}" "stage may only be written as"
 check 0 "agent disqualifies"          $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"stage\":\"Disqualified\"}}"
 check 2 "agent can't open a deal"     $AT ${P}update-list-entry-by-id "{$X,\"entry_values\":{\"stage\":\"Open Deal\"}}" "stage may only be written as"
@@ -206,10 +219,24 @@ echo "-- HubSpot"
 HS=capabilities/crm/tools/hubspot/guard.yaml; H=mcp__claude_ai_HubSpot__
 CU='{"objectType":"companies","objectId":202,"properties":{"sp_do_not_contact":%s}}'
 NC='{"objectType":"notes","properties":{"hs_note_body":"%s","hs_timestamp":"2026-10-16T00:00:00Z"},"associations":[{"targetObjectType":"COMPANY","targetObjectId":202}]}'
-check 0 "create a draft note"       $HS ${H}manage_crm_objects "{\"createRequest\":{\"objects\":[$(printf "$NC" '<p>=== 2026-10-16 · draft ===</p><p>Channel: email</p>')]}}"
+check 0 "create a talking points note" $HS ${H}manage_crm_objects "{\"createRequest\":{\"objects\":[$(printf "$NC" '<p>=== 2026-10-18 · talking points ===</p><p>For: the business</p>')]}}"
 check 0 "create a research note"    $HS ${H}manage_crm_objects "{\"createRequest\":{\"objects\":[$(printf "$NC" '<p>=== 2026-10-16 · research ===</p>')]}}"
 check 2 "note body rewritten"       $HS ${H}manage_crm_objects '{"updateRequest":{"objects":[{"objectType":"notes","objectId":303,"properties":{"hs_note_body":"<p>new</p>"}}]}}' "hs_note_body may not be changed after create"
 check 2 "agent can't approve a lead"  $HS ${H}manage_crm_objects '{"updateRequest":{"objects":[{"objectType":"companies","objectId":202,"properties":{"sp_stage":"Ready to Send"}}]}}' "sp_stage may only be written as"
+check 2 "agent can't approve (Approved)" $HS ${H}manage_crm_objects '{"updateRequest":{"objects":[{"objectType":"companies","objectId":202,"properties":{"sp_stage":"Approved"}}]}}' "sp_stage may only be written as"
+check 2 "Approach Drafted is gone"    $HS ${H}manage_crm_objects '{"updateRequest":{"objects":[{"objectType":"companies","objectId":202,"properties":{"sp_stage":"Approach Drafted"}}]}}' "sp_stage may only be written as"
+check 0 "agent marks Researched"      $HS ${H}manage_crm_objects '{"updateRequest":{"objects":[{"objectType":"companies","objectId":202,"properties":{"sp_stage":"Researched"}}]}}'
+check 0 "agent marks Scored"          $HS ${H}manage_crm_objects '{"updateRequest":{"objects":[{"objectType":"companies","objectId":202,"properties":{"sp_stage":"Scored"}}]}}'
+check 2 "sp_research_anyway true"     $HS ${H}manage_crm_objects '{"updateRequest":{"objects":[{"objectType":"companies","objectId":202,"properties":{"sp_research_anyway":true}}]}}' "sp_research_anyway may not be written"
+check 2 "sp_research_anyway false"    $HS ${H}manage_crm_objects '{"updateRequest":{"objects":[{"objectType":"companies","objectId":202,"properties":{"sp_research_anyway":false}}]}}' "sp_research_anyway may not be written"
+check 2 "sp_research_anyway \"true\""  $HS ${H}manage_crm_objects '{"updateRequest":{"objects":[{"objectType":"companies","objectId":202,"properties":{"sp_research_anyway":"true"}}]}}' "sp_research_anyway may not be written"
+check 2 "sp_research_anyway on create" $HS ${H}manage_crm_objects '{"createRequest":{"objects":[{"objectType":"companies","properties":{"name":"X","sp_stage":"New","sp_research_anyway":"true"}}]}}' "sp_research_anyway may not be written"
+check 0 "write sp_segment"            $HS ${H}manage_crm_objects '{"updateRequest":{"objects":[{"objectType":"companies","objectId":202,"properties":{"sp_segment":"home-services"}}]}}'
+check 0 "write sp_hero_offer"         $HS ${H}manage_crm_objects '{"updateRequest":{"objects":[{"objectType":"companies","objectId":202,"properties":{"sp_hero_offer":"ps-invoice-reconciliation"}}]}}'
+check 0 "write sp_offer_reason"       $HS ${H}manage_crm_objects '{"updateRequest":{"objects":[{"objectType":"companies","objectId":202,"properties":{"sp_offer_reason":"Two reviews mention slow invoicing"}}]}}'
+check 0 "write sp_offer_evidence"     $HS ${H}manage_crm_objects '{"updateRequest":{"objects":[{"objectType":"companies","objectId":202,"properties":{"sp_offer_evidence":"strong"}}]}}'
+check 0 "clear the sp_ offer fields"  $HS ${H}manage_crm_objects '{"updateRequest":{"objects":[{"objectType":"companies","objectId":202,"properties":{"sp_hero_offer":"","sp_offer_evidence":"","sp_offer_reason":"Every offer ruled out"}}]}}'
+check 0 "clear sp_segment"            $HS ${H}manage_crm_objects '{"updateRequest":{"objects":[{"objectType":"companies","objectId":202,"properties":{"sp_segment":""}}]}}'
 check 2 "agent can't mark Contacted"  $HS ${H}manage_crm_objects '{"updateRequest":{"objects":[{"objectType":"companies","objectId":202,"properties":{"sp_stage":"Contacted"}}]}}' "sp_stage may only be written as"
 check 0 "agent disqualifies"          $HS ${H}manage_crm_objects '{"updateRequest":{"objects":[{"objectType":"companies","objectId":202,"properties":{"sp_stage":"Disqualified"}}]}}'
 check 2 "agent can't mark Engaged"    $HS ${H}manage_crm_objects '{"updateRequest":{"objects":[{"objectType":"companies","objectId":202,"properties":{"sp_stage":"Engaged"}}]}}' "sp_stage may only be written as"
@@ -238,6 +265,7 @@ check 2 "merge refused"             $HS ${H}merge_crm_objects '{}' "is denied"
 check 0 "search allowed"            $HS ${H}search_crm_objects '{"objectType":"NOTE"}'
 check 0 "local server name allowed" $HS mcp__HubSpot__search_crm_objects '{"objectType":"COMPANY"}'
 # Token canary, offline: call is faked to fail (a 401, then a raised Stop); all output is captured.
+export CATALOG_FIXTURE="$PWD/tests/fixtures/offer-catalog.md"
 canary=$(python3 -B - <<'PY' 2>&1
 import importlib.util, io, os, contextlib
 sp = importlib.util.spec_from_file_location("b", "capabilities/crm/tools/hubspot/bootstrap.py")
@@ -254,7 +282,7 @@ for name, fake in (("401", unauthorized), ("stop", unreachable)):
     b.call = fake
     buf = io.StringIO()
     with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
-        rc = b.main()
+        rc = b.main(["--catalog", os.environ["CATALOG_FIXTURE"]])
     print(f"[{name}] rc={rc}")
     print(buf.getvalue())
 PY
@@ -271,6 +299,9 @@ sp = importlib.util.spec_from_file_location("b", "capabilities/crm/tools/hubspot
 b = importlib.util.module_from_spec(sp); sp.loader.exec_module(b)
 import os
 os.environ["HUBSPOT_TOKEN"] = "t"
+CATALOG = os.environ["CATALOG_FIXTURE"]
+# The same function main() calls, fed the same fixture main() is given below.
+b.PROPERTIES = b.build_properties(*b.read_catalog(CATALOG))
 
 def defn(obj, name):
     return next(p for p in b.PROPERTIES[obj] if p["name"] == name)
@@ -294,7 +325,7 @@ def run(over):
     b.call = fake
     out, err = io.StringIO(), io.StringIO()
     with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
-        rc = b.main()
+        rc = b.main(["--catalog", CATALOG])
     writes = [c for c in calls if c[0] in ("POST", "PATCH")]
     return rc, out.getvalue() + err.getvalue(), writes
 
@@ -308,6 +339,11 @@ print("C", rc == 0 and w == [("POST", "/companies")])
 rc, text, w = run({"/contacts/sp_role": {"type": "enumeration", "fieldType": "select",
                    "options": [{"value": "decision-maker"}, {"value": "extra"}]}})
 print("D", rc == 0 and [m for m, _ in w] == ["PATCH"])
+
+rc, text, w = run({"/companies/sp_stage": {"type": "enumeration", "fieldType": "select",
+                   "options": [{"value": v} for v in b.STAGES + ["Approach Drafted", "Ready to Send"]]}})
+print("F", rc == 0 and not w and "companies.sp_stage: extra options left in place (archive by hand if unwanted)" in text
+      and "Approach Drafted" in text and "Ready to Send" in text)
 
 # E: a realistic HubSpot GET payload for every property: extra fields, real type/fieldType pairs.
 META = {"archivable": True, "readOnlyDefinition": False, "readOnlyValue": False}
@@ -333,7 +369,8 @@ PY
 )
 for c in A:"mismatched type blocks with a clear message and no writes" B:"correct types pass with no writes" \
          C:"a missing property is created" D:"missing enum options are patched, extras kept" \
-         E:"a realistic HubSpot property payload passes with no writes"; do
+         E:"a realistic HubSpot property payload passes with no writes" \
+         F:"old stages left in place are reported, not removed"; do
   k=${c%%:*}; echo "$bt" | grep -qx "$k True" && _report ok "bootstrap $k: ${c#*:}" || _report no "bootstrap $k: ${c#*:} ($bt)"
 done
 

@@ -16,10 +16,10 @@ their prefix (for example `mcp__claude_ai_HubSpot__search_crm_objects`).
 ## Data model
 
 Every lead is a HubSpot **Company**, with a custom `sp_stage` dropdown
-holding the eleven statuses. People at the lead are **Contacts**
-associated with that company. The research record and the draft
-records are **Notes** associated with the company: one Note per
-`log_research` call and one per `log_draft` call. HubSpot notes have no
+holding the ten statuses. People at the lead are **Contacts**
+associated with that company. The research record and the Talking
+Points record are **Notes** associated with the company: one Note per
+`log_research` call and one per `log_talking_points` call. HubSpot notes have no
 title and can't be appended to through a guard-safe write, so each
 section is its own Note, and its first lines say which record it
 belongs to. This works on the free tier, keeps one record per business,
@@ -32,7 +32,7 @@ group `Sales Partner` (internal name `sales_partner`).
 | Lead | Company | — |
 | Contact | Contact | its company |
 | Research record | Notes, one per research run | its company |
-| Draft records | Notes, one per draft | its company and, when there is one, the contact |
+| Talking Points record | Notes, one per section | its company and, when there is one, the contact |
 
 **`lead_id` is the Company's record ID** (`hs_object_id`), and
 `contact_id` the Contact's.
@@ -50,20 +50,25 @@ group `Sales Partner` (internal name `sales_partner`).
 | `sp_verified` | `verified` (`true` / `false`) |
 | `sp_notes` | `notes` |
 
-### Notes — the research and draft records
+### Notes — the research and talking points records
 
 `hs_note_body` is rich text: one `<p>` per line, in the section format
 of the Attio tool's **Reading notes from an automation**
 (`../attio/usage.md`), so an automation reads both CRMs the same way. A
 research Note's first line is `=== YYYY-MM-DD · research ===`, then one
 block per finding (`Type:`, `Date:`, `Summary:`, `Source:`, `Hook:`). A
-draft Note's first lines are `=== YYYY-MM-DD · draft ===` and
-`Channel: email` (or `linkedin`, `call`), then `For: …`, the full draft
-and the Personalized statements block. `hs_timestamp` is the moment of
-the write.
+talking points Note's first line is `=== YYYY-MM-DD · talking points ===`,
+then the six labels `For:`, `Offer:`, `Opener:`, `Points:`, `Avoid:` and
+`Contact routes:`, one `<p>` per line, with the three list labels each
+followed by `- ` item lines; an empty list is the one line `- none`.
+With no hero offer the Offer line is `Offer: none matched`, and with no
+usable hook the Opener line is, exactly,
+`Opener: unverified — no recent hook found`.
+`hs_timestamp` is the moment of the write.
 
-The guard refuses any change to `hs_note_body` after create, so a draft
-can't be rewritten after the operator read it: a redraft is a new Note.
+The guard refuses any change to `hs_note_body` after create, so talking
+points can't be rewritten after the operator read them: a redo is a new
+Note.
 An operator's edit in HubSpot may rewrap the lines in other tags, so on
 read strip the HTML tags (treating `</p>`, `<br>` and `</div>` as line
 breaks) before parsing the lines.
@@ -129,7 +134,7 @@ outside the pipeline), adopt it (step 7) and return its ID as `lead_id`.
          "name": "<company>", "domain": "<domain>", "phone": "<E.164>",
          "address": "…", "city": "…", "state": "…", "zip": "…", "country": "…",
          "sp_stage": "New", "sp_stage_changed_at": "<now, ISO 8601 UTC>",
-         "sp_industry": "…", "sp_size": "…",
+         "sp_industry": "…", "sp_segment": "…", "sp_size": "…",
          "sp_source": "…", "sp_source_url": "…", "sp_email": "…",
          "sp_fit_score": "…", "sp_fit_breakdown": "…"}}]}}
 
@@ -160,14 +165,14 @@ outside the pipeline), adopt it (step 7) and return its ID as `lead_id`.
    and the Schema properties for that object, paging until the results
    run out. These are the lead's Contacts and its Notes. A Note whose
    first line is a `research` header is a research section; one whose
-   first lines are a `draft` header and `Channel: <channel>` is a draft
-   section for that channel. Any other Note is the operator's and is
+   first line is a `talking points` header is a Talking Points section.
+   Any other Note is the operator's and is
    ignored. Sort each record's sections by `hs_createdate` (stamped by HubSpot, never by the agent): the last is
    the newest.
 
 ### `update_stage`
 
-Reject a `stage` outside the eleven. Then one call, with all three
+Reject a `stage` outside the ten. Then one call, with all three
 properties **in the same update**:
 
     {"updateRequest": {"objects": [{"objectType": "companies", "objectId": <lead_id>, "properties": {
@@ -183,22 +188,27 @@ Write only the fields that change: an update that repeats unchanged
 fields (for example `sp_do_not_contact` as `false`) can be refused by
 the guard.
 
-Reject if `fields` contains `stage`, `sp_stage`, or
-`sp_stage_changed_at`. Read the company first
+Reject if `fields` contains `stage`, `sp_stage`,
+`sp_stage_changed_at`, `research_anyway` or `sp_research_anyway`. The
+properties `sp_segment`, `sp_industry`, `sp_hero_offer`,
+`sp_offer_reason` and `sp_offer_evidence` are written like any other
+lead property. To clear a select or text field (for example
+`sp_hero_offer` and `sp_offer_evidence` when every offer is ruled out),
+write it as `""`: HubSpot stores an empty string as no value. Read the company first
 (`hubspot:get_crm_objects`, property `sp_do_not_contact`). If it is
 already `true`, reject any `fields` that sets it to `false`. Otherwise
 one `updateRequest` on `companies` with the mapped properties. Setting
 the flag is `"sp_do_not_contact": "true"`.
 
-### `log_draft`
+### `log_talking_points`
 
-1. Reject a `channel` other than `email`, `linkedin` or `call`.
+1. The call takes no channel argument.
 2. `hubspot:get_crm_objects` on `COMPANY` with `objectIds: [lead_id]`
    and property `sp_do_not_contact`. Reject if it is `true`.
 3. One create, never an update:
 
        {"createRequest": {"objects": [{"objectType": "notes",
-         "properties": {"hs_note_body": "<p>=== YYYY-MM-DD · draft ===</p><p>Channel: <channel></p><p>For: …</p><p><draft lines></p>",
+         "properties": {"hs_note_body": "<p>=== YYYY-MM-DD · talking points ===</p><p>For: …</p><p>Offer: …</p><p>Opener: …</p><p>Points:</p><p>- …</p><p>Avoid:</p><p>- …</p><p>Contact routes:</p><p>- …</p>",
            "hs_timestamp": "<now, ISO 8601 UTC>"},
          "associations": [{"targetObjectType": "COMPANY", "targetObjectId": <lead_id>},
                           {"targetObjectType": "CONTACT", "targetObjectId": <contact_id>}]}]}}
@@ -248,7 +258,11 @@ Reject a call with no `stage` and neither filter. Then
 the date (for `next_action_due_before`). With no stage, add
 `sp_stage` `HAS_PROPERTY` so only pipeline companies return. For
 `idle_days`: keep a lead when now minus its `sp_stage_changed_at` is
-greater than `idle_days`.
+greater than `idle_days`. When `research_anyway` is given, add the
+filter `sp_research_anyway` `EQ` `"true"`. For `false`, use two filter
+groups (HubSpot ORs them), each holding the filters above: one adds
+`sp_research_anyway` `EQ` `"false"`, the other `sp_research_anyway`
+`NOT_HAS_PROPERTY`, so a checkbox never set counts as unticked.
 Page with `offset` until the results run out; apply `limit` last.
 
 ### `query_by_score`
@@ -267,8 +281,8 @@ Created Time.
 ## Approval invariant under HubSpot
 
 `manage_crm_objects` can write any value to any property, so the
-contract's guarantees are enforced by mechanism (approval, append-only
-drafts and `dnc_one_way`):
+contract's guarantees are enforced by mechanism (`approval_only`,
+`dnc_one_way` and `no_delete`):
 
 1. **`guard.yaml` in this folder**, enforced by the agent's guard
    policy engine before every HubSpot call inside an instance:
@@ -285,13 +299,15 @@ drafts and `dnc_one_way`):
      accepts only those two request shapes, so there is no other place
      for values to sit;
    - `hs_note_body` and `hs_timestamp` may not be changed after
-     create, so a draft or a research section is never rewritten or
-     re-ordered (`draft_only`);
+     create, so a talking points or a research section is never rewritten
+     or re-ordered (`approval_only`);
    - `hs_task_status`, `hs_task_body` and `hs_task_completion_date` are
      forbidden outright: the agent uses no Tasks, so the operator's own
      Tasks are out of its reach;
-   - `sp_stage` may only be created as `New`, and never written as
-     `Ready to Send`: only the operator approves a lead.
+   - `sp_stage` may only be created as `New`, and updated only to
+     `Scored`, `Researched` or `Disqualified`; never written as
+     `Approved` or later: only the operator approves a lead.
+     `sp_research_anyway` is forbidden outright: it is the operator's.
      `hs_pipeline_stage` and `hs_pipeline` are forbidden to the agent
      outright (`forbid: true`), on create or update;
    - `sp_do_not_contact` may only be updated to `true` (`dnc_one_way`).
@@ -307,21 +323,21 @@ drafts and `dnc_one_way`):
 
 Create these once in HubSpot. The connector can't create views.
 
-- **Review** — Companies filtered on `sp_stage` is `Approach Drafted`.
-  Open a company to read its research and draft Notes (one draft Note
-  per channel, a full draft and its personalized statements each) and
-  `Do Not Contact` (`sp_do_not_contact`), then move the company to
-  `Ready to Send`: that approves the lead.
-- **Ready to Send** — Companies filtered on `sp_stage` is
-  `Ready to Send`: approved, waiting for your workflow or your own
-  touch. The agent never acts on them; move a company back to `Approach
-  Drafted` to cancel.
+- **Review** — Companies filtered on `sp_stage` is `Researched`, sorted
+  by `Approach score`, highest first. Open a company to read its
+  research and Talking Points Notes, and `Do Not Contact`
+  (`sp_do_not_contact`), then move the company to `Approved`: that
+  approves the lead. Show `Do Not Contact`, `Segment` (`sp_segment`),
+  `Hero offer` (`sp_hero_offer`), `Offer evidence` (`sp_offer_evidence`)
+  and `Offer reason` (`sp_offer_reason`) as columns, so you approve on
+  the match you can see.
+- **Approved** — Companies filtered on `sp_stage` is `Approved`:
+  approved, waiting for your workflow or your own touch. The agent never
+  acts on them; move a company back to `Researched` to cancel.
 - **Pipeline** — a Companies view grouped (or a board) by
   `Sales Partner stage` (`sp_stage`), filtered on `sp_stage` is known.
 - **Research Queue** — Companies filtered on `sp_stage` is `Scored`,
   sorted by `Fit score`, highest first.
-- **Approach Queue** — Companies filtered on `sp_stage` is `Researched`,
-  sorted by `Approach score`, highest first.
 - **Due Today** — Companies filtered on `Next action due` on or before
   today.
 - **Nurture** — Companies filtered on `sp_stage` is `Nurture`, sorted
@@ -338,8 +354,11 @@ what they find to `bindings/crm.md` in the instance:
    show `write: AVAILABLE`; report any that don't.
 2. `hubspot:get_properties`:
    - on `companies`, `["sp_stage", "sp_stage_changed_at", "sp_do_not_contact",
-     "sp_fit_score", "sp_fit_breakdown", "sp_approach_score", "sp_approach_breakdown"]`:
-     all seven exist, and `sp_stage` has the eleven status options;
+     "sp_fit_score", "sp_fit_breakdown", "sp_approach_score", "sp_approach_breakdown",
+     "sp_segment", "sp_hero_offer", "sp_offer_reason", "sp_offer_evidence",
+     "sp_research_anyway"]`: all of them exist, `sp_stage` has the ten status
+     options, and `sp_segment` and `sp_hero_offer` hold every segment id and
+     offer id in `context/offer-catalog.md`;
    - on `contacts`, `["sp_role"]`: it has the three role options;
 3. Report every missing property or option by name.
 
@@ -375,7 +394,7 @@ both equal to the text shown.
 
 | Internal name | Label | Field type | Options |
 |---|---|---|---|
-| `sp_stage` | Sales Partner stage | Dropdown select | New, Scored, Researched, Approach Drafted, Ready to Send, Contacted, Engaged, Open Deal, Nurture, Customer, Disqualified |
+| `sp_stage` | Sales Partner stage | Dropdown select | New, Scored, Researched, Approved, Contacted, Engaged, Open Deal, Nurture, Customer, Disqualified |
 | `sp_stage_changed_at` | Stage changed at | Date and time picker | |
 | `sp_stage_reason` | Stage reason | Multi-line text | |
 | `sp_fit_score` | Fit score | Number | |
@@ -383,6 +402,11 @@ both equal to the text shown.
 | `sp_approach_score` | Approach score | Number | |
 | `sp_approach_breakdown` | Approach breakdown | Multi-line text | |
 | `sp_industry` | Industry (Sales Partner) | Single-line text | |
+| `sp_segment` | Segment | Dropdown select | the segment ids in `context/offer-catalog.md` |
+| `sp_hero_offer` | Hero offer | Dropdown select | the offer ids in `context/offer-catalog.md` |
+| `sp_offer_reason` | Offer reason | Multi-line text | |
+| `sp_offer_evidence` | Offer evidence | Dropdown select | strong, moderate, weak |
+| `sp_research_anyway` | Research anyway | Single checkbox | Yes = `true`, No = `false` |
 | `sp_size` | Size | Single-line text | |
 | `sp_source` | Source | Single-line text | |
 | `sp_source_url` | Source URL | Single-line text | |
@@ -405,7 +429,14 @@ When you are done, tell the agent and it probes again.
 ### Choice 2: run the script with an API key
 
 `bootstrap.py` creates everything in Choice 1 and only adds what is
-missing; it never deletes or renames anything.
+missing; it never deletes or renames anything. It reads the Segment and
+Hero offer options from the instance's offer catalog before it makes any
+API call, and uses each id as both the option's label and its value. Run
+it from the instance folder, where the default
+`context/offer-catalog.md` is found, or pass `--catalog <path>`. After
+you change the catalog, run it again: re-running only adds the new
+options. It also leaves the old stages `Approach Drafted` and `Ready to
+Send` in place and prints a note; archive them by hand in HubSpot.
 
 1. In HubSpot, create a private app (Settings → Integrations → Private
    Apps → Create a private app) with these scopes:
@@ -419,7 +450,7 @@ missing; it never deletes or renames anything.
    only; never paste it into the chat or a file:
 
        read -rs HUBSPOT_TOKEN && export HUBSPOT_TOKEN
-       python3 "<package>/capabilities/crm/tools/hubspot/bootstrap.py"
+       python3 "<package>/capabilities/crm/tools/hubspot/bootstrap.py" --catalog context/offer-catalog.md
 
    The environment variable the script reads is `HUBSPOT_TOKEN`.
 3. Tell the agent it is done, and it probes again. You can delete the

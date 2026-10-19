@@ -2,7 +2,7 @@
   Research summary template — filled by research-company.
   One block per finding. A finding with no usable Hook is still recorded
   in Summary, but Hook is never forced — write "no hooks found" per
-  research-company step 6 rather than fabricate one.
+  research-company step 7 rather than fabricate one.
 -->
 
 # Research summary — [Company]

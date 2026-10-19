@@ -1,22 +1,29 @@
 # Business Profile
 
-Every claim the agent makes about the business must trace to this file.
-If it is not written here, the agent does not say it.
+Every claim the agent makes about the business must trace to this file
+or to `context/offer-catalog.md`. If it is written in neither, the agent
+does not say it.
 
 This file is written by the `interview-business` skill (Phase 0) and
 re-run whenever anything material about the business changes — a new
 offer, a retired product, a new case study, a pricing change. Every
 bracketed section below is a prompt for that interview, not filler text:
 the interview replaces each bracket with the operator's own words, and
-nothing downstream may add a fact this file doesn't contain.
+nothing downstream may add a fact that neither file contains.
 
 ## What we sell
 
-[Interview: get the product or service list in the operator's own
-words — what it is, what problem it solves, and what "done" looks like
-for a customer. Capture packaging (one offer vs. a menu of offers) and
+The offers themselves, grouped into segments with what each delivers,
+who it suits and the signals that point to it, are in
+`context/offer-catalog.md`. That file and this one are the only sources
+for a claim about the business; the interview keeps the two
+consistent.
+
+[Interview: get a short summary in the operator's own words — what the
+business does overall, what "done" looks like for a customer, and
 anything explicitly out of scope, so the agent knows what it must never
-claim the business does.]
+claim the business does. Name the segments, but leave each offer's
+detail to the catalog.]
 
 ## Who we serve
 
@@ -68,6 +75,6 @@ before it consumes research budget.]
 [Interview: get three to five words the operator would use to describe
 how the business should sound in writing, plus two example sentences
 in that voice — one that could open a cold email, one that could answer
-a tough question on a call. These examples are what the Approacher
-imitates; a voice description without examples is
+a tough question on a call. These examples are what the talking
+points imitate; a voice description without examples is
 too abstract to write from.]

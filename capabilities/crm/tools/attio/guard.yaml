@@ -1,7 +1,7 @@
 # Attio guard policy: enforces the crm contract's invariants on Attio tool calls.
-# Drafts and research are notes on the company: the agent may create a note
-# and append to it, never prepend, retitle or delete one.
-covers: [draft_only, dnc_one_way, no_delete]
+# Talking points and research are notes on the company: the agent may create
+# a note and append to it, never prepend, retitle or delete one.
+covers: [approval_only, dnc_one_way, no_delete]
 
 allow: [whoami, list-*, get-*, search-*, semantic-search-*, run-basic-report,
         add-record-to-list, create-record, upsert-record, update-record,
@@ -37,7 +37,10 @@ only_keys:
 rules:
   - field: stage
     create: [New]
-    update: [Scored, Researched, "Approach Drafted", Disqualified]
+    update: [Scored, Researched, Disqualified]
+  # Operator-only: the agent never ticks Research Anyway.
+  - field: research_anyway
+    forbid: true
   - field: do_not_contact
     update: [true]
   - field: type

@@ -24,12 +24,8 @@ leads_per_week: 40
 prospecting_sources: [apify_google_maps, apify_contact_info, web_search]
 research_quota_per_week: 10
 research_threshold: 60
-approach_threshold: 70
-enabled_channels: [email, linkedin]
 apify_spend_cap_usd_per_week: 25
 research_budget_per_lead_minutes: 8
-sending_identity: "[name] <[email]>"
-callback_phone: "[phone]"
 tone: "[three adjectives from the interview]"
 ```
 
@@ -58,21 +54,6 @@ tone: "[three adjectives from the interview]"
   rubric in `icp.md`, scored by the Prospector from the listing) a
   `Scored` lead needs to enter research. Default `60`. See `icp.md`'s
   Thresholds section for the full explanation of this gate.
-- **`approach_threshold`** — the minimum Approach score (0–100, per the
-  Approach rubric in `icp.md`, scored by the Preparer from research) a
-  `Researched` lead needs to reach the Approacher and get a drafted
-  first touch. Default `70`. A different score from the one
-  `research_threshold` gates, not a repeat of it. See `icp.md`'s
-  Thresholds section.
-- **`enabled_channels`** — the outbound channels the Approacher drafts
-  touches for. `linkedin` in this list means LinkedIn
-  copy may be **drafted** for the operator to paste by hand — it never
-  authorizes any automated LinkedIn action (no automated connection
-  requests, messages, or scraping), per `AGENT.md`'s guardrails. A
-  channel not in this list is never chosen, regardless of fit.
-  `call` in this list means the Approacher may draft a phone opener
-  (`skills/write-call-opener/SKILL.md`) for a lead with a sourced phone
-  number; the operator places the call.
 - **`apify_spend_cap_usd_per_week`** — the ceiling on Apify actor
   spend per week, shared across the Prospector's sourcing and the
   Preparer's research, measured by adding up the ledger `Cost USD` of the
@@ -84,17 +65,9 @@ tone: "[three adjectives from the interview]"
   spends researching a single lead before it stops and hands off with
   whatever hooks it has found; see `subagents/preparer.md`'s `Stop
   conditions`.
-- **`sending_identity`** — the `"[name] <[email]>"` the drafted email
-  Activities are written from. Filled in by
-  the interview; the agent never sends a message from this identity — it is only written into drafted email Activities in the CRM.
-- **`callback_phone`** — the operator's own number the voicemail in a
-  call opener gives for callbacks. Filled in by the interview when
-  `call` is in `enabled_channels`; never a prospect-facing send
-  capability — the agent only writes it into a draft.
-- **`tone`** — three adjectives describing how outbound copy should
+- **`tone`** — three adjectives describing how the talking points should
   read, filled in by the interview from `business-profile.md`'s Voice
-  section. Read by `write-cold-email`, `write-linkedin-touch` and
-  `write-call-opener` when drafting.
+  section. Read by `write-talking-points` when it writes the opener.
 
 ## Running on a schedule
 
@@ -105,9 +78,9 @@ for activities whose capabilities are all covered by guard policies.
 Nothing in this file, and nothing any key here configures, sends a
 message to a prospect on its own. Nothing goes out without the
 operator's approval, and only the operator approves a lead, by moving
-the lead to `Ready to Send` — the guard refuses that status to the agent.
-Drafts are append-only: the agent adds a draft section and never edits,
-replaces or removes one. See
+the lead to `Approved` — the guard refuses that status to the agent.
+Talking points are append-only: the agent adds a section and never
+edits, replaces or removes one. See
 `capabilities/crm/contract.md`'s Approval invariant for the full, provable rule —
 this file states the outcome, not the mechanics, precisely so it
 cannot drift out of sync with them again.

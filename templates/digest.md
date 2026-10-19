@@ -3,18 +3,18 @@
   Six sections, in this fixed order, every run. A section with nothing to
   report still gets its heading and an explicit "None" — never a silently
   omitted heading. This is a report; it never advances a stage, edits a
-  lead field, or logs a draft or research section.
+  lead field, or logs talking points or research.
 -->
 
 # Sales Partner Digest — [date]
 
 ## Review ([count])
 
-- [lead/company — drafted: <channels> — link; for a call draft, the number from the Call note — or "None"]
+- [company — segment · hero offer or "no offer" · evidence — link; ordered by Approach score, highest first. Mark `weak` evidence "(weak: segment fit only)"; mark a lead with no offer with a leading ⚠, "no offer" and "no evidence". Or "None"]
 
-## Ready to Send ([count])
+## Approved, not yet contacted ([count])
 
-- [lead/company — drafted: <channels> — drafted N days ago — or "None"]
+- [company — segment · hero offer or "no offer" — researched N days ago — or "None"]
 
 ## Next actions due today ([count])
 

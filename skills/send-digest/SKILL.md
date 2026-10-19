@@ -6,7 +6,7 @@ description: Use when the digest's scheduled run fires (`schedule_digest` in the
 This skill produces a report, not a pipeline action. It reads the CRM
 and Apify usage, renders six fixed sections in a fixed order, and
 sends the result to the owner with `notify_owner`. It never advances a stage, edits
-a lead field, logs a draft, or logs research — see **This skill
+a lead field, logs talking points, or logs research — see **This skill
 reads the CRM; it never writes to it** below.
 
 ## The "since last digest" anchor
@@ -113,14 +113,14 @@ window per section:
 
 Its only side effects are delivering the finished digest and recording
 the run in the ledger. It never calls `create_lead`, `update_stage`,
-`update_lead`, `log_draft`, `log_research`, or `upsert_contact` — no
-stage moves, no field edits, no draft or research section, not even a
+`update_lead`, `log_talking_points`, `log_research`, or `upsert_contact` — no
+stage moves, no field edits, no talking-points or research section, not even a
 "digest sent" marker in the CRM. The reads it does use, named precisely:
 
-- CRM **`query_by_stage`** on `Approach Drafted` — Section 1, Review —
-  and on `Ready to Send` — Section 2, Ready to Send.
+- CRM **`query_by_stage`** on `Researched` — Section 1, Review — and on
+  `Approved` — Section 2, Approved, not yet contacted.
 - CRM **`get_lead`**, once for each lead those two calls return (its
-  draft records, contacts and Do Not Contact).
+  Segment, Hero Offer, Offer Evidence and Do Not Contact).
 - CRM **`query_by_stage`** with its `next_action_due_before` filter
   (`stage` omitted, so leads across every stage are considered) —
   Section 3, Next actions due today.
@@ -130,15 +130,15 @@ stage moves, no field edits, no draft or research section, not even a
   Section 4, New leads scored. Every scored lead has a Fit score, so
   this finds them all; each one's Approach score, when it has one, is
   on the same record.
-- CRM **`query_by_stage`**, called once per stage of interest, results
+- CRM **`query_by_stage`**, called once per stage after `New`, results
   filtered client-side to the `(anchor, nominal_time]` window on
   `Stage Changed At` — Section 5, Movement.
 - Ledger **`find_events`** — Section 6. This is the one section with no
   CRM read at all; Apify spend is not CRM data and never was.
 
-Every one of the above is a call through `capabilities/crm/contract.md`'s eleven
+Every one of the above is a call through `capabilities/crm/contract.md`'s nine
 provider-neutral operations — none of the six sections reads a
-CRM view directly. Any named views a CRM tool offers (Review, Ready to Send, My touches, Research Queue, Due Today, Nurture) are
+CRM view directly. Any named views a CRM tool offers (Review, Approved, Research Queue, Due Today, Nurture) are
 a convenience for the operator looking at the CRM by hand, and are
 defined to compute exactly what the operations above return, but this
 skill does not depend on them: swap the tool for a different CRM
@@ -163,15 +163,22 @@ First, call `ledger_status`, then write `run_started`
 
 1. Compute the window — the anchor and `nominal_time` that bound it on
    both edges — per **The "since last digest" anchor** above.
-2. **Section 1 — Review.** Call CRM `query_by_stage("Approach Drafted")`
-   and `get_lead` for each lead: these are leads waiting for the
-   operator. List each lead as `<company> — drafted: <channels> —
-   [link]`, the channels that have a draft record, and for a call draft
-   the number it uses, read from the newest section of the Call note
-   (its `Call:` line). No window:
-   every lead waiting right now, however old. Heading with the count of
-   leads, e.g. `Review (3)`.
-   - **Drafts on DNC leads.** Mark every lead whose `Do Not Contact` is
+2. **Section 1 — Review.** Call CRM `query_by_stage("Researched")` and
+   `get_lead` for each lead: these are leads waiting for the operator to
+   approve. List each lead as `<company> — <segment> · <hero offer or
+   "no offer"> · <evidence> — [link]`, where segment, hero offer and
+   evidence are the lead's Segment, Hero Offer and Offer Evidence as the
+   CRM holds them (the catalog's ids). Order the list by `Approach
+   Score`, highest first; leads with no Approach score go last, ordered
+   by `Fit Score`. No window: every lead waiting right now, however old.
+   Heading with the count of leads, e.g. `Review (3)`.
+   - **Marked picks.** Mark a lead whose Offer Evidence is `weak` with
+     `(weak: segment fit only)` after the evidence. Mark a lead with an
+     empty Hero Offer with a leading `⚠`, and write `no offer` in the
+     offer position and `no evidence` in the evidence position; with no
+     Segment either, the segment reads `no segment`. Marked leads keep
+     their place in the Approach-score order.
+   - **Do Not Contact leads.** Mark every lead whose `Do Not Contact` is
      true `⚠ DO NOT SEND — lead is Do Not Contact` and list those first.
      Report only: the digest writes nothing to the CRM.
    - **Possible duplicate leads.** Across the leads this run already
@@ -181,20 +188,21 @@ First, call `ledger_status`, then write `run_started`
      group, as `Possible
      duplicate leads (among leads in this digest)`. Include the line only
      when there are any.
-3. **Section 2 — Ready to Send.** Call CRM `query_by_stage("Ready to
-   Send")` and `get_lead` for each: leads the operator approved, now
-   waiting for the owner's hand-off (their CRM automation, another
-   system or agent, or the operator's own touch). List each lead with
-   `drafted: <channels>` and `drafted N days ago` (now − `Stage
-   Changed At`). The operator's drag in the CRM does not stamp `Stage
-   Changed At` (only `update_stage` does), so this is time since the
-   agent drafted the touch, not time since approval, and the digest
-   raises no alarm on it. If the owner's automation sets `Stage Changed
+3. **Section 2 — Approved, not yet contacted.** Call CRM
+   `query_by_stage("Approved")` and `get_lead` for each: leads the
+   operator approved, now waiting for the owner's hand-off (their CRM
+   automation, another system or agent, or the operator's own touch).
+   List each lead as `<company> — <segment> · <hero offer or "no offer">
+   — researched N days ago` (now − `Stage Changed At`). The operator's
+   drag in the CRM does not stamp `Stage Changed At` (only
+   `update_stage` does), so this is time since the agent finished
+   researching the lead, not time since approval; the digest labels it
+   `researched N days ago` and raises no alarm on it. If the owner's automation sets `Stage Changed
    At` when it picks a lead up, the figure becomes time since then. The
    agent never acts on these leads. In Section 2 too, mark every lead whose `Do Not Contact` is true
    `⚠ DO NOT SEND — lead is Do Not Contact` and list those first: the
    operator may have opted it out after approving it. Heading with the
-   count.
+   count, e.g. `Approved, not yet contacted (2)`.
 4. **Section 3 — Next actions due today.** Call CRM
    `query_by_stage(next_action_due_before: today, stage: omitted)` —
    omitting `stage` so leads at every stage are considered, not one
@@ -224,7 +232,7 @@ First, call `ledger_status`, then write `run_started`
    not this one).
 
    The Approach score is the one the digest reports first: it is the
-   score that decides whether a lead gets a drafted touch. Sort leads
+   operator's guide to which researched leads to approve. Sort leads
    that have an `Approach Score` first, by Approach Score descending,
    then the rest by `Fit Score` descending, and take the top five. List
    each as `<company> — Approach <a> · Fit <f> — <rationale>`, or
@@ -254,14 +262,16 @@ First, call `ledger_status`, then write `run_started`
    "what changed since last digest." A lead that answers both
    questions still gets exactly one line in each, never two lines in
    either.
-6. **Section 5 — Movement.** Call `query_by_stage` once for each status
-   the agent moves leads to — `Researched`, `Approach Drafted` and
-   `Disqualified` — and once each for `Ready to Send`, `Contacted`,
-   `Engaged`, `Open Deal`, `Nurture` and `Customer`, so a lead the agent
-   drafted and the operator approved within the window still counts.
-   A lead at one of those later statuses keeps the agent's last stamp
+6. **Section 5 — Movement.** Call `query_by_stage` once for each stage
+   after `New`. The ten stages are `New, Scored, Researched, Approved,
+   Contacted, Engaged, Open Deal, Nurture, Customer, Disqualified`;
+   `New` carries only the creation stamp, which is not a move. The agent
+   moves leads to `Scored`, `Researched` and `Disqualified`; the later
+   stages are queried too, so a lead the agent researched and the
+   operator approved within the window still counts.
+   A lead at `Approved` or a later stage keeps the agent's last stamp
    unless the owner's automation restamps it; list it as
-   `<Company>: → Approach Drafted (now <status>)`. For each status's results,
+   `<Company>: → Researched (now <status>)`. For each stage's results,
    keep only leads whose `Stage Changed At` falls in the window
    `(anchor, nominal_time]` — strictly after the anchor **and** at or
    before this run's nominal scheduled time — and list them as
@@ -289,9 +299,7 @@ First, call `ledger_status`, then write `run_started`
 8. Render all six sections, in the fixed order above, every run — a
    section with nothing to report still gets its heading and an
    explicit "None" (or equivalent), never a silently omitted heading.
-   This is the shape `templates/digest.md` defines; until that
-   template exists, the section order and content rules above **are**
-   the shape.
+   This is the shape `templates/digest.md` defines.
 9. Deliver the rendered digest with `notify_owner(kind: digest)`: the
    subject is `Digest <date>`, the body is the rendered digest. The
    recipient is the owner pinned at setup; this skill never chooses
@@ -302,16 +310,16 @@ First, call `ledger_status`, then write `run_started`
 ## Why the review queue leads
 
 Sections 1 and 2 are queues: every lead in Review needs the operator to
-approve or change its first touch, and a lead waiting long in Ready to
-Send means the owner's hand-off has not picked it up. Every other section is reporting. Queues
+approve it or leave it, and a lead waiting long in Approved, not yet
+contacted means the owner's hand-off has not picked it up. Every other section is reporting. Queues
 placed below reporting get scrolled past out of habit, so they lead
 every run, even when empty — see the first Failure mode below.
 
 ## Approval scope
 
-The digest reports on drafts; it never approves, sends or changes one.
-Every first touch stays a draft in the CRM until the operator moves the
-lead to `Ready to Send`. The digest itself goes only
+The digest reports on researched leads; it never approves, contacts or
+changes one. A lead stays at `Researched` until the operator moves it to
+`Approved`. The digest itself goes only
 to the owner, through `owner_notify`, whose guard pins the recipient and
 the sender; the agent has no other way to send anything.
 
@@ -324,16 +332,18 @@ matches the wall clock exactly this week. Anchor: Monday, 2026-08-24,
 ```
 # Sales Partner Digest — 2026-08-31
 
-## Review (2)
-- Meridian Robotics — drafted: email, linkedin — [link]
-- Thornfield Media — drafted: linkedin, call (+1 510 555 0142) — [link]
+## Review (4)
+- Harrow Analytics — saas-vendors · onboarding-audit · strong — [link]
+- Quill Systems — saas-vendors · onboarding-audit · moderate — [link]
+- Thornfield Media — local-media · ad-teardown · weak (weak: segment fit only) — [link]
+- ⚠ Larkspur Dental — dental-clinics · no offer · no evidence — [link]
 
-## Ready to Send (1)
-- Corvid Analytics — drafted: email — drafted 1 day ago
+## Approved, not yet contacted (1)
+- Corvid Analytics — saas-vendors · onboarding-audit — researched 1 day ago
 
 ## Next actions due today (2)
 - Fennimore Health — Send onboarding proposal — due 2026-08-28 (3 days overdue)
-- Corvid Analytics — Await reply to approach; re-engage if none by 2026-08-31 — due 2026-08-31
+- Corvid Analytics — Call the COO about the onboarding audit — due 2026-08-31
 
 ## New leads scored (5, top 5 since last digest)
 1. Harrow Analytics — Approach 80 · Fit 70 — buying trigger: posted six ops-eng roles in two weeks after a Series B
@@ -344,7 +354,7 @@ matches the wall clock exactly this week. Anchor: Monday, 2026-08-24,
 
 ## Movement (3)
 - Harrow Analytics: → Researched (2026-08-30)
-- Quill Systems: → Approach Drafted (2026-08-29)
+- Quill Systems: → Researched (2026-08-29)
 - Ashgrove Systems: → Disqualified (2026-08-27; anti-signal — company size under floor)
 - Disqualified: Ashgrove Systems
 - Owner's pipeline now: Contacted 4, Engaged 1, Open Deal 1, Nurture 2, Customer 0

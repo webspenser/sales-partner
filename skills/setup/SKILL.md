@@ -119,7 +119,9 @@ skill, if this agent has one.
       the pushed copy: on a first setup step 10 commits and pushes it.
       For `owner_only_send` only, step 11 offers the test notification.
       On a re-run, when the instance already has a
-      git upstream, commit and push the file now. If it cannot be
+      git remote, commit and push the file now, to the branch the guard
+      compares against: the current branch's upstream, or, on a branch
+      with none, the remote's default branch (`origin/HEAD`). If it cannot be
       pushed, do not bind the capability.
    5. Add `bind_<capability>: <provider>` (or `custom`) to
       `instance.yaml`, replacing an earlier line for that capability.

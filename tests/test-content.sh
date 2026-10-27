@@ -530,7 +530,7 @@ assert_contains "$SP/README.md" 'messages only you, through Resend'
 assert_contains "$SP/evals/cases.md" 'A notification never reaches anyone but the owner'
 
 echo "-- 7.0.0: release"
-assert_contains "$SP/agent.yaml" 'version: 8.1.1'
+assert_contains "$SP/agent.yaml" 'version: 8.1.2'
 for m in agent.yaml .claude-plugin/plugin.json .claude-plugin/marketplace.json .codex-plugin/plugin.json gemini-extension.json; do
   grep -qF "$EXPECTED_DESC" "./$m" && _report ok "$m: description is the 8.0.0 string" || _report no "$m: description is not the 8.0.0 string"
 done
@@ -794,10 +794,10 @@ done < <(find AGENT.md README.md subagents skills templates context capabilities
 rm -f "$README_NO_UPGRADE"
 
 echo "-- 8.0.0: release: version, README flow and the upgrade note"
-assert_contains "$SP/agent.yaml" 'version: 8.1.1'
-assert_contains "$SP/README.md" 'Version 8.1.1.'
+assert_contains "$SP/agent.yaml" 'version: 8.1.2'
+assert_contains "$SP/README.md" 'Version 8.1.2.'
 for m in .claude-plugin/plugin.json .codex-plugin/plugin.json gemini-extension.json; do
-  assert_contains "./$m" '"version": "8.1.1"'
+  assert_contains "./$m" '"version": "8.1.2"'
 done
 assert_contains "$SP/README.md" 'Upgrading from 7.4'
 for t in 'Approved' 'Research Anyway' 'Talking Points' 'offer catalog' 'Hero Offer' 'schedule_approach'; do

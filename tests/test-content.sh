@@ -530,7 +530,7 @@ assert_contains "$SP/README.md" 'messages only you, through Resend'
 assert_contains "$SP/evals/cases.md" 'A notification never reaches anyone but the owner'
 
 echo "-- 7.0.0: release"
-assert_contains "$SP/agent.yaml" 'version: 8.1.2'
+assert_contains "$SP/agent.yaml" 'version: 8.2.0'
 for m in agent.yaml .claude-plugin/plugin.json .claude-plugin/marketplace.json .codex-plugin/plugin.json gemini-extension.json; do
   grep -qF "$EXPECTED_DESC" "./$m" && _report ok "$m: description is the 8.0.0 string" || _report no "$m: description is not the 8.0.0 string"
 done
@@ -794,10 +794,10 @@ done < <(find AGENT.md README.md subagents skills templates context capabilities
 rm -f "$README_NO_UPGRADE"
 
 echo "-- 8.0.0: release: version, README flow and the upgrade note"
-assert_contains "$SP/agent.yaml" 'version: 8.1.2'
-assert_contains "$SP/README.md" 'Version 8.1.2.'
+assert_contains "$SP/agent.yaml" 'version: 8.2.0'
+assert_contains "$SP/README.md" 'Version 8.2.0.'
 for m in .claude-plugin/plugin.json .codex-plugin/plugin.json gemini-extension.json; do
-  assert_contains "./$m" '"version": "8.1.2"'
+  assert_contains "./$m" '"version": "8.2.0"'
 done
 assert_contains "$SP/README.md" 'Upgrading from 7.4'
 for t in 'Approved' 'Research Anyway' 'Talking Points' 'offer catalog' 'Hero Offer' 'schedule_approach'; do
@@ -1140,7 +1140,7 @@ for t in 'Upgrading from 8.0' 'Research Capped' 'reviews' 'Indeed' 'research tip
 done
 # The note names the config keys, the field, the bindings and the connector URL, and it
 # carries the exact connector URL from the Apify usage file's Setup.
-UP81=$(awk '/^Upgrading from 8\.0/ { f=1; next } f && (/^## / || /^Upgrading from 8\.0/) { f=0 } f' "$SP/README.md")
+UP81=$(awk '/^Upgrading from 8\.0/ { f=1; next } f && (/^## / || /^Upgrading from /) { f=0 } f' "$SP/README.md")
 for t in apify_reviews apify_ads apify_jobs apify_site_reader 'apify_cap_usd_per_lead: 0.50' \
   'research_budget_per_lead_minutes: 15' research_capped 'bindings/scraping.md' 'Apify Actors' \
   'mcp__claude_ai_Apify_Actors__' '/sales-partner:schedule'; do
@@ -1346,5 +1346,10 @@ assert_contains "$WU" '`search_web`'
 flat_has "$SP/agent.yaml" 'optional_prepare: web_search'
 assert_contains "$SP/agent.yaml" 'capabilities: crm, owner_notify, ledger, scraping, web_search'
 if grep -rqiE 'EXA_API_KEY|exaApiKey=[A-Za-z0-9]' "$SP/capabilities/web_search"; then _report no "web_search holds no key or env var"; else _report ok "web_search holds no key or env var"; fi
+
+echo "-- 8.2: README"
+flat_has "$SP/README.md" 'Optional: Exa for web search'
+flat_has "$SP/README.md" 'Upgrading from 8.1:'
+flat_has "$SP/README.md" 'agent_version: 8.2.0'
 
 finish

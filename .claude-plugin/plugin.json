@@ -1,6 +1,6 @@
 {
   "name": "sales-partner",
-  "version": "8.1.2",
+  "version": "8.2.0",
   "description": "Interviews a business, then finds, scores and researches fresh leads that fit its ideal customer and matches each one to the offer most likely to land, with sourced talking points the owner's own sequences can use",
   "author": { "name": "Webspenser" },
   "repository": "https://github.com/webspenser/sales-partner",

@@ -1333,4 +1333,18 @@ flat_has "$PR" 'A `search_web` call is not an Apify call: it never counts toward
 flat_has "$PR" 'and when a cap stops scraping, Exa keeps running, since it is web search'
 flat_has "$PR" 'A `search_web` call that fails after its one retry is recorded as a failed `step` and research goes on; it is not a stop and does not notify the owner.'
 
+echo "-- 8.2: web_search capability"
+WC="$SP/capabilities/web_search/contract.md"; WU="$SP/capabilities/web_search/tools/exa/usage.md"
+assert_contains "$WC" '| `search_web` |'
+assert_contains "$WC" '- `no_external_send` —'
+assert_contains "$WC" '- `allowlisted_tools` —'
+assert_contains "$WC" '- `default_result_count` —'
+assert_contains "$WU" '## Setup'
+assert_contains "$WU" '## Probe'
+assert_contains "$WU" '## Cost'
+assert_contains "$WU" '`search_web`'
+flat_has "$SP/agent.yaml" 'optional_prepare: web_search'
+assert_contains "$SP/agent.yaml" 'capabilities: crm, owner_notify, ledger, scraping, web_search'
+if grep -rqiE 'EXA_API_KEY|exaApiKey=[A-Za-z0-9]' "$SP/capabilities/web_search"; then _report no "web_search holds no key or env var"; else _report ok "web_search holds no key or env var"; fi
+
 finish

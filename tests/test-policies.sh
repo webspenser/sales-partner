@@ -526,4 +526,15 @@ for c in A:"mismatched type blocks with a clear message and no writes" B:"correc
   k=${c%%:*}; echo "$bt" | grep -qx "$k True" && _report ok "bootstrap $k: ${c#*:}" || _report no "bootstrap $k: ${c#*:} ($bt)"
 done
 
+echo "-- web_search (exa)"
+EX=capabilities/web_search/tools/exa/guard.yaml; P=mcp__claude_ai_Exa__; SM=exa
+check 0 "search with query"          $EX ${P}web_search_exa '{"query":"owner or principal of a roofing contractor in Alameda"}'
+check 0 "category in the query"      $EX ${P}web_search_exa '{"query":"category:people owner of a roofing contractor in Alameda"}'
+check 2 "numResults blocked"         $EX ${P}web_search_exa '{"query":"x","numResults":100}' "may not use numResults"
+check 2 "respelled numresults"       $EX ${P}web_search_exa '{"query":"x","numresults":100}' "may not use"
+check 2 "agent_run blocked"          $EX ${P}agent_run '{"query":"x"}'
+check 2 "advanced search blocked"    $EX ${P}web_search_advanced_exa '{"query":"x"}'
+check 2 "page fetch blocked"         $EX ${P}web_fetch_exa '{"urls":["https://example.com"]}'
+SM=
+
 finish

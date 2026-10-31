@@ -1,0 +1,14 @@
+# Exa guard policy: Exa's hosted MCP server (https://mcp.exa.ai/mcp) added
+# as a claude.ai connector whose name contains "exa". Only web_search_exa
+# runs, and it takes only query: numResults (and any respelling) is
+# blocked, so Exa's default of 10 results applies. agent_run (Exa's
+# research agent), web_search_advanced_exa, web_fetch_exa and every other
+# tool on the server are outside allow. Tool names come from
+# docs/superpowers/notes/2026-10-31-exa-connector-probe.md. Nothing is
+# pinned from bindings: the policy itself fixes the call's size.
+covers: [no_external_send, allowlisted_tools, default_result_count]
+allow: [web_search_exa]
+only_keys:
+  - tools: [web_search_exa]
+    at: ["$"]
+    keys: [query]

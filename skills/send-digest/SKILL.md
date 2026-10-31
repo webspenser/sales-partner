@@ -298,14 +298,16 @@ First, call `ledger_status`, then write `run_started`
    moved.
 7. **Section 6 — Spend.** Read the week's Apify cost from the ledger:
    the sum of `cost_usd` over this cap week's `step` events for `prospect`
-   and `prepare` (`find_events`) — the same weekly boundary the anchor
+   and `prepare` (`find_events`), leaving out every step whose `detail` starts with `search_web` — the same weekly boundary the anchor
    uses, so spend and digest windows line up. Compare it to
    `apify_spend_cap_usd_per_week` from `operating-config.md`. Report the
    dollar amount spent, the weekly cap, and the percentage, then the
    per-lead cap, `apify_cap_usd_per_lead` from the same file, next to
    it as `$<cap> per lead`. The amounts are
-   estimates (Apify does not return cost). This section does
-   not touch the CRM.
+   estimates (Apify does not return cost). When the week has
+   `search_web` steps, add one line, `Exa web search: $<sum of their
+   cost_usd> (<count> searches, <failed> failed)`; with none, leave the
+   line out. This section does not touch the CRM.
 8. Render all six sections, in the fixed order above, every run — a
    section with nothing to report still gets its heading and an
    explicit "None" (or equivalent), never a silently omitted heading.

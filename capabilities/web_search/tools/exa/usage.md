@@ -2,8 +2,8 @@
 
 Searches the web through Exa's hosted MCP server, connected as a claude.ai
 connector. `exa:` below means the connected Exa server's tools, whatever
-their prefix (with a claude.ai connector named `Exa`,
-`mcp__claude_ai_Exa__`).
+their prefix (with a claude.ai connector named `ExaSearch`,
+`mcp__claude_ai_ExaSearch__`).
 
 - `search_web` — `exa:web_search_exa` with `query` only. Exa sends its
   recommended request (`type: auto`, highlights on) and returns up to 10
@@ -40,18 +40,24 @@ Exa is optional. Bind it only when the business has an Exa account.
 
 1. Get an Exa API key at https://dashboard.exa.ai/api-keys (or use Exa's
    sign-in, if the connector offers it).
-2. At claude.ai, Settings → Connectors → Add custom connector: name it
-   `Exa` (the name must contain `exa`), URL `https://mcp.exa.ai/mcp`.
-   Put the key where the connector form asks for it, or on the URL as
-   `?exaApiKey=<key>` if it has no field for it. The key lives only in
+2. At claude.ai, Settings → Connectors → Add custom connector: name it `ExaSearch`
+   (one word: the guard and the schedule check look for `exasearch` in
+   the connector's name), URL `https://mcp.exa.ai/mcp?tools=web_search_exa`.
+   The `tools` parameter turns on only the search tool, so the model is
+   never offered Exa's page fetch or research agent (the guard would
+   block them, and a block stops the run). Put the key where the
+   connector form asks for it, or append it to the URL as
+   `&exaApiKey=<key>` if it has no field for it. The key lives only in
    the connector: never in this instance, its bindings, or a file.
 3. Re-run setup's tools step and answer yes for web search; it adds
    `bind_web_search: exa` to `instance.yaml`.
-4. For scheduled runs, re-run the schedule skill and attach the `Exa`
-   connector to the routine that runs prepare.
+4. For scheduled runs, re-run the schedule skill and attach the
+   `ExaSearch` connector to the routine that runs prepare.
 
-No other connector's tool names may contain `exa`: the guard applies
-this policy to any MCP tool whose name contains it.
+No other connector's name or tool name may contain `exasearch`: the guard applies
+this policy to any MCP tool whose name contains it, and blocks every
+tool but `web_search_exa`. In setup's tools step, list the session's
+tools that contain `exasearch` and stop if any is on another server.
 
 ## Probe
 

@@ -101,7 +101,7 @@ Segment and offer).
   an anti-signal
 
 ## Tools allowed
-- Web search
+- Web search (the host's built-in search)
 - Web search `search_web` (Exa), once per lead, only when `instance.yaml` has a `bind_web_search` line (find-decision-makers).
   A `search_web` call is not an Apify call: it never counts toward `apify_cap_usd_per_lead` or `apify_spend_cap_usd_per_week`,
   and when a cap stops scraping, Exa keeps running, since it is web search.
@@ -464,6 +464,13 @@ In an interactive session the operator can ask for three things:
 
 ## Ledger
 Call `ledger_status` first; write `run_started` first and `run_finished` last, numbering events with `seq` per `capabilities/ledger/contract.md` (Run bracketing, Failure policy). Write `stop_condition`, `notify_sent` and `error` events when they happen.
+
+A `search_web` step has `subject` the lead id, `outcome` `ok` or `failed`,
+`items_in` 1, `items_out` the results read, `cost_usd` the `usage.md`
+estimate (also on a failed call), and `detail` `search_web; estimated`
+or `search_web; failed: <reason>`. Before searching for a lead, a
+continue run looks for an `ok` `search_web` step with that `subject` in
+the run being continued, and skips the search when there is one.
 
 One `step` per lead researched: `subject` is the CRM lead id,
 `items_in` the findings logged, `items_out` the hooks written, and

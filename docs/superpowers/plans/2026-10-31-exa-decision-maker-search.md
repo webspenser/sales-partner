@@ -157,6 +157,6 @@ Sources list gains "Exa web search, when `web_search` is bound". 7-day cap: sum 
 **Files:** live instance `live-agents/webspenser-sales-partner` (`instance.yaml`, `schedules.yaml`); no package files.
 
 - [ ] **Step 1:** User: Exa connector exists (Task 2 Step 1). Re-run setup's tools step in the instance: answer yes for Exa; it adds `bind_web_search: exa`. Commit and push the instance over HTTPS.
-- [ ] **Step 2:** Run the schedule skill: `check` shows `web_search` as a bound connector on the prospect entry; user attaches the `Exa` connector to routine `trig_01LAydzT3oRKw4EQUcUH71HH`; `verify` prints `OK`. Set `agent_version: 8.2.0`; user sets the environment comment `# sales-partner 8.2.0`.
+- [ ] **Step 2:** Run the schedule skill: `check` shows `web_search` as a bound connector on the prospect entry; user attaches the `ExaSearch` connector to the prospect routine; `verify` prints `OK`. Set `agent_version: 8.2.0`; user sets the environment comment `# sales-partner 8.2.0`.
 - [ ] **Step 3:** User runs the prospect routine (Run now). Read the log with `RemoteTrigger get_run_log`: 8.2.0 loaded; `web_search_exa` calls not blocked; one per researched lead.
 - [ ] **Step 4:** Compare names written in Attio with the baseline in `live-agents/exa-test-2026-10-31/results2.json` for the four strong-source leads. Pass: all four named with a strong source. Report the comparison to the user; if fewer, report the gap (the release stands).

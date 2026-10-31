@@ -527,7 +527,7 @@ for c in A:"mismatched type blocks with a clear message and no writes" B:"correc
 done
 
 echo "-- web_search (exa)"
-EX=capabilities/web_search/tools/exa/guard.yaml; P=mcp__claude_ai_Exa__; SM=exa
+EX=capabilities/web_search/tools/exa/guard.yaml; P=mcp__claude_ai_ExaSearch__; SM=exasearch
 check 0 "search with query"          $EX ${P}web_search_exa '{"query":"owner or principal of a roofing contractor in Alameda"}'
 check 0 "category in the query"      $EX ${P}web_search_exa '{"query":"category:people owner of a roofing contractor in Alameda"}'
 check 2 "numResults blocked"         $EX ${P}web_search_exa '{"query":"x","numResults":100}' "may not use numResults"

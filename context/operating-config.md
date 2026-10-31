@@ -46,7 +46,8 @@ tone: "[three adjectives from the interview]"
   `read_site` (the text, links and markup of a few pages of a
   business's website); these four are used by the Preparer, which picks
   among them from the lead's segment's offers' `research_tips`;
-  `web_search` is general search; `apollo` is a stubbed tool —
+  `web_search` is the host's built-in search, not the Exa `web_search` capability
+  (which the Preparer uses on its own when bound); `apollo` is a stubbed tool —
   listing it makes the Prospector report that it is not yet enabled,
   never substitute another source. Every Apify source draws on
   `apify_spend_cap_usd_per_week` and, for a lead being researched, on

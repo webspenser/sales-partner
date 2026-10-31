@@ -273,7 +273,7 @@ verified). Exa is optional. In order:
    `schedules.yaml`, then commit and push. Nothing else changes.
 2. With Exa: first add Exa's connector at claude.ai (the tool's
    `## Setup`), re-run setup's tools step and answer yes for web search,
-   then re-run `/sales-partner:schedule`, attach the `Exa` connector to
+   then re-run `/sales-partner:schedule`, attach the `ExaSearch` connector to
    the routine that runs prepare, and do step 1.
 
 ## Developing

@@ -15,6 +15,11 @@ step when there is none.
 |---|---|---|---|
 | `search_web` | `query`: what to find, in plain words, with the business's name, trade, street address, city and website domain when the search is about one business | up to 10 results, each with title, URL, published date when known, and highlights (the passages of the page that answer the query); plus the call's cost (estimated, since the provider does not report it) | Retried once; then a ledger `step` with outcome `failed` |
 
+Only `find-decision-makers` calls `search_web`, from the Preparer: the
+Prospector's `web_search` source is the host's built-in search, not this
+capability. The one-search-per-lead limit is an instruction; no guard
+counts calls.
+
 Each call is a ledger `step` (`capabilities/ledger/contract.md`) whose
 `detail` starts with `search_web`, with its cost in `cost_usd`. Its spend
 is not scraping spend: the Preparer's Apify caps leave it out. A guard

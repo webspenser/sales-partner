@@ -91,7 +91,10 @@ output; this difference is checked in the smoke test below.)
 ## The capability
 
 A new capability, **`web_search`**, with one tool, **`exa`**
-(`capabilities/web_search/tools/exa/`, `server_match: exa`).
+(`capabilities/web_search/tools/exa/`, `server_match: exasearch`; the
+connector is named `ExaSearch`, because a bare `exa` occurs in ordinary
+words such as example and Texas, and would put other tools under this
+policy. Changed after the final review.).
 
 - **Operation `search_web(query)`**: returns up to 10 results, each
   with title, URL, published date when known, and highlights; plus the
@@ -206,7 +209,8 @@ means a call the policy refuses.
 
 - Setup's tools step binds `web_search` to `exa` like any capability;
   `usage.md` `## Setup` tells the user to add Exa's hosted MCP server as
-  a claude.ai connector whose name contains `exa`; `## Probe` makes one
+  a claude.ai connector named `ExaSearch` (URL
+  `https://mcp.exa.ai/mcp?tools=web_search_exa`); `## Probe` makes one
   read-only `web_search_exa` call on a known business.
 - `agent.yaml`: `web_search` added to `capabilities` and as
   `optional_prepare: web_search` (prospect and digest do not use it).

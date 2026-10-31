@@ -1352,4 +1352,20 @@ flat_has "$SP/README.md" 'Optional: Exa for web search'
 flat_has "$SP/README.md" 'Upgrading from 8.1:'
 flat_has "$SP/README.md" 'agent_version: 8.2.0'
 
+echo "-- 8.2 review fixes"
+flat_has "$SP/subagents/prospector.md" 'leaving out every step whose `detail` starts with `search_web`'
+flat_has "$SP/subagents/prospector.md" 'The source `web_search` is the host'"'"'s built-in web search, never the `web_search` capability (Exa)'
+flat_has "$SP/context/operating-config.md" '`web_search` is the host'"'"'s built-in search, not the Exa `web_search` capability'
+flat_has "$SP/subagents/preparer.md" '- Web search (the host'"'"'s built-in search)'
+flat_has "$SP/capabilities/web_search/contract.md" 'Only `find-decision-makers` calls `search_web`'
+flat_has "$SP/skills/send-digest/SKILL.md" 'leaving out every step whose `detail` starts with `search_web`'
+flat_has "$SP/skills/send-digest/SKILL.md" 'Exa web search: $'
+assert_contains "$SP/templates/digest.md" 'Exa web search: [$ spent]'
+flat_has "$SP/capabilities/web_search/tools/exa/usage.md" 'https://mcp.exa.ai/mcp?tools=web_search_exa'
+flat_has "$SP/capabilities/web_search/tools/exa/usage.md" 'name it `ExaSearch`'
+flat_has "$SP/capabilities/web_search/tools/exa/usage.md" 'No other connector'"'"'s name or tool name may contain `exasearch`'
+assert_contains "$SP/capabilities/web_search/tools/exa/identity.yaml" 'server_match: exasearch'
+flat_has "$SP/subagents/preparer.md" 'A `search_web` step has `subject` the lead id'
+if grep -rqE 'trig_[0-9A-Za-z]{8,}' "$SP/docs" "$SP/README.md"; then _report no "no routine trigger ids in the public repo"; else _report ok "no routine trigger ids in the public repo"; fi
+
 finish

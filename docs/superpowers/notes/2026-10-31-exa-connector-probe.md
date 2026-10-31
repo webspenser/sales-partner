@@ -32,8 +32,11 @@ not contain any bound `server_match`).
 
 ## web_search_exa
 
-- Input: `query` (string), optional `numResults` (number), as Exa
-  documents. The policy allows `query` only.
+- Input: `query` (string, required), `objective` (string, required),
+  optional `numResults` (number). The policy allows `query` and
+  `objective`. (This probe asked for the schema but its answer was not
+  read; the first scheduled run on 8.2.0 found `objective` required when
+  the guard refused it. Fixed in 8.2.1.)
 - A call with only `query` succeeded in about one second.
 - The result is text, one block per result: `Title:`, `URL:`,
   `Published:`, `Author:` and `Highlights:` (the passages that answer the

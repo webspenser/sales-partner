@@ -118,7 +118,7 @@ in that folder loads the agent. Plugin updates never touch your folder.
 
 Built on [Agent Standard](https://github.com/webspenser/agent-builder/blob/main/STANDARD.md) 7.4
 with [Agent Builder](https://github.com/webspenser/agent-builder).
-Version 8.2.0.
+Version 8.2.1.
 
 ## Use it from source
 
@@ -271,6 +271,9 @@ verified). Exa is optional. In order:
 1. Without Exa: change the cloud environment's version comment to
    `# sales-partner 8.2.0` and set `agent_version: 8.2.0` in
    `schedules.yaml`, then commit and push. Nothing else changes.
+   (8.2.1: use `8.2.1` in both places. 8.2.0's guard refused the
+   `objective` argument Exa's connector requires, which stopped prepare
+   at its first Exa search.)
 2. With Exa: first add Exa's connector at claude.ai (the tool's
    `## Setup`), re-run setup's tools step and answer yes for web search,
    then re-run `/sales-partner:schedule`, attach the `ExaSearch` connector to

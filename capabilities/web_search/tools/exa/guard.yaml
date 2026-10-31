@@ -1,7 +1,9 @@
 # Exa guard policy: Exa's hosted MCP server
 # (https://mcp.exa.ai/mcp?tools=web_search_exa) added as a claude.ai
 # connector named ExaSearch (server_match exasearch). Only web_search_exa
-# runs, and it takes only query: numResults (and any respelling) is
+# runs, and it takes only query and objective (the connector requires
+# objective: the goal the search serves, which ranks results but does not
+# change their number or cost): numResults (and any respelling) is
 # blocked, so Exa's default of 10 results applies. agent_run (Exa's
 # research agent), web_search_advanced_exa, web_fetch_exa and every other
 # tool on the server are outside allow. Tool names come from Exa's MCP
@@ -14,4 +16,4 @@ allow: [web_search_exa]
 only_keys:
   - tools: [web_search_exa]
     at: ["$"]
-    keys: [query]
+    keys: [query, objective]

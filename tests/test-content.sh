@@ -530,7 +530,7 @@ assert_contains "$SP/README.md" 'messages only you, through Resend'
 assert_contains "$SP/evals/cases.md" 'A notification never reaches anyone but the owner'
 
 echo "-- 7.0.0: release"
-assert_contains "$SP/agent.yaml" 'version: 8.2.0'
+assert_contains "$SP/agent.yaml" 'version: 8.2.1'
 for m in agent.yaml .claude-plugin/plugin.json .claude-plugin/marketplace.json .codex-plugin/plugin.json gemini-extension.json; do
   grep -qF "$EXPECTED_DESC" "./$m" && _report ok "$m: description is the 8.0.0 string" || _report no "$m: description is not the 8.0.0 string"
 done
@@ -794,10 +794,10 @@ done < <(find AGENT.md README.md subagents skills templates context capabilities
 rm -f "$README_NO_UPGRADE"
 
 echo "-- 8.0.0: release: version, README flow and the upgrade note"
-assert_contains "$SP/agent.yaml" 'version: 8.2.0'
-assert_contains "$SP/README.md" 'Version 8.2.0.'
+assert_contains "$SP/agent.yaml" 'version: 8.2.1'
+assert_contains "$SP/README.md" 'Version 8.2.1.'
 for m in .claude-plugin/plugin.json .codex-plugin/plugin.json gemini-extension.json; do
-  assert_contains "./$m" '"version": "8.2.0"'
+  assert_contains "./$m" '"version": "8.2.1"'
 done
 assert_contains "$SP/README.md" 'Upgrading from 7.4'
 for t in 'Approved' 'Research Anyway' 'Talking Points' 'offer catalog' 'Hero Offer' 'schedule_approach'; do
@@ -1367,5 +1367,11 @@ flat_has "$SP/capabilities/web_search/tools/exa/usage.md" 'No other connector'"'
 assert_contains "$SP/capabilities/web_search/tools/exa/identity.yaml" 'server_match: exasearch'
 flat_has "$SP/subagents/preparer.md" 'A `search_web` step has `subject` the lead id'
 if grep -rqE 'trig_[0-9A-Za-z]{8,}' "$SP/docs" "$SP/README.md"; then _report no "no routine trigger ids in the public repo"; else _report ok "no routine trigger ids in the public repo"; fi
+
+echo "-- 8.2.1: objective"
+flat_has "$SP/capabilities/web_search/tools/exa/usage.md" '`exa:web_search_exa` with `query` and `objective`'
+flat_has "$SP/capabilities/web_search/tools/exa/usage.md" 'Find the owner, principal or co-owners of <business name>'
+flat_has "$SP/skills/find-decision-makers/SKILL.md" 'and the objective'
+flat_has "$SP/docs/superpowers/notes/2026-10-31-exa-connector-probe.md" '`objective` (string, required)'
 
 finish

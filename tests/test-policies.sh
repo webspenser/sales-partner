@@ -535,6 +535,8 @@ check 2 "respelled numresults"       $EX ${P}web_search_exa '{"query":"x","numre
 check 2 "agent_run blocked"          $EX ${P}agent_run '{"query":"x"}'
 check 2 "advanced search blocked"    $EX ${P}web_search_advanced_exa '{"query":"x"}'
 check 2 "page fetch blocked"         $EX ${P}web_fetch_exa '{"urls":["https://example.com"]}'
+check 0 "query with objective"       $EX ${P}web_search_exa '{"query":"owner or principal of a roofing contractor in Alameda","objective":"Find the owner or principal of this business"}'
+check 2 "objective with numResults"  $EX ${P}web_search_exa '{"query":"x","objective":"y","numResults":100}' "may not use numResults"
 check 0 "local session name"         $EX mcp__claude_ai_ExaSearch__web_search_exa '{"query":"owner of a roofing contractor in Alameda"}'
 SM=
 

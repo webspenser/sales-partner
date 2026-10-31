@@ -527,7 +527,7 @@ for c in A:"mismatched type blocks with a clear message and no writes" B:"correc
 done
 
 echo "-- web_search (exa)"
-EX=capabilities/web_search/tools/exa/guard.yaml; P=mcp__claude_ai_ExaSearch__; SM=exasearch
+EX=capabilities/web_search/tools/exa/guard.yaml; P=mcp__ExaSearch__; SM=exasearch  # the cloud routine's name (probe note)
 check 0 "search with query"          $EX ${P}web_search_exa '{"query":"owner or principal of a roofing contractor in Alameda"}'
 check 0 "category in the query"      $EX ${P}web_search_exa '{"query":"category:people owner of a roofing contractor in Alameda"}'
 check 2 "numResults blocked"         $EX ${P}web_search_exa '{"query":"x","numResults":100}' "may not use numResults"
@@ -535,6 +535,7 @@ check 2 "respelled numresults"       $EX ${P}web_search_exa '{"query":"x","numre
 check 2 "agent_run blocked"          $EX ${P}agent_run '{"query":"x"}'
 check 2 "advanced search blocked"    $EX ${P}web_search_advanced_exa '{"query":"x"}'
 check 2 "page fetch blocked"         $EX ${P}web_fetch_exa '{"urls":["https://example.com"]}'
+check 0 "local session name"         $EX mcp__claude_ai_ExaSearch__web_search_exa '{"query":"owner of a roofing contractor in Alameda"}'
 SM=
 
 finish

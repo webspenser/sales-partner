@@ -2,8 +2,9 @@
 
 Searches the web through Exa's hosted MCP server, connected as a claude.ai
 connector. `exa:` below means the connected Exa server's tools, whatever
-their prefix (with a claude.ai connector named `ExaSearch`,
-`mcp__claude_ai_ExaSearch__`).
+their prefix: with a claude.ai connector named `ExaSearch`,
+`mcp__ExaSearch__` in a cloud routine and `mcp__claude_ai_ExaSearch__` in
+a local session (docs/superpowers/notes/2026-10-31-exa-connector-probe.md).
 
 - `search_web` — `exa:web_search_exa` with `query` only. Exa sends its
   recommended request (`type: auto`, highlights on) and returns up to 10
@@ -20,8 +21,9 @@ rules, never by words in the query.
 
 ## Results
 
-Each result has a title, a URL, a published date when Exa knows one, and
-highlights: the passages of the page that answer the query. Read the
+The tool returns text, one block per result, with `Title:`, `URL:`,
+`Published:`, `Author:` (often `N/A`) and `Highlights:`: the passages of
+the page that answer the query. Read the
 people a page names from its highlights, and grade each by that page's
 URL (`find-decision-makers`, Source strength). An `exa.ai/library/person`
 URL is Exa's own profile page; when it carries contractor licence data
@@ -54,7 +56,9 @@ Exa is optional. Bind it only when the business has an Exa account.
 4. For scheduled runs, re-run the schedule skill and attach the
    `ExaSearch` connector to the routine that runs prepare.
 
-No other connector's name or tool name may contain `exasearch`: the guard applies
+Attach only `ExaSearch` to a routine, never a second Exa connector with
+Exa's default tools (page fetch, research agent): nothing guards it, and
+`verify` refuses it. No other connector's name or tool name may contain `exasearch`: the guard applies
 this policy to any MCP tool whose name contains it, and blocks every
 tool but `web_search_exa`. In setup's tools step, list the session's
 tools that contain `exasearch` and stop if any is on another server.

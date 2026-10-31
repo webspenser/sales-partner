@@ -116,7 +116,7 @@ where your data lives — and run `/sales-partner:setup`. It writes
 make the folder a private git repo. From then on, opening Claude Code
 in that folder loads the agent. Plugin updates never touch your folder.
 
-Built on [Agent Standard](https://github.com/webspenser/agent-builder/blob/main/STANDARD.md) 7.3
+Built on [Agent Standard](https://github.com/webspenser/agent-builder/blob/main/STANDARD.md) 7.4
 with [Agent Builder](https://github.com/webspenser/agent-builder).
 Version 8.1.2.
 

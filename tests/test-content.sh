@@ -500,7 +500,7 @@ echo "-- 7.0: no Airtable CRM"
 for f in capabilities/crm/contract.md capabilities/crm/tools/attio/usage.md skills/send-digest/SKILL.md; do
   assert_not_contains "./$f" "Airtable"
 done
-assert_contains "$SP/agent.yaml" 'standard: "7.3"'
+assert_contains "$SP/agent.yaml" 'standard: "7.4"'
 assert_contains "$SP/agent.yaml" 'capabilities: crm'
 
 echo "-- 7.0: no email_drafts"
@@ -546,7 +546,7 @@ printf '%s' "$after_tools" | grep -qF 'git push -u' && _report ok "version contr
 printf '%s' "$after_tools" | grep -qF 'offer one test notification' && _report ok "open step offers the test notification" || _report no "open step does not offer the test notification"
 
 echo "-- 7.1: ledger"
-assert_contains "$SP/agent.yaml" 'standard: "7.3"'
+assert_contains "$SP/agent.yaml" 'standard: "7.4"'
 assert_contains "$SP/agent.yaml" 'capabilities: crm, owner_notify, ledger'
 assert_contains "$SP/agent.yaml" 'activity_prospect: crm, owner_notify, ledger'
 assert_contains "$SP/agent.yaml" 'activity_prepare: crm, owner_notify, ledger, scraping'
@@ -582,7 +582,7 @@ assert_contains "$SP/README.md" 'Upgrading from 7.0'
 wc -c < "$SP/AGENT.md" | awk '{exit !($1 < 6000)}' && _report ok "AGENT.md under 6000 bytes" || _report no "AGENT.md 6000 bytes or more"
 
 echo "-- 7.2: scraping"
-assert_contains "$SP/agent.yaml" 'standard: "7.3"'
+assert_contains "$SP/agent.yaml" 'standard: "7.4"'
 assert_contains "$SP/agent.yaml" 'capabilities: crm, owner_notify, ledger, scraping'
 assert_contains "$SP/capabilities/scraping/contract.md" '`pinned_inputs`'
 assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" 'mcp.apify.com?tools=compass/crawler-google-places,vdrmota/contact-info-scraper'
@@ -1218,7 +1218,7 @@ flat_has "$PP" 'rewrite the reason with only the capped start (the start and its
 flat_has "$PP" 'the other starts stay'
 
 echo "-- 7.3: fixed values and URL rules on the Apify tools"
-assert_contains "$SP/agent.yaml" 'standard: "7.3"'
+assert_contains "$SP/agent.yaml" 'standard: "7.4"'
 AGD=capabilities/scraping/tools/apify/guard.yaml
 assert_contains "./$AGD" 'fixed:'
 assert_contains "./$AGD" 'urls:'
@@ -1304,7 +1304,7 @@ flat_has "$EV" 'a test domain you control that serves only http (Apify fetches f
 C34=$(awk '/^## Case 34:/ { f=1; next } f && /^## Case / { f=0 } f' "$EV")
 printf '%s' "$C34" | grep -qF smithbookkeeping && _report no "Case 34 reuses Case 33's smithbookkeeping" || _report ok "Case 34 has its own page name"
 # README: the standard and the one stated limit left
-assert_contains "$SP/README.md" 'Agent Standard](https://github.com/webspenser/agent-builder/blob/main/STANDARD.md) 7.3'
+assert_contains "$SP/README.md" 'Agent Standard](https://github.com/webspenser/agent-builder/blob/main/STANDARD.md) 7.4'
 flat_has "$SP/README.md" 'data could still leave in the hostname itself'
 # Odd website forms are normalized in both files, so the guard never receives one it refuses
 for f in "$SP/capabilities/scraping/tools/apify/usage.md" "$SP/subagents/preparer.md"; do

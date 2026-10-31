@@ -1311,4 +1311,18 @@ for f in "$SP/capabilities/scraping/tools/apify/usage.md" "$SP/subagents/prepare
   flat_has "$f" 'lowercase the scheme (`HTTPS://` is `https://`) and treat a website with no scheme (`example.com`) or a scheme-relative one (`//example.com`) as `https://`, then apply the same host and root rules'
 done
 
+echo "-- 8.2: Exa search and source strength in find-decision-makers"
+FDM="$SP/skills/find-decision-makers/SKILL.md"
+flat_has "$FDM" 'When `instance.yaml` has a `bind_web_search` line, make one `search_web` call first'
+flat_has "$FDM" 'With no `bind_web_search` line, skip it: that is not an error.'
+flat_has "$FDM" 'One search per lead per run'
+flat_has "$FDM" 'owner or principal of <business name>, <trade> at <street address>, <city> (<domain>)'
+flat_has "$FDM" 'applies to every person this skill records, whatever source found them'
+flat_has "$FDM" 'Diamond Certified'
+flat_has "$FDM" '`exa.ai/library/person`'
+flat_has "$FDM" '`directory only`'
+flat_has "$FDM" '`conflicting sources`'
+flat_has "$FDM" 'A weak source alone never supports `Verified`.'
+flat_has "$FDM" 'Trusting an aggregator directory.'
+
 finish

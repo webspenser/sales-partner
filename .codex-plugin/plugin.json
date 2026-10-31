@@ -1,6 +1,6 @@
 {
   "name": "sales-partner",
-  "version": "8.2.0",
+  "version": "8.2.1",
   "description": "Interviews a business, then finds, scores and researches fresh leads that fit its ideal customer and matches each one to the offer most likely to land, with sourced talking points the owner's own sequences can use",
   "skills": "./skills/",
   "license": "Apache-2.0"

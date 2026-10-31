@@ -6,7 +6,8 @@ their prefix: with a claude.ai connector named `ExaSearch`,
 `mcp__ExaSearch__` in a cloud routine and `mcp__claude_ai_ExaSearch__` in
 a local session (docs/superpowers/notes/2026-10-31-exa-connector-probe.md).
 
-- `search_web` — `exa:web_search_exa` with `query` only. Exa sends its
+- `search_web` — `exa:web_search_exa` with `query` and `objective`, nothing else (the
+  connector requires `objective`; the guard refuses every other argument). Exa sends its
   recommended request (`type: auto`, highlights on) and returns up to 10
   results. Do not pass `numResults`; the guard refuses it. A query may
   start with `category:people` or `category:company` to search only
@@ -15,7 +16,8 @@ a local session (docs/superpowers/notes/2026-10-31-exa-connector-probe.md).
 
 The decision-maker query (`find-decision-makers`):
 `owner or principal of <business name>, <trade> at <street address>, <city> (<domain>)`.
-Leave out the domain when the lead has no website. The query says what
+Leave out the domain when the lead has no website. Its objective:
+`Find the owner, principal or co-owners of <business name> in <city>: pages that name a person tied to this business, such as its own site, a licence record, BBB or a LinkedIn profile.` The query says what
 to find; which results count is decided afterwards by the skill's source
 rules, never by words in the query.
 

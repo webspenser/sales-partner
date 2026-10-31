@@ -17,7 +17,8 @@ search is a legitimate source, viewing it as a human would is not.
 2. **Exa first, when bound.** When `instance.yaml` has a `bind_web_search` line, make one `search_web` call first
    (`capabilities/web_search/contract.md`), with the query
    `owner or principal of <business name>, <trade> at <street address>, <city> (<domain>)`,
-   leaving out the domain when the lead has no website. The query states
+   leaving out the domain when the lead has no website, and the objective
+   `usage.md` gives for the Exa tool. The query states
    what to find, never which results to keep. One search per lead per
    run: a retry after a failed call is the same search, and a continue
    run does not search again once a search for the lead succeeded. If

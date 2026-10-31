@@ -13,7 +13,7 @@ step when there is none.
 
 | Operation | Arguments | Returns | On failure |
 |---|---|---|---|
-| `search_web` | `query`: what to find, in plain words, with the business's name, trade, street address, city and website domain when the search is about one business | up to 10 results, each with title, URL, published date when known, and highlights (the passages of the page that answer the query); plus the call's cost (estimated, since the provider does not report it) | Retried once; then a ledger `step` with outcome `failed` |
+| `search_web` | `query`: what to find, in plain words, with the business's name, trade, street address, city and website domain when the search is about one business; `objective`: the goal the search serves (which pages should rank first) | up to 10 results, each with title, URL, published date when known, and highlights (the passages of the page that answer the query); plus the call's cost (estimated, since the provider does not report it) | Retried once; then a ledger `step` with outcome `failed` |
 
 Only `find-decision-makers` calls `search_web`, from the Preparer: the
 Prospector's `web_search` source is the host's built-in search, not this

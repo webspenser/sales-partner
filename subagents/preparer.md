@@ -102,6 +102,10 @@ Segment and offer).
 
 ## Tools allowed
 - Web search
+- Web search `search_web` (Exa), once per lead, only when `instance.yaml` has a `bind_web_search` line (find-decision-makers).
+  A `search_web` call is not an Apify call: it never counts toward `apify_cap_usd_per_lead` or `apify_spend_cap_usd_per_week`,
+  and when a cap stops scraping, Exa keeps running, since it is web search.
+  A `search_web` call that fails after its one retry is recorded as a failed `step` and research goes on; it is not a stop and does not notify the owner.
 - Map and directory listings, read through web search
 - Scraping `find_contacts`, when `apify_contact_info` is listed in
   `prospecting_sources`
@@ -350,8 +354,9 @@ Before each call, add up the Apify spend of the last 7 days (a rolling
 window, not the calendar week): call `find_events` twice, with
 `activity: prospect, event: step` and `activity: prepare, event: step`,
 `since` set to now minus 7 days, and sum `cost_usd` over those `step`
-events only (`run_finished` repeats the run's total, so counting it would
-double the spend). Add this run's own steps not yet written (queued or
+events only, leaving out every step whose `detail` starts with `search_web` (Exa
+spend is not Apify spend; `run_finished` repeats the run's total, so
+counting it would double the spend). Add this run's own steps not yet written (queued or
 pending). Estimate the next call from `usage.md`'s `## Cost`: for contact
 info, `max_pages_per_call` times the per-page estimate; for an evidence
 call, its flat estimate. If the spend plus

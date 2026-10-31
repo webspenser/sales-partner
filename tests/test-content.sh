@@ -1325,4 +1325,12 @@ flat_has "$FDM" '`conflicting sources`'
 flat_has "$FDM" 'A weak source alone never supports `Verified`.'
 flat_has "$FDM" 'Trusting an aggregator directory.'
 
+echo "-- 8.2: Exa in the Preparer"
+PR="$SP/subagents/preparer.md"
+flat_has "$PR" 'Web search `search_web` (Exa), once per lead, only when `instance.yaml` has a `bind_web_search` line (find-decision-makers)'
+flat_has "$PR" 'sum `cost_usd` over those `step` events only, leaving out every step whose `detail` starts with `search_web`'
+flat_has "$PR" 'A `search_web` call is not an Apify call: it never counts toward `apify_cap_usd_per_lead` or `apify_spend_cap_usd_per_week`'
+flat_has "$PR" 'and when a cap stops scraping, Exa keeps running, since it is web search'
+flat_has "$PR" 'A `search_web` call that fails after its one retry is recorded as a failed `step` and research goes on; it is not a stop and does not notify the owner.'
+
 finish

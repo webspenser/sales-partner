@@ -49,7 +49,8 @@ A scheduled prospecting run, or the count of leads at stages `New` and
 ## Tools allowed
 - Sourcing tools — only the sources listed in `prospecting_sources`
   (`operating-config.md`): its own sources are `apify_google_maps` and
-  `web_search` (and the `apollo` stub; Guardrails). A source not in that list is never used, even when it
+  `web_search` (and the `apollo` stub; Guardrails). The source `web_search` is the host's built-in web search, never the `web_search` capability (Exa):
+  the Prospector never calls `search_web`. A source not in that list is never used, even when it
   would find more leads. The Prospector ignores the Preparer-only sources `apify_contact_info`, `apify_reviews`, `apify_ads`, `apify_jobs` and `apify_site_reader`
   (as `operating-config.md` says): they research leads already found,
   and never source new ones.
@@ -89,8 +90,9 @@ Before each call, add up the Apify spend of the last 7 days (a rolling
 window, not the calendar week): call `find_events` twice, with
 `activity: prospect, event: step` and `activity: prepare, event: step`,
 `since` set to now minus 7 days, and sum `cost_usd` over those `step`
-events only (`run_finished` repeats the run's total, so counting it would
-double the spend). Add this run's own steps not yet written (queued or
+events only, leaving out every step whose `detail` starts with `search_web` (Exa
+spend is not Apify spend; `run_finished` repeats the run's total, so
+counting it would double the spend). Add this run's own steps not yet written (queued or
 pending). Estimate the next call from `usage.md`'s `## Cost`: for Maps,
 `max_places_per_search` times the per-place estimate. If the spend plus
 that estimate would pass `apify_spend_cap_usd_per_week`, write a

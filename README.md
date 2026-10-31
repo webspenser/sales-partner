@@ -116,9 +116,9 @@ where your data lives — and run `/sales-partner:setup`. It writes
 make the folder a private git repo. From then on, opening Claude Code
 in that folder loads the agent. Plugin updates never touch your folder.
 
-Built on [Agent Standard](https://github.com/webspenser/agent-builder/blob/main/STANDARD.md) 7.3
+Built on [Agent Standard](https://github.com/webspenser/agent-builder/blob/main/STANDARD.md) 7.4
 with [Agent Builder](https://github.com/webspenser/agent-builder).
-Version 8.1.2.
+Version 8.2.0.
 
 ## Use it from source
 
@@ -146,7 +146,9 @@ Version 8.1.2.
   can't tie a website to a lead, so data could still leave in the
   hostname itself (a made-up subdomain).
 
-Each tool's guard policy makes Attio, HubSpot, Resend, Airtable and Apify unattended-safe.
+- Optional: Exa for web search (`capabilities/web_search/tools/exa/`), through Exa's hosted connector on your own Exa account. When it is connected, research runs one Exa search per lead to find its owner or principal; without it, research runs as before. The guard lets only Exa's basic search run, at its default 10 results.
+
+Each tool's guard policy makes Attio, HubSpot, Resend, Airtable, Apify and Exa unattended-safe.
 
 Connect these in your host (connectors or MCP servers). Credentials
 never go in this repo.
@@ -261,6 +263,18 @@ new bindings, the new sources are skipped and you get an error
 notification naming the missing bindings. Re-run
 `/sales-partner:schedule` afterwards (step 4): it checks the new
 bindings.
+
+Upgrading from 8.1: decision-maker research can now use Exa, and every
+name it records is graded by its source (a directory-only name is never
+verified). Exa is optional. In order:
+
+1. Without Exa: change the cloud environment's version comment to
+   `# sales-partner 8.2.0` and set `agent_version: 8.2.0` in
+   `schedules.yaml`, then commit and push. Nothing else changes.
+2. With Exa: first add Exa's connector at claude.ai (the tool's
+   `## Setup`), re-run setup's tools step and answer yes for web search,
+   then re-run `/sales-partner:schedule`, attach the `ExaSearch` connector to
+   the routine that runs prepare, and do step 1.
 
 ## Developing
 

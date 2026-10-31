@@ -14,7 +14,16 @@ search is a legitimate source, viewing it as a human would is not.
    job titles and functions that make a real buyer, influencer, or
    gatekeeper — the search below is scoped to these, not to "everyone
    at the company."
-2. Search, in this order: the company site's team or leadership page,
+2. **Exa first, when bound.** When `instance.yaml` has a `bind_web_search` line, make one `search_web` call first
+   (`capabilities/web_search/contract.md`), with the query
+   `owner or principal of <business name>, <trade> at <street address>, <city> (<domain>)`,
+   leaving out the domain when the lead has no website. The query states
+   what to find, never which results to keep. One search per lead per
+   run: a retry after a failed call is the same search, and a continue
+   run does not search again once a search for the lead succeeded. If
+   the call still fails after its one retry, record the failed `step`
+   and go on with the sources below. With no `bind_web_search` line, skip it: that is not an error.
+   Then search, in this order: the company site's team or leadership page,
    the company's public LinkedIn page (and the public LinkedIn profiles
    it links to), and any public professional directory (e.g. a
    conference speaker list, a press mention with a named title).
@@ -23,6 +32,8 @@ search is a legitimate source, viewing it as a human would is not.
    public business registries, which name owners and officers.
    Whatever the source, an owner is written with `role: decision-maker`
    and the title the source gives, e.g. "Owner" — never inferred.
+   Grade every person by the page that names them (Source strength,
+   below), and keep that page's URL in `Notes`.
 3. For each person found who plausibly matches a Target role, classify
    them into exactly one of three roles:
    - **decision-maker** — has the authority to approve or kill the
@@ -44,7 +55,8 @@ search is a legitimate source, viewing it as a human would is not.
    exactly one of decision-maker, influencer, or gatekeeper — the
    operation rejects anything else. `title` holds only the person's
    job title — never fold any other annotation into it.
-6. Set `Verified` only when the contact route came from a source that
+6. A weak source alone never supports `Verified`.
+   Set `Verified` only when the contact route came from a source that
    directly confirms it belongs to this person — a public bio page
    listing the address, a verified LinkedIn profile matching the
    name and current title, a press contact block. Leave `Verified`
@@ -57,6 +69,26 @@ search is a legitimate source, viewing it as a human would is not.
    form `pattern guess, unverified`, together with the guessed address
    and the confirmed address it was inferred from. `Title` stays a
    plain job title and `Verified` stays unchecked.
+
+## Source strength
+
+This applies to every person this skill records, whatever source found them: Exa, the company site,
+the map listing, or any other web search.
+
+- **Strong:** the business's own website; a state licence record
+  (including `exa.ai/library/person` entries that carry contractor
+  licence data); BBB; a bar or trade association profile; Diamond
+  Certified; a LinkedIn profile whose current role is at this business.
+- **Weak:** any other directory or aggregator page (the sites that list
+  every business in a city with a phone number and a "contact person").
+
+- A person named only by weak sources is still written, with `Verified`
+  unchecked and `Notes` saying `directory only` and the URL.
+- When two sources name different people as owner, write both,
+  unverified, with `Notes` saying `conflicting sources` and both URLs.
+  Do not pick one.
+- A person named only at a similarly named business elsewhere is not
+  written at all.
 
 ## Worked example
 
@@ -97,6 +129,12 @@ Contacts written:
   verified to be: a route to someone who is not the decision-maker.
 
 ## Failure modes
+
+- **Trusting an aggregator directory.** Directory sites copy each
+  other and go stale: a name that appears only there may be a former
+  owner, a registered agent, or invented. Write it as `directory only`,
+  never verified, and never let it settle a conflict with a strong
+  source.
 
 - **Targeting the most senior person rather than the actual buyer.** A
   founder or CEO at a 300-person company is frequently not who

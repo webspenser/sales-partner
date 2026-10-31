@@ -1,0 +1,3 @@
+capability: web_search
+provider: exa
+server_match: exasearch

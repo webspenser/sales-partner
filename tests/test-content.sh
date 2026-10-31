@@ -500,7 +500,7 @@ echo "-- 7.0: no Airtable CRM"
 for f in capabilities/crm/contract.md capabilities/crm/tools/attio/usage.md skills/send-digest/SKILL.md; do
   assert_not_contains "./$f" "Airtable"
 done
-assert_contains "$SP/agent.yaml" 'standard: "7.3"'
+assert_contains "$SP/agent.yaml" 'standard: "7.4"'
 assert_contains "$SP/agent.yaml" 'capabilities: crm'
 
 echo "-- 7.0: no email_drafts"
@@ -530,7 +530,7 @@ assert_contains "$SP/README.md" 'messages only you, through Resend'
 assert_contains "$SP/evals/cases.md" 'A notification never reaches anyone but the owner'
 
 echo "-- 7.0.0: release"
-assert_contains "$SP/agent.yaml" 'version: 8.1.2'
+assert_contains "$SP/agent.yaml" 'version: 8.2.0'
 for m in agent.yaml .claude-plugin/plugin.json .claude-plugin/marketplace.json .codex-plugin/plugin.json gemini-extension.json; do
   grep -qF "$EXPECTED_DESC" "./$m" && _report ok "$m: description is the 8.0.0 string" || _report no "$m: description is not the 8.0.0 string"
 done
@@ -546,7 +546,7 @@ printf '%s' "$after_tools" | grep -qF 'git push -u' && _report ok "version contr
 printf '%s' "$after_tools" | grep -qF 'offer one test notification' && _report ok "open step offers the test notification" || _report no "open step does not offer the test notification"
 
 echo "-- 7.1: ledger"
-assert_contains "$SP/agent.yaml" 'standard: "7.3"'
+assert_contains "$SP/agent.yaml" 'standard: "7.4"'
 assert_contains "$SP/agent.yaml" 'capabilities: crm, owner_notify, ledger'
 assert_contains "$SP/agent.yaml" 'activity_prospect: crm, owner_notify, ledger'
 assert_contains "$SP/agent.yaml" 'activity_prepare: crm, owner_notify, ledger, scraping'
@@ -582,7 +582,7 @@ assert_contains "$SP/README.md" 'Upgrading from 7.0'
 wc -c < "$SP/AGENT.md" | awk '{exit !($1 < 6000)}' && _report ok "AGENT.md under 6000 bytes" || _report no "AGENT.md 6000 bytes or more"
 
 echo "-- 7.2: scraping"
-assert_contains "$SP/agent.yaml" 'standard: "7.3"'
+assert_contains "$SP/agent.yaml" 'standard: "7.4"'
 assert_contains "$SP/agent.yaml" 'capabilities: crm, owner_notify, ledger, scraping'
 assert_contains "$SP/capabilities/scraping/contract.md" '`pinned_inputs`'
 assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" 'mcp.apify.com?tools=compass/crawler-google-places,vdrmota/contact-info-scraper'
@@ -794,10 +794,10 @@ done < <(find AGENT.md README.md subagents skills templates context capabilities
 rm -f "$README_NO_UPGRADE"
 
 echo "-- 8.0.0: release: version, README flow and the upgrade note"
-assert_contains "$SP/agent.yaml" 'version: 8.1.2'
-assert_contains "$SP/README.md" 'Version 8.1.2.'
+assert_contains "$SP/agent.yaml" 'version: 8.2.0'
+assert_contains "$SP/README.md" 'Version 8.2.0.'
 for m in .claude-plugin/plugin.json .codex-plugin/plugin.json gemini-extension.json; do
-  assert_contains "./$m" '"version": "8.1.2"'
+  assert_contains "./$m" '"version": "8.2.0"'
 done
 assert_contains "$SP/README.md" 'Upgrading from 7.4'
 for t in 'Approved' 'Research Anyway' 'Talking Points' 'offer catalog' 'Hero Offer' 'schedule_approach'; do
@@ -1140,7 +1140,7 @@ for t in 'Upgrading from 8.0' 'Research Capped' 'reviews' 'Indeed' 'research tip
 done
 # The note names the config keys, the field, the bindings and the connector URL, and it
 # carries the exact connector URL from the Apify usage file's Setup.
-UP81=$(awk '/^Upgrading from 8\.0/ { f=1; next } f && (/^## / || /^Upgrading from 8\.0/) { f=0 } f' "$SP/README.md")
+UP81=$(awk '/^Upgrading from 8\.0/ { f=1; next } f && (/^## / || /^Upgrading from /) { f=0 } f' "$SP/README.md")
 for t in apify_reviews apify_ads apify_jobs apify_site_reader 'apify_cap_usd_per_lead: 0.50' \
   'research_budget_per_lead_minutes: 15' research_capped 'bindings/scraping.md' 'Apify Actors' \
   'mcp__claude_ai_Apify_Actors__' '/sales-partner:schedule'; do
@@ -1218,7 +1218,7 @@ flat_has "$PP" 'rewrite the reason with only the capped start (the start and its
 flat_has "$PP" 'the other starts stay'
 
 echo "-- 7.3: fixed values and URL rules on the Apify tools"
-assert_contains "$SP/agent.yaml" 'standard: "7.3"'
+assert_contains "$SP/agent.yaml" 'standard: "7.4"'
 AGD=capabilities/scraping/tools/apify/guard.yaml
 assert_contains "./$AGD" 'fixed:'
 assert_contains "./$AGD" 'urls:'
@@ -1304,11 +1304,68 @@ flat_has "$EV" 'a test domain you control that serves only http (Apify fetches f
 C34=$(awk '/^## Case 34:/ { f=1; next } f && /^## Case / { f=0 } f' "$EV")
 printf '%s' "$C34" | grep -qF smithbookkeeping && _report no "Case 34 reuses Case 33's smithbookkeeping" || _report ok "Case 34 has its own page name"
 # README: the standard and the one stated limit left
-assert_contains "$SP/README.md" 'Agent Standard](https://github.com/webspenser/agent-builder/blob/main/STANDARD.md) 7.3'
+assert_contains "$SP/README.md" 'Agent Standard](https://github.com/webspenser/agent-builder/blob/main/STANDARD.md) 7.4'
 flat_has "$SP/README.md" 'data could still leave in the hostname itself'
 # Odd website forms are normalized in both files, so the guard never receives one it refuses
 for f in "$SP/capabilities/scraping/tools/apify/usage.md" "$SP/subagents/preparer.md"; do
   flat_has "$f" 'lowercase the scheme (`HTTPS://` is `https://`) and treat a website with no scheme (`example.com`) or a scheme-relative one (`//example.com`) as `https://`, then apply the same host and root rules'
 done
+
+echo "-- 8.2: Exa search and source strength in find-decision-makers"
+FDM="$SP/skills/find-decision-makers/SKILL.md"
+flat_has "$FDM" 'When `instance.yaml` has a `bind_web_search` line, make one `search_web` call first'
+flat_has "$FDM" 'With no `bind_web_search` line, skip it: that is not an error.'
+flat_has "$FDM" 'One search per lead per run'
+flat_has "$FDM" 'owner or principal of <business name>, <trade> at <street address>, <city> (<domain>)'
+flat_has "$FDM" 'applies to every person this skill records, whatever source found them'
+flat_has "$FDM" 'Diamond Certified'
+flat_has "$FDM" '`exa.ai/library/person`'
+flat_has "$FDM" '`directory only`'
+flat_has "$FDM" '`conflicting sources`'
+flat_has "$FDM" 'A weak source alone never supports `Verified`.'
+flat_has "$FDM" 'Trusting an aggregator directory.'
+
+echo "-- 8.2: Exa in the Preparer"
+PR="$SP/subagents/preparer.md"
+flat_has "$PR" 'Web search `search_web` (Exa), once per lead, only when `instance.yaml` has a `bind_web_search` line (find-decision-makers)'
+flat_has "$PR" 'sum `cost_usd` over those `step` events only, leaving out every step whose `detail` starts with `search_web`'
+flat_has "$PR" 'A `search_web` call is not an Apify call: it never counts toward `apify_cap_usd_per_lead` or `apify_spend_cap_usd_per_week`'
+flat_has "$PR" 'and when a cap stops scraping, Exa keeps running, since it is web search'
+flat_has "$PR" 'A `search_web` call that fails after its one retry is recorded as a failed `step` and research goes on; it is not a stop and does not notify the owner.'
+
+echo "-- 8.2: web_search capability"
+WC="$SP/capabilities/web_search/contract.md"; WU="$SP/capabilities/web_search/tools/exa/usage.md"
+assert_contains "$WC" '| `search_web` |'
+assert_contains "$WC" '- `no_external_send` —'
+assert_contains "$WC" '- `allowlisted_tools` —'
+assert_contains "$WC" '- `default_result_count` —'
+assert_contains "$WU" '## Setup'
+assert_contains "$WU" '## Probe'
+assert_contains "$WU" '## Cost'
+assert_contains "$WU" '`search_web`'
+flat_has "$SP/agent.yaml" 'optional_prepare: web_search'
+assert_contains "$SP/agent.yaml" 'capabilities: crm, owner_notify, ledger, scraping, web_search'
+if grep -rqiE 'EXA_API_KEY|exaApiKey=[A-Za-z0-9]' "$SP/capabilities/web_search"; then _report no "web_search holds no key or env var"; else _report ok "web_search holds no key or env var"; fi
+
+echo "-- 8.2: README"
+flat_has "$SP/README.md" 'Optional: Exa for web search'
+flat_has "$SP/README.md" 'Upgrading from 8.1:'
+flat_has "$SP/README.md" 'agent_version: 8.2.0'
+
+echo "-- 8.2 review fixes"
+flat_has "$SP/subagents/prospector.md" 'leaving out every step whose `detail` starts with `search_web`'
+flat_has "$SP/subagents/prospector.md" 'The source `web_search` is the host'"'"'s built-in web search, never the `web_search` capability (Exa)'
+flat_has "$SP/context/operating-config.md" '`web_search` is the host'"'"'s built-in search, not the Exa `web_search` capability'
+flat_has "$SP/subagents/preparer.md" '- Web search (the host'"'"'s built-in search)'
+flat_has "$SP/capabilities/web_search/contract.md" 'Only `find-decision-makers` calls `search_web`'
+flat_has "$SP/skills/send-digest/SKILL.md" 'leaving out every step whose `detail` starts with `search_web`'
+flat_has "$SP/skills/send-digest/SKILL.md" 'Exa web search: $'
+assert_contains "$SP/templates/digest.md" 'Exa web search: [$ spent]'
+flat_has "$SP/capabilities/web_search/tools/exa/usage.md" 'https://mcp.exa.ai/mcp?tools=web_search_exa'
+flat_has "$SP/capabilities/web_search/tools/exa/usage.md" 'name it `ExaSearch`'
+flat_has "$SP/capabilities/web_search/tools/exa/usage.md" 'No other connector'"'"'s name or tool name may contain `exasearch`'
+assert_contains "$SP/capabilities/web_search/tools/exa/identity.yaml" 'server_match: exasearch'
+flat_has "$SP/subagents/preparer.md" 'A `search_web` step has `subject` the lead id'
+if grep -rqE 'trig_[0-9A-Za-z]{8,}' "$SP/docs" "$SP/README.md"; then _report no "no routine trigger ids in the public repo"; else _report ok "no routine trigger ids in the public repo"; fi
 
 finish

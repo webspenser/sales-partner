@@ -112,7 +112,8 @@ printf '%s\n' 'max_places_per_search: 60' 'max_pages_per_site: 3' 'max_crawl_dep
   'max_search_terms: 1' 'max_sites_per_call: 10' 'max_dataset_items: 100' \
   'max_reviews: 50' 'max_ads: 5' 'max_jobs: 20' 'max_site_pages: 5' 'max_site_depth: 1' 'max_review_places: 1' \
   'max_ad_queries: 1' 'max_ad_advertisers: 1' 'ads_result_type: advertisers' 'site_crawler_type: cheerio' \
-  'site_html_transformer: none' 'max_site_urls: 1' > "$W/scraping.md"
+  'site_html_transformer: none' 'max_site_urls: 1' 'max_profile_results: 5' 'max_profile_reads: 10' \
+  'max_profile_locations: 1' > "$W/scraping.md"
 MAPS_OK='{"maxCrawledPlacesPerSearch":60,"searchStringsArray":["HVAC contractor"],"city":"Alameda","state":"CA","countryCode":"us","language":"en","waitSecs":45}'
 CT='"maxRequestsPerStartUrl":3,"maxDepth":1,"maxRequests":30'
 U1='{"url":"https://example.com"}'
@@ -301,6 +302,54 @@ start_url 2 "contacts IP address" $CONTACTS "$CT_OK" https://10.0.0.1 "the host 
 check 2 "contacts one bad URL among roots" $AG2 ${P2}$CONTACTS "$(jset "$CT_OK" startUrls '[{"url":"https://a.com"},{"url":"https://b.com/x"}]')" "only the site root is allowed" "$W/scraping.md"
 check 2 "contacts start URL requestsFromUrl" $AG2 ${P2}$CONTACTS "$(jset "$CT_OK" startUrls '[{"url":"https://a.com","requestsFromUrl":"https://a.com/list.txt"}]')" "may not use startUrls[].requestsFromUrl" "$W/scraping.md"
 check 2 "contacts start URL without url" $AG2 ${P2}$CONTACTS "$(jset "$CT_OK" startUrls '[{"url":"https://a.com"},{}]')" "names no startUrls[].url" "$W/scraping.md"
+
+# 8.3 social profiles: find_profiles (LinkedIn search by name) and
+# read_profile (Instagram and TikTok readers, which take handles).
+LI=harvestapi--linkedin-profile-search-by-name; IG=apify--instagram-profile-scraper; TT=clockworks--tiktok-profile-scraper
+LI_OK='{"firstName":"Alex","lastName":"Example","locations":["Springfield"],"maxItems":5,"maxPages":1,"profileScraperMode":"Full","strictSearch":true,"waitSecs":45}'
+check 0 "linkedin search in limit"        $AG2 ${P2}$LI "$LI_OK" "" "$W/scraping.md"
+check 0 "linkedin search without a location" $AG2 ${P2}$LI "$(jdel "$LI_OK" locations)" "" "$W/scraping.md"
+pins    "linkedin search" $LI "$LI_OK" 'maxItems:max_profile_results:1000'
+check 2 "linkedin search maxItems null"   $AG2 ${P2}$LI "$(jset "$LI_OK" maxItems null)" "names no pinned value at maxItems" "$W/scraping.md"
+check 2 "linkedin search two locations"   $AG2 ${P2}$LI "$(jset "$LI_OK" locations '["Springfield","California"]')" "exceeds max_profile_locations at locations" "$W/scraping.md"
+check 2 "linkedin search respelled key"   $AG2 ${P2}$LI "$(jset "$LI_OK" MaxItems 5)" "may not use MaxItems" "$W/scraping.md"
+refused "linkedin search" $LI "$LI_OK" currentCompanies pastCompanies schools currentJobTitles industryIds \
+  cookies cookie sessionCookie li_at proxyConfiguration proxy headers customHttpHeaders profileUrls searchQuery
+check 2 "linkedin search company filter list" $AG2 ${P2}$LI "$(jset "$LI_OK" currentCompanies '["https://www.linkedin.com/company/example"]')" "may not use currentCompanies" "$W/scraping.md"
+check 2 "linkedin search mode omitted"    $AG2 ${P2}$LI "$(jdel "$LI_OK" profileScraperMode)" "names no profileScraperMode" "$W/scraping.md"
+check 2 "linkedin search Short mode"      $AG2 ${P2}$LI "$(jset "$LI_OK" profileScraperMode '"Short"')" "must send profileScraperMode = \"Full\"" "$W/scraping.md"
+check 2 "linkedin search email search mode" $AG2 ${P2}$LI "$(jset "$LI_OK" profileScraperMode '"Full + email search"')" "must send profileScraperMode = \"Full\"" "$W/scraping.md"
+check 2 "linkedin search strictSearch omitted" $AG2 ${P2}$LI "$(jdel "$LI_OK" strictSearch)" "names no strictSearch" "$W/scraping.md"
+check 2 "linkedin search strictSearch false"   $AG2 ${P2}$LI "$(jset "$LI_OK" strictSearch false)" "must send strictSearch = true (got false)" "$W/scraping.md"
+check 2 "linkedin search strictSearch as a string" $AG2 ${P2}$LI "$(jset "$LI_OK" strictSearch '"true"')" "must send strictSearch = true" "$W/scraping.md"
+check 2 "linkedin search maxPages omitted" $AG2 ${P2}$LI "$(jdel "$LI_OK" maxPages)" "names no maxPages" "$W/scraping.md"
+check 2 "linkedin search maxPages raised"  $AG2 ${P2}$LI "$(jset "$LI_OK" maxPages 10)" "must send maxPages = 1 (got 10)" "$W/scraping.md"
+check 2 "linkedin search without bindings" $AG2 ${P2}$LI "$LI_OK" "no max_profile_results line"
+
+IG_OK='{"usernames":["example.handle"],"waitSecs":45}'
+check 0 "instagram read in limit"         $AG2 ${P2}$IG "$IG_OK" "" "$W/scraping.md"
+IG11=$(python3 -c 'import json;print(json.dumps(["example%d"%i for i in range(11)]))')
+lists   "instagram read" $IG "$IG_OK" "usernames:max_profile_reads:$IG11"
+check 2 "instagram read respelled key"    $AG2 ${P2}$IG "$(jset "$IG_OK" userNames '["example"]')" "may not use userNames" "$W/scraping.md"
+refused "instagram read" $IG "$IG_OK" includeAboutSection directUrls resultsLimit resultsType searchType cookies sessionCookie \
+  proxyConfiguration proxy headers customHttpHeaders
+check 2 "instagram read includeAboutSection true" $AG2 ${P2}$IG "$(jset "$IG_OK" includeAboutSection true)" "may not use includeAboutSection" "$W/scraping.md"
+check 2 "instagram read without bindings" $AG2 ${P2}$IG "$IG_OK" "no max_profile_reads line"
+
+TT_OK='{"profiles":["example.handle"],"resultsPerPage":1,"waitSecs":45}'
+check 0 "tiktok read in limit"            $AG2 ${P2}$TT "$TT_OK" "" "$W/scraping.md"
+TT11=$(python3 -c 'import json;print(json.dumps(["example%d"%i for i in range(11)]))')
+lists   "tiktok read" $TT "$TT_OK" "profiles:max_profile_reads:$TT11"
+check 2 "tiktok read respelled key"       $AG2 ${P2}$TT "$(jset "$TT_OK" Profiles '["example"]')" "may not use Profiles" "$W/scraping.md"
+refused "tiktok read" $TT "$TT_OK" commentsPerPost topLevelCommentsPerPost maxRepliesPerComment maxFollowersPerProfile \
+  maxFollowingPerProfile shouldDownloadVideos shouldDownloadCovers shouldDownloadSlideshowImages shouldDownloadAvatars \
+  downloadSubtitlesOptions oldestPostDateUnified newestPostDate leastDiggs mostDiggs profileSorting excludePinnedPosts \
+  profileScrapeSections videoKvStoreIdOrName cookies proxyConfiguration proxyCountryCode headers
+check 2 "tiktok read video download true" $AG2 ${P2}$TT "$(jset "$TT_OK" shouldDownloadVideos true)" "may not use shouldDownloadVideos" "$W/scraping.md"
+check 2 "tiktok read resultsPerPage omitted (default 100)" $AG2 ${P2}$TT "$(jdel "$TT_OK" resultsPerPage)" "names no resultsPerPage" "$W/scraping.md"
+check 2 "tiktok read resultsPerPage 100"  $AG2 ${P2}$TT "$(jset "$TT_OK" resultsPerPage 100)" "must send resultsPerPage = 1 (got 100)" "$W/scraping.md"
+check 2 "tiktok read resultsPerPage as a string" $AG2 ${P2}$TT "$(jset "$TT_OK" resultsPerPage '"1"')" "must send resultsPerPage = 1" "$W/scraping.md"
+check 2 "tiktok read without bindings"    $AG2 ${P2}$TT "$TT_OK" "no max_profile_reads line"
 SM=
 
 echo "-- Attio"

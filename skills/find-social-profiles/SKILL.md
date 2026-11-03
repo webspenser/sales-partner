@@ -40,7 +40,7 @@ The Preparer's cap and time-budget rules for Apify spend apply to every
    LinkedIn if known, and the `find_contacts` social links. A link on a
    shared-platform host (`subagents/preparer.md`, "Shared platform") is
    never the business's website; it is a profile page, read as one.
-   Use `read_profile` on a
+   Use `read_profile` (Instagram and TikTok only) on a
    business social page to find people it tags or links to, and on a
    known profile to find the business it links to. A link between the
    business and the person, in either direction, is an anchor.
@@ -49,10 +49,17 @@ The Preparer's cap and time-budget rules for Apify spend apply to every
    …})`, only when the lead's field is empty (Attio only; on HubSpot
    these two company fields do not exist, so skip this).
 2. **Search.** For each platform the contact still has no profile on,
-   in platform order (LinkedIn, Instagram, Facebook, TikTok), call
-   `find_profiles(name, business, city, platforms)` with the contact's
-   name, the business name, the lead's city and the platforms still
-   missing. Facebook personal profiles cannot be searched without a login,
+   in platform order (LinkedIn, Instagram, Facebook, TikTok):
+   - LinkedIn: call `find_profiles(name, business, city, [linkedin])`
+     with the contact's name, the business name and the lead's city.
+     `find_profiles` is called for LinkedIn only.
+   - Instagram, Facebook and TikTok: when `web_search` is bound
+     (`capabilities/web_search/contract.md`), make one `search_web` call
+     per contact for the platforms still missing, with the contact's
+     name, the business name and the city. When it is not bound, skip
+     this silently.
+
+   Facebook personal profiles cannot be searched without a login,
    so expect one only when an anchor links to it. A platform an anchor
    already filled is not searched. We never search for X: `x_url` is
    filled only from an X link already returned by an anchor or another
@@ -62,9 +69,9 @@ The Preparer's cap and time-budget rules for Apify spend apply to every
    - a business link: the profile links to the business's own website or
      page, or the business's page links to the profile (strongest). A
      link to a shared-platform website (the list in `subagents/preparer.md`,
-     "Shared platform") is never a business link. Use `read_profile` on a
-     searched candidate when needed, to check its links, or for LinkedIn
-     to read the current employer;
+     "Shared platform") is never a business link. Use `read_profile` on an
+     Instagram or TikTok candidate when needed, to check its links (a
+     LinkedIn candidate's current employer comes with `find_profiles`);
    - the employer or business name in the bio or job title (for LinkedIn,
      the `current_employer` read from the profile);
    - the location matches the lead's city or region;
@@ -133,13 +140,15 @@ social field is filled.
    Priya's Instagram. The footer has no TikTok or X page, so no company field is set.
 2. Search: LinkedIn, Facebook and TikTok are still missing.
    `find_profiles("Priya Nandakumar", "Brightwater Accounting",
-   "Springfield", [linkedin, facebook, tiktok])` returns:
+   "Springfield", [linkedin])` returns:
    - LinkedIn `https://linkedin.example/in/priya-nandakumar`, current
      employer Brightwater Accounting, Springfield;
    - LinkedIn `https://linkedin.example/in/priya-n-9`, Priya N, in
-     another city, employer a retailer;
-   - TikTok `https://tiktok.example/@priyan`, bio "mum, runner,
-     Springfield".
+     another city, employer a retailer.
+
+   One `search_web` call for Facebook and TikTok returns TikTok
+   `https://tiktok.example/@priyan`; `read_profile` on it shows the bio
+   "mum, runner, Springfield".
 3. Score: Instagram `priya.n`: business page links to it, so confident.
    LinkedIn `priya-nandakumar`: current employer matches, location
    matches, no contradiction, so confident. LinkedIn `priya-n-9`:

@@ -1002,8 +1002,8 @@ for d in '`max_reviews` — reviews per reviews call (default 50)' '`max_ads` �
          '`max_site_depth` — link depth for the site reader (default 1)'; do
   printf '%s' "$SETUP" | grep -qF -- "$d" && _report ok "usage.md Setup: $d" || _report no "usage.md Setup missing: $d"
 done
-printf '%s' "$SETUP" | grep -qF 'mcp.apify.com?tools=compass/crawler-google-places,vdrmota/contact-info-scraper,compass/Google-Maps-Reviews-Scraper,scrapesage/google-ads-transparency-scraper,apify/facebook-ads-scraper,valig/indeed-jobs-scraper,apify/website-content-crawler`' \
-  && _report ok "usage.md Setup gives the seven-actor connector URL" || _report no "usage.md Setup lacks the seven-actor connector URL"
+printf '%s' "$SETUP" | grep -qF 'mcp.apify.com?tools=compass/crawler-google-places,vdrmota/contact-info-scraper,compass/Google-Maps-Reviews-Scraper,scrapesage/google-ads-transparency-scraper,apify/facebook-ads-scraper,valig/indeed-jobs-scraper,apify/website-content-crawler,harvestapi/linkedin-profile-search-by-name,apify/instagram-profile-scraper,clockworks/tiktok-profile-scraper`' \
+  && _report ok "usage.md Setup gives the ten-actor connector URL" || _report no "usage.md Setup lacks the ten-actor connector URL"
 assert_contains "$SU" 'always pass `personalData: false`'
 assert_contains "$SU" 'never record reviewer names'
 assert_contains "$SU" 'always pass `onlyTotal: true`'
@@ -1146,8 +1146,11 @@ for t in apify_reviews apify_ads apify_jobs apify_site_reader 'apify_cap_usd_per
   'mcp__claude_ai_Apify_Actors__' '/sales-partner:schedule'; do
   printf '%s' "$UP81" | grep -qF -- "$t" && _report ok "8.0 upgrade note names '$t'" || _report no "8.0 upgrade note does not name '$t'"
 done
+# The 8.0 note's URL is the seven-actor one; usage.md's current URL extends
+# it (8.3 adds the profile actors, and its own upgrade note carries them).
 APIFY_URL=$(grep -o 'https://mcp\.apify\.com?tools=[^`]*' "$SP/capabilities/scraping/tools/apify/usage.md" | head -1)
-[ -n "$APIFY_URL" ] && printf '%s' "$UP81" | grep -qF -- "$APIFY_URL" \
+UP81_URL=$(printf '%s' "$UP81" | grep -o 'https://mcp\.apify\.com?tools=[^`]*' | head -1)
+[ -n "$APIFY_URL" ] && [ -n "$UP81_URL" ] && [ "${APIFY_URL#"$UP81_URL"}" != "$APIFY_URL" ] \
   && _report ok "8.0 upgrade note carries the connector URL from the Apify usage file" \
   || _report no "8.0 upgrade note lacks the connector URL from the Apify usage file"
 
@@ -1224,7 +1227,7 @@ assert_contains "./$AGD" 'fixed:'
 assert_contains "./$AGD" 'urls:'
 comment_has() { tr '\n#' '  ' < "$1" | tr -s ' ' | grep -qF -- "$2"; } # the file with comment marks and line breaks flattened
 comment_has "$AGD" "can't be pinned" && _report no "$AGD still says the true/false inputs can't be pinned" || _report ok "$AGD no longer says the true/false inputs can't be pinned"
-for s in 'Four fixed values (Standard 7.3), each required' 'only_keys on startUrls[] still blocks requestsFromUrl'; do
+for s in 'Eight fixed values (Standard 7.3), each required' 'only_keys on startUrls[] still blocks requestsFromUrl'; do
   comment_has "$AGD" "$s" && _report ok "$AGD says '$s'" || _report no "$AGD does not say '$s'"
 done
 
@@ -1410,6 +1413,25 @@ assert_contains "$FSP" 'in platform order (LinkedIn, Instagram, Facebook, TikTok
 assert_not_contains "$FSP" 'Facebook, TikTok, X)'
 assert_not_contains "$FSP" '[linkedin, facebook, tiktok, x]'
 assert_contains "$FSP" 'found in step 1 or step 2'
+assert_contains "$FSP" '`find_profiles` is called for LinkedIn only.'
+assert_not_contains "$FSP" "the lead's city and the platforms still"
+
+echo "-- 8.3: find_profiles and read_profile through Apify"
+SC="$SP/capabilities/scraping/contract.md"; SU="$SP/capabilities/scraping/tools/apify/usage.md"
+for op in find_profiles read_profile; do
+  assert_contains "$SC" "| \`$op\` |"
+  assert_contains "$SU" "\`$op\`"
+done
+setup=$(awk '/^## Setup/,/^## Probe/' "$SU")
+for b in max_profile_results max_profile_reads max_profile_locations; do
+  printf '%s' "$setup" | grep -qF "\`$b\`" && _report ok "usage.md Setup lists $b" || _report no "usage.md Setup misses $b"
+done
+assert_contains "$SU" 'no login'
+assert_contains "$SU" 'never a handle guessed from a name'
+assert_contains "$SU" 'for `linkedin` only, in this release'
+assert_contains "$SU" 'harvestapi/linkedin-profile-search-by-name,apify/instagram-profile-scraper,clockworks/tiktok-profile-scraper'
+assert_contains "$SU" 'verify them in Apify Console'
+assert_contains "$SP/capabilities/scraping/tools/apify/guard.yaml" '# Apify guard policy: ten actors and two reads.'
 
 echo "-- profile pass"
 assert_contains "$SP/subagents/preparer.md" 'Profile pass'

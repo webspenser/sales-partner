@@ -2,7 +2,7 @@
 
 Provider-neutral contract for the sales-partner agent's data layer. Every
 sub-agent (Prospector, Preparer) and skill reads and writes
-the CRM only through the nine operations
+the CRM only through the ten operations
 below. No sub-agent talks to a provider's API directly, and no sub-agent
 invokes another sub-agent directly — **`update_stage` is the only
 handoff mechanism between sub-agents.** A sub-agent's job is done when it

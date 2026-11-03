@@ -1422,4 +1422,18 @@ assert_contains "$SP/subagents/preparer.md" "no person's name"
 assert_contains "$SP/subagents/preparer.md" 'opt-out'
 assert_contains "$SP/context/operating-config.md" '`apify_profiles`'
 
+# Evals: seven social profile cases
+for h in \
+  '## Case 37: A name-only match goes to the note, never the field' \
+  '## Case 38: Two candidates for one platform both go to the note' \
+  '## Case 39: A shared-platform website is not a business link' \
+  '## Case 40: A field the operator filled is never overwritten' \
+  '## Case 41: A lead moved to Approved mid-pass gets no write' \
+  '## Case 42: A Do Not Contact lead in the backlog is disqualified, not searched' \
+  '## Case 43: Evidence spends first; the profile pass stops on the cap and leaves the contact unchecked'; do
+  assert_contains "$EV" "$h"
+done
+assert_contains "$EV" 'all eight sources'
+assert_not_contains "$EV" 'all seven sources'
+
 finish

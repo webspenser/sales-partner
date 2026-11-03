@@ -1397,4 +1397,13 @@ assert_contains "$AU" 'the person'"'"'s social fields'
 assert_contains "$HU" 'the contact'"'"'s social fields'
 assert_contains "$AU" '`instagram`, `facebook` and `twitter` exist on People'
 
+# find-social-profiles skill and the LinkedIn wording
+FSP=skills/find-social-profiles/SKILL.md
+for t in 'name: find-social-profiles' 'Anchor first' 'Name or location alone is never confident' 'both are uncertain' 'shared-platform' 'only when the CRM field is empty' 'never follow, connect, like, comment, post or message' 'Sales Partner · Possible Profiles' 'profiles_checked_at' '=== YYYY-MM-DD · possible profiles ===' 'stopped'; do
+  assert_contains "$FSP" "$t"
+done
+assert_contains AGENT.md 'Never act on a social platform. Reading public LinkedIn profiles is allowed.'
+assert_not_contains AGENT.md 'Never automate anything on LinkedIn.'
+assert_contains skills/find-decision-makers/SKILL.md 'including through an actor'
+
 finish

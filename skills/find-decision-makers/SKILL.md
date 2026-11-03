@@ -3,10 +3,11 @@ name: find-decision-makers
 description: Use when the target company is known but the right person is not — identifies decision-makers, influencers, and gatekeepers, and finds a contact route for each.
 ---
 
-This skill reads public pages only. LinkedIn is read here, never acted
-on — no automated connection request, message, or scrape behind a
-login; a LinkedIn profile URL found on a public company page or public
-search is a legitimate source, viewing it as a human would is not.
+This skill reads public pages only. Reading a public LinkedIn profile,
+including through an actor, is allowed; acting on LinkedIn is not — no
+automated connection request, follow, message or post, and no scrape
+behind a login. A LinkedIn profile URL found on a public company page or
+public search is a legitimate source.
 
 ## Procedure
 

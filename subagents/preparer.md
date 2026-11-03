@@ -1,6 +1,6 @@
 ---
 name: preparer
-description: Dispatch for a lead at stage `Scored` whose `Fit Score` clears `research_threshold` and that has a Segment, or that the operator ticked Research Anyway — deep-researches the company, identifies decision-makers, gives it an Approach score, matches its hero offer and writes its talking points.
+description: Dispatch for a lead at stage `Scored` whose `Fit Score` clears `research_threshold` and that has a Segment, or that the operator ticked Research Anyway — deep-researches the company, identifies decision-makers, gives it an Approach score, matches its hero offer and writes its talking points. After the queue it runs the Profile pass over `Researched` leads whose contacts are unsearched, even when nothing is queued.
 ---
 
 # Preparer — Sub-Agent Contract
@@ -32,7 +32,9 @@ queue is full or no more leads come back. A re-query leaves out every
 lead already worked or skipped this run, so a skipped lead is read once
 and gets one skipped `step` per run.
 
-After the last queued lead, the Profile pass runs (below).
+After the last queued lead, the Profile pass runs (below), also when the queue is empty.
+An empty queue is not a reason to end the run: the backlog part of the
+pass still runs.
 
 ### Segment fill
 When a lead's turn comes, after the `get_lead`, status and opt-out
@@ -130,6 +132,7 @@ Segment and offer).
   profile fields, `Next Action`, `segment`, `industry`, `hero_offer`, `offer_reason`, `offer_evidence`,
   `research_capped`)
 - CRM `log_talking_points`
+- CRM `log_possible_profiles` (Profile pass, through find-social-profiles)
 - CRM `update_stage`
 - Owner notify `notify_owner`
 - Ledger `ledger_status`, `append_events`, `find_events`
@@ -153,10 +156,17 @@ changes a lead's stage except the opt-out move below.
 
 **The list.** First the leads this run moved to `Researched`, then the
 other leads from CRM `query_by_stage("Researched")` that have a named
-contact lacking `profiles_checked_at`, oldest `Stage Changed At` first.
+contact lacking `profiles_checked_at`, oldest `Stage Changed At` first,
+at most `research_quota_per_week` backlog leads per run (the same value
+that caps the prepare queue; there is no separate key). Leads this run
+moved to `Researched` do not count toward it. A backlog lead past that
+limit waits for a later run, so the backlog never spends next run's
+evidence budget in one go.
 A lead whose named contacts are all checked is left out. A contact with
 no person's name (a generic inbox such as `info@`) is not searched and
-does not put its lead on the list.
+does not put its lead on the list. A contact with no role is not
+searched either (`upsert_contact` refuses a write without one), and does
+not put its lead on the list.
 
 **Per lead**, in list order, one at a time:
 1. Read the lead with `get_lead` and re-check the stage before the first
@@ -168,6 +178,12 @@ does not put its lead on the list.
 3. For each named contact without `profiles_checked_at`, run
    `find-social-profiles(lead, contact)`. It writes `profiles_checked_at`
    itself when its search completes.
+   Re-check the stage with `get_lead` before each contact's writes, not
+   once per lead: the operator reviews `Researched` leads while the pass
+   runs. `find-social-profiles` does this before its first write for the
+   contact. When it returns `approved`, stop the lead there: its
+   remaining contacts are not searched and nothing more is written on it,
+   recorded as the `profile pass; stage Approved` skipped `step`.
 
 **Caps and time.** Every `find_profiles` and `read_profile` call is an
 Apify call: it counts toward `apify_cap_usd_per_lead` and
@@ -186,7 +202,8 @@ picks them up. This is not Research Capped: do not set
 `research_capped`, do not change the stage reason, and write no
 `stop_condition` event for it. A per-lead stop moves on to the next
 lead. When the 7-day cap would be passed, call
-`notify_owner(kind: alert)` once, as in the 7-day cap, and end the pass;
+`notify_owner(kind: alert)` once, as in the 7-day cap, unless one was
+already sent this run, and end the pass;
 every lead not yet reached stays unchecked. Each stop is recorded as a
 ledger `step` (Ledger).
 
@@ -202,6 +219,9 @@ ledger `step` (Ledger).
 - The next Apify call's worst-case estimate does not fit in what
   remains of the lead's `apify_cap_usd_per_lead`: stop scraping that
   lead (Per-lead cap)
+- In the Profile pass: a cap or the time budget ends a lead's search, or
+  the 7-day cap ends the pass (Profile pass, Caps and time); a lead
+  reached `Approved` before a contact's writes (Profile pass, Per lead)
 
 In a scheduled (unattended) run, never ask the operator a question; if
 a required input is missing, call `notify_owner(kind: error)` with
@@ -279,8 +299,13 @@ parentheses (`apify_site_reader (shared-platform website)`).
 When `apify_contact_info` is listed, gather the site roots of the leads
 being researched (Website URLs; skip a lead with no website, and leave
 out one with a shared-platform website or a refused host) and call `find_contacts` once
-per batch of up to 10. Add each email, phone and social link to its
-lead's Contacts with its source URL.
+per batch of up to 10. Add each email and phone to its lead's Contacts
+with its source URL, and a person's own LinkedIn profile as their
+`linkedin_url`.
+Only `find-social-profiles` passes `instagram_url`, `facebook_url`, `tiktok_url`, `x_url` and `profiles_checked_at`.
+Research passes `linkedin_url` only, as before: a `find_contacts` social
+link is usually the business's page, not the person's. A business's own social pages go to the company profile fields
+(Handoff), never into a person's field.
 
 ### Evidence sources
 After the Maps listing and website contact steps, read the
@@ -557,7 +582,8 @@ Each `find_profiles` and `read_profile` call in the Profile pass is a
 `step` with `subject` the CRM lead id, `items_in` 1, `items_out` the
 candidates or profiles read, `cost_usd` its estimate, and `detail` the
 call and `estimated` (for example `find_profiles; estimated`). A lead
-left out of the pass for being at `Approved` or later, and a contact
+left out of the pass for being at `Approved` or later (also when it
+reached `Approved` between two of its contacts), and a contact
 left unchecked because a cap or the time budget stopped the pass, are
 `skipped` `step`s with `subject` the lead id, `items_in` and
 `items_out` 0, and `detail` `profile pass; <reason>` (`stage Approved`,
@@ -573,7 +599,8 @@ For each lead in the queue: writes each person with CRM
 `upsert_contact(lead_id, name, title,
 email, phone, linkedin_url, instagram_url, facebook_url, tiktok_url, x_url,
 profiles_checked_at, role, verified, notes)` as research proceeds, filling in fields that are still
-empty on people already there, and the run's findings with one CRM
+empty on people already there. Only `find-social-profiles` passes `instagram_url`, `facebook_url`, `tiktok_url`, `x_url` and `profiles_checked_at`.
+Research passes `linkedin_url` only, as before. It writes the run's findings with one CRM
 `log_research(lead_id, findings[])` call (`research-company`, with the
 Segment settled as in Segment and offer). Runs `score-lead` (`rubric:
 approach`), which writes `Approach Score` and `Approach Breakdown`, then
@@ -612,7 +639,8 @@ from `Researched` the lead is the operator's to review and approve.
 Runs as the second sequential phase on a host without sub-agent
 dispatch: build the queue as in Trigger directly from the CRM, research
 each lead, score it, match its offer and write its talking points in the
-same context, then advance the stage before moving to the next phase.
+same context, then advance the stage; then the Profile pass, also when
+the queue is empty; then move to the next phase.
 
 ### Guardrails
 - If `prospecting_sources` lists `apify_site_scraper`, stop and report

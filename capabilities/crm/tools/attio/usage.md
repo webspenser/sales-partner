@@ -255,7 +255,9 @@ write nothing) exactly where the contract says the operation rejects.
   only when the CRM field is empty: one the operator, Attio's
   enrichment or an earlier run set is never overwritten. Read the
   person's attributes before writing. `profiles_checked_at` is written
-  whenever the caller passes it.
+  whenever the caller passes it. An argument the caller did not pass is
+  left out of the call: it is never sent empty, and never set to a
+  default.
   Find an existing person first. With an email: `attio:list-records`
   on `people`, filtered on `email_addresses` eq the email. Without
   one: `attio:search-records` on `people` by name, and pick the hit
@@ -310,8 +312,8 @@ only with a version bump and an upgrade note in the README.
   contact route found) is the one line `- none`.
 - A possible profiles section starts with `=== YYYY-MM-DD · possible
   profiles ===`, then one line per candidate:
-  `<platform>: <URL> — <reasons> [<source URL>]`, or the one line
-  `- none found` when the search found no candidate. Plain text, URLs
+  `<platform>: <URL> — <reasons> [<source URL>]`. A search with no
+  candidate writes no section. Plain text, URLs
   and reasons only: no bio, post, photo or follower data.
 - Every line is plain text: no tables, no markdown that renders only in
   a note's first section.

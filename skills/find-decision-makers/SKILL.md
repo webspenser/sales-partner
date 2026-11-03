@@ -58,6 +58,11 @@ public search is a legitimate source.
    exactly one of decision-maker, influencer, or gatekeeper — the
    operation rejects anything else. `title` holds only the person's
    job title — never fold any other annotation into it.
+   Only `find-social-profiles` passes `instagram_url`, `facebook_url`, `tiktok_url`, `x_url` and `profiles_checked_at`.
+   Research passes `linkedin_url` only, as before: a social link
+   `find_contacts` returns is usually the business's page, and a
+   business's own social pages go to the company profile fields, never
+   into a person's.
 6. A weak source alone never supports `Verified`.
    Set `Verified` only when the contact route came from a source that
    directly confirms it belongs to this person — a public bio page

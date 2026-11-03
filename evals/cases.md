@@ -43,6 +43,10 @@ trace you can inspect. "Seed" below means writing that starting state
 through the CRM contract's own operations, the same way a sub-agent
 would encounter it.
 
+The social profile cases (37 to 43) use real platform hosts with
+`example` handles (`https://www.instagram.com/example.handle`), so the
+host rules in the Apify tool's `usage.md` pass; no such profile is real.
+
 Every case that names a segment or an offer uses the example catalog
 shown in the package's `context/offer-catalog.md` — the segments
 `professional-services` (Accounting, Tax, Legal, Medical, Real Estate)
@@ -1541,27 +1545,33 @@ guard block.
 ## Case 37: A name-only match goes to the note, never the field
 
 **Given** — The default `prospecting_sources` (all eight sources, so
-`apify_profiles` is listed). Lead B, Brightwater Accounting in
-Springfield (`https://brightwater.example`), at `Researched` with one
-named contact, Priya Nandakumar, Owner, no social field filled and no
+`apify_profiles` is listed), and `instance.yaml` has a `bind_web_search`
+line (Exa is bound). Lead B, Brightwater Accounting in Springfield
+(`https://brightwater.example`), at `Researched` with one named contact,
+Priya Nandakumar, Owner, no social field filled and no
 `profiles_checked_at`. The business has no social page that links to
-her. `find_profiles` returns a TikTok `https://tiktok.example/@priyan`
-whose bio reads "mum, runner, Springfield" and which links to nothing.
+her. `find_profiles` (LinkedIn only) returns no candidate. The one
+`search_web` call for the contact returns a TikTok profile
+`https://www.tiktok.com/@example.priyan` as a result; `read_profile` on
+it shows the bio "mum, runner, Springfield" and no links.
 
-**Expect** — `skills/find-social-profiles/SKILL.md`, Procedure steps 3
-and 4:
+**Expect** — `skills/find-social-profiles/SKILL.md`, Procedure steps 2
+to 4:
 
+- **Searched as shipped.** `find_profiles` is called with `[linkedin]`
+  only. The TikTok candidate comes from `search_web`, and
+  `read_profile` is called on its handle `example.priyan`.
 - **Not confident.** The candidate has a location match and a name
   resemblance only. Name or location alone is never confident, however
   well it fits, so `upsert_contact` carries no `tiktok_url`.
 - **The note.** One `log_possible_profiles(lead_id, contact_id, body)`
   call writes a section whose header is
   `=== YYYY-MM-DD · possible profiles ===` with today's date, then the
-  line `tiktok: https://tiktok.example/@priyan — location matches
-  Springfield, name resembles Priya N, no business link [<source URL>]`,
-  the source URL being the page the candidate was found on.
+  line `tiktok: https://www.tiktok.com/@example.priyan — location
+  matches Springfield, name resembles Priya N, no business link
+  [<source URL>]`, the source URL being the `search_web` result's URL.
 - **Checked.** The search completed, so `profiles_checked_at` is written
-  as today's date even though no field was filled.
+  (now, ISO 8601 UTC) even though no field was filled.
 - **Only URLs and reasons.** The note holds no bio text, post, photo or
   follower count.
 
@@ -1569,9 +1579,10 @@ and 4:
 to message a stranger. A missing profile costs them a search. The
 requirement behind the skill is that no wrong person ends up in a field.
 
-**How to run** — Seed B and its contact, with a stubbed `find_profiles`
-that returns only the TikTok candidate. Run the Preparer and read the
-contact: `tiktok_url` is empty and `profiles_checked_at` is today. Read
+**How to run** — Seed B and its contact, stub `find_profiles` to return
+nothing, stub `search_web` to return only the TikTok result and
+`read_profile` to return its bio. Run the Preparer and read the
+contact: `tiktok_url` is empty and `profiles_checked_at` is set. Read
 the contact's `Sales Partner · Possible Profiles` record and confirm
 one dated section with the one candidate line.
 
@@ -1580,47 +1591,56 @@ one dated section with the one candidate line.
 ## Case 38: Two candidates for one platform both go to the note
 
 **Given** — The default `prospecting_sources` and the lead and contact
-of Case 37. `find_profiles` returns two LinkedIn profiles:
-`https://linkedin.example/in/priya-nandakumar`, whose
-`current_employer` read with `read_profile` is Brightwater Accounting,
-Springfield; and `https://linkedin.example/in/priya-nandakumar-cpa`,
-whose `current_employer` is also Brightwater Accounting. The contact has
-no `linkedin_url`.
+of Case 37. `find_profiles` (`[linkedin]`) returns two LinkedIn
+profiles: `https://www.linkedin.com/in/example-priya-nandakumar`, whose
+`current_employer`, returned by `find_profiles` (`Full` mode), is
+Brightwater Accounting, location Springfield; and
+`https://www.linkedin.com/in/example-priya-nandakumar-cpa`, whose
+`current_employer` is also Brightwater Accounting, location
+Springfield. The contact has no `linkedin_url`.
 
 **Expect** — `skills/find-social-profiles/SKILL.md`, Procedure step 3:
 
-- **Both uncertain.** Each qualifies on its own, but when two candidates
-  on one platform both qualify, both are uncertain: neither goes into a
-  field, and both are listed. `upsert_contact` carries no `linkedin_url`.
+- **No LinkedIn read.** `read_profile` is never called for a LinkedIn
+  URL: LinkedIn has no reader.
+- **Both uncertain.** Each qualifies on its own (the employer is this
+  business, since each location matches Springfield), but when two
+  candidates on one platform both qualify, both are uncertain: neither
+  goes into a field, and both are listed. `upsert_contact` carries no
+  `linkedin_url`.
 - **Both listed.** The one `log_possible_profiles` section holds two
   `linkedin:` lines, each with its URL, its reasons and its source URL.
-- **Checked.** `profiles_checked_at` is written as today's date.
+- **Checked.** `profiles_checked_at` is written (now, ISO 8601 UTC).
 
 **Why it matters** — Choosing between two plausible profiles is a guess.
 Writing the guess into the field hides that it was one; listing both
 lets the operator pick in seconds.
 
-**How to run** — Seed the lead and contact, stub `find_profiles` and
-`read_profile` as above, and run the Preparer. Confirm `linkedin_url` is
-empty and the note has one section with two `linkedin:` lines.
+**How to run** — Seed the lead and contact, stub `find_profiles` as
+above, and run the Preparer. Confirm no `read_profile` call names a
+LinkedIn URL, `linkedin_url` is empty and the note has one section with
+two `linkedin:` lines.
 
 ---
 
 ## Case 39: A shared-platform website is not a business link
 
-**Given** — The default `prospecting_sources`. Lead H, Harbor Books,
-whose Maps `website` is `https://www.facebook.com/harborbooks`, at
-`Researched` with one named contact, Dana Okafor, Owner, no social field
-filled. `find_profiles` returns an Instagram profile
-`https://instagram.example/dana.okafor.books` whose bio links to
-`https://harbortax.wixsite.com/home`, and whose location matches H's
-city.
+**Given** — The default `prospecting_sources`, with Exa bound. Lead H,
+Harbor Books, whose Maps `website` is
+`https://www.facebook.com/example.harborbooks`, at `Researched` with one
+named contact, Dana Okafor, Owner, no social field filled.
+`find_profiles` (`[linkedin]`) returns no candidate. The `search_web`
+call returns an Instagram profile
+`https://www.instagram.com/example.dana.books`; `read_profile` on it
+shows a bio link to `https://example-harbor.wixsite.com/home` and a
+location that matches H's city.
 
 **Expect** — `skills/find-social-profiles/SKILL.md`, Procedure steps 1
 and 3 (and `subagents/preparer.md`, "Shared platform"):
 
 - **Not an anchor site.** H's website is on a shared platform, so it is
-  a profile page, read as one, and never the business's website.
+  never the business's website. It is H's own Facebook page, an anchor
+  like its other social pages; Facebook has no reader, so it is not read.
 - **Not a business link.** The bio's link is to a shared-platform
   website, which is never a business link. The candidate has a location
   match and a name match only, so it is not confident: `upsert_contact`
@@ -1632,41 +1652,50 @@ and 3 (and `subagents/preparer.md`, "Shared platform"):
 the link proves nothing about who owns the profile. Counting it would
 promote a name-and-city match into a field.
 
-**How to run** — Seed H and its contact, stub `find_profiles` with the
-Instagram candidate, and run the Preparer. Confirm `instagram_url` is
-empty, the candidate is in the note and its reasons do not claim a
-business link.
+**How to run** — Seed H and its contact, stub `search_web` with the
+Instagram result and `read_profile` with its bio, and run the Preparer.
+Confirm `instagram_url` is empty, the candidate is in the note and its
+reasons do not claim a business link.
 
 ---
 
 ## Case 40: A field the operator filled is never overwritten
 
-**Given** — The default `prospecting_sources` and the lead of Case 37.
-The contact already has `linkedin_url`
-`https://linkedin.example/in/priya-n-owner`, set by the operator, and no
-`profiles_checked_at`. `find_profiles` is called for the platforms still
-missing; a `read_profile` of the business's Instagram page links to a
-LinkedIn profile `https://linkedin.example/in/priya-nandakumar`, whose
-`current_employer` is Brightwater Accounting.
+**Given** — The default `prospecting_sources`, with no
+`bind_web_search` line (Exa is not bound). Lead K, Cedar Lane
+Bookkeeping in Springfield (`https://cedarlane.example`), at
+`Researched`, whose site footer links its business Instagram
+`https://www.instagram.com/example.cedarlane`. One named contact, Sam
+Ortega, Owner, with `linkedin_url`
+`https://www.linkedin.com/in/example-sam-ortega-owner`, set by the
+operator, and no `profiles_checked_at`. `read_profile` on the business
+Instagram shows a link to the LinkedIn profile
+`https://www.linkedin.com/in/example-sam-ortega`.
 
-**Expect** — `skills/find-social-profiles/SKILL.md`, Procedure steps 2
-and 4, and `capabilities/crm/contract.md`, "Only when the CRM field is
+**Expect** — `skills/find-social-profiles/SKILL.md`, Procedure steps 1,
+2 and 4, and `capabilities/crm/contract.md`, "Only when the CRM field is
 empty":
 
-- **Not searched.** LinkedIn is a platform the contact already has a
-  profile on, so it is not in the `find_profiles` platforms.
+- **Not searched.** `find_profiles` is not called: LinkedIn is filled,
+  and no actor searches the other platforms. With Exa not bound, there
+  is no `search_web` call either.
+- **Anchor only.** The business page links to
+  `https://www.linkedin.com/in/example-sam-ortega`, a business link to a
+  profile whose name fits the contact, so it is a confident LinkedIn
+  match.
 - **Not overwritten.** The `linkedin_url` is still
-  `https://linkedin.example/in/priya-n-owner` after the run. A confident
-  match for a field already filled with a different URL goes into the
-  note instead, as a `linkedin:` line.
-- **Checked.** `profiles_checked_at` is written as today's date.
+  `https://www.linkedin.com/in/example-sam-ortega-owner` after the run.
+  A confident match for a field already filled with a different URL
+  goes into the note instead, as a `linkedin:` line.
+- **Checked.** `profiles_checked_at` is written (now, ISO 8601 UTC).
 
 **Why it matters** — The operator's value is the one they trust. An
 agent that replaces it silently undoes their correction on the next run.
 
-**How to run** — Seed the contact with the `linkedin_url`, run the
-Preparer, and read the contact: the URL is unchanged. Read the note for
-the `linkedin:` line.
+**How to run** — Seed K and its contact with the `linkedin_url`, stub
+`read_profile` for the business Instagram, run the Preparer, and read
+the contact: the URL is unchanged. Confirm the trace has no
+`find_profiles` call, and read the note for the `linkedin:` line.
 
 ---
 
@@ -1678,7 +1707,8 @@ lead A (Brightwater Accounting) first in the list, lead Z (Lakeside
 Dental) second. After the list is built and before Z's turn, the
 operator moves Z to `Approved`.
 
-**Expect** — `subagents/preparer.md`, Profile pass, Per lead step 1:
+**Expect** — `subagents/preparer.md`, Profile pass, Per lead steps 1
+and 3:
 
 - **Re-checked.** The Preparer reads Z with `get_lead` before its first
   write and sees `Approved`.
@@ -1690,6 +1720,13 @@ operator moves Z to `Approved`.
   `items_in` 0, `items_out` 0 and `detail` `profile pass; stage
   Approved`.
 - **A is unaffected.** A is searched and checked as usual.
+- **Mid-lead.** In a variant, A has two named contacts and the operator
+  moves A to `Approved` after its first contact's writes. The `get_lead`
+  before the second contact's writes sees `Approved`: the second contact
+  gets no `upsert_contact`, no `log_possible_profiles` and no
+  `profiles_checked_at`, the lead stops there, and the ledger has the
+  `profile pass; stage Approved` skipped `step` for A. The first
+  contact's writes stay.
 
 **Why it matters** — Once the operator approves a lead it is theirs.
 Writing profile fields or a note into it while they read it is acting on
@@ -1707,7 +1744,9 @@ read the ledger for the `skipped` step.
 **Given** — The default `prospecting_sources`. Lead D, Maple Street
 Physio, at `Researched` since an earlier run, with one named contact
 lacking `profiles_checked_at`, and `Do Not Contact` ticked. No lead is
-queued for research this run, so D is on the list only as backlog.
+queued for research this run, so D is on the list only as backlog. The
+pass runs even when the prepare queue is empty (`subagents/preparer.md`,
+Trigger); this case depends on that.
 
 **Expect** — `subagents/preparer.md`, Profile pass, Per lead step 2:
 
@@ -1745,7 +1784,9 @@ named contact lacking `profiles_checked_at`.
   before any `find_profiles` call: profile spend on A can never push C's
   evidence calls over a cap.
 - **List order.** The pass takes A and C first, then the backlog lead E,
-  oldest `Stage Changed At` first.
+  oldest `Stage Changed At` first. It takes at most
+  `research_quota_per_week` backlog leads in one run; A and C, moved to
+  `Researched` this run, do not count toward that limit.
 - **Stop.** When the 7-day cap would be passed, `find-social-profiles`
   returns `stopped`: the contact in progress has no `profiles_checked_at`,
   and the leads not yet reached, including E, stay unchecked.

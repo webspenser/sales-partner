@@ -73,8 +73,8 @@ usable hook the Opener line is, exactly,
 `Opener: unverified — no recent hook found`.
 A possible profiles Note's first line is
 `=== YYYY-MM-DD · possible profiles ===`, then one `<p>` per candidate:
-`<platform>: <URL> — <reasons> [<source URL>]`, or the one line
-`- none found`. URLs and reasons only: no bio, post, photo or follower
+`<platform>: <URL> — <reasons> [<source URL>]`. A search with no
+candidate writes no Note. URLs and reasons only: no bio, post, photo or follower
 data.
 `hs_timestamp` is the moment of the write.
 
@@ -274,18 +274,22 @@ If a contact matches, update it (`updateRequest` on `contacts` with
 the contact's `hs_linkedin_url`, `sp_instagram_url`, `sp_facebook_url`,
 `sp_tiktok_url` and `sp_x_url` first and write each social URL only
 when the CRM field is empty; never overwrite or clear one.
-`sp_profiles_checked_at` is written whenever the caller passes it. If
-none matches, create it:
+`sp_profiles_checked_at` is written whenever the caller passes it. An
+argument the caller did not pass is left out of the call: it is never
+sent empty, and never set to a default. If none matches, create it:
 
     {"createRequest": {"objects": [{"objectType": "contacts",
       "properties": {"firstname": "…", "lastname": "…", "jobtitle": "…", "email": "…",
-        "phone": "…", "hs_linkedin_url": "…", "sp_instagram_url": "…",
-        "sp_facebook_url": "…", "sp_tiktok_url": "…", "sp_x_url": "…",
-        "sp_profiles_checked_at": "<ISO 8601 UTC>", "sp_role": "<role>",
+        "phone": "…", "hs_linkedin_url": "…", "sp_role": "<role>",
         "sp_verified": "false", "sp_notes": "…"},
       "associations": [{"targetObjectType": "COMPANY", "targetObjectId": <lead_id>}]}]}}
 
-Set `sp_verified` to `"true"` only when the caller passes it. An
+Send each property only when the caller passed its argument. The four
+other social properties (`sp_instagram_url`, `sp_facebook_url`,
+`sp_tiktok_url`, `sp_x_url`) are added to a create only when the caller
+passes them, and `sp_profiles_checked_at` is never sent on create: it is
+written only when a person's profile search completes, on a contact
+that already exists. Set `sp_verified` to `"true"` only when the caller passes it. An
 unverified pattern-guessed address goes in `sp_notes`, never in
 `email`. Return the contact's ID.
 

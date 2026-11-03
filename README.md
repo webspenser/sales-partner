@@ -153,7 +153,11 @@ Version 8.3.0.
   hostname itself (a made-up subdomain).
   Three more actors find and read social profiles (LinkedIn by name,
   Instagram and TikTok). They run with no login: the agent never signs
-  in to any platform.
+  in to any platform. Facebook personal profiles have no reader, so they
+  come only from the business's own pages and from Exa. The guard limits
+  which arguments go to the profile actors and how many, but it can't
+  check what a name or handle contains, so data could in principle ride
+  in one.
 
 - Optional: Exa for web search (`capabilities/web_search/tools/exa/`), through Exa's hosted connector on your own Exa account. When it is connected, research runs one Exa search per lead to find its owner or principal; without it, research runs as before. The guard lets only Exa's basic search run, at its default 10 results.
 

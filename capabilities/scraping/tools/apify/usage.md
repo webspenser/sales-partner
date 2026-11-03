@@ -116,7 +116,10 @@ names are spelled as the connector shows them, case included.
   `web_search` is bound, from its `search_web`
   (`capabilities/web_search/contract.md`). Pass names and cities only,
   never a handle guessed from the name. Allowed arguments, and no others:
-  - `firstName`, `lastName` — the person's name, split at the last space;
+  - `firstName`, `lastName` — the person's name, split at the last space.
+    The guard does not require `firstName` or
+    `lastName`, so a search with neither is allowed; it costs a call and
+    finds nobody, so never call it without the person's name;
   - `locations` — at most one, the lead's city (`["Springfield"]`), or
     leave it out;
   - `maxItems` = `max_profile_results`;

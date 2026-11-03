@@ -1486,4 +1486,73 @@ flat_has "$SP/README.md" 'Nothing is ever followed or messaged'
 flat_has "$SP/README.md" 'LinkedIn stays human on every platform'
 flat_has "$SP/README.md" 'no login'
 
+echo "-- 8.3.0: final review fixes"
+FSP=skills/find-social-profiles/SKILL.md
+FDM=skills/find-decision-makers/SKILL.md
+PR=subagents/preparer.md
+AU="$SP/capabilities/crm/tools/attio/usage.md"
+HU="$SP/capabilities/crm/tools/hubspot/usage.md"
+SU="$SP/capabilities/scraping/tools/apify/usage.md"
+EV="$SP/evals/cases.md"
+ONLY='Only `find-social-profiles` passes `instagram_url`, `facebook_url`, `tiktok_url`, `x_url` and `profiles_checked_at`.'
+# I1: research never passes the new social arguments
+flat_has "$FDM" "$ONLY"
+n=$(tr '\n' ' ' < "$PR" | tr -s ' ' | grep -oF -- "$ONLY" | wc -l | tr -d ' ')
+[ "$n" -ge 2 ] && _report ok "preparer says only find-social-profiles passes the social arguments (contacts and Handoff)" || _report no "preparer says it $n times, want 2 (Website contacts and Handoff)"
+flat_has "$PR" "A business's own social pages go to the company profile fields"
+# I2 and I2b: HubSpot create never stamps the marker; omitted arguments stay out
+create=$(awk '/"createRequest"/,/"associations"/' "$HU" | awk '/contacts/,/associations/')
+printf '%s' "$create" | grep -qF 'sp_profiles_checked_at' && _report no "HubSpot contact create example still sends sp_profiles_checked_at" || _report ok "HubSpot contact create example sends no sp_profiles_checked_at"
+flat_has "$HU" '`sp_profiles_checked_at` is never sent on create'
+flat_has "$AU" 'An argument the caller did not pass is left out of the call'
+flat_has "$HU" 'An argument the caller did not pass is left out of the call'
+# I3: a different city contradicts every candidate; the employer must be this business
+flat_has "$FSP" "A different city or region from the lead's is a contradicting signal for every candidate, including a LinkedIn employer match"
+flat_has "$FSP" 'unless it also has a direct business link'
+assert_contains "$FSP" '`companyLinkedinUrl`'
+flat_has "$FSP" "A business page is never a person's profile"
+flat_has "$FSP" 'returned by `find_profiles`'
+assert_not_contains "$FSP" 'a different city and a different employer'
+assert_not_contains "$FSP" 'read from the profile'
+# I4: the stage is re-checked before each contact's writes
+flat_has "$PR" "Re-check the stage with \`get_lead\` before each contact's writes"
+flat_has "$FSP" 'Re-read the lead with `get_lead` before the first write'
+flat_has "$EV" 'Mid-lead.'
+# I5: the Preparer may write the possible-profiles note
+assert_contains "$PR" '- CRM `log_possible_profiles` (Profile pass, through find-social-profiles)'
+# I6: evals and the worked example follow the shipped design and the host rule
+for t in '`find_profiles` returns a TikTok' '`find_profiles` returns an Instagram' 'read with `read_profile` is Brightwater' '`find_profiles` is called for the platforms still missing' 'tiktok.example' 'instagram.example' 'linkedin.example'; do
+  assert_not_contains "$EV" "$t"
+done
+for t in 'tiktok.example' 'instagram.example' 'linkedin.example'; do
+  assert_not_contains "$FSP" "$t"
+done
+assert_contains "$EV" 'https://www.tiktok.com/@example.priyan'
+assert_contains "$FSP" 'https://www.instagram.com/example.priya.n'
+flat_has "$EV" '`find_profiles` is not called: LinkedIn is filled, and no actor searches the other platforms'
+flat_has "$EV" 'returned by `find_profiles` (`Full` mode)'
+flat_has "$EV" 'The pass runs even when the prepare queue is empty'
+# I7: the backlog is bounded per run, with no new key
+flat_has "$PR" 'at most `research_quota_per_week` backlog leads per run'
+flat_has "$PR" 'Leads this run moved to `Researched` do not count toward it'
+flat_has "$EV" 'at most `research_quota_per_week` backlog leads'
+# I8: the pass runs on an empty queue
+flat_has "$PR" 'After the last queued lead, the Profile pass runs (below), also when the queue is empty.'
+sed -n 3p "$PR" | grep -qF 'runs the Profile pass over `Researched` leads whose contacts are unsearched, even when nothing is queued' && _report ok "preparer description names the profile pass" || _report no "preparer description lacks the profile pass"
+awk '/^## Inline fallback/,/^### Guardrails/' "$PR" | tr '\n' ' ' | grep -qF 'then the Profile pass, also when the queue is empty' && _report ok "inline fallback runs the profile pass" || _report no "inline fallback lacks the profile pass"
+# Minors
+assert_not_contains "$AU" '- none found'
+assert_not_contains "$HU" '- none found'
+assert_not_contains "$FSP" "today's date"
+flat_has "$FSP" '`profiles_checked_at` (now, ISO 8601 UTC)'
+flat_has "$FSP" 'name, title, email and role unchanged'
+flat_has "$PR" 'A contact with no role is not searched either'
+assert_contains "$SP/AGENT.md" '`find-social-profiles`'
+[ "$(wc -c < "$SP/AGENT.md" | tr -d ' ')" -le 6000 ] && _report ok "AGENT.md within 6000 bytes" || _report no "AGENT.md over 6000 bytes"
+flat_has "$SP/README.md" "it can't check what a name or handle contains, so data could in principle ride in one"
+flat_has "$SP/README.md" "Facebook personal profiles have no reader, so they come only from the business's own pages and from Exa"
+flat_has "$PR" 'unless one was already sent this run'
+flat_has "$SU" 'The guard does not require `firstName` or `lastName`'
+awk '/^## Stop conditions/,/^## Scraping/' "$PR" | grep -qF 'Profile pass' && _report ok "Stop conditions point at the Profile pass" || _report no "Stop conditions miss the Profile pass"
+
 finish

@@ -1189,7 +1189,8 @@ flat_has "$PP" 'The run calls `notify_owner(kind: error)` once, naming the missi
 flat_has "$PP" 'This is not a stop: the activity carries on with the other sources and web search.'
 MB=$(awk '/^\*\*Missing bindings\.\*\*/ { f=1 } f && /^$/ { exit } f' "$PP")
 for b in max_reviews max_review_places max_ads max_ad_queries max_ad_advertisers ads_result_type max_jobs \
-         max_site_pages max_site_depth max_site_urls site_crawler_type site_html_transformer; do
+         max_site_pages max_site_depth max_site_urls site_crawler_type site_html_transformer \
+         max_profile_results max_profile_reads max_profile_locations; do
   printf '%s' "$MB" | grep -qF -- "\`$b\`" && _report ok "Missing bindings names $b" || _report no "Missing bindings lacks $b"
   assert_contains "$SU" "\`$b\` —"
 done
@@ -1360,7 +1361,7 @@ flat_has "$SP/subagents/prospector.md" 'leaving out every step whose `detail` st
 flat_has "$SP/subagents/prospector.md" 'The source `web_search` is the host'"'"'s built-in web search, never the `web_search` capability (Exa)'
 flat_has "$SP/context/operating-config.md" '`web_search` is the host'"'"'s built-in search, not the Exa `web_search` capability'
 flat_has "$SP/subagents/preparer.md" '- Web search (the host'"'"'s built-in search)'
-flat_has "$SP/capabilities/web_search/contract.md" 'Only `find-decision-makers` calls `search_web`'
+flat_has "$SP/capabilities/web_search/contract.md" 'Only the Preparer calls `search_web`'
 flat_has "$SP/skills/send-digest/SKILL.md" 'leaving out every step whose `detail` starts with `search_web`'
 flat_has "$SP/skills/send-digest/SKILL.md" 'Exa web search: $'
 assert_contains "$SP/templates/digest.md" 'Exa web search: [$ spent]'
@@ -1432,6 +1433,14 @@ assert_contains "$SU" 'for `linkedin` only, in this release'
 assert_contains "$SU" 'harvestapi/linkedin-profile-search-by-name,apify/instagram-profile-scraper,clockworks/tiktok-profile-scraper'
 assert_contains "$SU" 'verify them in Apify Console'
 assert_contains "$SP/capabilities/scraping/tools/apify/guard.yaml" '# Apify guard policy: ten actors and two reads.'
+WC="$SP/capabilities/web_search/contract.md"
+assert_contains "$WC" '`find-social-profiles` once per contact'
+assert_contains "$WC" 'one-search-per-lead and'
+assert_not_contains "$WC" 'Only `find-decision-makers` calls `search_web`'
+assert_not_contains "$WC" 'Today one skill uses it'
+assert_contains "$SP/capabilities/web_search/tools/exa/usage.md" 'The profile query (`find-social-profiles`, once per contact'
+assert_contains "$SP/subagents/preparer.md" 'once per contact in the Profile pass, under the same condition (find-social-profiles)'
+assert_contains "$SP/subagents/preparer.md" '`search_web; profiles <contact_id>; estimated`'
 
 echo "-- profile pass"
 assert_contains "$SP/subagents/preparer.md" 'Profile pass'

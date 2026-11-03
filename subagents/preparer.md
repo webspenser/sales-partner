@@ -104,7 +104,8 @@ Segment and offer).
 
 ## Tools allowed
 - Web search (the host's built-in search)
-- Web search `search_web` (Exa), once per lead, only when `instance.yaml` has a `bind_web_search` line (find-decision-makers).
+- Web search `search_web` (Exa), once per lead, only when `instance.yaml` has a `bind_web_search` line (find-decision-makers);
+  and once per contact in the Profile pass, under the same condition (find-social-profiles).
   A `search_web` call is not an Apify call: it never counts toward `apify_cap_usd_per_lead` or `apify_spend_cap_usd_per_week`,
   and when a cap stops scraping, Exa keeps running, since it is web search.
   A `search_web` call that fails after its one retry is recorded as a failed `step` and research goes on; it is not a stop and does not notify the owner.
@@ -347,7 +348,9 @@ check that `bindings/scraping.md` has every binding the source passes:
 `apify_ads` needs `max_ads`, `max_ad_queries`, `max_ad_advertisers` and
 `ads_result_type`; `apify_jobs` needs `max_jobs`; `apify_site_reader`
 needs `max_site_pages`, `max_site_depth`, `max_site_urls`,
-`site_crawler_type` and `site_html_transformer`. When one is missing (an
+`site_crawler_type` and `site_html_transformer`; `apify_profiles` needs
+`max_profile_results` (default 5), `max_profile_reads` (default 10) and
+`max_profile_locations` (default 1). When one is missing (an
 8.0 instance whose setup tools step has not run yet), that source is
 skipped for this run and never called. It is recorded as not run: each
 lead that picked it gets a ledger `step` with `outcome` `skipped`,
@@ -523,9 +526,13 @@ Call `ledger_status` first; write `run_started` first and `run_finished` last, n
 A `search_web` step has `subject` the lead id, `outcome` `ok` or `failed`,
 `items_in` 1, `items_out` the results read, `cost_usd` the `usage.md`
 estimate (also on a failed call), and `detail` `search_web; estimated`
-or `search_web; failed: <reason>`. Before searching for a lead, a
+or `search_web; failed: <reason>`. A Profile pass search is the same
+step with `detail` `search_web; profiles <contact_id>; estimated` (or
+`; failed: <reason>`). Before searching for a lead, a
 continue run looks for an `ok` `search_web` step with that `subject` in
-the run being continued, and skips the search when there is one.
+the run being continued, and skips the search when there is one; the
+decision-maker search counts only steps without `profiles` in `detail`,
+and a profile search only the one naming that contact.
 
 One `step` per lead researched: `subject` is the CRM lead id,
 `items_in` the findings logged, `items_out` the hooks written, and

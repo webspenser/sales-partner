@@ -3,10 +3,11 @@ name: find-decision-makers
 description: Use when the target company is known but the right person is not — identifies decision-makers, influencers, and gatekeepers, and finds a contact route for each.
 ---
 
-This skill reads public pages only. LinkedIn is read here, never acted
-on — no automated connection request, message, or scrape behind a
-login; a LinkedIn profile URL found on a public company page or public
-search is a legitimate source, viewing it as a human would is not.
+This skill reads public pages only. Reading a public LinkedIn profile,
+including through an actor, is allowed; acting on LinkedIn is not — no
+automated connection request, follow, message or post, and no scrape
+behind a login. A LinkedIn profile URL found on a public company page or
+public search is a legitimate source.
 
 ## Procedure
 
@@ -52,10 +53,16 @@ search is a legitimate source, viewing it as a human would is not.
    direct phone number, a LinkedIn profile URL, or any combination.
    Note where each came from.
 5. Write each person via CRM `upsert_contact(lead_id, name, title,
-   email, phone, linkedin_url, role, verified, notes)`. `role` must be
+   email, phone, linkedin_url, instagram_url, facebook_url, tiktok_url, x_url,
+   profiles_checked_at, role, verified, notes)`. `role` must be
    exactly one of decision-maker, influencer, or gatekeeper — the
    operation rejects anything else. `title` holds only the person's
    job title — never fold any other annotation into it.
+   Only `find-social-profiles` passes `instagram_url`, `facebook_url`, `tiktok_url`, `x_url` and `profiles_checked_at`.
+   Research passes `linkedin_url` only, as before: a social link
+   `find_contacts` returns is usually the business's page, and a
+   business's own social pages go to the company profile fields, never
+   into a person's.
 6. A weak source alone never supports `Verified`.
    Set `Verified` only when the contact route came from a source that
    directly confirms it belongs to this person — a public bio page

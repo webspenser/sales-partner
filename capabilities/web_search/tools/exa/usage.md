@@ -21,6 +21,15 @@ Leave out the domain when the lead has no website. Its objective:
 to find; which results count is decided afterwards by the skill's source
 rules, never by words in the query.
 
+The profile query (`find-social-profiles`, once per contact, from the
+Preparer's Profile pass): `<contact name>, <business name>, <city>:
+<platforms still missing> profiles`, with the platforms named from
+Instagram, Facebook and TikTok. Its objective: `Find the public social
+profiles of <contact name> of <business name> in <city>: profile pages
+on <platforms>, or pages that link to them.` Which result counts as a
+candidate, and how confident it is, is decided by the skill's scoring,
+never by words in the query.
+
 ## Results
 
 The tool returns text, one block per result, with `Title:`, `URL:`,

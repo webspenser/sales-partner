@@ -21,7 +21,7 @@ these keys are what make that countable.
 
 ```yaml
 leads_per_week: 40
-prospecting_sources: [apify_google_maps, apify_contact_info, apify_reviews, apify_ads, apify_jobs, apify_site_reader, web_search]
+prospecting_sources: [apify_google_maps, apify_contact_info, apify_reviews, apify_ads, apify_jobs, apify_site_reader, apify_profiles, web_search]
 research_quota_per_week: 10
 research_threshold: 60
 apify_spend_cap_usd_per_week: 25
@@ -46,6 +46,10 @@ tone: "[three adjectives from the interview]"
   `read_site` (the text, links and markup of a few pages of a
   business's website); these four are used by the Preparer, which picks
   among them from the lead's segment's offers' `research_tips`;
+  `apify_profiles` runs `find_profiles` and `read_profile` (the public
+  social profiles of a lead's named contacts) in the Preparer's Profile
+  pass, after the run's leads are prepared; a list without it means no
+  profile pass;
   `web_search` is the host's built-in search, not the Exa `web_search` capability
   (which the Preparer uses on its own when bound); `apollo` is a stubbed tool —
   listing it makes the Prospector report that it is not yet enabled,

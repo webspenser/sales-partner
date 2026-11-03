@@ -2,7 +2,7 @@
 
 Provider-neutral contract for the sales-partner agent's data layer. Every
 sub-agent (Prospector, Preparer) and skill reads and writes
-the CRM only through the nine operations
+the CRM only through the ten operations
 below. No sub-agent talks to a provider's API directly, and no sub-agent
 invokes another sub-agent directly — **`update_stage` is the only
 handoff mechanism between sub-agents.** A sub-agent's job is done when it
@@ -20,12 +20,13 @@ behavior only; it names no provider table or field.
 | Operation | Arguments | Returns | On failure |
 |---|---|---|---|
 | `create_lead` | `company, location, industry, size, source, source_url`, plus optional `domain, address, phone, email, fit_score, fit_breakdown, segment` and the company profile fields | `lead_id`, on a record created at `Stage = New` with `Stage Changed At` stamped at creation | A lead matching an existing one by the dedupe order (domain, then phone, then company + address, each where the tool stores it) returns the existing `lead_id` and writes nothing; rejects a call with none of `domain`, `phone`, or `address` |
-| `get_lead` | `lead_id` | full lead record with linked Contacts, its research record and its Talking Points record, the newest section of each identified | Missing id is an error, not an empty record |
+| `get_lead` | `lead_id` | full lead record with linked Contacts (each with its social fields and `profiles_checked_at`), its research record and its Talking Points record, the newest section of each identified | Missing id is an error, not an empty record |
 | `update_stage` | `lead_id, stage, reason` | updated lead, with `stage_changed_at` set to the moment of this call | Rejects any stage outside the enumerated list |
 | `update_lead` | `lead_id, fields` | updated lead | Accepts `segment`, `industry`, `hero_offer`, `offer_reason`, `offer_evidence` and `research_capped` among its fields. Rejects any attempt to write `stage` through this operation — stage changes go only through `update_stage` — and any attempt to write `research_anyway`, which is the operator's. May set `Do Not Contact` to true; rejects any attempt to clear it once true |
 | `log_talking_points` | `lead_id, contact_id, body` | the Talking Points record the section was added to | Create or append only: adds one dated section to the lead's Talking Points record, creating the record when it has none; never edits, replaces or removes earlier text. Takes no channel argument. The agent writes no talking points for a lead whose `Do Not Contact` is true — an instruction the guard does not enforce |
 | `log_research` | `lead_id, findings[]` (each `type, summary, source_url, date, hook`) | the research record the section was added to | Adds one dated section holding the whole run's findings; rejects the call when any finding has an empty `source_url` or `hook`, or a `type` outside the seven |
-| `upsert_contact` | `lead_id, name, title, email, phone, linkedin_url, role, verified, notes` | `contact_id` | Matches an existing Contact on `email` when present, otherwise on `name` plus `title`, and updates it rather than creating a duplicate; rejects a `role` outside decision-maker / influencer / gatekeeper |
+| `upsert_contact` | `lead_id, name, title, email, phone, linkedin_url, instagram_url, facebook_url, tiktok_url, x_url, profiles_checked_at, role, verified, notes` | `contact_id` | Matches an existing Contact on `email` when present, otherwise on `name` plus `title`, and updates it rather than creating a duplicate; writes each social argument only when the CRM field is empty; rejects a `role` outside decision-maker / influencer / gatekeeper |
+| `log_possible_profiles` | `lead_id, contact_id, body` | the possible-profiles record the section was added to | Create or append only: adds one dated section to the person's `Sales Partner · Possible Profiles` record, creating the record when it has none; never edits, replaces or removes earlier text. The agent writes none for a lead at `Approved` or later or whose `Do Not Contact` is true — an instruction the guard does not enforce |
 | `query_by_stage` | `stage, limit, next_action_due_before, idle_days, research_anyway` | list of leads | Empty list is a valid result; rejects a call where `stage` is omitted and neither `next_action_due_before` nor `idle_days` is given. `research_anyway` is an optional boolean filter on the operator's Research Anyway field |
 | `query_by_score` | `score, min_score, stage, limit` | list of leads ordered by that score descending | Rejects a `score` other than `fit` or `approach`; empty list is a valid result |
 
@@ -66,7 +67,8 @@ names, so a workflow routing on them is unaffected by a rename.
 ### Company profile fields
 
 `description, company_linkedin_url, facebook_url, instagram_url`, plus
-`address`: the basics the operator sees on the company itself.
+`address`: the basics the operator sees on the company itself. Two more
+accept a business's TikTok and X pages: `tiktok_url` and `x_url`.
 `create_lead` and `update_lead` accept them, each optional. Each value
 is sourced: `description` is one line on what the business does and
 where, written from the listing or the research; each URL is a page the
@@ -75,6 +77,39 @@ writes a profile field only when the CRM's own field is empty: it never
 overwrites what the CRM's enrichment or the operator already set, and
 it never clears one. A tool with no home for a profile field skips it
 and says nothing; that is not a failure.
+
+### Social profile fields
+
+A person (a Contact) carries up to five social profile URLs and a
+checked marker, all written through `upsert_contact`: `linkedin_url`,
+`instagram_url`, `facebook_url`, `tiktok_url`, `x_url`, and
+`profiles_checked_at`.
+
+- **Only when the CRM field is empty.** A tool writes each social URL
+  only when the CRM field is empty: it never overwrites a value the
+  operator, the CRM's enrichment or an earlier run set, and it never
+  clears one.
+- **Only confident matches go into a field.** A candidate the agent is
+  not confident about is never written to a field. It goes into the
+  person's `Sales Partner · Possible Profiles` record with
+  `log_possible_profiles`, one line per candidate: platform, URL, the
+  reasons, and the source URL.
+- **Only URLs and reasons.** No bio, post, photo or follower data is
+  ever written.
+- **`profiles_checked_at`** is an ISO date-time. It is written every
+  time a person's profile search completes, whether or not it found
+  anything, and is not written when the search stops early. Its
+  presence is how a later run knows the person was searched.
+- **`log_possible_profiles`** adds one section to the person's
+  `Sales Partner · Possible Profiles` record: a header line
+  `=== YYYY-MM-DD · possible profiles ===` with today's date, then the
+  candidate lines. There is one record per person; every later call
+  appends, and the newest section is last. A tool whose notes cannot be
+  appended to writes each section as its own note instead.
+  The tool fixes the record's exact title in its `usage.md`.
+- A tool with no home for a field skips it and says nothing, as for the
+  company profile fields. `tiktok_url` and `x_url` on a company are
+  written in Attio only.
 
 ### Notes on individual operations
 
@@ -294,6 +329,9 @@ be breaking before they break it:
 - Talking points are append-only: `log_talking_points` adds a section
   and no operation edits, replaces or deletes one, so what the operator
   read when they approved is what stays on the record.
+- The agent writes no possible-profiles note and no social field on a
+  lead at `Approved` or later. This is an instruction: the guard checks
+  one call at a time and cannot see the lead's stage.
 - The agent writes no talking points or research section on a lead at
   `Approved` or later. Approval covers the sections present when the
   operator moved the lead, and a workflow reading "the newest section"

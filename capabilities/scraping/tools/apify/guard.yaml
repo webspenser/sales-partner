@@ -1,4 +1,4 @@
-# Apify guard policy: seven actors and two reads. Each tool takes only the
+# Apify guard policy: ten actors and two reads. Each tool takes only the
 # arguments listed under only_keys (an allowlist: anything else the
 # vendor accepts, such as paid add-ons, proxyConfig or proxyConfiguration,
 # locationQuery or startUrls on Maps and reviews, custom headers, cookies,
@@ -9,27 +9,37 @@
 # from the probe notes: Maps and contacts from
 # docs/superpowers/notes/2026-10-13-apify-connector-probe.md in
 # agent-builder; reviews, ads, jobs and the site reader from this repo's
-# docs/superpowers/notes/2026-10-18-research-actors-probe.md. Tool names
+# docs/superpowers/notes/2026-10-18-research-actors-probe.md; the LinkedIn
+# search and the Instagram and TikTok readers from this repo's
+# docs/superpowers/notes/2026-11-03-social-profiles-actors-probe.md. Tool names
 # are matched without regard to case (the reviews actor's tool is
 # compass--Google-Maps-Reviews-Scraper), and server_match apify covers the
 # connector's claude_ai_Apify_Actors server. Three text pins fix the Google
 # Ads mode (resultType), the crawler (crawlerType) and the HTML
-# transformer (htmlTransformer). Four fixed values (Standard 7.3), each
+# transformer (htmlTransformer). Eight fixed values (Standard 7.3), each
 # required, hold the safety settings that are not operator choices:
-# personalData false on reviews, onlyTotal true on Facebook, and
-# saveMarkdown true and removeElementsCssSelector on the site reader.
+# personalData false on reviews, onlyTotal true on Facebook,
+# saveMarkdown true and removeElementsCssSelector on the site reader,
+# profileScraperMode "Full" (never the email search mode), strictSearch
+# true and maxPages 1 on the LinkedIn search, and resultsPerPage 1 on the
+# TikTok reader (its default is 100 videos per profile).
 # URL rules check every start URL: Facebook takes https pages on
 # facebook.com or www.facebook.com with no query or fragment; the site
 # reader and the contact scraper take only an https site root on a public
 # host (no path, query, fragment, IP address, local name or odd port).
 # The URL rules check only url: only_keys on startUrls[] still blocks
-# requestsFromUrl and the other start URL fields. No refuse_args: the
+# requestsFromUrl and the other start URL fields. The Instagram and
+# TikTok readers take handles, not URLs, so no URL rule applies to them:
+# the guard counts the handles but cannot check what they say. Data could
+# ride out in a handle, the same class of limit as data riding in a
+# hostname on the URL rules. No refuse_args: the
 # allowlists already block every argument not named, so a deny list
 # would add nothing.
 covers: [no_external_send, allowlisted_actors, pinned_inputs]
 allow: [compass--crawler-google-places, vdrmota--contact-info-scraper, compass--Google-Maps-Reviews-Scraper,
   scrapesage--google-ads-transparency-scraper, apify--facebook-ads-scraper, valig--indeed-jobs-scraper,
-  apify--website-content-crawler, get-actor-run, get-dataset-items]
+  apify--website-content-crawler, harvestapi--linkedin-profile-search-by-name, apify--instagram-profile-scraper,
+  clockworks--tiktok-profile-scraper, get-actor-run, get-dataset-items]
 deny: ["*call-actor*", "*call_actor*", "*search-actors*", "*add-actor*", "*fetch-actor*", "*webhook*", "*schedule*"]
 only_keys:
   - tools: [compass--crawler-google-places]
@@ -57,6 +67,19 @@ only_keys:
   - tools: [apify--website-content-crawler]
     at: ["$"]
     keys: [startUrls, crawlerType, maxCrawlPages, maxResults, maxCrawlDepth, htmlTransformer, removeElementsCssSelector, saveMarkdown, waitSecs]
+  # Company, school, title and industry filters stay out: the search is
+  # by name and city only.
+  - tools: [harvestapi--linkedin-profile-search-by-name]
+    at: ["$"]
+    keys: [firstName, lastName, locations, maxItems, maxPages, profileScraperMode, strictSearch, waitSecs]
+  - tools: [apify--instagram-profile-scraper]
+    at: ["$"]
+    keys: [usernames, waitSecs]
+  # Comments, followers, downloads, subtitles, filters, sorting, sections
+  # and the video store stay out.
+  - tools: [clockworks--tiktok-profile-scraper]
+    at: ["$"]
+    keys: [profiles, resultsPerPage, waitSecs]
   - tools: [get-dataset-items]
     at: ["$"]
     keys: [datasetId, fields, limit, offset, clean, omit, desc]
@@ -81,6 +104,22 @@ fixed:
   - tools: [apify--website-content-crawler]
     at: [removeElementsCssSelector]
     value: 'script, style, noscript, svg'
+    required: true
+  - tools: [harvestapi--linkedin-profile-search-by-name]
+    at: [profileScraperMode]
+    value: 'Full'
+    required: true
+  - tools: [harvestapi--linkedin-profile-search-by-name]
+    at: [strictSearch]
+    value: true
+    required: true
+  - tools: [harvestapi--linkedin-profile-search-by-name]
+    at: [maxPages]
+    value: 1
+    required: true
+  - tools: [clockworks--tiktok-profile-scraper]
+    at: [resultsPerPage]
+    value: 1
     required: true
 # Every start URL must name a url that passes these rules (query and
 # fragment are forbidden by default).
@@ -145,11 +184,16 @@ recipients:
   - tools: [apify--website-content-crawler]
     at: [maxCrawlDepth]
     bound: max_site_depth
+  - tools: [harvestapi--linkedin-profile-search-by-name]
+    at: [maxItems]
+    bound: max_profile_results
 # List lengths multiply the size pins: one search term per Maps call, at
 # most 10 sites per contact call, one place per reviews call, one query
 # per Google Ads call, one page URL per Facebook call, one start URL per
-# site read, at most 100 items per dataset read. The lists are required,
-# so leaving them out cannot skip the cap.
+# site read, at most 10 handles per Instagram or TikTok read, at most 100
+# items per dataset read. The lists are required, so leaving them out
+# cannot skip the cap. The LinkedIn location list is optional (a search
+# without one is no larger) and holds at most one city.
 # only_keys names are compared exactly: send the spelling listed above.
 limits:
   - tools: [compass--crawler-google-places]
@@ -182,6 +226,20 @@ limits:
     bound: max_site_urls
     kind: count
     required: true
+  - tools: [apify--instagram-profile-scraper]
+    at: [usernames]
+    bound: max_profile_reads
+    kind: count
+    required: true
+  - tools: [clockworks--tiktok-profile-scraper]
+    at: [profiles]
+    bound: max_profile_reads
+    kind: count
+    required: true
+  - tools: [harvestapi--linkedin-profile-search-by-name]
+    at: [locations]
+    bound: max_profile_locations
+    kind: count
   - tools: [get-dataset-items]
     at: [limit]
     bound: max_dataset_items

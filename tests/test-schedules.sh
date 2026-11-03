@@ -25,7 +25,8 @@ scrape() { # scrape <dir>: bind scraping to Apify with every pinned value
     'max_search_terms: 1' 'max_sites_per_call: 10' 'max_dataset_items: 100' \
     'max_reviews: 50' 'max_ads: 5' 'max_jobs: 20' 'max_site_pages: 5' 'max_site_depth: 1' 'max_review_places: 1' \
     'max_ad_queries: 1' 'max_ad_advertisers: 1' 'ads_result_type: advertisers' 'site_crawler_type: cheerio' \
-    'site_html_transformer: none' 'max_site_urls: 1' > "$1/bindings/scraping.md"
+    'site_html_transformer: none' 'max_site_urls: 1' 'max_profile_results: 5' 'max_profile_reads: 10' \
+    'max_profile_locations: 1' > "$1/bindings/scraping.md"
 }
 inst() { # inst <dir> <crm provider>
   mkdir -p "$1"
@@ -81,7 +82,8 @@ out=$(python3 -B "$C" check "$W/nopin" --repo acme/sales 2>&1); rc=$?
 # A bound scraping capability missing a pinned value fails the gate, naming the key.
 for key in max_places_per_search max_pages_per_site max_crawl_depth max_pages_per_call max_search_terms max_sites_per_call max_dataset_items \
            max_reviews max_ads max_jobs max_site_pages max_site_depth max_review_places max_ad_queries max_ad_advertisers \
-           ads_result_type site_crawler_type site_html_transformer max_site_urls; do
+           ads_result_type site_crawler_type site_html_transformer max_site_urls \
+           max_profile_results max_profile_reads max_profile_locations; do
   mkdir -p "$W/noscrape-$key"
   inst "$W/noscrape-$key" attio
   grep -v "^$key:" "$W/noscrape-$key/bindings/scraping.md" > "$W/s.tmp" && mv "$W/s.tmp" "$W/noscrape-$key/bindings/scraping.md"

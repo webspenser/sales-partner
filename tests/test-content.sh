@@ -23,7 +23,7 @@ while IFS= read -r f; do
 done < <(find "$SP" -name '*.md' -not -path './docs/*' -not -path './tests/*' -not -path './.git/*' -not -name README.md -not -path './.claude/*' -not -path './CLAUDE.md' -not -path './GEMINI.md' -not -path './AGENTS.md')
 
 echo "-- prospecting sources"
-assert_contains "$SP/context/operating-config.md" 'prospecting_sources: [apify_google_maps, apify_contact_info, apify_reviews, apify_ads, apify_jobs, apify_site_reader, web_search]'
+assert_contains "$SP/context/operating-config.md" 'prospecting_sources: [apify_google_maps, apify_contact_info, apify_reviews, apify_ads, apify_jobs, apify_site_reader, apify_profiles, web_search]'
 assert_contains "$SP/context/operating-config.md" '**`prospecting_sources`**'
 assert_contains "$SP/subagents/prospector.md" 'only the sources listed in `prospecting_sources`'
 assert_contains "$SP/subagents/prospector.md" '`apollo` is listed'
@@ -43,11 +43,11 @@ C="$SP/capabilities/crm/contract.md"
 assert_contains "$C" '`company, location, industry, size, source, source_url`, plus optional `domain, address, phone, email, fit_score, fit_breakdown, segment`'
 assert_contains "$C" 'failing that, the same normalized `phone`'
 assert_contains "$C" 'none of `domain`, `phone`, or `address`'
-assert_contains "$C" '`lead_id, name, title, email, phone, linkedin_url, role, verified, notes`'
+assert_contains "$C" '`lead_id, name, title, email, phone, linkedin_url, instagram_url, facebook_url, tiktok_url, x_url, profiles_checked_at, role, verified, notes`'
 assert_contains "$C" 'listing, web_presence'
 assert_contains "$SP/skills/research-company/SKILL.md" 'hire, listing, web_presence'
-assert_contains "$SP/skills/find-decision-makers/SKILL.md" 'email, phone, linkedin_url'
-assert_contains "$SP/subagents/preparer.md" 'email, phone, linkedin_url'
+assert_contains "$SP/skills/find-decision-makers/SKILL.md" 'email, phone, linkedin_url, instagram_url'
+assert_contains "$SP/subagents/preparer.md" 'email, phone, linkedin_url, instagram_url'
 assert_contains "$SP/subagents/prospector.md" '`Address`, `Phone`, `Email`'
 assert_contains "$SP/AGENT.md" 'hire, listing, web presence'
 
@@ -530,7 +530,7 @@ assert_contains "$SP/README.md" 'messages only you, through Resend'
 assert_contains "$SP/evals/cases.md" 'A notification never reaches anyone but the owner'
 
 echo "-- 7.0.0: release"
-assert_contains "$SP/agent.yaml" 'version: 8.2.1'
+assert_contains "$SP/agent.yaml" 'version: 8.3.0'
 for m in agent.yaml .claude-plugin/plugin.json .claude-plugin/marketplace.json .codex-plugin/plugin.json gemini-extension.json; do
   grep -qF "$EXPECTED_DESC" "./$m" && _report ok "$m: description is the 8.0.0 string" || _report no "$m: description is not the 8.0.0 string"
 done
@@ -675,7 +675,7 @@ assert_contains "$SP/README.md" 'Upgrading from 7.2'
 echo "-- 7.4: one Attio list"
 assert_contains "$C" '| `log_talking_points` |'
 assert_contains "$C" 'log_research(lead_id, findings[])'
-assert_contains "$C" 'the nine operations'
+assert_contains "$C" 'the ten operations'
 assert_not_contains "$C" 'update_activity'
 assert_not_contains "$C" 'query_activities'
 assert_not_contains "$C" 'log_activity'
@@ -721,7 +721,7 @@ SD="$SP/skills/send-digest/SKILL.md"
 assert_contains "$SD" 'Approved, not yet contacted'
 assert_contains "$SD" 'researched N days ago'
 assert_contains "$SD" 'no offer'
-assert_contains "$SD" 'nine operations'
+assert_contains "$SD" 'ten operations'
 assert_not_contains "$SD" 'drafted:'
 assert_not_contains "$SD" 'drafted N days ago'
 assert_not_contains "$SD" 'the Call note'
@@ -794,10 +794,10 @@ done < <(find AGENT.md README.md subagents skills templates context capabilities
 rm -f "$README_NO_UPGRADE"
 
 echo "-- 8.0.0: release: version, README flow and the upgrade note"
-assert_contains "$SP/agent.yaml" 'version: 8.2.1'
-assert_contains "$SP/README.md" 'Version 8.2.1.'
+assert_contains "$SP/agent.yaml" 'version: 8.3.0'
+assert_contains "$SP/README.md" 'Version 8.3.0.'
 for m in .claude-plugin/plugin.json .codex-plugin/plugin.json gemini-extension.json; do
-  assert_contains "./$m" '"version": "8.2.1"'
+  assert_contains "./$m" '"version": "8.3.0"'
 done
 assert_contains "$SP/README.md" 'Upgrading from 7.4'
 for t in 'Approved' 'Research Anyway' 'Talking Points' 'offer catalog' 'Hero Offer' 'schedule_approach'; do
@@ -1002,8 +1002,8 @@ for d in '`max_reviews` — reviews per reviews call (default 50)' '`max_ads` �
          '`max_site_depth` — link depth for the site reader (default 1)'; do
   printf '%s' "$SETUP" | grep -qF -- "$d" && _report ok "usage.md Setup: $d" || _report no "usage.md Setup missing: $d"
 done
-printf '%s' "$SETUP" | grep -qF 'mcp.apify.com?tools=compass/crawler-google-places,vdrmota/contact-info-scraper,compass/Google-Maps-Reviews-Scraper,scrapesage/google-ads-transparency-scraper,apify/facebook-ads-scraper,valig/indeed-jobs-scraper,apify/website-content-crawler`' \
-  && _report ok "usage.md Setup gives the seven-actor connector URL" || _report no "usage.md Setup lacks the seven-actor connector URL"
+printf '%s' "$SETUP" | grep -qF 'mcp.apify.com?tools=compass/crawler-google-places,vdrmota/contact-info-scraper,compass/Google-Maps-Reviews-Scraper,scrapesage/google-ads-transparency-scraper,apify/facebook-ads-scraper,valig/indeed-jobs-scraper,apify/website-content-crawler,harvestapi/linkedin-profile-search-by-name,apify/instagram-profile-scraper,clockworks/tiktok-profile-scraper`' \
+  && _report ok "usage.md Setup gives the ten-actor connector URL" || _report no "usage.md Setup lacks the ten-actor connector URL"
 assert_contains "$SU" 'always pass `personalData: false`'
 assert_contains "$SU" 'never record reviewer names'
 assert_contains "$SU" 'always pass `onlyTotal: true`'
@@ -1146,8 +1146,11 @@ for t in apify_reviews apify_ads apify_jobs apify_site_reader 'apify_cap_usd_per
   'mcp__claude_ai_Apify_Actors__' '/sales-partner:schedule'; do
   printf '%s' "$UP81" | grep -qF -- "$t" && _report ok "8.0 upgrade note names '$t'" || _report no "8.0 upgrade note does not name '$t'"
 done
+# The 8.0 note's URL is the seven-actor one; usage.md's current URL extends
+# it (8.3 adds the profile actors, and its own upgrade note carries them).
 APIFY_URL=$(grep -o 'https://mcp\.apify\.com?tools=[^`]*' "$SP/capabilities/scraping/tools/apify/usage.md" | head -1)
-[ -n "$APIFY_URL" ] && printf '%s' "$UP81" | grep -qF -- "$APIFY_URL" \
+UP81_URL=$(printf '%s' "$UP81" | grep -o 'https://mcp\.apify\.com?tools=[^`]*' | head -1)
+[ -n "$APIFY_URL" ] && [ -n "$UP81_URL" ] && [ "${APIFY_URL#"$UP81_URL"}" != "$APIFY_URL" ] \
   && _report ok "8.0 upgrade note carries the connector URL from the Apify usage file" \
   || _report no "8.0 upgrade note lacks the connector URL from the Apify usage file"
 
@@ -1186,7 +1189,8 @@ flat_has "$PP" 'The run calls `notify_owner(kind: error)` once, naming the missi
 flat_has "$PP" 'This is not a stop: the activity carries on with the other sources and web search.'
 MB=$(awk '/^\*\*Missing bindings\.\*\*/ { f=1 } f && /^$/ { exit } f' "$PP")
 for b in max_reviews max_review_places max_ads max_ad_queries max_ad_advertisers ads_result_type max_jobs \
-         max_site_pages max_site_depth max_site_urls site_crawler_type site_html_transformer; do
+         max_site_pages max_site_depth max_site_urls site_crawler_type site_html_transformer \
+         max_profile_results max_profile_reads max_profile_locations; do
   printf '%s' "$MB" | grep -qF -- "\`$b\`" && _report ok "Missing bindings names $b" || _report no "Missing bindings lacks $b"
   assert_contains "$SU" "\`$b\` —"
 done
@@ -1224,7 +1228,7 @@ assert_contains "./$AGD" 'fixed:'
 assert_contains "./$AGD" 'urls:'
 comment_has() { tr '\n#' '  ' < "$1" | tr -s ' ' | grep -qF -- "$2"; } # the file with comment marks and line breaks flattened
 comment_has "$AGD" "can't be pinned" && _report no "$AGD still says the true/false inputs can't be pinned" || _report ok "$AGD no longer says the true/false inputs can't be pinned"
-for s in 'Four fixed values (Standard 7.3), each required' 'only_keys on startUrls[] still blocks requestsFromUrl'; do
+for s in 'Eight fixed values (Standard 7.3), each required' 'only_keys on startUrls[] still blocks requestsFromUrl'; do
   comment_has "$AGD" "$s" && _report ok "$AGD says '$s'" || _report no "$AGD does not say '$s'"
 done
 
@@ -1357,7 +1361,7 @@ flat_has "$SP/subagents/prospector.md" 'leaving out every step whose `detail` st
 flat_has "$SP/subagents/prospector.md" 'The source `web_search` is the host'"'"'s built-in web search, never the `web_search` capability (Exa)'
 flat_has "$SP/context/operating-config.md" '`web_search` is the host'"'"'s built-in search, not the Exa `web_search` capability'
 flat_has "$SP/subagents/preparer.md" '- Web search (the host'"'"'s built-in search)'
-flat_has "$SP/capabilities/web_search/contract.md" 'Only `find-decision-makers` calls `search_web`'
+flat_has "$SP/capabilities/web_search/contract.md" 'Only the Preparer calls `search_web`'
 flat_has "$SP/skills/send-digest/SKILL.md" 'leaving out every step whose `detail` starts with `search_web`'
 flat_has "$SP/skills/send-digest/SKILL.md" 'Exa web search: $'
 assert_contains "$SP/templates/digest.md" 'Exa web search: [$ spent]'
@@ -1373,5 +1377,182 @@ flat_has "$SP/capabilities/web_search/tools/exa/usage.md" '`exa:web_search_exa` 
 flat_has "$SP/capabilities/web_search/tools/exa/usage.md" 'Find the owner, principal or co-owners of <business name>'
 flat_has "$SP/skills/find-decision-makers/SKILL.md" 'and the objective'
 flat_has "$SP/docs/superpowers/notes/2026-10-31-exa-connector-probe.md" '`objective` (string, required)'
+
+echo "-- 8.3.0: social profile fields in the CRM"
+K="$SP/capabilities/crm/contract.md"
+for t in 'log_possible_profiles' 'Sales Partner · Possible Profiles' 'profiles_checked_at' 'only when the CRM field is empty' '`tiktok_url`' '`x_url`'; do
+  assert_contains "$K" "$t"
+done
+AU="$SP/capabilities/crm/tools/attio/usage.md"
+HU="$SP/capabilities/crm/tools/hubspot/usage.md"
+for t in '| `instagram_url` | `instagram` |' '| `x_url` | `twitter` |' '| `tiktok_url` | `sp_tiktok` (custom) |' '| `instagram` | `instagram_url` (built in) |' '| `facebook` | `facebook_url` (built in) |' '| `twitter` | `x_url` (built in) |' '| `sp_tiktok` | `tiktok_url`' '| `sp_profiles_checked_at` | `profiles_checked_at`' '`log_possible_profiles`' 'Sales Partner · Possible Profiles'; do
+  assert_contains "$AU" "$t"
+done
+for t in '| `sp_instagram_url` | `instagram_url` |' '| `sp_facebook_url` | `facebook_url` |' '| `sp_tiktok_url` | `tiktok_url` |' '| `sp_x_url` | `x_url` |' '| `sp_profiles_checked_at` | `profiles_checked_at`' '### `log_possible_profiles`' 'possible profiles'; do
+  assert_contains "$HU" "$t"
+done
+for s in sp_tiktok sp_profiles_checked_at; do
+  grep -qF "attr(\"$s\"" ./capabilities/crm/tools/attio/bootstrap.py && _report ok "attio bootstrap creates $s" || _report no "attio bootstrap misses $s"
+done
+for s in sp_instagram_url sp_facebook_url sp_tiktok_url sp_x_url sp_profiles_checked_at; do
+  grep -qF "prop(\"$s\"" ./capabilities/crm/tools/hubspot/bootstrap.py && _report ok "hubspot bootstrap creates $s" || _report no "hubspot bootstrap misses $s"
+done
+assert_contains "$AU" 'the person'"'"'s social fields'
+assert_contains "$HU" 'the contact'"'"'s social fields'
+assert_contains "$AU" '`instagram`, `facebook` and `twitter` exist on People'
+
+# find-social-profiles skill and the LinkedIn wording
+FSP=skills/find-social-profiles/SKILL.md
+for t in 'name: find-social-profiles' 'Anchor first' 'Name or location alone is never confident' 'both are uncertain' 'shared-platform' 'only when the CRM field is empty' 'never follow, connect, like, comment, post or message' 'Sales Partner · Possible Profiles' 'profiles_checked_at' '=== YYYY-MM-DD · possible profiles ===' 'stopped'; do
+  assert_contains "$FSP" "$t"
+done
+assert_contains AGENT.md 'Never act on a social platform (follow, connect, message, post). Reading public profiles is fine.'
+assert_not_contains AGENT.md 'Never automate anything on LinkedIn.'
+assert_contains skills/find-decision-makers/SKILL.md 'including through an actor'
+assert_contains "$FSP" 'never search for X'
+assert_contains "$FSP" 'in platform order (LinkedIn, Instagram, Facebook, TikTok)'
+assert_not_contains "$FSP" 'Facebook, TikTok, X)'
+assert_not_contains "$FSP" '[linkedin, facebook, tiktok, x]'
+assert_contains "$FSP" 'found in step 1 or step 2'
+assert_contains "$FSP" '`find_profiles` is called for LinkedIn only.'
+assert_not_contains "$FSP" "the lead's city and the platforms still"
+
+echo "-- 8.3: find_profiles and read_profile through Apify"
+SC="$SP/capabilities/scraping/contract.md"; SU="$SP/capabilities/scraping/tools/apify/usage.md"
+for op in find_profiles read_profile; do
+  assert_contains "$SC" "| \`$op\` |"
+  assert_contains "$SU" "\`$op\`"
+done
+setup=$(awk '/^## Setup/,/^## Probe/' "$SU")
+for b in max_profile_results max_profile_reads max_profile_locations; do
+  printf '%s' "$setup" | grep -qF "\`$b\`" && _report ok "usage.md Setup lists $b" || _report no "usage.md Setup misses $b"
+done
+assert_contains "$SU" 'no login'
+assert_contains "$SU" 'never a handle guessed from a name'
+assert_contains "$SU" 'for `linkedin` only, in this release'
+assert_contains "$SU" 'harvestapi/linkedin-profile-search-by-name,apify/instagram-profile-scraper,clockworks/tiktok-profile-scraper'
+assert_contains "$SU" 'verify them in Apify Console'
+assert_contains "$SP/capabilities/scraping/tools/apify/guard.yaml" '# Apify guard policy: ten actors and two reads.'
+WC="$SP/capabilities/web_search/contract.md"
+assert_contains "$WC" '`find-social-profiles` once per contact'
+assert_contains "$WC" 'one-search-per-lead and'
+assert_not_contains "$WC" 'Only `find-decision-makers` calls `search_web`'
+assert_not_contains "$WC" 'Today one skill uses it'
+assert_contains "$SP/capabilities/web_search/tools/exa/usage.md" 'The profile query (`find-social-profiles`, once per contact'
+assert_contains "$SP/subagents/preparer.md" 'once per contact in the Profile pass, under the same condition (find-social-profiles)'
+assert_contains "$SP/subagents/preparer.md" '`search_web; profiles <contact_id>; estimated`'
+
+echo "-- profile pass"
+assert_contains "$SP/subagents/preparer.md" 'Profile pass'
+assert_contains "$SP/subagents/preparer.md" 'after every queued lead'
+assert_contains "$SP/subagents/preparer.md" 'oldest `Stage Changed At` first'
+assert_contains "$SP/subagents/preparer.md" '`apify_profiles`'
+assert_contains "$SP/subagents/preparer.md" 're-check the stage'
+assert_contains "$SP/subagents/preparer.md" 'not Research Capped'
+assert_contains "$SP/subagents/preparer.md" "no person's name"
+assert_contains "$SP/subagents/preparer.md" 'opt-out'
+assert_contains "$SP/context/operating-config.md" '`apify_profiles`'
+
+# Evals: seven social profile cases
+for h in \
+  '## Case 37: A name-only match goes to the note, never the field' \
+  '## Case 38: Two candidates for one platform both go to the note' \
+  '## Case 39: A shared-platform website is not a business link' \
+  '## Case 40: A field the operator filled is never overwritten' \
+  '## Case 41: A lead moved to Approved mid-pass gets no write' \
+  '## Case 42: A Do Not Contact lead in the backlog is disqualified, not searched' \
+  '## Case 43: Evidence spends first; the profile pass stops on the cap and leaves the contact unchecked'; do
+  assert_contains "$EV" "$h"
+done
+assert_contains "$EV" 'all eight sources'
+assert_not_contains "$EV" 'all seven sources'
+
+echo "-- 8.3.0: README"
+UP82=$(awk '/^Upgrading from 8\.2/ { f=1; next } f && (/^## / || /^Upgrading from /) { f=0 } f' "$SP/README.md")
+assert_contains "$SP/README.md" 'Upgrading from 8.2'
+TEN_URL='https://mcp.apify.com?tools=compass/crawler-google-places,vdrmota/contact-info-scraper,compass/Google-Maps-Reviews-Scraper,scrapesage/google-ads-transparency-scraper,apify/facebook-ads-scraper,valig/indeed-jobs-scraper,apify/website-content-crawler,harvestapi/linkedin-profile-search-by-name,apify/instagram-profile-scraper,clockworks/tiktok-profile-scraper'
+printf '%s' "$UP82" | grep -qF "$TEN_URL" && _report ok "8.3 upgrade note has the exact ten-actor URL" || _report no "8.3 upgrade note lacks the exact ten-actor URL"
+n_url=$(printf '%s\n' "$UP82" | grep -nF 'https://mcp.apify.com?tools=' | head -1 | cut -d: -f1)
+n_tools=$(printf '%s\n' "$UP82" | grep -nF "e-run setup's tools step" | head -1 | cut -d: -f1)
+n_src=$(printf '%s\n' "$UP82" | grep -nF 'apify_profiles' | head -1 | cut -d: -f1)
+n_sched=$(printf '%s\n' "$UP82" | grep -nF '/sales-partner:schedule' | tail -1 | cut -d: -f1)
+[ -n "$n_url" ] && [ -n "$n_tools" ] && [ -n "$n_src" ] && [ -n "$n_sched" ] && [ "$n_url" -lt "$n_tools" ] && [ "$n_tools" -lt "$n_src" ] && [ "$n_src" -lt "$n_sched" ] \
+  && _report ok "8.3 upgrade note steps are in order" || _report no "8.3 upgrade note steps are missing or out of order"
+for b in max_profile_results max_profile_reads max_profile_locations; do
+  printf '%s' "$UP82" | grep -qF "\`$b\`" && _report ok "8.3 upgrade note names $b" || _report no "8.3 upgrade note lacks $b"
+done
+flat_has "$SP/README.md" 'Confident matches are filled on the person record'
+flat_has "$SP/README.md" 'Nothing is ever followed or messaged'
+flat_has "$SP/README.md" 'LinkedIn stays human on every platform'
+flat_has "$SP/README.md" 'no login'
+
+echo "-- 8.3.0: final review fixes"
+FSP=skills/find-social-profiles/SKILL.md
+FDM=skills/find-decision-makers/SKILL.md
+PR=subagents/preparer.md
+AU="$SP/capabilities/crm/tools/attio/usage.md"
+HU="$SP/capabilities/crm/tools/hubspot/usage.md"
+SU="$SP/capabilities/scraping/tools/apify/usage.md"
+EV="$SP/evals/cases.md"
+ONLY='Only `find-social-profiles` passes `instagram_url`, `facebook_url`, `tiktok_url`, `x_url` and `profiles_checked_at`.'
+# I1: research never passes the new social arguments
+flat_has "$FDM" "$ONLY"
+n=$(tr '\n' ' ' < "$PR" | tr -s ' ' | grep -oF -- "$ONLY" | wc -l | tr -d ' ')
+[ "$n" -ge 2 ] && _report ok "preparer says only find-social-profiles passes the social arguments (contacts and Handoff)" || _report no "preparer says it $n times, want 2 (Website contacts and Handoff)"
+flat_has "$PR" "A business's own social pages go to the company profile fields"
+# I2 and I2b: HubSpot create never stamps the marker; omitted arguments stay out
+create=$(awk '/"createRequest"/,/"associations"/' "$HU" | awk '/contacts/,/associations/')
+printf '%s' "$create" | grep -qF 'sp_profiles_checked_at' && _report no "HubSpot contact create example still sends sp_profiles_checked_at" || _report ok "HubSpot contact create example sends no sp_profiles_checked_at"
+flat_has "$HU" '`sp_profiles_checked_at` is never sent on create'
+flat_has "$AU" 'An argument the caller did not pass is left out of the call'
+flat_has "$HU" 'An argument the caller did not pass is left out of the call'
+# I3: a different city contradicts every candidate; the employer must be this business
+flat_has "$FSP" "A different city or region from the lead's is a contradicting signal for every candidate, including a LinkedIn employer match"
+flat_has "$FSP" 'unless it also has a direct business link'
+assert_contains "$FSP" '`companyLinkedinUrl`'
+flat_has "$FSP" "A business page is never a person's profile"
+flat_has "$FSP" 'returned by `find_profiles`'
+assert_not_contains "$FSP" 'a different city and a different employer'
+assert_not_contains "$FSP" 'read from the profile'
+# I4: the stage is re-checked before each contact's writes
+flat_has "$PR" "Re-check the stage with \`get_lead\` before each contact's writes"
+flat_has "$FSP" 'Re-read the lead with `get_lead` before the first write'
+flat_has "$EV" 'Mid-lead.'
+# I5: the Preparer may write the possible-profiles note
+assert_contains "$PR" '- CRM `log_possible_profiles` (Profile pass, through find-social-profiles)'
+# I6: evals and the worked example follow the shipped design and the host rule
+for t in '`find_profiles` returns a TikTok' '`find_profiles` returns an Instagram' 'read with `read_profile` is Brightwater' '`find_profiles` is called for the platforms still missing' 'tiktok.example' 'instagram.example' 'linkedin.example'; do
+  assert_not_contains "$EV" "$t"
+done
+for t in 'tiktok.example' 'instagram.example' 'linkedin.example'; do
+  assert_not_contains "$FSP" "$t"
+done
+assert_contains "$EV" 'https://www.tiktok.com/@example.priyan'
+assert_contains "$FSP" 'https://www.instagram.com/example.priya.n'
+flat_has "$EV" '`find_profiles` is not called: LinkedIn is filled, and no actor searches the other platforms'
+flat_has "$EV" 'returned by `find_profiles` (`Full` mode)'
+flat_has "$EV" 'The pass runs even when the prepare queue is empty'
+# I7: the backlog is bounded per run, with no new key
+flat_has "$PR" 'at most `research_quota_per_week` backlog leads per run'
+flat_has "$PR" 'Leads this run moved to `Researched` do not count toward it'
+flat_has "$EV" 'at most `research_quota_per_week` backlog leads'
+# I8: the pass runs on an empty queue
+flat_has "$PR" 'After the last queued lead, the Profile pass runs (below), also when the queue is empty.'
+sed -n 3p "$PR" | grep -qF 'runs the Profile pass over `Researched` leads whose contacts are unsearched, even when nothing is queued' && _report ok "preparer description names the profile pass" || _report no "preparer description lacks the profile pass"
+awk '/^## Inline fallback/,/^### Guardrails/' "$PR" | tr '\n' ' ' | grep -qF 'then the Profile pass, also when the queue is empty' && _report ok "inline fallback runs the profile pass" || _report no "inline fallback lacks the profile pass"
+# Minors
+assert_not_contains "$AU" '- none found'
+assert_not_contains "$HU" '- none found'
+assert_not_contains "$FSP" "today's date"
+flat_has "$FSP" '`profiles_checked_at` (now, ISO 8601 UTC)'
+flat_has "$FSP" 'name, title, email and role unchanged'
+flat_has "$PR" 'A contact with no role is not searched either'
+assert_contains "$SP/AGENT.md" '`find-social-profiles`'
+[ "$(wc -c < "$SP/AGENT.md" | tr -d ' ')" -le 6000 ] && _report ok "AGENT.md within 6000 bytes" || _report no "AGENT.md over 6000 bytes"
+flat_has "$SP/README.md" "it can't check what a name or handle contains, so data could in principle ride in one"
+flat_has "$SP/README.md" "Facebook personal profiles have no reader, so they come only from the business's own pages and from Exa"
+flat_has "$PR" 'unless one was already sent this run'
+flat_has "$SU" 'The guard does not require `firstName` or `lastName`'
+awk '/^## Stop conditions/,/^## Scraping/' "$PR" | grep -qF 'Profile pass' && _report ok "Stop conditions point at the Profile pass" || _report no "Stop conditions miss the Profile pass"
 
 finish

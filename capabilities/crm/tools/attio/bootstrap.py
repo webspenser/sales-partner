@@ -153,6 +153,15 @@ PEOPLE_ATTRS = [
     attr("sp_role", "Sales Role", "select", ["decision-maker", "influencer", "gatekeeper"]),
     attr("sp_verified", "Contact Verified", "checkbox"),
     attr("sp_notes", "Contact Notes", "text"),
+    attr("sp_tiktok", "TikTok", "text",
+         description="The person's TikTok profile URL; Attio has no built-in TikTok attribute."),
+    attr("sp_profiles_checked_at", "Profiles Checked At", "timestamp",
+         description="Set by the agent when the person's social profile search completed."),
+]
+
+COMPANY_ATTRS = [
+    attr("sp_tiktok", "TikTok", "text",
+         description="The business's TikTok page URL; Attio has no built-in TikTok attribute."),
 ]
 
 
@@ -243,6 +252,8 @@ if __name__ == "__main__":
     KEY = load_key()
     print("people")
     ensure_attributes("objects", "people", PEOPLE_ATTRS)
+    print("companies")
+    ensure_attributes("objects", "companies", COMPANY_ATTRS)
     for slug, (name, attrs) in build_lists(segment_ids, offer_ids).items():
         ensure_list(slug, name, attrs)
     print("done")

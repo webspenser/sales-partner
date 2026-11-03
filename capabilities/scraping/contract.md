@@ -1,8 +1,9 @@
 # Scraping contract
 
 How the agent reads public business listings, contact details, reviews,
-ads, job listings and website pages through an outside scraper. Skills and sub-agent contracts call these
-operations, never a provider's tools.
+ads, job listings, website pages and public social profiles through an
+outside scraper. Skills and sub-agent contracts call these operations,
+never a provider's tools.
 
 ## Operations
 
@@ -14,6 +15,8 @@ operations, never a provider's tools.
 | `find_ads` | `business`: its bare website domain (or brand name), and its own Facebook page URL when known | Google: advertisers matched (name, legal name, advertiser id, URL, approximate ad count, verified), none meaning no Google ads found; Facebook, only when a page URL was given: the page's ad count and whether the count is complete; plus each run's cost (estimated when the provider does not report it) | Same |
 | `find_jobs` | `company`, `location` (city, state, country) | open listings: title, date posted, employer, city, URL; none is a valid "no open listings" result; plus the run's cost (estimated when the provider does not report it) | Same |
 | `read_site` | `url` (the website the Maps listing gives) | per page read: URL, title, and the page as markdown with its links, nav and footer kept; plus the run's cost (estimated when the provider does not report it) | Same |
+| `find_profiles` | `name` (the person's), `business`, `city`, `platforms[]` (from `linkedin`, `instagram`, `facebook`, `tiktok`) | candidates: platform, URL, display name, bio, location, external links, current employer (when the source gives one); none is a valid "no profile found" result; plus the run's cost (estimated when the provider does not report it). A platform the tool serves with no actor returns no candidates; the tool's usage says which | Same |
+| `read_profile` | `url` (a public profile URL already found) | the same fields as one `find_profiles` candidate, for that profile; plus the run's cost (estimated when the provider does not report it). A platform the tool has no reader for is not read; the tool's usage says which | Same |
 
 Each call is a ledger `step` (`capabilities/ledger/contract.md`) with its
 cost in `cost_usd`; an operation that makes two provider calls, such as

@@ -42,6 +42,11 @@ and when.
   it is for, the offer, an opener, sourced points, what to avoid, and
   the ways to reach them. Your own sequences, automations or calls use
   them. Each run adds a dated section and never rewrites an earlier one.
+- **Social profiles for the people it finds.** Confident matches are
+  filled on the person record; possible matches go in a note on the
+  person. LinkedIn is searched by name. Instagram, Facebook and TikTok
+  come from the business's own pages, and from Exa when it is
+  connected. Nothing is ever followed or messaged.
 - **A weekly summary** sent to you: what's waiting for your
   review, what's approved but not yet contacted, what moved, and what
   research tools cost.
@@ -80,8 +85,9 @@ and when.
   it cannot break, checked on every action rather than just promised in
   its instructions. If a rule can't be checked, it won't run on a
   schedule.
-- **LinkedIn stays human.** Talking points are text for you to use. It
-  never automates anything on LinkedIn.
+- **LinkedIn stays human on every platform.** Talking points are text
+  for you to use. The agent never follows, connects with or messages
+  anyone on LinkedIn, Instagram, Facebook, TikTok or anywhere else.
 - **Your data stays yours.** Leads live in your CRM, your business notes
   live in your own private folder, and passwords and keys never go into
   the agent.
@@ -96,7 +102,7 @@ and when.
   weekly schedule.
 - **Apify**, your own account, with a monthly usage limit you set in
   Apify Console, for local-business listings, website contact details,
-  reviews, ads, jobs and website reading.
+  reviews, ads, jobs, website reading and social profiles.
 
 **Want it set up for you?** [Webspenser](https://www.webspenser.com/lp/agent-builder) offers
 a one-time, done-for-you setup: we connect your tools, run the
@@ -118,7 +124,7 @@ in that folder loads the agent. Plugin updates never touch your folder.
 
 Built on [Agent Standard](https://github.com/webspenser/agent-builder/blob/main/STANDARD.md) 7.4
 with [Agent Builder](https://github.com/webspenser/agent-builder).
-Version 8.2.1.
+Version 8.3.0.
 
 ## Use it from source
 
@@ -145,6 +151,13 @@ Version 8.2.1.
   contact scraper and the site reader. One limit remains: the guard
   can't tie a website to a lead, so data could still leave in the
   hostname itself (a made-up subdomain).
+  Three more actors find and read social profiles (LinkedIn by name,
+  Instagram and TikTok). They run with no login: the agent never signs
+  in to any platform. Facebook personal profiles have no reader, so they
+  come only from the business's own pages and from Exa. The guard limits
+  which arguments go to the profile actors and how many, but it can't
+  check what a name or handle contains, so data could in principle ride
+  in one.
 
 - Optional: Exa for web search (`capabilities/web_search/tools/exa/`), through Exa's hosted connector on your own Exa account. When it is connected, research runs one Exa search per lead to find its owner or principal; without it, research runs as before. The guard lets only Exa's basic search run, at its default 10 results.
 
@@ -278,6 +291,25 @@ verified). Exa is optional. In order:
    `## Setup`), re-run setup's tools step and answer yes for web search,
    then re-run `/sales-partner:schedule`, attach the `ExaSearch` connector to
    the routine that runs prepare, and do step 1.
+
+Upgrading from 8.2: Sales Partner now finds social profiles for the
+people it researches. Exa is optional; with Exa bound, Instagram,
+Facebook and TikTok get more candidates. In order:
+
+1. Replace the Apify connector's restricted URL with the ten-actor URL.
+   Copy it exactly:
+
+   `https://mcp.apify.com?tools=compass/crawler-google-places,vdrmota/contact-info-scraper,compass/Google-Maps-Reviews-Scraper,scrapesage/google-ads-transparency-scraper,apify/facebook-ads-scraper,valig/indeed-jobs-scraper,apify/website-content-crawler,harvestapi/linkedin-profile-search-by-name,apify/instagram-profile-scraper,clockworks/tiktok-profile-scraper`
+
+2. Re-run setup's tools step. It creates the new CRM fields (with
+   `bootstrap.py` or by hand) and pins the three new scraping bindings
+   `max_profile_results` (5), `max_profile_reads` (10) and
+   `max_profile_locations` (1). Then commit and push
+   `bindings/scraping.md`. Until the new keys are pushed, scheduled
+   runs stop.
+3. Add `apify_profiles` to `prospecting_sources` in
+   `context/operating-config.md`.
+4. Re-run `/sales-partner:schedule`.
 
 ## Developing
 

@@ -150,6 +150,11 @@ def build_properties(segment_ids, offer_ids):
                  opts(["decision-maker", "influencer", "gatekeeper"])),
             prop("sp_verified", "Contact verified", "bool", "booleancheckbox", YESNO),
             prop("sp_notes", "Contact notes", "string", "textarea"),
+            prop("sp_instagram_url", "Instagram URL", "string", "text"),
+            prop("sp_facebook_url", "Facebook URL", "string", "text"),
+            prop("sp_tiktok_url", "TikTok URL", "string", "text"),
+            prop("sp_x_url", "X URL", "string", "text"),
+            prop("sp_profiles_checked_at", "Profiles checked at", "datetime", "date"),
         ],
     }
 

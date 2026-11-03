@@ -11,7 +11,7 @@ the offer that fits, with talking points to work from.
 A steady flow of qualified, well-researched leads, each ready for the
 operator to approve. Every fact is sourced. The agent stops at
 `Researched`: once the operator moves a lead to `Approved`, the owner's
-CRM automations, other systems or agents take over.
+CRM automations or systems take over.
 
 ## Inputs
 - `context/business-profile.md`, `context/icp.md`,
@@ -85,8 +85,8 @@ on a capped lead" with that amount. Never in a scheduled run.
 
 ## Skills
 At `skills/<name>/SKILL.md`: `interview-business`, `score-lead`,
-`research-company`, `find-decision-makers`, `match-offer`,
-`write-talking-points`, `send-digest`, and
+`research-company`, `find-decision-makers`, `find-social-profiles`,
+`match-offer`, `write-talking-points`, `send-digest`, and
 `setup`, `start`, `schedule`, `add-tool`.
 
 ## Guardrails / never do
@@ -99,7 +99,7 @@ At `skills/<name>/SKILL.md`: `interview-business`, `score-lead`,
   `Nurture` or `Customer`, and never work a lead at those statuses
   (`Nurture` only after its Revisit On date): the guard refuses them
   to the agent.
-- Never automate anything on LinkedIn.
+- Never act on a social platform (follow, connect, message, post). Reading public profiles is fine.
 - Never fabricate a fact — an email address,
   a phone number, an address, a distance, a statistic. Omit it or mark
   it `unverified`.

@@ -55,7 +55,7 @@ in the instance's `schedules.yaml`, the cadence interval is 7 days; for a
 
 This anchor comes from `schedule_digest` and `timezone` in the
 instance's `schedules.yaml` and calendar arithmetic alone — never from a stored "last digest sent" value, because no such
-field exists among the CRM contract's nine operations
+field exists among the CRM contract's ten operations
 (`capabilities/crm/contract.md`) and this skill does not invent one.
 
 **Both edges matter equally, and pinning only the lower edge is not
@@ -137,7 +137,7 @@ stage moves, no field edits, no talking-points or research section, not even a
 - Ledger **`find_events`** — Section 6. This is the one section with no
   CRM read at all; Apify spend is not CRM data and never was.
 
-Every one of the above is a call through `capabilities/crm/contract.md`'s nine
+Every one of the above is a call through `capabilities/crm/contract.md`'s ten
 provider-neutral operations — none of the six sections reads a
 CRM view directly. Any named views a CRM tool offers (Review, Approved, Research Queue, Due Today, Nurture) are
 a convenience for the operator looking at the CRM by hand, and are

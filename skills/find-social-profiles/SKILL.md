@@ -1,6 +1,6 @@
 ---
 name: find-social-profiles
-description: Use when a contact is identified and their social profiles are still missing — finds the person's LinkedIn, Instagram, Facebook, TikTok and X profiles, writes the confident ones into the contact, and lists the uncertain ones as possible profiles for the operator.
+description: Use when a contact is identified and their social profiles are still missing — finds the person's LinkedIn, Instagram, Facebook, TikTok profiles (and X when a source returns it), writes the confident ones into the contact, and lists the uncertain ones as possible profiles for the operator.
 ---
 
 This skill reads public profiles and records what it finds. It will
@@ -49,22 +49,28 @@ The Preparer's cap and time-budget rules for Apify spend apply to every
    …})`, only when the lead's field is empty (Attio only; on HubSpot
    these two company fields do not exist, so skip this).
 2. **Search.** For each platform the contact still has no profile on,
-   in platform order (LinkedIn, Instagram, Facebook, TikTok, X), call
+   in platform order (LinkedIn, Instagram, Facebook, TikTok), call
    `find_profiles(name, business, city, platforms)` with the contact's
    name, the business name, the lead's city and the platforms still
    missing. Facebook personal profiles cannot be searched without a login,
    so expect one only when an anchor links to it. A platform an anchor
-   already filled is not searched.
+   already filled is not searched. We never search for X: `x_url` is
+   filled only from an X link already returned by an anchor or another
+   source.
 3. **Score** each candidate and record its reasons as plain text, one
    short phrase each:
-   - a business link: the profile links to the business's website or
-     page, or the business's page links to the profile (strongest);
+   - a business link: the profile links to the business's own website or
+     page, or the business's page links to the profile (strongest). A
+     link to a shared-platform website (the list in `subagents/preparer.md`,
+     "Shared platform") is never a business link. Use `read_profile` on a
+     searched candidate when needed, to check its links, or for LinkedIn
+     to read the current employer;
    - the employer or business name in the bio or job title (for LinkedIn,
      the `current_employer` read from the profile);
    - the location matches the lead's city or region;
    - the name matches, including a known nickname or surname.
    A candidate is **confident** when it has at least one business link
-   from step 1, or a LinkedIn `current_employer` match read from the
+   found in step 1 or step 2, or a LinkedIn `current_employer` match read from the
    profile, and no contradicting signal (a different city and a different
    employer, a different name, a personal account for an unrelated
    person). Name or location alone is never confident, however well it
@@ -124,17 +130,17 @@ social field is filled.
    `https://instagram.example/brightwateracct`. `read_profile` on it
    shows the bio "Run by @priya.n" and a link to
    `https://instagram.example/priya.n`. That is a business link for
-   Priya's Instagram. The footer has no TikTok or X page.
-2. Search: LinkedIn, Facebook, TikTok and X are still missing.
+   Priya's Instagram. The footer has no TikTok or X page, so no company field is set.
+2. Search: LinkedIn, Facebook and TikTok are still missing.
    `find_profiles("Priya Nandakumar", "Brightwater Accounting",
-   "Springfield", [linkedin, facebook, tiktok, x])` returns:
+   "Springfield", [linkedin, facebook, tiktok])` returns:
    - LinkedIn `https://linkedin.example/in/priya-nandakumar`, current
      employer Brightwater Accounting, Springfield;
    - LinkedIn `https://linkedin.example/in/priya-n-9`, Priya N, in
      another city, employer a retailer;
    - TikTok `https://tiktok.example/@priyan`, bio "mum, runner,
      Springfield".
-3. Score: Instagram `priya.n`: business link both ways, so confident.
+3. Score: Instagram `priya.n`: business page links to it, so confident.
    LinkedIn `priya-nandakumar`: current employer matches, location
    matches, no contradiction, so confident. LinkedIn `priya-n-9`:
    contradicts, so not listed. TikTok `@priyan`: location and a name

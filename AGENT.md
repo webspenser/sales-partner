@@ -99,7 +99,7 @@ At `skills/<name>/SKILL.md`: `interview-business`, `score-lead`,
   `Nurture` or `Customer`, and never work a lead at those statuses
   (`Nurture` only after its Revisit On date): the guard refuses them
   to the agent.
-- Never act on a social platform. Reading public LinkedIn profiles is allowed.
+- Never act on a social platform (follow, connect, message, post). Reading public profiles is fine.
 - Never fabricate a fact — an email address,
   a phone number, an address, a distance, a statistic. Omit it or mark
   it `unverified`.

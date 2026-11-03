@@ -27,6 +27,7 @@ companies are leads; everything else sits on the company and its people:
 | Research record | the note `Sales Partner · Research` on the company |
 | Talking Points record | the note `Sales Partner · Talking Points` on the company |
 | Contact | a `people` record, `company` = the lead's company |
+| Possible Profiles record | the note `Sales Partner · Possible Profiles` on the person |
 
 The list works on every Attio plan, including those with no custom-object
 allowance. Attio list entries cannot be filtered by their parent record,
@@ -45,8 +46,9 @@ filtering `sales_partner_pipeline` on `lead`.
 The tool writes `name` and `domains`, plus the contract's company
 profile fields onto the company's own built-in attributes, so the
 company page shows the basics. `domains` is unique in Attio, which gives
-dedupe rule 1 (domain) for free. No custom attribute is added to
-Companies.
+dedupe rule 1 (domain) for free. The one custom attribute added to
+Companies is `sp_tiktok` (text), because Attio has no built-in TikTok
+attribute.
 
 | Contract field | Company attribute |
 |---|---|
@@ -55,6 +57,8 @@ Companies.
 | `company_linkedin_url` | `linkedin` |
 | `facebook_url` | `facebook` |
 | `instagram_url` | `instagram` |
+| `tiktok_url` | `sp_tiktok` (custom) |
+| `x_url` | `twitter` |
 
 Read the company first (`attio:get-records-by-ids`) and write only the
 attributes that are empty:
@@ -108,14 +112,19 @@ stays selectable on the leads already matched to it.
 | `job_title` | `Title` |
 | `email_addresses` | `Email` |
 | `phone_numbers` | `Phone` |
-| `linkedin` | `LinkedIn URL` |
+| `linkedin` | `LinkedIn URL` (`linkedin_url`) |
+| `instagram` | `instagram_url` (built in) |
+| `facebook` | `facebook_url` (built in) |
+| `twitter` | `x_url` (built in) |
+| `sp_tiktok` | `tiktok_url` (custom text; Attio has no TikTok attribute) |
+| `sp_profiles_checked_at` | `profiles_checked_at` (custom timestamp) |
 | `company` | `Lead` (record-reference to the company) |
 | `sp_role` | `Role`: decision-maker / influencer / gatekeeper |
 | `sp_verified` | `Verified` |
 | `sp_notes` | `Notes` |
 | `lead_source` | select, set to `Outbound` on create only, and only when `bindings/crm.md` says `lead_source_outbound: yes` |
 
-The `sp_` prefix keeps these three apart from fields your other
+The `sp_` prefix keeps these five apart from fields your other
 workflows use on People.
 The tool never writes those other fields, with one exception: every
 person it **creates** gets `lead_source` = `Outbound` (only when
@@ -126,14 +135,16 @@ that person may have arrived through an inbound source
 that must be kept. The operator can add people to a company by hand;
 the agent treats them like any other Contact.
 
-### Notes — the research and talking points records
+### Notes — the research, talking points and possible profiles records
 
-Each lead has at most one note per title, on the company:
+Each lead has at most one note per title, on the company, and each
+person at most one possible-profiles note, on the person:
 
-| Title, exactly | Holds | Written by |
-|---|---|---|
-| `Sales Partner · Research` | one section per research run | `log_research` |
-| `Sales Partner · Talking Points` | one section per set of talking points | `log_talking_points` |
+| Title, exactly | On | Holds | Written by |
+|---|---|---|---|
+| `Sales Partner · Research` | the company | one section per research run | `log_research` |
+| `Sales Partner · Talking Points` | the company | one section per set of talking points | `log_talking_points` |
+| `Sales Partner · Possible Profiles` | the person | one section per profile search | `log_possible_profiles` |
 
 A note is created with its first section and only ever appended to.
 The newest section is at the bottom. The format is in **Reading notes
@@ -214,6 +225,12 @@ write nothing) exactly where the contract says the operation rejects.
   Points` (see **Writing a section**): create the note with the header
   line, then append the rest; later calls only append. The call takes no
   channel argument.
+- **`log_possible_profiles`** — Build one possible profiles section
+  (format below), then write it to the note titled `Sales Partner ·
+  Possible Profiles` on the person, with **Writing a section** below
+  using `parent_object: people` and `parent_record_id: contact_id`
+  (search the notes with `parent_record_object: people`). `lead_id`
+  only says which lead the search was for. Later calls only append.
 - **Writing a section.** `attio:search-notes-by-metadata` on the company,
   paging with `limit: 100` and `offset` until the results run out (a
   company can hold many other notes, newest first), or reuse the note
@@ -231,6 +248,14 @@ write nothing) exactly where the contract says the operation rejects.
   append to the oldest (earliest `created_at`) and never create another. Never pass
   `updated_title`, never prepend, never delete.
 - **`upsert_contact`** — Reject a `role` outside the three values.
+  The social arguments map to `linkedin`, `instagram`, `facebook`,
+  `sp_tiktok` and `twitter` (`linkedin_url`, `instagram_url`,
+  `facebook_url`, `tiktok_url`, `x_url`) and `profiles_checked_at` to
+  `sp_profiles_checked_at`, an ISO date-time. A social URL is written
+  only when the CRM field is empty: one the operator, Attio's
+  enrichment or an earlier run set is never overwritten. Read the
+  person's attributes before writing. `profiles_checked_at` is written
+  whenever the caller passes it.
   Find an existing person first. With an email: `attio:list-records`
   on `people`, filtered on `email_addresses` eq the email. Without
   one: `attio:search-records` on `people` by name, and pick the hit
@@ -267,7 +292,7 @@ automations (for example an n8n workflow) can read them. They change
 only with a version bump and an upgrade note in the README.
 
 - Titles, exactly: `Sales Partner · Research`, `Sales Partner · Talking
-  Points`.
+  Points`, and on a person `Sales Partner · Possible Profiles`.
 - Every section starts with a header alone on its line:
   `=== YYYY-MM-DD · research ===` in the research note,
   `=== YYYY-MM-DD · talking points ===` in the Talking Points note.
@@ -283,6 +308,11 @@ only with a version bump and an upgrade note in the README.
   `Avoid:` and `Contact routes:` are each followed by a list, one
   `- ` item per line; an empty list (no points, nothing to avoid, no
   contact route found) is the one line `- none`.
+- A possible profiles section starts with `=== YYYY-MM-DD · possible
+  profiles ===`, then one line per candidate:
+  `<platform>: <URL> — <reasons> [<source URL>]`, or the one line
+  `- none found` when the search found no candidate. Plain text, URLs
+  and reasons only: no bio, post, photo or follower data.
 - Every line is plain text: no tables, no markdown that renders only in
   a note's first section.
 
@@ -346,7 +376,10 @@ can't):
   research note and its Talking Points note, then
   move the lead to `Approved`: that approves it. Show `do_not_contact`, so an opted-out
   lead is obvious, and `segment`, `hero_offer`, `offer_reason` and
-  `offer_evidence`. Show `research_capped` too, so a lead whose research
+  `offer_evidence`. Show the person's social fields (`linkedin`,
+  `instagram`, `facebook`, `twitter`, `sp_tiktok`) on the People view,
+  and `sp_profiles_checked_at`, and the `Sales Partner · Possible
+  Profiles` note on the person. Show `research_capped` too, so a lead whose research
   stopped at an Apify cap (per-lead or 7-day) is obvious.
 - **Approved** — filtered on `stage` is `Approved`: approved, waiting
   for your workflow or your own touch. The agent never acts on them;
@@ -373,7 +406,10 @@ what they find to `bindings/crm.md` in the instance:
    `hero_offer` must hold every segment id and offer id in
    `context/offer-catalog.md`.
 4. `attio:list-attribute-definitions` on `people` — `sp_role`,
-   `sp_verified`, and `sp_notes` must exist. Record
+   `sp_verified`, `sp_notes`, `sp_tiktok` and `sp_profiles_checked_at`
+   must exist, and the built-in
+   `instagram`, `facebook` and `twitter` exist on People. On `companies`, `sp_tiktok` must exist and the
+   built-in `twitter` exist on Companies. Record
    `lead_source_outbound: yes` if `lead_source` exists with an
    `Outbound` option, otherwise `no`.
 
@@ -392,6 +428,8 @@ Then probe again.
 
 The probe needs these attributes and the list to exist. Create them
 yourself in Attio (Choice 1) or run the script (Choice 2). Then probe again.
+The probe also checks that `instagram`, `facebook` and `twitter` exist on People, and
+`twitter` on Companies: these are Attio's own, and are never created.
 
 ### Choice 1: create them yourself in Attio
 
@@ -399,12 +437,17 @@ Attribute names below are the title and the API slug (Attio shows the slug
 when you create or edit an attribute). The slug must match exactly.
 
 **People (standard object).** Settings, then Objects, then People, then
-Attributes, then New attribute. Add three:
+Attributes, then New attribute. Add five:
 
 1. Title `Sales Role`, slug `sp_role`, type Select, options
    `decision-maker`, `influencer`, `gatekeeper`.
 2. Title `Contact Verified`, slug `sp_verified`, type Checkbox.
 3. Title `Contact Notes`, slug `sp_notes`, type Text.
+4. Title `TikTok`, slug `sp_tiktok`, type Text.
+5. Title `Profiles Checked At`, slug `sp_profiles_checked_at`, type Timestamp.
+
+**Companies (standard object).** Same place, under Companies: add one
+attribute, title `TikTok`, slug `sp_tiktok`, type Text.
 
 **One list.** Lists, then New list: name `Sales Partner Pipeline`, slug
 `sales_partner_pipeline`, parent object Companies, access: full access

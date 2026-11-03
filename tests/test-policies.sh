@@ -333,6 +333,10 @@ check 2 "retitle refused"           $AT ${P}update-note "{$N,\"updated_title\":\
 check 2 "append and retitle refused" $AT ${P}update-note "{$N,\"operation\":{\"type\":\"append\",\"content\":\"x\"},\"updated_title\":\"x\"}" "may not use"
 check 2 "extra operation key refused" $AT ${P}update-note "{$N,\"operation\":{\"type\":\"append\",\"content\":\"x\",\"mode\":\"replace\"}}" "may not use"
 check 2 "delete-note refused"       $AT ${P}delete-note "{$N}" "is denied"
+PN='"parent_object":"people","parent_record_id":"00000000-0000-0000-0000-000000000003"'
+check 0 "create a possible profiles note" $AT ${P}create-note "{$PN,\"title\":\"Sales Partner · Possible Profiles\",\"content\":\"=== 2026-11-03 · possible profiles ===\"}"
+check 2 "non-append operation refused" $AT ${P}update-note "{$N,\"operation\":{\"type\":\"replace\",\"content\":\"x\"}}" "type may only be written as append"
+check 0 "write person social fields" $AT ${P}update-record '{"object":"people","record_id":"00000000-0000-0000-0000-000000000003","values":{"instagram":"https://www.instagram.com/example","sp_tiktok":"https://www.tiktok.com/@example","sp_profiles_checked_at":"2026-11-03T12:00:00Z"}}'
 check 2 "create-task not allowed"   $AT ${P}create-task '{"content":"x"}' "is not in the allow list"
 check 2 "update-task not allowed"   $AT ${P}update-task '{"task_id":"x"}' "is not in the allow list"
 out=$(printf '{not json' | python3 -B "$E" "$AT" - x 2>&1); rc=$?
@@ -371,6 +375,10 @@ CU='{"objectType":"companies","objectId":202,"properties":{"sp_do_not_contact":%
 NC='{"objectType":"notes","properties":{"hs_note_body":"%s","hs_timestamp":"2026-10-16T00:00:00Z"},"associations":[{"targetObjectType":"COMPANY","targetObjectId":202}]}'
 check 0 "create a talking points note" $HS ${H}manage_crm_objects "{\"createRequest\":{\"objects\":[$(printf "$NC" '<p>=== 2026-10-18 · talking points ===</p><p>For: the business</p>')]}}"
 check 0 "create a research note"    $HS ${H}manage_crm_objects "{\"createRequest\":{\"objects\":[$(printf "$NC" '<p>=== 2026-10-16 · research ===</p>')]}}"
+NP='{"objectType":"notes","properties":{"hs_note_body":"%s","hs_timestamp":"2026-11-03T00:00:00Z"},"associations":[{"targetObjectType":"CONTACT","targetObjectId":303},{"targetObjectType":"COMPANY","targetObjectId":202}]}'
+check 0 "create a possible profiles note" $HS ${H}manage_crm_objects "{\"createRequest\":{\"objects\":[$(printf "$NP" '<p>=== 2026-11-03 · possible profiles ===</p><p>facebook: https://www.facebook.com/example</p>')]}}"
+check 2 "possible profiles note rewritten" $HS ${H}manage_crm_objects '{"updateRequest":{"objects":[{"objectType":"notes","objectId":304,"properties":{"hs_note_body":"<p>new</p>"}}]}}' "hs_note_body may not be changed after create"
+check 0 "write contact social fields" $HS ${H}manage_crm_objects '{"updateRequest":{"objects":[{"objectType":"contacts","objectId":303,"properties":{"sp_instagram_url":"https://www.instagram.com/example","sp_profiles_checked_at":"2026-11-03T12:00:00Z"}}]}}'
 check 2 "note body rewritten"       $HS ${H}manage_crm_objects '{"updateRequest":{"objects":[{"objectType":"notes","objectId":303,"properties":{"hs_note_body":"<p>new</p>"}}]}}' "hs_note_body may not be changed after create"
 check 2 "agent can't approve a lead"  $HS ${H}manage_crm_objects '{"updateRequest":{"objects":[{"objectType":"companies","objectId":202,"properties":{"sp_stage":"Ready to Send"}}]}}' "sp_stage may only be written as"
 check 2 "agent can't approve (Approved)" $HS ${H}manage_crm_objects '{"updateRequest":{"objects":[{"objectType":"companies","objectId":202,"properties":{"sp_stage":"Approved"}}]}}' "sp_stage may only be written as"

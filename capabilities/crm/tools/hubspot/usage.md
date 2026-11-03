@@ -19,7 +19,8 @@ Every lead is a HubSpot **Company**, with a custom `sp_stage` dropdown
 holding the ten statuses. People at the lead are **Contacts**
 associated with that company. The research record and the Talking
 Points record are **Notes** associated with the company: one Note per
-`log_research` call and one per `log_talking_points` call. HubSpot notes have no
+`log_research` call, one per `log_talking_points` call and one per
+`log_possible_profiles` call. HubSpot notes have no
 title and can't be appended to through a guard-safe write, so each
 section is its own Note, and its first lines say which record it
 belongs to. This works on the free tier, keeps one record per business,
@@ -33,6 +34,7 @@ group `Sales Partner` (internal name `sales_partner`).
 | Contact | Contact | its company |
 | Research record | Notes, one per research run | its company |
 | Talking Points record | Notes, one per section | its company and, when there is one, the contact |
+| Possible Profiles record | Notes, one per section | its contact and that contact's company |
 
 **`lead_id` is the Company's record ID** (`hs_object_id`), and
 `contact_id` the Contact's.
@@ -46,11 +48,16 @@ group `Sales Partner` (internal name `sales_partner`).
 | `email` | `email` |
 | `phone` | `phone` (a person's direct line only) |
 | `hs_linkedin_url` | `linkedin_url` |
+| `sp_instagram_url` | `instagram_url` |
+| `sp_facebook_url` | `facebook_url` |
+| `sp_tiktok_url` | `tiktok_url` |
+| `sp_x_url` | `x_url` |
+| `sp_profiles_checked_at` | `profiles_checked_at` (ISO date-time) |
 | `sp_role` | `role`: `decision-maker` / `influencer` / `gatekeeper` |
 | `sp_verified` | `verified` (`true` / `false`) |
 | `sp_notes` | `notes` |
 
-### Notes — the research and talking points records
+### Notes — the research, talking points and possible profiles records
 
 `hs_note_body` is rich text: one `<p>` per line, in the section format
 of the Attio tool's **Reading notes from an automation**
@@ -64,6 +71,11 @@ followed by `- ` item lines; an empty list is the one line `- none`.
 With no hero offer the Offer line is `Offer: none matched`, and with no
 usable hook the Opener line is, exactly,
 `Opener: unverified — no recent hook found`.
+A possible profiles Note's first line is
+`=== YYYY-MM-DD · possible profiles ===`, then one `<p>` per candidate:
+`<platform>: <URL> — <reasons> [<source URL>]`, or the one line
+`- none found`. URLs and reasons only: no bio, post, photo or follower
+data.
 `hs_timestamp` is the moment of the write.
 
 The guard refuses any change to `hs_note_body` after create, so talking
@@ -97,7 +109,8 @@ breaks) before parsing the lines.
 ## Company profile fields
 
 This tool skips the company profile fields (`description`,
-`company_linkedin_url`, `facebook_url`, `instagram_url`) in this release;
+`company_linkedin_url`, `facebook_url`, `instagram_url`, `tiktok_url`,
+`x_url`) in this release;
 the contract allows that. `address` is still written as the lead's
 address.
 
@@ -217,6 +230,24 @@ the flag is `"sp_do_not_contact": "true"`.
 
    Drop the contact association when there is no `contact_id`.
 
+### `log_possible_profiles`
+
+1. `hubspot:get_crm_objects` on `COMPANY` with `objectIds: [lead_id]`
+   and property `sp_do_not_contact`. Reject if it is `true`.
+2. One create, never an update, one Note per section (HubSpot Notes
+   can't be appended to through a guard-safe write):
+
+       {"createRequest": {"objects": [{"objectType": "notes",
+         "properties": {"hs_note_body": "<p>=== YYYY-MM-DD · possible profiles ===</p><p>Sales Partner · Possible Profiles</p><p>instagram: … — … […]</p>",
+           "hs_timestamp": "<now, ISO 8601 UTC>"},
+         "associations": [{"targetObjectType": "CONTACT", "targetObjectId": <contact_id>},
+                          {"targetObjectType": "COMPANY", "targetObjectId": <lead_id>}]}]}}
+
+   The second line, `Sales Partner · Possible Profiles`, says which
+   record the Note belongs to. A reader of the person's possible
+   profiles takes every Note on the contact whose body has that line,
+   oldest first. Never edit an earlier Note.
+
 ### `log_research`
 
 Reject the call if any finding has an empty `source_url` or `hook`, or a
@@ -239,12 +270,18 @@ an existing contact first:
    `associatedWith` this company.
 
 If a contact matches, update it (`updateRequest` on `contacts` with
-`objectId`, plus an association to the company when it lacks one). If
+`objectId`, plus an association to the company when it lacks one). Read
+the contact's `hs_linkedin_url`, `sp_instagram_url`, `sp_facebook_url`,
+`sp_tiktok_url` and `sp_x_url` first and write each social URL only
+when the CRM field is empty; never overwrite or clear one.
+`sp_profiles_checked_at` is written whenever the caller passes it. If
 none matches, create it:
 
     {"createRequest": {"objects": [{"objectType": "contacts",
       "properties": {"firstname": "…", "lastname": "…", "jobtitle": "…", "email": "…",
-        "phone": "…", "hs_linkedin_url": "…", "sp_role": "<role>",
+        "phone": "…", "hs_linkedin_url": "…", "sp_instagram_url": "…",
+        "sp_facebook_url": "…", "sp_tiktok_url": "…", "sp_x_url": "…",
+        "sp_profiles_checked_at": "<ISO 8601 UTC>", "sp_role": "<role>",
         "sp_verified": "false", "sp_notes": "…"},
       "associations": [{"targetObjectType": "COMPANY", "targetObjectId": <lead_id>}]}]}}
 
@@ -333,8 +370,11 @@ Create these once in HubSpot. The connector can't create views.
   `Hero offer` (`sp_hero_offer`), `Offer evidence` (`sp_offer_evidence`)
   `Offer reason` (`sp_offer_reason`) and `Research capped`
   (`sp_research_capped`) as columns, so you approve on the match you can
-  see and a lead whose research stopped at an Apify cap (per-lead or
-  7-day) is obvious.
+  see, and a lead whose research stopped at an Apify cap (per-lead or
+  7-day) is obvious. On the Contacts view, show the contact's social fields
+  (`hs_linkedin_url`, `sp_instagram_url`, `sp_facebook_url`,
+  `sp_tiktok_url`, `sp_x_url`) and `sp_profiles_checked_at`; the
+  Possible Profiles Notes are on the contact.
 - **Approved** — Companies filtered on `sp_stage` is `Approved`:
   approved, waiting for your workflow or your own touch. The agent never
   acts on them; move a company back to `Researched` to cancel.
@@ -363,7 +403,9 @@ what they find to `bindings/crm.md` in the instance:
      "sp_research_anyway", "sp_research_capped"]`: all of them exist, `sp_stage` has the ten status
      options, and `sp_segment` and `sp_hero_offer` hold every segment id and
      offer id in `context/offer-catalog.md`;
-   - on `contacts`, `["sp_role"]`: it has the three role options;
+   - on `contacts`, `["sp_role", "sp_instagram_url", "sp_facebook_url",
+     "sp_tiktok_url", "sp_x_url", "sp_profiles_checked_at"]`: all of them
+     exist, and `sp_role` has the three role options;
 3. Report every missing property or option by name.
 
 If step 2 finds anything missing, offer the two choices in `## Setup`.
@@ -428,6 +470,11 @@ both equal to the text shown.
 | `sp_role` | Sales role | Dropdown select | decision-maker, influencer, gatekeeper |
 | `sp_verified` | Contact verified | Single checkbox | Yes = `true`, No = `false` |
 | `sp_notes` | Contact notes | Multi-line text | |
+| `sp_instagram_url` | Instagram URL | Single-line text | |
+| `sp_facebook_url` | Facebook URL | Single-line text | |
+| `sp_tiktok_url` | TikTok URL | Single-line text | |
+| `sp_x_url` | X URL | Single-line text | |
+| `sp_profiles_checked_at` | Profiles checked at | Date and time picker | |
 
 When you are done, tell the agent and it probes again.
 

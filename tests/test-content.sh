@@ -43,11 +43,11 @@ C="$SP/capabilities/crm/contract.md"
 assert_contains "$C" '`company, location, industry, size, source, source_url`, plus optional `domain, address, phone, email, fit_score, fit_breakdown, segment`'
 assert_contains "$C" 'failing that, the same normalized `phone`'
 assert_contains "$C" 'none of `domain`, `phone`, or `address`'
-assert_contains "$C" '`lead_id, name, title, email, phone, linkedin_url, role, verified, notes`'
+assert_contains "$C" '`lead_id, name, title, email, phone, linkedin_url, instagram_url, facebook_url, tiktok_url, x_url, profiles_checked_at, role, verified, notes`'
 assert_contains "$C" 'listing, web_presence'
 assert_contains "$SP/skills/research-company/SKILL.md" 'hire, listing, web_presence'
-assert_contains "$SP/skills/find-decision-makers/SKILL.md" 'email, phone, linkedin_url'
-assert_contains "$SP/subagents/preparer.md" 'email, phone, linkedin_url'
+assert_contains "$SP/skills/find-decision-makers/SKILL.md" 'email, phone, linkedin_url, instagram_url'
+assert_contains "$SP/subagents/preparer.md" 'email, phone, linkedin_url, instagram_url'
 assert_contains "$SP/subagents/prospector.md" '`Address`, `Phone`, `Email`'
 assert_contains "$SP/AGENT.md" 'hire, listing, web presence'
 
@@ -1373,5 +1373,28 @@ flat_has "$SP/capabilities/web_search/tools/exa/usage.md" '`exa:web_search_exa` 
 flat_has "$SP/capabilities/web_search/tools/exa/usage.md" 'Find the owner, principal or co-owners of <business name>'
 flat_has "$SP/skills/find-decision-makers/SKILL.md" 'and the objective'
 flat_has "$SP/docs/superpowers/notes/2026-10-31-exa-connector-probe.md" '`objective` (string, required)'
+
+echo "-- 8.3.0: social profile fields in the CRM"
+K="$SP/capabilities/crm/contract.md"
+for t in 'log_possible_profiles' 'Sales Partner · Possible Profiles' 'profiles_checked_at' 'only when the CRM field is empty' '`tiktok_url`' '`x_url`'; do
+  assert_contains "$K" "$t"
+done
+AU="$SP/capabilities/crm/tools/attio/usage.md"
+HU="$SP/capabilities/crm/tools/hubspot/usage.md"
+for t in '| `instagram_url` | `instagram` |' '| `x_url` | `twitter` |' '| `tiktok_url` | `sp_tiktok` (custom) |' '| `instagram` | `instagram_url` (built in) |' '| `facebook` | `facebook_url` (built in) |' '| `twitter` | `x_url` (built in) |' '| `sp_tiktok` | `tiktok_url`' '| `sp_profiles_checked_at` | `profiles_checked_at`' '`log_possible_profiles`' 'Sales Partner · Possible Profiles'; do
+  assert_contains "$AU" "$t"
+done
+for t in '| `sp_instagram_url` | `instagram_url` |' '| `sp_facebook_url` | `facebook_url` |' '| `sp_tiktok_url` | `tiktok_url` |' '| `sp_x_url` | `x_url` |' '| `sp_profiles_checked_at` | `profiles_checked_at`' '### `log_possible_profiles`' 'possible profiles'; do
+  assert_contains "$HU" "$t"
+done
+for s in sp_tiktok sp_profiles_checked_at; do
+  grep -qF "attr(\"$s\"" ./capabilities/crm/tools/attio/bootstrap.py && _report ok "attio bootstrap creates $s" || _report no "attio bootstrap misses $s"
+done
+for s in sp_instagram_url sp_facebook_url sp_tiktok_url sp_x_url sp_profiles_checked_at; do
+  grep -qF "prop(\"$s\"" ./capabilities/crm/tools/hubspot/bootstrap.py && _report ok "hubspot bootstrap creates $s" || _report no "hubspot bootstrap misses $s"
+done
+assert_contains "$AU" 'the person'"'"'s social fields'
+assert_contains "$HU" 'the contact'"'"'s social fields'
+assert_contains "$AU" '`instagram`, `facebook` and `twitter` exist on People'
 
 finish

@@ -52,7 +52,8 @@ search is a legitimate source, viewing it as a human would is not.
    direct phone number, a LinkedIn profile URL, or any combination.
    Note where each came from.
 5. Write each person via CRM `upsert_contact(lead_id, name, title,
-   email, phone, linkedin_url, role, verified, notes)`. `role` must be
+   email, phone, linkedin_url, instagram_url, facebook_url, tiktok_url, x_url,
+   profiles_checked_at, role, verified, notes)`. `role` must be
    exactly one of decision-maker, influencer, or gatekeeper — the
    operation rejects anything else. `title` holds only the person's
    job title — never fold any other annotation into it.

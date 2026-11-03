@@ -497,8 +497,9 @@ $<cap>; not run: <sources>` or `7-day Apify cap; not run: <sources>`.
 
 ## Handoff
 For each lead in the queue: writes each person with CRM
-`upsert_contact(lead_id, name, title, email, phone, linkedin_url, role,
-verified, notes)` as research proceeds, filling in fields that are still
+`upsert_contact(lead_id, name, title,
+email, phone, linkedin_url, instagram_url, facebook_url, tiktok_url, x_url,
+profiles_checked_at, role, verified, notes)` as research proceeds, filling in fields that are still
 empty on people already there, and the run's findings with one CRM
 `log_research(lead_id, findings[])` call (`research-company`, with the
 Segment settled as in Segment and offer). Runs `score-lead` (`rubric:

@@ -530,7 +530,7 @@ assert_contains "$SP/README.md" 'messages only you, through Resend'
 assert_contains "$SP/evals/cases.md" 'A notification never reaches anyone but the owner'
 
 echo "-- 7.0.0: release"
-assert_contains "$SP/agent.yaml" 'version: 8.2.1'
+assert_contains "$SP/agent.yaml" 'version: 8.3.0'
 for m in agent.yaml .claude-plugin/plugin.json .claude-plugin/marketplace.json .codex-plugin/plugin.json gemini-extension.json; do
   grep -qF "$EXPECTED_DESC" "./$m" && _report ok "$m: description is the 8.0.0 string" || _report no "$m: description is not the 8.0.0 string"
 done
@@ -794,10 +794,10 @@ done < <(find AGENT.md README.md subagents skills templates context capabilities
 rm -f "$README_NO_UPGRADE"
 
 echo "-- 8.0.0: release: version, README flow and the upgrade note"
-assert_contains "$SP/agent.yaml" 'version: 8.2.1'
-assert_contains "$SP/README.md" 'Version 8.2.1.'
+assert_contains "$SP/agent.yaml" 'version: 8.3.0'
+assert_contains "$SP/README.md" 'Version 8.3.0.'
 for m in .claude-plugin/plugin.json .codex-plugin/plugin.json gemini-extension.json; do
-  assert_contains "./$m" '"version": "8.2.1"'
+  assert_contains "./$m" '"version": "8.3.0"'
 done
 assert_contains "$SP/README.md" 'Upgrading from 7.4'
 for t in 'Approved' 'Research Anyway' 'Talking Points' 'offer catalog' 'Hero Offer' 'schedule_approach'; do
@@ -1466,5 +1466,24 @@ for h in \
 done
 assert_contains "$EV" 'all eight sources'
 assert_not_contains "$EV" 'all seven sources'
+
+echo "-- 8.3.0: README"
+UP82=$(awk '/^Upgrading from 8\.2/ { f=1; next } f && (/^## / || /^Upgrading from /) { f=0 } f' "$SP/README.md")
+assert_contains "$SP/README.md" 'Upgrading from 8.2'
+TEN_URL='https://mcp.apify.com?tools=compass/crawler-google-places,vdrmota/contact-info-scraper,compass/Google-Maps-Reviews-Scraper,scrapesage/google-ads-transparency-scraper,apify/facebook-ads-scraper,valig/indeed-jobs-scraper,apify/website-content-crawler,harvestapi/linkedin-profile-search-by-name,apify/instagram-profile-scraper,clockworks/tiktok-profile-scraper'
+printf '%s' "$UP82" | grep -qF "$TEN_URL" && _report ok "8.3 upgrade note has the exact ten-actor URL" || _report no "8.3 upgrade note lacks the exact ten-actor URL"
+n_url=$(printf '%s\n' "$UP82" | grep -nF 'https://mcp.apify.com?tools=' | head -1 | cut -d: -f1)
+n_tools=$(printf '%s\n' "$UP82" | grep -nF "e-run setup's tools step" | head -1 | cut -d: -f1)
+n_src=$(printf '%s\n' "$UP82" | grep -nF 'apify_profiles' | head -1 | cut -d: -f1)
+n_sched=$(printf '%s\n' "$UP82" | grep -nF '/sales-partner:schedule' | tail -1 | cut -d: -f1)
+[ -n "$n_url" ] && [ -n "$n_tools" ] && [ -n "$n_src" ] && [ -n "$n_sched" ] && [ "$n_url" -lt "$n_tools" ] && [ "$n_tools" -lt "$n_src" ] && [ "$n_src" -lt "$n_sched" ] \
+  && _report ok "8.3 upgrade note steps are in order" || _report no "8.3 upgrade note steps are missing or out of order"
+for b in max_profile_results max_profile_reads max_profile_locations; do
+  printf '%s' "$UP82" | grep -qF "\`$b\`" && _report ok "8.3 upgrade note names $b" || _report no "8.3 upgrade note lacks $b"
+done
+flat_has "$SP/README.md" 'Confident matches are filled on the person record'
+flat_has "$SP/README.md" 'Nothing is ever followed or messaged'
+flat_has "$SP/README.md" 'LinkedIn stays human on every platform'
+flat_has "$SP/README.md" 'no login'
 
 finish

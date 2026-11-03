@@ -174,6 +174,7 @@ files exists because a human has to answer it in their own words.
    `apify_reviews` for a business's Google Maps reviews, `apify_ads`
    for the ads it runs, `apify_jobs` for its job posts,
    `apify_site_reader` for reading a few pages of its website,
+   `apify_profiles` for finding its contacts' public social profiles,
    `web_search`; Apify needs the business's own Apify account with a
    monthly usage limit; do not ask about the Apify connection itself,
    because setup's tools step owns it); which activities should

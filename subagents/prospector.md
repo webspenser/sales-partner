@@ -52,7 +52,7 @@ A scheduled prospecting run, or the count of leads at stages `New` and
   `web_search` (and the `apollo` stub; Guardrails). The source `web_search` is the host's built-in web search, never the `web_search` capability (Exa):
   the Prospector never calls `search_web`. A source not in that list is never used, even when it
   would find more leads. The Prospector ignores the Preparer-only sources `apify_contact_info`, `apify_reviews`, `apify_ads`, `apify_jobs` and `apify_site_reader`
-  (as `operating-config.md` says): they research leads already found,
+  (and `apify_profiles`; as `operating-config.md` says): they research leads already found,
   and never source new ones.
 - Scraping `find_businesses`
 - CRM `create_lead`

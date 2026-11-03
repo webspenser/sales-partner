@@ -23,7 +23,7 @@ while IFS= read -r f; do
 done < <(find "$SP" -name '*.md' -not -path './docs/*' -not -path './tests/*' -not -path './.git/*' -not -name README.md -not -path './.claude/*' -not -path './CLAUDE.md' -not -path './GEMINI.md' -not -path './AGENTS.md')
 
 echo "-- prospecting sources"
-assert_contains "$SP/context/operating-config.md" 'prospecting_sources: [apify_google_maps, apify_contact_info, apify_reviews, apify_ads, apify_jobs, apify_site_reader, web_search]'
+assert_contains "$SP/context/operating-config.md" 'prospecting_sources: [apify_google_maps, apify_contact_info, apify_reviews, apify_ads, apify_jobs, apify_site_reader, apify_profiles, web_search]'
 assert_contains "$SP/context/operating-config.md" '**`prospecting_sources`**'
 assert_contains "$SP/subagents/prospector.md" 'only the sources listed in `prospecting_sources`'
 assert_contains "$SP/subagents/prospector.md" '`apollo` is listed'
@@ -1410,5 +1410,16 @@ assert_contains "$FSP" 'in platform order (LinkedIn, Instagram, Facebook, TikTok
 assert_not_contains "$FSP" 'Facebook, TikTok, X)'
 assert_not_contains "$FSP" '[linkedin, facebook, tiktok, x]'
 assert_contains "$FSP" 'found in step 1 or step 2'
+
+echo "-- profile pass"
+assert_contains "$SP/subagents/preparer.md" 'Profile pass'
+assert_contains "$SP/subagents/preparer.md" 'after every queued lead'
+assert_contains "$SP/subagents/preparer.md" 'oldest `Stage Changed At` first'
+assert_contains "$SP/subagents/preparer.md" '`apify_profiles`'
+assert_contains "$SP/subagents/preparer.md" 're-check the stage'
+assert_contains "$SP/subagents/preparer.md" 'not Research Capped'
+assert_contains "$SP/subagents/preparer.md" "no person's name"
+assert_contains "$SP/subagents/preparer.md" 'opt-out'
+assert_contains "$SP/context/operating-config.md" '`apify_profiles`'
 
 finish

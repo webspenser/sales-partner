@@ -32,6 +32,8 @@ queue is full or no more leads come back. A re-query leaves out every
 lead already worked or skipped this run, so a skipped lead is read once
 and gets one skipped `step` per run.
 
+After the last queued lead, the Profile pass runs (below).
+
 ### Segment fill
 When a lead's turn comes, after the `get_lead`, status and opt-out
 checks (Tools allowed), an empty Segment is first filled from Industry, using the catalog's `industries` lists; if that fails, the lead is skipped.
@@ -112,6 +114,10 @@ Segment and offer).
 - Scraping `find_reviews` (`apify_reviews`), `find_ads` (`apify_ads`),
   `find_jobs` (`apify_jobs`) and `read_site` (`apify_site_reader`), each
   only when its source is listed in `prospecting_sources`
+- Scraping `find_profiles` and `read_profile` (`apify_profiles`), only
+  through `find-social-profiles` in the Profile pass, and only when
+  `apify_profiles` is listed in `prospecting_sources`
+- CRM `query_by_stage` (`stage = "Researched"`), for the Profile pass
 - Every scraping call stays within `apify_cap_usd_per_lead` and
   `apify_spend_cap_usd_per_week` (Scraping)
 - CRM `get_lead`
@@ -133,6 +139,55 @@ leaves it untouched. Then apply the contract's opt-out instruction
 (`capabilities/crm/contract.md`, Approval invariant) to the lead: a
 `Do Not Contact` lead goes to `Disqualified` with reason `opt-out`, and
 nothing else is written.
+
+## Profile pass
+The Profile pass finds the social profiles of the people already
+identified. It runs after every queued lead in the run has been
+prepared and moved to `Researched`, so profile spend on one lead can
+never push a later lead's evidence calls over a cap. It runs only when
+`apify_profiles` is listed in `prospecting_sources`; a list without it
+means no pass, in scheduled and interactive runs alike. The pass never
+writes talking points or research sections, never re-scores, and never
+changes a lead's stage except the opt-out move below.
+
+**The list.** First the leads this run moved to `Researched`, then the
+other leads from CRM `query_by_stage("Researched")` that have a named
+contact lacking `profiles_checked_at`, oldest `Stage Changed At` first.
+A lead whose named contacts are all checked is left out. A contact with
+no person's name (a generic inbox such as `info@`) is not searched and
+does not put its lead on the list.
+
+**Per lead**, in list order, one at a time:
+1. Read the lead with `get_lead` and re-check the stage before the first
+   write. A lead at `Approved` or later (the operator may have moved it
+   since the list was built) is left untouched: no profile write, no
+   note, and it is not searched.
+2. A lead with Do Not Contact set goes to `Disqualified` with reason
+   `opt-out` through `update_stage`, and nothing else is written.
+3. For each named contact without `profiles_checked_at`, run
+   `find-social-profiles(lead, contact)`. It writes `profiles_checked_at`
+   itself when its search completes.
+
+**Caps and time.** Every `find_profiles` and `read_profile` call is an
+Apify call: it counts toward `apify_cap_usd_per_lead` and
+`apify_spend_cap_usd_per_week`, and is checked before it runs by the
+7-day cap and then the per-lead cap (Per-lead cap, 7-day cap), using the
+flat `## Cost` estimates in the Apify tool's `usage.md`. A lead's total
+in the pass includes what its evidence research already spent in the
+same run; for a backlog lead, the per-lead cap applies afresh to the
+pass. `research_budget_per_lead_minutes` applies to each lead's pass
+too, counted from the lead's first profile call.
+
+When a cap or the time budget ends the search, `find-social-profiles`
+returns `stopped`: the contact in progress and the lead's remaining
+contacts stay unchecked (no `profiles_checked_at`), and a later run
+picks them up. This is not Research Capped: do not set
+`research_capped`, do not change the stage reason, and write no
+`stop_condition` event for it. A per-lead stop moves on to the next
+lead. When the 7-day cap would be passed, call
+`notify_owner(kind: alert)` once, as in the 7-day cap, and end the pass;
+every lead not yet reached stays unchecked. Each stop is recorded as a
+ledger `step` (Ledger).
 
 ## Stop conditions
 - Two or more usable `Hook` values have been written for the lead, and
@@ -491,6 +546,17 @@ lead id, `items_in` 1, `items_out` the items read (reviews,
 advertisers, the Facebook count, job listings or pages), `cost_usd` its
 estimate, and `detail` the call and `estimated` (for example
 `find_reviews; estimated`, `find_ads google; estimated`).
+Each `find_profiles` and `read_profile` call in the Profile pass is a
+`step` with `subject` the CRM lead id, `items_in` 1, `items_out` the
+candidates or profiles read, `cost_usd` its estimate, and `detail` the
+call and `estimated` (for example `find_profiles; estimated`). A lead
+left out of the pass for being at `Approved` or later, and a contact
+left unchecked because a cap or the time budget stopped the pass, are
+`skipped` `step`s with `subject` the lead id, `items_in` and
+`items_out` 0, and `detail` `profile pass; <reason>` (`stage Approved`,
+`per-lead cap`, `7-day cap`, `time budget`). A lead moved to
+`Disqualified` for Do Not Contact is a `step` with `detail`
+`profile pass; disqualified; opt-out`.
 A continue on a capped lead is one `step` like a lead researched, with
 `detail` starting `continue; `. Each capped lead gets one `stop_condition` of its own, never one event for several leads, with `subject` the lead id and `detail` `per-lead cap
 $<cap>; not run: <sources>` or `7-day Apify cap; not run: <sources>`.

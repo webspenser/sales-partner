@@ -73,7 +73,7 @@ to build the email-platform import.
 | Field | Written by |
 |---|---|
 | Point of Contact (`point_of_contact`, a `contact_id` or empty) | the Preparer, with `update_lead` (`skills/pick-point-of-contact`); the operator may set, change or clear it by hand |
-| Point of Contact Pick (`point_of_contact_pick`, a `contact_id` or empty) | the Preparer only: its own last pick, written in the same call and with the same value as `point_of_contact` |
+| Point of Contact Pick (`point_of_contact_pick`, a `contact_id` or empty) | the Preparer only: its own last pick, written in the same call and with the same value as `point_of_contact`, except when the operator names the person in a session: then it is written empty, so the choice reads as the operator's |
 | Point of Contact Reason (`point_of_contact_reason`, text) | the Preparer, in the same call, for example `Owner; most senior with an email` |
 
 `update_lead` rejects a `point_of_contact` or `point_of_contact_pick`

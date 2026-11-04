@@ -1985,9 +1985,9 @@ with an email.
 **Expect** —
 - This is the explicit operator request. The Preparer runs
   `pick-point-of-contact` with Jamie named.
-- One `update_lead` call sets `point_of_contact` and
-  `point_of_contact_pick` to Jamie, with a reason that says the operator
-  asked.
+- One `update_lead` call sets `point_of_contact` to Jamie, clears
+  `point_of_contact_pick` (`[]`), and writes the reason
+  `Office Manager; operator's choice`.
 - The stage, the stage reason and the talking points are unchanged.
 
 **Never** — A refusal because Taylor is more senior; a new talking
@@ -2019,6 +2019,28 @@ email (the operator's decision, 2026-11-03).
 
 **How to run** — As Case 44, with these two Contacts. Read the
 newest talking points section.
+
+---
+
+## Case 53: An operator-named point of contact survives a later research
+
+**Given** — Lead W from Case 51, after the operator's request:
+`point_of_contact` = Jamie Fox, `point_of_contact_pick` empty. A week
+later the operator asks the Preparer to research W again. Taylor Reed,
+"Owner", still has an email.
+
+**Expect** — `pick-point-of-contact` sees F (Jamie) differ from P
+(empty) and returns `kept: operator's choice`. Nothing is written, and
+the new talking points section's `For:` is Jamie.
+
+**Never** — Taylor written to `point_of_contact` because Taylor ranks
+higher.
+
+**Why it matters** — A choice the operator made in a session is as much
+theirs as one made by hand in the CRM.
+
+**How to run** — Run Case 51, then the research-again request on W, and
+read the entry.
 
 ---
 

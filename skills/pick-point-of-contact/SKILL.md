@@ -43,8 +43,11 @@ One of:
      to set or change the point of contact. Then go on, and when the
      operator names a person, pick that person (they must be one of
      the lead's Contacts) instead of ranking, with the reason
-     `<rank word from the title>; operator's choice`. A named person
-     with no email is still written, since the operator chose them.
+     `<rank word from the title>; operator's choice`. That write sets
+     `point_of_contact` to the person and leaves `point_of_contact_pick`
+     empty, so F differs from P and every later run treats the choice
+     as the operator's. A named person with no email is still written,
+     since the operator chose them.
 2. **Build the eligible list:** the lead's Contacts with a **non-empty
    email** field and a person's name. Verified and unverified emails
    both count. A pattern-guessed address never sits in the email field
@@ -91,9 +94,12 @@ One of:
   empty.
 - **Picking someone without an email** because they are more senior.
   The email decides eligibility first.
-- **Writing F alone.** F and P are always written together, with the
-  same value, or the next run mistakes the agent's own pick for the
-  operator's.
+- **Writing F alone.** The agent's own picks write F and P together,
+  with the same value, or the next run mistakes the agent's pick for
+  the operator's. Only an operator-named pick leaves P empty.
+- **Writing P on an operator-named pick.** F = P would mark the
+  operator's choice as the agent's, and a later research would rank
+  again and replace it.
 
 ## Worked example
 

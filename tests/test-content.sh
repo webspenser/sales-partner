@@ -1609,4 +1609,9 @@ for t in "e-run setup's tools step" '`point_of_contact`' 'not backfilled'; do
   printf '%s' "$UP83" | grep -qF -- "$t" && _report ok "8.4 upgrade note says $t" || _report no "8.4 upgrade note lacks $t"
 done
 
+echo "-- 8.4.0 final review: an operator-named pick stays the operator's"
+flat_has "$SP/skills/pick-point-of-contact/SKILL.md" 'leaves `point_of_contact_pick` empty'
+flat_has "$SP/capabilities/crm/contract.md" 'except when the operator names the person'
+assert_contains "$SP/evals/cases.md" "## Case 53: An operator-named point of contact survives a later research"
+
 finish

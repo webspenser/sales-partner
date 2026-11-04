@@ -93,6 +93,9 @@ findings in the research note.
 | `next_action_due` | date | `Next Action Due` |
 | `revisit_on` | date | `Revisit On` — set by the operator for `Nurture`; the agent reads it, never writes it |
 | `do_not_contact` | checkbox | `Do Not Contact` |
+| `point_of_contact` | record-reference → people | `point_of_contact`: the person the operator's email outreach goes to; n8n reads the name and email from that person |
+| `point_of_contact_pick` | record-reference → people | `point_of_contact_pick`: the agent's own last pick (Point of contact fields in the contract) |
+| `point_of_contact_reason` | text | `point_of_contact_reason` |
 
 `industry` and `size` are text rather than select. Their values come
 from the band names in `icp.md`, which the interview sets, and an
@@ -187,7 +190,10 @@ write nothing) exactly where the contract says the operation rejects.
   record_id: lead_id}`). Contacts come from `attio:list-records` on
   `people`, filtered on `company` eq the same reference. Notes come from
   `attio:search-notes-by-metadata` (`parent_record_object: companies`,
-  `parent_record_id: lead_id`, paging until the results run out); keep
+  `parent_record_id: lead_id`, paging until the results run out). The
+  entry's `point_of_contact`, `point_of_contact_pick` and
+  `point_of_contact_reason` are returned as the contract's fields, each
+  reference as its `contact_id`. Keep
   those whose title equals one of the two titles exactly, and read each
   with `attio:get-note-body`. When more than one note has the same
   exact title, use the oldest (earliest `created_at`): it is the one the
@@ -204,7 +210,11 @@ write nothing) exactly where the contract says the operation rejects.
 - **`update_lead`** — Reject if `fields` contains `stage`,
   `stage_changed_at` or `research_anyway`. `segment`, `industry`,
   `hero_offer`, `offer_reason`, `offer_evidence` and `research_capped`
-  (`true` or `false`) go to the Pipeline entry like any other lead field. To clear a select or text field (for
+  (`true` or `false`) go to the Pipeline entry like any other lead field.
+  `point_of_contact` and `point_of_contact_pick` are written as
+  `[{"target_object": "people", "target_record_id": <contact_id>}]`, or
+  `[]` to clear; reject either when the contact_id is not one of the
+  lead's linked Contacts (a `people` record whose `company` is the lead). To clear a select or text field (for
   example `hero_offer` and `offer_evidence` when every offer is ruled
   out), write it as `[]`: an entry value may be an array even for a
   single-value attribute, and an empty one removes the value. Read the Pipeline entry first. If
@@ -378,7 +388,8 @@ can't):
   research note and its Talking Points note, then
   move the lead to `Approved`: that approves it. Show `do_not_contact`, so an opted-out
   lead is obvious, and `segment`, `hero_offer`, `offer_reason` and
-  `offer_evidence`. Show the person's social fields (`linkedin`,
+  `offer_evidence`, and `point_of_contact` and `point_of_contact_reason`
+  (never `point_of_contact_pick`, which is the agent's). Show the person's social fields (`linkedin`,
   `instagram`, `facebook`, `twitter`, `sp_tiktok`) on the People view,
   and `sp_profiles_checked_at`, and the `Sales Partner · Possible
   Profiles` note on the person. Show `research_capped` too, so a lead whose research
@@ -404,7 +415,9 @@ what they find to `bindings/crm.md` in the instance:
 3. `attio:list-list-attribute-definitions` on `sales_partner_pipeline`
    — every slug in its Schema table above must exist (including
    `segment`, `hero_offer`, `offer_reason`, `offer_evidence` and
-   `research_anyway` and `research_capped`), `stage` must hold the ten statuses, and `segment` and
+   `research_anyway`, `research_capped`, `point_of_contact`,
+   `point_of_contact_pick` and `point_of_contact_reason`, the two
+   references allowing `people`), `stage` must hold the ten statuses, and `segment` and
    `hero_offer` must hold every segment id and offer id in
    `context/offer-catalog.md`.
 4. `attio:list-attribute-definitions` on `people` — `sp_role`,
@@ -471,6 +484,9 @@ for the workspace. Then add its attributes in the list's settings:
 | Offer Evidence | `offer_evidence` | Select | strong, moderate, weak |
 | Research Anyway | `research_anyway` | Checkbox | |
 | Research Capped | `research_capped` | Checkbox | |
+| Point of Contact | `point_of_contact` | Record (relationship) → People, single | |
+| Point of Contact (agent pick) | `point_of_contact_pick` | Record (relationship) → People, single | |
+| Point of Contact Reason | `point_of_contact_reason` | Text | |
 | Size | `size` | Text | |
 | Source | `source` | Text | |
 | Source URL | `source_url` | Text | |

@@ -145,6 +145,16 @@ def build_lists(segment_ids, offer_ids):
                  config={"record_reference": {"allowed_objects": ["companies"]}},
                  description="Same company as the parent record; exists because list "
                              "entries cannot be filtered by parent."),
+            attr("point_of_contact", "Point of Contact", "record-reference",
+                 config={"record_reference": {"allowed_objects": ["people"]}},
+                 description="The person to email: the most senior contact with an email. "
+                             "Set by the agent on new leads; yours to change."),
+            attr("point_of_contact_pick", "Point of Contact (agent pick)", "record-reference",
+                 config={"record_reference": {"allowed_objects": ["people"]}},
+                 description="Agent only: its last pick. When Point of Contact differs, "
+                             "the agent treats the choice as yours and never changes it."),
+            attr("point_of_contact_reason", "Point of Contact Reason", "text",
+                 description="Why the agent picked this person."),
         ]),
     }
 

@@ -1555,4 +1555,19 @@ flat_has "$PR" 'unless one was already sent this run'
 flat_has "$SU" 'The guard does not require `firstName` or `lastName`'
 awk '/^## Stop conditions/,/^## Scraping/' "$PR" | grep -qF 'Profile pass' && _report ok "Stop conditions point at the Profile pass" || _report no "Stop conditions miss the Profile pass"
 
+echo "-- 8.4.0: point of contact fields"
+K="$SP/capabilities/crm/contract.md"
+AU="$SP/capabilities/crm/tools/attio/usage.md"
+HU="$SP/capabilities/crm/tools/hubspot/usage.md"
+assert_contains "$K" 'point_of_contact_pick'
+assert_contains "$K" 'Point of contact fields'
+assert_contains "$K" "not one of the lead's linked Contacts"
+assert_contains "$AU" '`point_of_contact`'
+assert_contains "$AU" 'record-reference → people'
+assert_contains "$HU" 'sp_point_of_contact_pick'
+for n in point_of_contact point_of_contact_pick point_of_contact_reason; do
+  assert_contains "$SP/capabilities/crm/tools/attio/bootstrap.py" "\"$n\""
+  assert_contains "$SP/capabilities/crm/tools/hubspot/bootstrap.py" "\"sp_$n\""
+done
+
 finish

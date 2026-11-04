@@ -530,7 +530,7 @@ assert_contains "$SP/README.md" 'messages only you, through Resend'
 assert_contains "$SP/evals/cases.md" 'A notification never reaches anyone but the owner'
 
 echo "-- 7.0.0: release"
-assert_contains "$SP/agent.yaml" 'version: 8.3.0'
+assert_contains "$SP/agent.yaml" 'version: 8.4.0'
 for m in agent.yaml .claude-plugin/plugin.json .claude-plugin/marketplace.json .codex-plugin/plugin.json gemini-extension.json; do
   grep -qF "$EXPECTED_DESC" "./$m" && _report ok "$m: description is the 8.0.0 string" || _report no "$m: description is not the 8.0.0 string"
 done
@@ -794,10 +794,10 @@ done < <(find AGENT.md README.md subagents skills templates context capabilities
 rm -f "$README_NO_UPGRADE"
 
 echo "-- 8.0.0: release: version, README flow and the upgrade note"
-assert_contains "$SP/agent.yaml" 'version: 8.3.0'
-assert_contains "$SP/README.md" 'Version 8.3.0.'
+assert_contains "$SP/agent.yaml" 'version: 8.4.0'
+assert_contains "$SP/README.md" 'Version 8.4.0.'
 for m in .claude-plugin/plugin.json .codex-plugin/plugin.json gemini-extension.json; do
-  assert_contains "./$m" '"version": "8.3.0"'
+  assert_contains "./$m" '"version": "8.4.0"'
 done
 assert_contains "$SP/README.md" 'Upgrading from 7.4'
 for t in 'Approved' 'Research Anyway' 'Talking Points' 'offer catalog' 'Hero Offer' 'schedule_approach'; do
@@ -1599,6 +1599,14 @@ for h in \
   '## Case 51: The operator asks to change the point of contact' \
   '## Case 52: Talking points are written for the point of contact'; do
   assert_contains "$SP/evals/cases.md" "$h"
+done
+
+echo "-- 8.4.0: README"
+UP83=$(awk '/^Upgrading from 8\.3/ { f=1; next } f && (/^## / || /^Upgrading from /) { f=0 } f' "$SP/README.md")
+assert_contains "$SP/README.md" 'Upgrading from 8.3'
+assert_contains "$SP/README.md" '**A point of contact on each new lead.**'
+for t in "e-run setup's tools step" '`point_of_contact`' 'not backfilled'; do
+  printf '%s' "$UP83" | grep -qF -- "$t" && _report ok "8.4 upgrade note says $t" || _report no "8.4 upgrade note lacks $t"
 done
 
 finish

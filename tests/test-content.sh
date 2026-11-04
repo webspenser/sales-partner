@@ -1579,4 +1579,12 @@ flat_has "$SP/skills/write-talking-points/SKILL.md" "the lead's point of contact
 flat_has "$SP/skills/write-talking-points/SKILL.md" "take the one whose title best matches"
 assert_contains "$SP/AGENT.md" '`pick-point-of-contact`'
 
+echo "-- 8.4.0: Preparer picks the point of contact"
+PRP="$SP/subagents/preparer.md"
+for t in 'pick-point-of-contact' 'before `write-talking-points`' '; no point of contact: no contact has an email' 'set or change the point of contact' 'never on a lead that goes to `Disqualified`' '`point_of_contact`, `point_of_contact_pick`, `point_of_contact_reason`'; do
+  flat_has "$PRP" "$t"
+done
+awk '/^## Handoff/,/^## Inline fallback/' "$PRP" | tr '\n' ' ' | grep -qF 'pick-point-of-contact' && _report ok "Handoff runs pick-point-of-contact" || _report no "Handoff misses pick-point-of-contact"
+awk '/^## Inline fallback/,/^### Guardrails/' "$PRP" | tr '\n' ' ' | grep -qF 'point of contact' && _report ok "Inline fallback picks the point of contact" || _report no "Inline fallback misses the point of contact"
+
 finish

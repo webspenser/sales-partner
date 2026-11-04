@@ -207,6 +207,11 @@ properties `sp_segment`, `sp_industry`, `sp_hero_offer`,
 `sp_offer_reason`, `sp_offer_evidence` and `sp_research_capped` are
 written like any other lead property; `research_capped` maps to
 `sp_research_capped`, written as `"true"` or `"false"`.
+`point_of_contact`, `point_of_contact_pick` and `point_of_contact_reason`
+map to `sp_point_of_contact`, `sp_point_of_contact_pick` and
+`sp_point_of_contact_reason`; the first two hold the Contact's record ID
+as a string, `""` to clear. Reject either when that Contact is not
+associated with the lead's company.
 To clear a select or text field (for example
 `sp_hero_offer` and `sp_offer_evidence` when every offer is ruled out),
 write it as `""`: HubSpot stores an empty string as no value. Read the company first
@@ -373,7 +378,9 @@ Create these once in HubSpot. The connector can't create views.
   approves the lead. Show `Do Not Contact`, `Segment` (`sp_segment`),
   `Hero offer` (`sp_hero_offer`), `Offer evidence` (`sp_offer_evidence`)
   `Offer reason` (`sp_offer_reason`) and `Research capped`
-  (`sp_research_capped`) as columns, so you approve on the match you can
+  (`sp_research_capped`) as columns, with `Point of contact`
+  (`sp_point_of_contact`) and `Point of contact reason`
+  (`sp_point_of_contact_reason`), so you approve on the match you can
   see, and a lead whose research stopped at an Apify cap (per-lead or
   7-day) is obvious. On the Contacts view, show the contact's social fields
   (`hs_linkedin_url`, `sp_instagram_url`, `sp_facebook_url`,
@@ -404,7 +411,8 @@ what they find to `bindings/crm.md` in the instance:
    - on `companies`, `["sp_stage", "sp_stage_changed_at", "sp_do_not_contact",
      "sp_fit_score", "sp_fit_breakdown", "sp_approach_score", "sp_approach_breakdown",
      "sp_segment", "sp_hero_offer", "sp_offer_reason", "sp_offer_evidence",
-     "sp_research_anyway", "sp_research_capped"]`: all of them exist, `sp_stage` has the ten status
+     "sp_research_anyway", "sp_research_capped"]` and
+     `["sp_point_of_contact", "sp_point_of_contact_pick", "sp_point_of_contact_reason"]`: all of them exist, `sp_stage` has the ten status
      options, and `sp_segment` and `sp_hero_offer` hold every segment id and
      offer id in `context/offer-catalog.md`;
    - on `contacts`, `["sp_role", "sp_instagram_url", "sp_facebook_url",
@@ -458,6 +466,9 @@ both equal to the text shown.
 | `sp_offer_evidence` | Offer evidence | Dropdown select | strong, moderate, weak |
 | `sp_research_anyway` | Research anyway | Single checkbox | Yes = `true`, No = `false` |
 | `sp_research_capped` | Research capped | Single checkbox | Yes = `true`, No = `false` |
+| `sp_point_of_contact` | Point of contact (Contact ID) | Single-line text | |
+| `sp_point_of_contact_pick` | Point of contact, agent pick (Contact ID) | Single-line text | |
+| `sp_point_of_contact_reason` | Point of contact reason | Multi-line text | |
 | `sp_size` | Size | Single-line text | |
 | `sp_source` | Source | Single-line text | |
 | `sp_source_url` | Source URL | Single-line text | |

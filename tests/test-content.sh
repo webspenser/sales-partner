@@ -530,7 +530,7 @@ assert_contains "$SP/README.md" 'messages only you, through Resend'
 assert_contains "$SP/evals/cases.md" 'A notification never reaches anyone but the owner'
 
 echo "-- 7.0.0: release"
-assert_contains "$SP/agent.yaml" 'version: 8.3.0'
+assert_contains "$SP/agent.yaml" 'version: 8.4.0'
 for m in agent.yaml .claude-plugin/plugin.json .claude-plugin/marketplace.json .codex-plugin/plugin.json gemini-extension.json; do
   grep -qF "$EXPECTED_DESC" "./$m" && _report ok "$m: description is the 8.0.0 string" || _report no "$m: description is not the 8.0.0 string"
 done
@@ -794,10 +794,10 @@ done < <(find AGENT.md README.md subagents skills templates context capabilities
 rm -f "$README_NO_UPGRADE"
 
 echo "-- 8.0.0: release: version, README flow and the upgrade note"
-assert_contains "$SP/agent.yaml" 'version: 8.3.0'
-assert_contains "$SP/README.md" 'Version 8.3.0.'
+assert_contains "$SP/agent.yaml" 'version: 8.4.0'
+assert_contains "$SP/README.md" 'Version 8.4.0.'
 for m in .claude-plugin/plugin.json .codex-plugin/plugin.json gemini-extension.json; do
-  assert_contains "./$m" '"version": "8.3.0"'
+  assert_contains "./$m" '"version": "8.4.0"'
 done
 assert_contains "$SP/README.md" 'Upgrading from 7.4'
 for t in 'Approved' 'Research Anyway' 'Talking Points' 'offer catalog' 'Hero Offer' 'schedule_approach'; do
@@ -1554,5 +1554,64 @@ flat_has "$SP/README.md" "Facebook personal profiles have no reader, so they com
 flat_has "$PR" 'unless one was already sent this run'
 flat_has "$SU" 'The guard does not require `firstName` or `lastName`'
 awk '/^## Stop conditions/,/^## Scraping/' "$PR" | grep -qF 'Profile pass' && _report ok "Stop conditions point at the Profile pass" || _report no "Stop conditions miss the Profile pass"
+
+echo "-- 8.4.0: point of contact fields"
+K="$SP/capabilities/crm/contract.md"
+AU="$SP/capabilities/crm/tools/attio/usage.md"
+HU="$SP/capabilities/crm/tools/hubspot/usage.md"
+assert_contains "$K" 'point_of_contact_pick'
+assert_contains "$K" 'Point of contact fields'
+assert_contains "$K" "not one of the lead's linked Contacts"
+assert_contains "$AU" '`point_of_contact`'
+assert_contains "$AU" 'record-reference → people'
+assert_contains "$HU" 'sp_point_of_contact_pick'
+for n in point_of_contact point_of_contact_pick point_of_contact_reason; do
+  assert_contains "$SP/capabilities/crm/tools/attio/bootstrap.py" "\"$n\""
+  assert_contains "$SP/capabilities/crm/tools/hubspot/bootstrap.py" "\"sp_$n\""
+done
+
+echo "-- 8.4.0: pick-point-of-contact skill and talking points For:"
+PPC="$SP/skills/pick-point-of-contact/SKILL.md"
+for t in 'name: pick-point-of-contact' 'non-empty email' 'generic inbox' 'from the job title, never from' 'highest rank any part of the title names' 'Verified' 'Target roles' 'earliest-written' 'point_of_contact_pick' 'F empty and P set' 'explicit operator request' 'no point of contact: no contact has an email' 'kept: operator'"'"'s choice' 'none eligible'; do
+  flat_has "$PPC" "$t"
+done
+flat_has "$SP/skills/write-talking-points/SKILL.md" "the lead's point of contact"
+flat_has "$SP/skills/write-talking-points/SKILL.md" "take the one whose title best matches"
+assert_contains "$SP/AGENT.md" '`pick-point-of-contact`'
+
+echo "-- 8.4.0: Preparer picks the point of contact"
+PRP="$SP/subagents/preparer.md"
+for t in 'pick-point-of-contact' 'before `write-talking-points`' '; no point of contact: no contact has an email' 'set or change the point of contact' 'never on a lead that goes to `Disqualified`' '`point_of_contact`, `point_of_contact_pick`, `point_of_contact_reason`'; do
+  flat_has "$PRP" "$t"
+done
+awk '/^## Handoff/,/^## Inline fallback/' "$PRP" | tr '\n' ' ' | grep -qF 'pick-point-of-contact' && _report ok "Handoff runs pick-point-of-contact" || _report no "Handoff misses pick-point-of-contact"
+awk '/^## Inline fallback/,/^### Guardrails/' "$PRP" | tr '\n' ' ' | grep -qF 'point of contact' && _report ok "Inline fallback picks the point of contact" || _report no "Inline fallback misses the point of contact"
+
+echo "-- 8.4.0: point of contact evals"
+for h in \
+  '## Case 44: One person with an email is the point of contact' \
+  '## Case 45: A GM with an email beats an owner without one' \
+  '## Case 46: An owner with an unverified email beats a verified gatekeeper' \
+  '## Case 47: No one with an email leaves the field empty' \
+  '## Case 48: Two owners, the verified one wins' \
+  '## Case 49: A hand-set point of contact survives a re-research' \
+  '## Case 50: A field the operator cleared stays empty' \
+  '## Case 51: The operator asks to change the point of contact' \
+  '## Case 52: Talking points are written for the point of contact'; do
+  assert_contains "$SP/evals/cases.md" "$h"
+done
+
+echo "-- 8.4.0: README"
+UP83=$(awk '/^Upgrading from 8\.3/ { f=1; next } f && (/^## / || /^Upgrading from /) { f=0 } f' "$SP/README.md")
+assert_contains "$SP/README.md" 'Upgrading from 8.3'
+assert_contains "$SP/README.md" '**A point of contact on each new lead.**'
+for t in "e-run setup's tools step" '`point_of_contact`' 'not backfilled'; do
+  printf '%s' "$UP83" | grep -qF -- "$t" && _report ok "8.4 upgrade note says $t" || _report no "8.4 upgrade note lacks $t"
+done
+
+echo "-- 8.4.0 final review: an operator-named pick stays the operator's"
+flat_has "$SP/skills/pick-point-of-contact/SKILL.md" 'leaves `point_of_contact_pick` empty'
+flat_has "$SP/capabilities/crm/contract.md" 'except when the operator names the person'
+assert_contains "$SP/evals/cases.md" "## Case 53: An operator-named point of contact survives a later research"
 
 finish

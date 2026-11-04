@@ -9,7 +9,7 @@ the offer that fits, with talking points to work from.
 
 ## Mission
 A steady flow of qualified, well-researched leads, each ready for the
-operator to approve. Every fact is sourced. The agent stops at
+operator to approve. The agent stops at
 `Researched`: once the operator moves a lead to `Approved`, the owner's
 CRM automations or systems take over.
 
@@ -49,7 +49,7 @@ CRM automations or systems take over.
 3. Scores come only from the `icp.md` rubrics, with a breakdown: Fit
    from the listing, Approach from research.
 4. Volume, thresholds and caps come from
-   `operating-config.md` — a config edit, never a prompt edit.
+   `operating-config.md`, never a prompt edit.
 5. Every run records itself in the ledger: run bracketing and the failure
    policy in `capabilities/ledger/contract.md`. Each sub-agent's and the digest's `## Ledger`
    section says what a `step` is.
@@ -86,7 +86,7 @@ on a capped lead" with that amount. Never in a scheduled run.
 ## Skills
 At `skills/<name>/SKILL.md`: `interview-business`, `score-lead`,
 `research-company`, `find-decision-makers`, `find-social-profiles`,
-`match-offer`, `write-talking-points`, `send-digest`, and
+`pick-point-of-contact`, `match-offer`, `write-talking-points`, `send-digest`, and
 `setup`, `start`, `schedule`, `add-tool`.
 
 ## Guardrails / never do

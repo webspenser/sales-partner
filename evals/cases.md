@@ -1814,6 +1814,236 @@ are checked.
 
 ---
 
+## Case 44: One person with an email is the point of contact
+
+**Given** — Lead P, Maple Street Dental (`https://maplestreet.example`),
+at `Scored`, Fit above `research_threshold`, with a Segment. Research
+writes two Contacts: Lee Park, "Practice Manager", email
+`lee@maplestreet.example` (verified), and Ana Cruz, "Owner", no email.
+Both point of contact fields are empty.
+
+**Expect** — `skills/pick-point-of-contact/SKILL.md`, Procedure:
+
+- `pick-point-of-contact` runs after the Contacts are written and before
+  `write-talking-points`.
+- One `update_lead` call sets `point_of_contact` and
+  `point_of_contact_pick` to Lee's `contact_id`, with a reason such as
+  `Practice Manager; only contact with an email`.
+- The lead moves to `Researched` with no `no point of contact` end on
+  its reason.
+
+**Never** — Ana as the point of contact; `point_of_contact` written
+without `point_of_contact_pick`.
+
+**Why it matters** — The email platform needs someone it can send to.
+
+**How to run** — Seed P, stub the research to return the two Contacts,
+run the Preparer, and read the Pipeline entry.
+
+---
+
+## Case 45: A GM with an email beats an owner without one
+
+**Given** — Lead Q, Ridgeway HVAC, researched with three Contacts:
+Morgan Hale, "Owner", no email; Jordan Lin, "General Manager",
+`jordan@ridgeway.example` (unverified); Casey Ward, "Service Manager",
+`casey@ridgeway.example` (verified). Both fields are empty.
+
+**Expect** —
+- Jordan is the point of contact. Rank 2 beats Casey's rank 3, even
+  though Casey's email is verified (ties are broken only within a
+  rank).
+- The reason reads `General Manager; owner has no email` or similar.
+
+**Never** — Morgan (no email); Casey (lower rank).
+
+**Why it matters** — This is the operator's rule: an email beats
+seniority, and seniority beats verification.
+
+**How to run** — As Case 44, with these three Contacts.
+
+---
+
+## Case 46: An owner with an unverified email beats a verified gatekeeper
+
+**Given** — Lead R, Brightside Cleaning, with two Contacts: Riley
+Stone, "Owner", `riley@brightside.example`, unverified (from a
+directory listing), `role: decision-maker`; and Pat Doyle, "Front Desk",
+`pat@brightside.example`, verified, `role: gatekeeper`. Both fields are
+empty.
+
+**Expect** — Riley is the point of contact, with reason
+`Owner; most senior with an email`.
+
+**Never** — Pat, picked for the verified email or the role tag.
+
+**Why it matters** — An unverified email still counts, and verification
+only breaks ties within a rank.
+
+**How to run** — As Case 44, with these two Contacts.
+
+---
+
+## Case 47: No one with an email leaves the field empty
+
+**Given** — Lead S, Oakline Auto, with two Contacts: Drew Kim,
+"Owner", no email, a `pattern guess, unverified` address in `notes`;
+and a gatekeeper row with no person's name and email
+`info@oakline.example`. Both fields are empty.
+
+**Expect** —
+- `pick-point-of-contact` returns `none eligible`, and no point of
+  contact field is written.
+- The stage reason ends with
+  `; no point of contact: no contact has an email`.
+- `write-talking-points` falls back to its own rule: `For:` is Drew, the
+  decision-maker.
+
+**Never** — The `info@` row as the point of contact; the guessed
+address used to make Drew eligible.
+
+**Why it matters** — The field exists so an email can be sent. An empty
+field is better than an inbox with no person, or a guess.
+
+**How to run** — As Case 44, with these two Contacts. Read the entry
+and the stage reason.
+
+---
+
+## Case 48: Two owners, the verified one wins
+
+**Given** — Lead T, Twin Pines Landscaping, with two Contacts: Alex
+Moore, "Co-Owner", `alex@twinpines.example`, unverified; and Sam
+Moore, "Co-Owner", `sam@twinpines.example`, verified. Both fields are
+empty.
+
+**Expect** — Sam is the point of contact. Both are rank 1, and the
+verified email breaks the tie.
+
+**Never** — Alex.
+
+**How to run** — As Case 44, with these two Contacts.
+
+---
+
+## Case 49: A hand-set point of contact survives a re-research
+
+**Given** — Lead U, Harbor Plumbing, at `Researched`. The agent's last
+pick was Sam Ortiz (`point_of_contact_pick` = Sam). The operator has
+since set `point_of_contact` to Dana Reyes by hand. The operator asks
+the Preparer to research U again, and the research adds a new Contact,
+Chris Vale, "Owner", `chris@harborplumbing.example`, verified.
+
+**Expect** —
+- `pick-point-of-contact` sees F (Dana) differ from P (Sam) and returns
+  `kept: operator's choice`.
+- No point of contact field is written.
+- The new talking points section's `For:` is Dana.
+
+**Never** — Chris or Sam written to `point_of_contact`; P changed.
+
+**Why it matters** — The operator's choice is theirs. An agent that
+"improves" it silently undoes their decision.
+
+**How to run** — Seed U with the fields as given, run the named-lead
+research-again request, and read the entry and the new talking points
+section.
+
+---
+
+## Case 50: A field the operator cleared stays empty
+
+**Given** — Lead V, Lakeside Florist, at `Researched`.
+`point_of_contact_pick` holds Jo Park, the agent's pick, and the
+operator has cleared `point_of_contact`. The operator asks for a
+research again, and the research still finds Jo with an email.
+
+**Expect** —
+- F is empty and P is set, so the operator chose nobody.
+  `pick-point-of-contact` returns `kept: operator's choice`.
+- `point_of_contact` stays empty.
+
+**Never** — Jo written back to `point_of_contact`.
+
+**Why it matters** — Clearing the field is how the operator keeps a
+lead out of the email import. Refilling it would send email the
+operator stopped.
+
+**How to run** — Seed V with the fields as given, run the research
+again, and read the entry.
+
+---
+
+## Case 51: The operator asks to change the point of contact
+
+**Given** — Lead W, Summit Roofing, at `Researched`, with
+`point_of_contact` = `point_of_contact_pick` = Taylor Reed, "Owner".
+In a session, the operator says: "Make Jamie Fox the point of contact
+for Summit Roofing." Jamie is one of W's Contacts, "Office Manager",
+with an email.
+
+**Expect** —
+- This is the explicit operator request. The Preparer runs
+  `pick-point-of-contact` with Jamie named.
+- One `update_lead` call sets `point_of_contact` to Jamie, clears
+  `point_of_contact_pick` (`[]`), and writes the reason
+  `Office Manager; operator's choice`.
+- The stage, the stage reason and the talking points are unchanged.
+
+**Never** — A refusal because Taylor is more senior; a new talking
+points section the operator didn't ask for; a person who isn't one of
+W's Contacts.
+
+**How to run** — Seed W, make the request in a session, and read the
+entry and the Talking Points record.
+
+---
+
+## Case 52: Talking points are written for the point of contact
+
+**Given** — Lead X, Northgate Logistics. `icp.md`'s Target roles name
+"VP Operations (decision-maker)". Research finds Robin Hart, "VP
+Operations", `role: decision-maker`, with no email; and Quinn Bell,
+"General Manager", `role: influencer`, with `quinn@northgate.example`.
+
+**Expect** —
+- `pick-point-of-contact` picks Quinn, the only eligible person.
+- `write-talking-points` then writes `For: Quinn Bell, General Manager`
+  and passes Quinn's `contact_id` to `log_talking_points`.
+
+**Never** — `For: Robin Hart, VP Operations` while the email goes to
+Quinn.
+
+**Why it matters** — The talking points are for the person who gets the
+email (the operator's decision, 2026-11-03).
+
+**How to run** — As Case 44, with these two Contacts. Read the
+newest talking points section.
+
+---
+
+## Case 53: An operator-named point of contact survives a later research
+
+**Given** — Lead W from Case 51, after the operator's request:
+`point_of_contact` = Jamie Fox, `point_of_contact_pick` empty. A week
+later the operator asks the Preparer to research W again. Taylor Reed,
+"Owner", still has an email.
+
+**Expect** — `pick-point-of-contact` sees F (Jamie) differ from P
+(empty) and returns `kept: operator's choice`. Nothing is written, and
+the new talking points section's `For:` is Jamie.
+
+**Never** — Taylor written to `point_of_contact` because Taylor ranks
+higher.
+
+**Why it matters** — A choice the operator made in a session is as much
+theirs as one made by hand in the CRM.
+
+**How to run** — Run Case 51, then the research-again request on W, and
+read the entry.
+
+---
+
 ## Degradation check
 
 This is the only test in the repo of the portability claim the whole

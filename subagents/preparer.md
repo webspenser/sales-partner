@@ -1,6 +1,6 @@
 ---
 name: preparer
-description: Dispatch for a lead at stage `Scored` whose `Fit Score` clears `research_threshold` and that has a Segment, or that the operator ticked Research Anyway — deep-researches the company, identifies decision-makers, gives it an Approach score, matches its hero offer and writes its talking points. After the queue it runs the Profile pass over `Researched` leads whose contacts are unsearched, even when nothing is queued.
+description: Dispatch for a lead at stage `Scored` whose `Fit Score` clears `research_threshold` and that has a Segment, or that the operator ticked Research Anyway — deep-researches the company, identifies decision-makers, gives it an Approach score, matches its hero offer, picks its point of contact and writes its talking points. After the queue it runs the Profile pass over `Researched` leads whose contacts are unsearched, even when nothing is queued.
 ---
 
 # Preparer — Sub-Agent Contract
@@ -99,6 +99,10 @@ Segment and offer).
   scraping stopped at an Apify cap (per-lead or 7-day) with at least one
   source not run, and false once a continue completes it (Scraping,
   Interactive requests)
+- The lead's point of contact (`point_of_contact`, `point_of_contact_pick`,
+  `point_of_contact_reason`), written by `pick-point-of-contact`: the
+  most senior named Contact with an email, never overwriting the
+  operator's choice; never on a lead that goes to `Disqualified`
 - One talking points section added to the lead's Talking Points record,
   written by `write-talking-points` with `log_talking_points`
 - `Stage = Researched`, or `Stage = Disqualified` if research surfaces
@@ -130,7 +134,8 @@ Segment and offer).
 - CRM `upsert_contact`
 - CRM `update_lead` (`Approach Score`, `Approach Breakdown`, company
   profile fields, `Next Action`, `segment`, `industry`, `hero_offer`, `offer_reason`, `offer_evidence`,
-  `research_capped`)
+  `research_capped`, and through `pick-point-of-contact`
+  `point_of_contact`, `point_of_contact_pick`, `point_of_contact_reason`)
 - CRM `log_talking_points`
 - CRM `log_possible_profiles` (Profile pass, through find-social-profiles)
 - CRM `update_stage`
@@ -498,7 +503,7 @@ With the Segment still empty, `match-offer` writes the two empty and
 says why in `offer_reason`.
 
 ## Interactive requests
-In an interactive session the operator can ask for three things:
+In an interactive session the operator can ask for four things:
 - **Research a named lead.** Treated as a Research Anyway tick: the lead
   is researched whatever its Fit Score, with the same stage reason. It
   must be at `Scored`, or at `Researched` when the operator asks to
@@ -531,8 +536,12 @@ In an interactive session the operator can ask for three things:
   `apify_cap_usd_per_lead` when they named none, with the same 7-day
   check. Write their findings as one new research
   section with `log_research`, then re-run `score-lead` (`rubric:
-  approach`), `match-offer` and `write-talking-points`, each from all of
-  the lead's research. End with `update_stage(lead_id, "Researched", reason)`. A source named with a reason is not run again.
+  approach`), `match-offer`, `pick-point-of-contact` and
+  `write-talking-points`, each from all of the lead's research. A
+  research-again of a named lead runs `pick-point-of-contact` the same
+  way. Either rewrite of the reason keeps the
+  `; no point of contact: no contact has an email` end only when this
+  run's pick returned `none eligible`. End with `update_stage(lead_id, "Researched", reason)`. A source named with a reason is not run again.
   When every source has run, or could not for want of its input (no
   `query_place_id`, no website, a shared-platform website, a refused
   website host, a profile id page or an https fetch that failed), clear
@@ -544,6 +553,14 @@ In an interactive session the operator can ask for three things:
   start is replaced by that cap's start with a fresh list of the
   sources still not run; the other starts stay. The agent does this
   only when the operator asks in a session, never in a scheduled run.
+- **Set or change the point of contact** of a lead at `Researched`.
+  When the operator asks to set or change the point of contact, that is
+  the explicit operator request `pick-point-of-contact` allows:
+  run it with the request, naming the person when the operator did.
+  It writes only the three point of contact fields; the stage, the
+  reason and the talking points stay, unless the operator also asks to
+  refresh the talking points. A lead not at `Researched` is not
+  changed: report its status and do nothing.
 
 ## Ledger
 Call `ledger_status` first; write `run_started` first and `run_finished` last, numbering events with `seq` per `capabilities/ledger/contract.md` (Run bracketing, Failure policy). Write `stop_condition`, `notify_sent` and `error` events when they happen.
@@ -610,13 +627,17 @@ the company profile fields it confirmed
 `instagram_url`; see `capabilities/crm/contract.md`, each one sourced),
 with `research_capped: true` on a lead whose scraping stopped at a cap.
 Runs `match-offer`, which writes the three offer fields, then
-`write-talking-points`, which adds one section with CRM
+`pick-point-of-contact`, after the lead's Contacts are written and
+before `write-talking-points`, so the talking points are written for
+that person. When it returns `none eligible`, the stage reason ends with
+`; no point of contact: no contact has an email`, after every start
+below. Then `write-talking-points`, which adds one section with CRM
 `log_talking_points(lead_id, contact_id, body)`. Then calls CRM
 `update_stage(lead_id, "Researched", reason)` and stops.
 
 If an anti-signal was found, it calls `update_stage(lead_id,
-"Disqualified", reason)` instead, with no `match-offer` and no talking
-points.
+"Disqualified", reason)` instead, with no `match-offer`, no point of
+contact and no talking points.
 
 The stage reason names any Segment or Industry change and, when Segment
 stays empty, why. A capped lead's reason starts with its cap's start
@@ -638,8 +659,8 @@ from `Researched` the lead is the operator's to review and approve.
 ## Inline fallback
 Runs as the second sequential phase on a host without sub-agent
 dispatch: build the queue as in Trigger directly from the CRM, research
-each lead, score it, match its offer and write its talking points in the
-same context, then advance the stage; then the Profile pass, also when
+each lead, score it, match its offer, pick its point of contact and
+write its talking points in the same context, then advance the stage; then the Profile pass, also when
 the queue is empty; then move to the next phase.
 
 ### Guardrails

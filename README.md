@@ -47,6 +47,11 @@ and when.
   person. LinkedIn is searched by name. Instagram, Facebook and TikTok
   come from the business's own pages, and from Exa when it is
   connected. Nothing is ever followed or messaged.
+- **A point of contact on each new lead.** The most senior person it
+  found with an email address is set on the lead, with the reason, and
+  the talking points are written for them. Your email workflow (for
+  example n8n) reads it. Set or change it by hand and it is never
+  overwritten.
 - **A weekly summary** sent to you: what's waiting for your
   review, what's approved but not yet contacted, what moved, and what
   research tools cost.
@@ -124,7 +129,7 @@ in that folder loads the agent. Plugin updates never touch your folder.
 
 Built on [Agent Standard](https://github.com/webspenser/agent-builder/blob/main/STANDARD.md) 7.4
 with [Agent Builder](https://github.com/webspenser/agent-builder).
-Version 8.3.0.
+Version 8.4.0.
 
 ## Use it from source
 
@@ -310,6 +315,17 @@ Facebook and TikTok get more candidates. In order:
 3. Add `apify_profiles` to `prospecting_sources` in
    `context/operating-config.md`.
 4. Re-run `/sales-partner:schedule`.
+
+Upgrading from 8.3: each new lead now gets a point of contact on the
+pipeline list. In order:
+
+1. Re-run setup's tools step. It creates the three new lead fields
+   `point_of_contact`, `point_of_contact_pick` (the agent's own last
+   pick; leave it alone) and `point_of_contact_reason`, with
+   `bootstrap.py` or by hand.
+2. Point your email workflow (for example n8n) at `point_of_contact`:
+   in Attio it links to the Person, whose name and email you read.
+3. Existing leads are not backfilled. Set theirs by hand.
 
 ## Developing
 

@@ -62,9 +62,11 @@ square brackets after the claim it backs.
 2. Read `tone` and the Voice section (its words and its two example
    sentences) fresh. The Opener and the Points follow that voice; the
    format above does not change with it.
-3. **For:** the decision-maker from the lead's Contacts (`role:
-   decision-maker`), written as `<name>, <title>` with the title the
-   source gives. With more than one, take the one whose title best
+3. **For:** the lead's point of contact (`point_of_contact`, set by
+   `pick-point-of-contact` or by the operator) when it has one, written
+   as `<name>, <title>` with the title the source gives. With none, the
+   decision-maker from the lead's Contacts (`role: decision-maker`),
+   written the same way. With more than one, take the one whose title best
    matches `icp.md`'s Target roles, preferring a `Verified` one. With
    none, write `For: owner, name not found`. Keep that contact's
    `contact_id` for the write; with none, `contact_id` is empty.

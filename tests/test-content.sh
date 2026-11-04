@@ -1570,4 +1570,13 @@ for n in point_of_contact point_of_contact_pick point_of_contact_reason; do
   assert_contains "$SP/capabilities/crm/tools/hubspot/bootstrap.py" "\"sp_$n\""
 done
 
+echo "-- 8.4.0: pick-point-of-contact skill and talking points For:"
+PPC="$SP/skills/pick-point-of-contact/SKILL.md"
+for t in 'name: pick-point-of-contact' 'non-empty email' 'generic inbox' 'from the job title, never from' 'highest rank any part of the title names' 'Verified' 'Target roles' 'earliest-written' 'point_of_contact_pick' 'F empty and P set' 'explicit operator request' 'no point of contact: no contact has an email' 'kept: operator'"'"'s choice' 'none eligible'; do
+  flat_has "$PPC" "$t"
+done
+flat_has "$SP/skills/write-talking-points/SKILL.md" "the lead's point of contact"
+flat_has "$SP/skills/write-talking-points/SKILL.md" "take the one whose title best matches"
+assert_contains "$SP/AGENT.md" '`pick-point-of-contact`'
+
 finish

@@ -1587,4 +1587,18 @@ done
 awk '/^## Handoff/,/^## Inline fallback/' "$PRP" | tr '\n' ' ' | grep -qF 'pick-point-of-contact' && _report ok "Handoff runs pick-point-of-contact" || _report no "Handoff misses pick-point-of-contact"
 awk '/^## Inline fallback/,/^### Guardrails/' "$PRP" | tr '\n' ' ' | grep -qF 'point of contact' && _report ok "Inline fallback picks the point of contact" || _report no "Inline fallback misses the point of contact"
 
+echo "-- 8.4.0: point of contact evals"
+for h in \
+  '## Case 44: One person with an email is the point of contact' \
+  '## Case 45: A GM with an email beats an owner without one' \
+  '## Case 46: An owner with an unverified email beats a verified gatekeeper' \
+  '## Case 47: No one with an email leaves the field empty' \
+  '## Case 48: Two owners, the verified one wins' \
+  '## Case 49: A hand-set point of contact survives a re-research' \
+  '## Case 50: A field the operator cleared stays empty' \
+  '## Case 51: The operator asks to change the point of contact' \
+  '## Case 52: Talking points are written for the point of contact'; do
+  assert_contains "$SP/evals/cases.md" "$h"
+done
+
 finish

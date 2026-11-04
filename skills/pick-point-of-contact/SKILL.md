@@ -42,7 +42,9 @@ One of:
    - The one exception is an **explicit operator request** in a session
      to set or change the point of contact. Then go on, and when the
      operator names a person, pick that person (they must be one of
-     the lead's Contacts) instead of ranking.
+     the lead's Contacts) instead of ranking, with the reason
+     `<rank word from the title>; operator's choice`. A named person
+     with no email is still written, since the operator chose them.
 2. **Build the eligible list:** the lead's Contacts with a **non-empty
    email** field and a person's name. Verified and unverified emails
    both count. A pattern-guessed address never sits in the email field

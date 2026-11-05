@@ -193,7 +193,8 @@ files exists because a human has to answer it in their own words.
    operator confirms.
 9. Write the answers to `context/operating-config.md`'s keys
    (`leads_per_week`, `prospecting_sources`,
-   `apify_spend_cap_usd_per_week`, `tone`), to
+   `apify_spend_cap_usd_per_week`, `tone`, and `business_name`, the
+   business's name as the operator writes it), to
    `context/business-profile.md`'s "Voice" section (the adjectives plus
    the example sentence), and to
    `schedules.yaml` at the instance root (the folder holding

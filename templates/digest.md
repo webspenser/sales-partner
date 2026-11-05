@@ -1,6 +1,6 @@
 <!--
   Digest template — filled by send-digest.
-  Six sections, in this fixed order, every run. A section with nothing to
+  Five sections, in this fixed order, every run. A section with nothing to
   report still gets its heading and an explicit "None" — never a silently
   omitted heading. This is a report; it never advances a stage, edits a
   lead field, or logs talking points or research.
@@ -15,10 +15,6 @@
 ## Approved, not yet contacted ([count])
 
 - [company — segment · hero offer or "no offer" — researched N days ago — or "None"]
-
-## Next actions due today ([count])
-
-- [lead/company — Next Action — Next Action Due, or "None"]
 
 ## New leads scored ([count])
 

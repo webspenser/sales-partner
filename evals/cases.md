@@ -2044,6 +2044,33 @@ read the entry.
 
 ---
 
+## Case 54: The digest arrives as HTML with the plain text inside
+
+**Given** — A scheduled digest run. Review holds two leads; one is named
+`Bob's <Plumbing> & Heating` on its Google listing. One lead sits at
+`Approved`. A lead at `Scored` has a `Next Action Due` of yesterday.
+`business_name` is `Acme Services`.
+
+**Expect** — One `send-email` call with both `text` (the five-section
+plain-text digest) and `html` (rendered from `templates/digest.html`).
+The HTML title reads `Weekly Digest for Acme Services`; the company
+shows as `Bob&#39;s &lt;Plumbing&gt; &amp; Heating` in the source and
+reads normally in the inbox. Review and Approved, not yet contacted lead
+the email; neither version has a Next actions section, and the overdue
+lead is not mentioned.
+
+**Never** — An `html` send with no `text`; a company name inserted as
+raw markup; a link to anything but the lead's CRM record.
+
+**Why it matters** — The HTML is for reading at a glance, but the plain
+text is what any client can show and what a later skill can read back.
+Lead names come from the web.
+
+**How to run** — Seed the leads, run the digest, and read the
+`send-email` arguments.
+
+---
+
 ## Degradation check
 
 This is the only test in the repo of the portability claim the whole

@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="supported-color-schemes" content="light">
+<title>Weekly Digest for [business_name]</title>
+<!--
+  Sales Partner digest — HTML email template.
+
+  Email-safe: table layout, inline styles only, no external CSS, fonts or
+  images, 600px wide. Works in Gmail, Outlook, Apple Mail.
+
+  Filled by skills/send-digest/SKILL.md, step 8. [business_name] and
+  [date] are placeholders; every other value shown is a sample from that
+  skill's worked example and is replaced with this run's data. Open this
+  file in a browser to see the design.
+
+  When filling it:
+  - HTML-escape every value read from the CRM or the ledger (& < > " ')
+    before it goes into the page. Company names and reasons come from
+    the web and may contain markup.
+  - A lead's link is its CRM record URL and nothing else.
+  - With no business_name set, the title reads "Weekly Digest".
+  - Keep the plain-text digest (templates/digest.md) as the `body`; this
+    page is sent alongside it as `html`.
+
+  Two kinds of section:
+    ACTION  (white card under a solid colour header)
+            Review (orange) · Approved, not yet contacted (blue)
+    REPORT  (no card, grey heading, smaller text)
+            New leads scored · Movement · Spend
+
+  Repeating rows are marked <!-- repeat: ... --> / <!-- /repeat -->.
+  Empty section: keep the heading, replace the rows with the "None" row.
+-->
+</head>
+<body style="margin:0; padding:0; background-color:#f3f4f6;">
+
+<!-- Preheader: shows as the preview line in the inbox -->
+<div style="display:none; max-height:0; overflow:hidden; mso-hide:all;">
+  4 leads to review · 1 approved and waiting
+</div>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f3f4f6;">
+<tr><td align="center" style="padding:32px 16px;">
+
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:100%; max-width:600px; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color:#111827;">
+
+  <!-- ===== Header ===== -->
+  <tr><td style="padding:0 4px 24px 4px;">
+    <div style="font-size:13px; letter-spacing:0.08em; text-transform:uppercase; color:#6b7280;">Built by Sales Partner</div>
+    <div style="font-size:26px; font-weight:700; line-height:1.3; padding-top:4px;">Weekly Digest for [business_name]</div>
+    <div style="font-size:15px; color:#6b7280; padding-top:2px;">[date]</div>
+  </td></tr>
+
+  <!-- ===== At a glance: action counts ===== -->
+  <tr><td style="padding:0 0 32px 0;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+      <tr>
+        <td width="47%" align="center" style="background-color:#ea580c; padding:20px 8px; border-radius:8px;">
+          <div style="font-size:32px; font-weight:700; color:#ffffff;">4<!-- [review count] --></div>
+          <div style="font-size:13px; color:#ffedd5; padding-top:2px;">to review</div>
+        </td>
+        <td width="6%" style="width:24px; min-width:24px; font-size:0; line-height:0;">&nbsp;</td>
+        <td width="47%" align="center" style="background-color:#2563eb; padding:20px 8px; border-radius:8px;">
+          <div style="font-size:32px; font-weight:700; color:#ffffff;">1<!-- [approved count] --></div>
+          <div style="font-size:13px; color:#dbeafe; padding-top:2px;">approved, waiting</div>
+        </td>
+      </tr>
+    </table>
+  </td></tr>
+
+  <!-- =========================================================
+       ACTION 1 — Review
+       ========================================================= -->
+  <tr><td style="padding:0 0 24px 0;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#ffffff; border-radius:8px;">
+      <tr><td style="background-color:#ea580c; padding:16px 24px; border-radius:8px 8px 0 0;">
+        <div style="font-size:11px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:#ffedd5;">Needs your approval</div>
+        <div style="font-size:19px; font-weight:700; color:#ffffff; padding-top:4px;">Review (4)</div>
+      </td></tr>
+      <tr><td style="padding:16px 24px 8px 24px; font-size:14px; color:#6b7280; line-height:1.5;">
+        Researched and waiting for you to approve. Highest Approach score first.
+      </td></tr>
+
+      <!-- Do Not Contact leads go first, using this row (red):
+      <tr><td style="padding:8px 24px;">
+        <div style="background-color:#fef2f2; padding:14px 16px; border-radius:6px;">
+          <div style="font-size:12px; font-weight:700; color:#b91c1c;">&#9888; DO NOT SEND — lead is Do Not Contact</div>
+          <div style="font-size:16px; font-weight:600; padding-top:4px;">[Company]</div>
+          <div style="font-size:14px; color:#4b5563; padding-top:2px;">[segment] · [hero offer]</div>
+        </div>
+      </td></tr>
+      -->
+
+      <!-- repeat: review lead -->
+      <!-- href = the lead's CRM record URL -->
+      <tr><td style="padding:12px 24px; border-top:1px solid #f3f4f6;">
+        <a href="#" style="font-size:16px; font-weight:600; color:#111827; text-decoration:none;">Harrow Analytics &rsaquo;</a>
+        <div style="font-size:14px; color:#4b5563; padding-top:4px; line-height:1.5;">saas-vendors · onboarding-audit · <span style="color:#15803d; font-weight:600;">strong</span></div>
+      </td></tr>
+      <!-- /repeat -->
+
+      <tr><td style="padding:12px 24px; border-top:1px solid #f3f4f6;">
+        <a href="#" style="font-size:16px; font-weight:600; color:#111827; text-decoration:none;">Quill Systems &rsaquo;</a>
+        <div style="font-size:14px; color:#4b5563; padding-top:4px; line-height:1.5;">saas-vendors · onboarding-audit · moderate <span style="color:#6b7280;">· research capped</span></div>
+      </td></tr>
+
+      <tr><td style="padding:12px 24px; border-top:1px solid #f3f4f6;">
+        <a href="#" style="font-size:16px; font-weight:600; color:#111827; text-decoration:none;">Thornfield Media &rsaquo;</a>
+        <div style="font-size:14px; color:#4b5563; padding-top:4px; line-height:1.5;">local-media · ad-teardown · <span style="color:#b45309;">weak (segment fit only)</span></div>
+      </td></tr>
+
+      <!-- No-offer lead: amber warning -->
+      <tr><td style="padding:12px 24px 24px 24px; border-top:1px solid #f3f4f6;">
+        <a href="#" style="font-size:16px; font-weight:600; color:#111827; text-decoration:none;"><span style="color:#d97706;">&#9888;</span> Larkspur Dental &rsaquo;</a>
+        <div style="font-size:14px; color:#4b5563; padding-top:4px; line-height:1.5;">dental-clinics · <span style="color:#b45309;">no offer · no evidence</span></div>
+      </td></tr>
+
+      <!-- Possible duplicates, only when there are any, after the leads:
+      <tr><td style="padding:0 24px 24px 24px; font-size:13px; color:#6b7280;">Possible duplicate leads (among leads in this digest): [Company A] and [Company B]</td></tr>
+      -->
+
+      <!-- Empty: replace the rows above with
+      <tr><td style="padding:4px 24px 24px 24px; font-size:15px; color:#6b7280;">Nothing to review.</td></tr>
+      -->
+    </table>
+  </td></tr>
+
+  <!-- =========================================================
+       ACTION 2 — Approved, not yet contacted (waiting on hand-off)
+       ========================================================= -->
+  <tr><td style="padding:0 0 40px 0;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#ffffff; border-radius:8px;">
+      <tr><td style="background-color:#2563eb; padding:16px 24px; border-radius:8px 8px 0 0;">
+        <div style="font-size:11px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:#dbeafe;">Approved, still waiting</div>
+        <div style="font-size:19px; font-weight:700; color:#ffffff; padding-top:4px;">Not yet contacted (1)</div>
+      </td></tr>
+      <tr><td style="padding:16px 24px 8px 24px; font-size:14px; color:#6b7280; line-height:1.5;">
+        You approved these and they have not moved since.
+      </td></tr>
+
+      <!-- Do Not Contact leads go first here too, with the red row from Review -->
+
+      <!-- repeat: approved lead -->
+      <tr><td style="padding:12px 24px 24px 24px; border-top:1px solid #f3f4f6;">
+        <div style="font-size:16px; font-weight:600;">Corvid Analytics</div>
+        <div style="font-size:14px; color:#4b5563; padding-top:4px; line-height:1.5;">saas-vendors · onboarding-audit</div>
+        <div style="font-size:13px; color:#6b7280; padding-top:4px;">Researched 1 day ago</div>
+      </td></tr>
+      <!-- /repeat -->
+    </table>
+  </td></tr>
+
+  <!-- ===== Divider into the reporting half ===== -->
+  <tr><td style="padding:0 4px 24px 4px;">
+    <div style="font-size:12px; letter-spacing:0.08em; text-transform:uppercase; color:#9ca3af; border-bottom:1px solid #e5e7eb; padding-bottom:8px;">For your information</div>
+  </td></tr>
+
+  <!-- ===== Owner's pipeline snapshot (now, no window) ===== -->
+  <tr><td style="padding:0 4px 32px 4px;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#ffffff; border-radius:8px;">
+      <tr>
+        <td align="center" style="padding:14px 4px;"><div style="font-size:18px; font-weight:700;">4</div><div style="font-size:12px; color:#6b7280;">Contacted</div></td>
+        <td align="center" style="padding:14px 4px;"><div style="font-size:18px; font-weight:700;">1</div><div style="font-size:12px; color:#6b7280;">Engaged</div></td>
+        <td align="center" style="padding:14px 4px;"><div style="font-size:18px; font-weight:700;">1</div><div style="font-size:12px; color:#6b7280;">Open Deal</div></td>
+        <td align="center" style="padding:14px 4px;"><div style="font-size:18px; font-weight:700;">2</div><div style="font-size:12px; color:#6b7280;">Nurture</div></td>
+        <td align="center" style="padding:14px 4px;"><div style="font-size:18px; font-weight:700;">0</div><div style="font-size:12px; color:#6b7280;">Customer</div></td>
+      </tr>
+    </table>
+  </td></tr>
+
+  <!-- =========================================================
+       REPORT 1 — New leads scored
+       ========================================================= -->
+  <tr><td style="padding:0 4px 32px 4px;">
+    <div style="font-size:16px; font-weight:700; color:#374151;">New leads scored <span style="color:#9ca3af; font-weight:400;">(top 5 since last digest)</span></div>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="padding-top:8px;">
+      <!-- repeat: scored lead. Score pill shows Approach when there is one, else Fit -->
+      <tr>
+        <td valign="top" width="64" style="padding:12px 0;">
+          <span style="display:inline-block; min-width:40px; text-align:center; background-color:#e5e7eb; color:#111827; font-size:13px; font-weight:700; padding:4px 6px; border-radius:4px;">80</span>
+        </td>
+        <td valign="top" style="padding:12px 0;">
+          <div style="font-size:15px; font-weight:600; color:#111827;">Harrow Analytics</div>
+          <div style="font-size:13px; color:#6b7280; padding-top:2px;">Approach 80 · Fit 70</div>
+          <div style="font-size:14px; color:#4b5563; padding-top:4px; line-height:1.5;">Buying trigger: posted six ops-eng roles in two weeks after a Series B</div>
+        </td>
+      </tr>
+      <!-- /repeat -->
+      <tr>
+        <td valign="top" width="64" style="padding:12px 0; border-top:1px solid #e5e7eb;">
+          <span style="display:inline-block; min-width:40px; text-align:center; background-color:#e5e7eb; color:#111827; font-size:13px; font-weight:700; padding:4px 6px; border-radius:4px;">75</span>
+        </td>
+        <td valign="top" style="padding:12px 0; border-top:1px solid #e5e7eb;">
+          <div style="font-size:15px; font-weight:600; color:#111827;">Quill Systems</div>
+          <div style="font-size:13px; color:#6b7280; padding-top:2px;">Approach 75 · Fit 72.5</div>
+          <div style="font-size:14px; color:#4b5563; padding-top:4px; line-height:1.5;">Decision-maker reachable: COO identified with a verified LinkedIn profile</div>
+        </td>
+      </tr>
+      <tr>
+        <td valign="top" width="64" style="padding:12px 0; border-top:1px solid #e5e7eb;">
+          <span style="display:inline-block; min-width:40px; text-align:center; background-color:#f3f4f6; color:#6b7280; font-size:13px; font-weight:700; padding:4px 6px; border-radius:4px;">90</span>
+        </td>
+        <td valign="top" style="padding:12px 0; border-top:1px solid #e5e7eb;">
+          <div style="font-size:15px; font-weight:600; color:#111827;">Northwind Logistics</div>
+          <div style="font-size:13px; color:#6b7280; padding-top:2px;">Fit 90 · not researched yet</div>
+          <div style="font-size:14px; color:#4b5563; padding-top:4px; line-height:1.5;">On target list: mid-market logistics SaaS</div>
+        </td>
+      </tr>
+    </table>
+  </td></tr>
+
+  <!-- =========================================================
+       REPORT 2 — Movement
+       ========================================================= -->
+  <tr><td style="padding:0 4px 32px 4px;">
+    <div style="font-size:16px; font-weight:700; color:#374151;">Movement <span style="color:#9ca3af; font-weight:400;">(3)</span></div>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="padding-top:8px; font-size:14px; color:#4b5563;">
+      <!-- repeat: moved lead -->
+      <tr><td style="padding:8px 0;"><strong style="color:#111827;">Harrow Analytics</strong> &rarr; Researched <span style="color:#9ca3af;">· 30 Aug</span></td></tr>
+      <!-- /repeat -->
+      <!-- With no disqualified lead in the window, add:
+      <tr><td style="padding:8px 0;">Disqualified: None this week</td></tr>
+      -->
+      <tr><td style="padding:8px 0;"><strong style="color:#111827;">Quill Systems</strong> &rarr; Researched <span style="color:#9ca3af;">· 29 Aug</span></td></tr>
+      <tr><td style="padding:8px 0;"><strong style="color:#111827;">Ashgrove Systems</strong> &rarr; Disqualified <span style="color:#9ca3af;">· 27 Aug · company size under floor</span></td></tr>
+    </table>
+
+  </td></tr>
+
+  <!-- =========================================================
+       REPORT 3 — Spend
+       ========================================================= -->
+  <tr><td style="padding:0 4px 40px 4px;">
+    <div style="font-size:16px; font-weight:700; color:#374151;">Spend</div>
+    <div style="font-size:14px; color:#4b5563; padding-top:8px;">$18.40 of $25.00 weekly Apify cap <span style="color:#9ca3af;">· 74%</span></div>
+    <!-- Bar: set the first cell's width to the percentage. Over 90%: use #dc2626 -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:8px;">
+      <tr>
+        <td width="74%" style="background-color:#6b7280; height:8px; font-size:0; line-height:0; border-radius:4px 0 0 4px;">&nbsp;</td>
+        <td style="background-color:#e5e7eb; height:8px; font-size:0; line-height:0; border-radius:0 4px 4px 0;">&nbsp;</td>
+      </tr>
+    </table>
+    <div style="font-size:13px; color:#6b7280; padding-top:8px; line-height:1.6;">
+      $6.60 left this week · per-lead cap $0.50<br>
+      <!-- only when the week had Exa searches -->
+      Exa web search: $0.42 (14 searches, 0 failed)
+    </div>
+  </td></tr>
+
+  <!-- ===== Footer ===== -->
+  <tr><td style="padding:0 4px; font-size:12px; color:#9ca3af; line-height:1.6; border-top:1px solid #e5e7eb; padding-top:16px;">
+    Built by Sales Partner for [business_name]. It reports only: nothing in this email changed your CRM.
+  </td></tr>
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>

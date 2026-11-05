@@ -12,6 +12,8 @@ means the connected Resend server's tools, whatever their prefix.
   `idempotencyKey` built from the run and the kind, so a retry never
   sends twice. Never pass `cc`, `bcc`, `replyTo`, `headers`,
   `scheduledAt`, `attachments` or `topicId`: the guard refuses them.
+  When `notify_owner` is given `html`, also pass the rendered HTML in `html`,
+  next to `text`; Resend sends both as one message.
   Return the email id from the response.
 
 The tool's description tells the model to ask the user for `from`, `cc`,

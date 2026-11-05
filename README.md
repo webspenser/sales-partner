@@ -129,7 +129,7 @@ in that folder loads the agent. Plugin updates never touch your folder.
 
 Built on [Agent Standard](https://github.com/webspenser/agent-builder/blob/main/STANDARD.md) 7.4
 with [Agent Builder](https://github.com/webspenser/agent-builder).
-Version 8.4.0.
+Version 8.5.0.
 
 ## Use it from source
 
@@ -326,6 +326,13 @@ pipeline list. In order:
 2. Point your email workflow (for example n8n) at `point_of_contact`:
    in Attio it links to the Person, whose name and email you read.
 3. Existing leads are not backfilled. Set theirs by hand.
+
+Upgrading from 8.4: the digest now arrives as a formatted email, with
+the plain text still inside it, and no longer has a Next actions
+section. Add `business_name: "<your business>"` to
+`context/operating-config.md` so the title reads
+`Weekly Digest for <your business>`. Nothing else changes: Resend sends
+the HTML through the same pinned sender and recipients.
 
 ## Developing
 

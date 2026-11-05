@@ -319,7 +319,7 @@ checked marker, all written through `upsert_contact`: `linkedin_url`,
   both are given together. Omitting `stage` while also omitting both
   filters is rejected rather than silently returning every lead in the
   CRM; at least one of the three must be present. This is what lets
-  `send-digest` ask "which leads are due today" or "which leads have
+  a skill ask "which leads are due today" or "which leads have
   gone stale" without a table scan across all ten statuses one at a
   time, and it is why the operation grew these filters rather than the
   digest reconstructing them from `query_by_stage`'s original one-stage

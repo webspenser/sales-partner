@@ -67,6 +67,7 @@ OK='"from":"no-reply@notify.acme.com","subject":"[sales-partner] digest: x","tex
 check 0 "owner send passes"           $NP ${R}send-email "{\"to\":[\"owner@acme.com\"],$OK}" "" "$W/notify.md"
 check 0 "both owners pass"            $NP ${R}send-email "{\"to\":[\"owner@acme.com\",\"OPS@acme.com\"],$OK}" "" "$W/notify.md"
 check 0 "owner cc passes"             $NP ${R}send-email "{\"to\":[\"owner@acme.com\"],\"cc\":[\"ops@acme.com\"],$OK}" "" "$W/notify.md"
+check 0 "html body passes"            $NP ${R}send-email "{\"to\":[\"owner@acme.com\"],$OK,\"html\":\"<p>y</p>\"}" "" "$W/notify.md"
 check 2 "prospect send blocked"       $NP ${R}send-email "{\"to\":[\"lead@prospect.com\"],$OK}" "is not a pinned value" "$W/notify.md"
 check 2 "owner plus prospect blocked" $NP ${R}send-email "{\"to\":[\"owner@acme.com\",\"lead@prospect.com\"],$OK}" "is not a pinned value" "$W/notify.md"
 check 2 "extra cc blocked"            $NP ${R}send-email "{\"to\":[\"owner@acme.com\"],\"cc\":[\"lead@prospect.com\"],$OK}" "is not a pinned value" "$W/notify.md"

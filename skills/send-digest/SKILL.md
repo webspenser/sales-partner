@@ -4,15 +4,15 @@ description: Use when the digest's scheduled run fires (`schedule_digest` in the
 ---
 
 This skill produces a report, not a pipeline action. It reads the CRM
-and Apify usage, renders six fixed sections in a fixed order, and
+and Apify usage, renders five fixed sections in a fixed order, and
 sends the result to the owner with `notify_owner`. It never advances a stage, edits
 a lead field, logs talking points, or logs research — see **This skill
 reads the CRM; it never writes to it** below.
 
 ## The "since last digest" anchor
 
-Two of the six sections — **New leads scored** and **Movement** — are
-windowed on "since last digest." The other four are point-in-time
+Two of the five sections — **New leads scored** and **Movement** — are
+windowed on "since last digest." The other three are point-in-time
 snapshots evaluated fresh against *now* and carry no window at all (see
 each section below). Getting the window wrong is the single most
 likely way this skill produces a wrong digest, so the anchor is defined
@@ -122,28 +122,25 @@ stage moves, no field edits, no talking-points or research section, not even a
 - CRM **`get_lead`**, once for each lead those two calls return (its
   Segment, Hero Offer, Offer Evidence, Research Capped and Do Not
   Contact).
-- CRM **`query_by_stage`** with its `next_action_due_before` filter
-  (`stage` omitted, so leads across every stage are considered) —
-  Section 3, Next actions due today.
 - CRM **`query_by_score`** (`score: fit`, `min_score: 0`), called once
   per stage a scored lead can currently occupy, results filtered
   client-side to the `(anchor, nominal_time]` window on Created Time —
-  Section 4, New leads scored. Every scored lead has a Fit score, so
+  Section 3, New leads scored. Every scored lead has a Fit score, so
   this finds them all; each one's Approach score, when it has one, is
   on the same record.
 - CRM **`query_by_stage`**, called once per stage after `New`, results
   filtered client-side to the `(anchor, nominal_time]` window on
-  `Stage Changed At` — Section 5, Movement.
-- Ledger **`find_events`** — Section 6. This is the one section with no
+  `Stage Changed At` — Section 4, Movement.
+- Ledger **`find_events`** — Section 5. This is the one section with no
   CRM read at all; Apify spend is not CRM data and never was.
 
 Every one of the above is a call through `capabilities/crm/contract.md`'s ten
-provider-neutral operations — none of the six sections reads a
+provider-neutral operations — none of the five sections reads a
 CRM view directly. Any named views a CRM tool offers (Review, Approved, Research Queue, Due Today, Nurture) are
 a convenience for the operator looking at the CRM by hand, and are
 defined to compute exactly what the operations above return, but this
 skill does not depend on them: swap the tool for a different CRM
-behind the same contract, and every one of these six sections still
+behind the same contract, and every one of these five sections still
 works, because none of them named a tool-specific view as its read
 path.
 
@@ -152,7 +149,7 @@ a required input is missing, call `notify_owner(kind: error)` with what
 is missing, then stop and report it.
 
 ## Ledger
-One `step` for the send: `subject` `digest`, `items_in` the six
+One `step` for the send: `subject` `digest`, `items_in` the five
 sections, `items_out` 1 when `notify_owner` succeeded. These ledger
 writes are the digest's only writes besides delivery; it still never
 writes to the CRM.
@@ -190,7 +187,7 @@ First, call `ledger_status`, then write `run_started`
      true `⚠ DO NOT SEND — lead is Do Not Contact` and list those first.
      Report only: the digest writes nothing to the CRM.
    - **Possible duplicate leads.** Across the leads this run already
-     reads (Sections 1 to 5), list leads that share a normalized
+     reads (Sections 1 to 4), list leads that share a normalized
      `domain`, or an E.164 `phone` where the CRM tool stores one
      (normalized as in `capabilities/crm/contract.md`), one line per
      group, as `Possible
@@ -211,15 +208,7 @@ First, call `ledger_status`, then write `run_started`
    `⚠ DO NOT SEND — lead is Do Not Contact` and list those first: the
    operator may have opted it out after approving it. Heading with the
    count, e.g. `Approved, not yet contacted (2)`.
-4. **Section 3 — Next actions due today.** Call CRM
-   `query_by_stage(next_action_due_before: today, stage: omitted)` —
-   omitting `stage` so leads at every stage are considered, not one
-   at a time. List each returned lead's `Next Action` and `Next Action
-   Due`. No window applied — overdue items stay listed every run until
-   acted on; that is the point of a due-date filter, not a bug. Render
-   the section heading with the count of leads returned, e.g. `Next
-   actions due today (2)`.
-5. **Section 4 — New leads scored.** Select by *when the lead was
+4. **Section 3 — New leads scored.** Select by *when the lead was
    created*, not by its current stage — a lead scored at prospecting
    and then advanced to `Researched` (or further) within this same
    window is still a new lead since last digest, and is exactly the
@@ -265,12 +254,12 @@ First, call `ledger_status`, then write `run_started`
    gained since. If that same lead gained its Approach score as part of
    a stage change (the Preparer's score alongside `Scored →
    Researched`), that transition is reported once, under
-   Movement (Section 5) — not as a second appearance here. Section 4
-   answers "which leads are new since last digest"; Section 5 answers
+   Movement (Section 4) — not as a second appearance here. Section 3
+   answers "which leads are new since last digest"; Section 4 answers
    "what changed since last digest." A lead that answers both
    questions still gets exactly one line in each, never two lines in
    either.
-6. **Section 5 — Movement.** Call `query_by_stage` once for each stage
+5. **Section 4 — Movement.** Call `query_by_stage` once for each stage
    after `New`. The ten stages are `New, Scored, Researched, Approved,
    Contacted, Engaged, Open Deal, Nurture, Customer, Disqualified`;
    `New` carries only the creation stamp, which is not a move. The agent
@@ -296,7 +285,7 @@ First, call `ledger_status`, then write `run_started`
    score or `Next Action` was edited without its status moving does
    not appear here. Heading with the count of leads that actually
    moved.
-7. **Section 6 — Spend.** Read the week's Apify cost from the ledger:
+6. **Section 5 — Spend.** Read the week's Apify cost from the ledger:
    the sum of `cost_usd` over this cap week's `step` events for `prospect`
    and `prepare` (`find_events`), leaving out every step whose `detail` starts with `search_web` — the same weekly boundary the anchor
    uses, so spend and digest windows line up. Compare it to
@@ -308,12 +297,29 @@ First, call `ledger_status`, then write `run_started`
    `search_web` steps, add one line, `Exa web search: $<sum of their
    cost_usd> (<count> searches, <failed> failed)`; with none, leave the
    line out. This section does not touch the CRM.
-8. Render all six sections, in the fixed order above, every run — a
+7. Render all five sections, in the fixed order above, every run — a
    section with nothing to report still gets its heading and an
    explicit "None" (or equivalent), never a silently omitted heading.
-   This is the shape `templates/digest.md` defines.
-9. Deliver the rendered digest with `notify_owner(kind: digest)`: the
-   subject is `Digest <date>`, the body is the rendered digest. The
+   This is the shape `templates/digest.md` defines, and it is the
+   plain-text body.
+8. **Render the HTML version.** The skill renders the same five sections into `templates/digest.html`,
+   with the same data, order and marks as the plain text: Review and
+   Approved, not yet contacted in the two coloured cards, then the
+   owner's pipeline counts, New leads scored, Movement and Spend under
+   "For your information". Follow the comments in that file: repeat the
+   marked rows once per lead, use the commented variants for Do Not
+   Contact, no-offer and empty sections, and set the spend bar's width to
+   the percentage. The title reads `Weekly Digest for <business_name>`,
+   with `business_name` from `context/operating-config.md`; while that
+   key is empty or still a bracketed prompt, it reads `Weekly Digest`.
+   Before inserting them, escape every value read from the CRM or the ledger
+   (`&`, `<`, `>`, `"`, `'`): company names and reasons come from the
+   web. A lead's link is its CRM record URL and nothing else. The HTML
+   adds nothing the plain text does not say.
+9. Deliver the digest with `notify_owner(kind: digest)` with both bodies: the
+   subject is `Digest <date>`, the body is the plain-text digest and
+   `html` is the page from step 8. If step 8 fails, send the plain text
+   alone rather than no digest. The
    recipient is the owner pinned at setup; this skill never chooses
    one. Delivery is the skill's only side effect besides its ledger writes.
    Record the `step`, write `run_finished`, then stop: no CRM write of
@@ -352,10 +358,6 @@ matches the wall clock exactly this week. Anchor: Monday, 2026-08-24,
 
 ## Approved, not yet contacted (1)
 - Corvid Analytics — saas-vendors · onboarding-audit — researched 1 day ago
-
-## Next actions due today (2)
-- Fennimore Health — Send onboarding proposal — due 2026-08-28 (3 days overdue)
-- Corvid Analytics — Call the COO about the onboarding audit — due 2026-08-31
 
 ## New leads scored (5, top 5 since last digest)
 1. Harrow Analytics — Approach 80 · Fit 70 — buying trigger: posted six ops-eng roles in two weeks after a Series B

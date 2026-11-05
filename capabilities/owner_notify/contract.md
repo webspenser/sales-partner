@@ -9,14 +9,18 @@ tools.
 
 | Operation | Arguments | Returns | On failure |
 |---|---|---|---|
-| `notify_owner` | `kind` (`alert`, `error`, `summary`, `digest`), `subject`, `body`, `payload` (optional) | the provider's message id | the provider rejects the send, or no recipient is bound |
+| `notify_owner` | `kind` (`alert`, `error`, `summary`, `digest`), `subject`, `body`, `payload` (optional), `html` (optional) | the provider's message id | the provider rejects the send, or no recipient is bound |
 
 The recipient is never an argument: it is every `recipient_email` line in
 `bindings/owner_notify.md`, and the sender is its `sender_email` line,
 both written at setup with the owner confirming them. The subject starts
 with `[sales-partner] <kind>:`. The body is plain text. `payload`, when
 given, is appended to the body as a fenced block, so a person or a later
-skill can read it back unchanged.
+skill can read it back unchanged. `html`, when given, is an HTML version
+of the same message (the digest sends one, rendered from
+`templates/digest.html`); the plain-text `body` is always sent with it,
+so a mail client that shows only text, and anyone reading the message
+back, still gets the whole message.
 
 ## Invariants
 

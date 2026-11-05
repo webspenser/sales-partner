@@ -28,9 +28,15 @@ apify_spend_cap_usd_per_week: 25
 apify_cap_usd_per_lead: 0.50
 research_budget_per_lead_minutes: 15
 tone: "[three adjectives from the interview]"
+business_name: "[the business's name, from the interview]"
 ```
 
 ## What each key gates
+
+- **`business_name`** — the name in the digest email's title and
+  footer (`Weekly Digest for <business_name>`). It gates nothing; while
+  it is empty or still this bracketed prompt, the title reads
+  `Weekly Digest`.
 
 - **`leads_per_week`** — the Prospector's target count of new `Scored`
   leads per run; see `subagents/prospector.md`'s `Stop conditions`.

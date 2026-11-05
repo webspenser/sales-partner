@@ -365,10 +365,10 @@ for f in "$D" "$T"; do
   assert_not_contains "$f" 'InvokeIQ'
   assert_not_contains "$f" 'enroll'
 done
-assert_contains "$D" 'six fixed sections'
-assert_contains "$D" '**Section 6 — Spend.**'
+assert_contains "$D" 'five fixed sections'
+assert_contains "$D" '**Section 5 — Spend.**'
 assert_contains "$D" 'waiting for the owner'"'"'s hand-off'
-assert_contains "$T" 'Six sections'
+assert_contains "$T" 'Five sections'
 assert_contains "$D" 'not time since approval'
 assert_contains "$D" "Owner's pipeline now"
 assert_contains "$T" "Owner's pipeline now"
@@ -530,7 +530,7 @@ assert_contains "$SP/README.md" 'messages only you, through Resend'
 assert_contains "$SP/evals/cases.md" 'A notification never reaches anyone but the owner'
 
 echo "-- 7.0.0: release"
-assert_contains "$SP/agent.yaml" 'version: 8.4.0'
+assert_contains "$SP/agent.yaml" 'version: 8.5.0'
 for m in agent.yaml .claude-plugin/plugin.json .claude-plugin/marketplace.json .codex-plugin/plugin.json gemini-extension.json; do
   grep -qF "$EXPECTED_DESC" "./$m" && _report ok "$m: description is the 8.0.0 string" || _report no "$m: description is not the 8.0.0 string"
 done
@@ -794,10 +794,10 @@ done < <(find AGENT.md README.md subagents skills templates context capabilities
 rm -f "$README_NO_UPGRADE"
 
 echo "-- 8.0.0: release: version, README flow and the upgrade note"
-assert_contains "$SP/agent.yaml" 'version: 8.4.0'
-assert_contains "$SP/README.md" 'Version 8.4.0.'
+assert_contains "$SP/agent.yaml" 'version: 8.5.0'
+assert_contains "$SP/README.md" 'Version 8.5.0.'
 for m in .claude-plugin/plugin.json .codex-plugin/plugin.json gemini-extension.json; do
-  assert_contains "./$m" '"version": "8.4.0"'
+  assert_contains "./$m" '"version": "8.5.0"'
 done
 assert_contains "$SP/README.md" 'Upgrading from 7.4'
 for t in 'Approved' 'Research Anyway' 'Talking Points' 'offer catalog' 'Hero Offer' 'schedule_approach'; do
@@ -1613,5 +1613,35 @@ echo "-- 8.4.0 final review: an operator-named pick stays the operator's"
 flat_has "$SP/skills/pick-point-of-contact/SKILL.md" 'leaves `point_of_contact_pick` empty'
 flat_has "$SP/capabilities/crm/contract.md" 'except when the operator names the person'
 assert_contains "$SP/evals/cases.md" "## Case 53: An operator-named point of contact survives a later research"
+
+echo "-- 8.5.0: HTML digest"
+SD="$SP/skills/send-digest/SKILL.md"
+DT="$SP/templates/digest.md"
+DH="$SP/templates/digest.html"
+[ -f "$DH" ] && _report ok "templates/digest.html exists" || _report no "templates/digest.html missing"
+assert_not_contains "$SD" 'Next actions due today'
+assert_not_contains "$DT" 'Next actions due today'
+assert_not_contains "$SD" 'next_action_due_before'
+assert_not_contains "$SD" 'six sections'
+assert_contains "$SD" '**Section 4 — Movement.**'
+flat_has "$SD" 'renders the same five sections into `templates/digest.html`'
+flat_has "$SD" 'escape every value read from the CRM'
+flat_has "$SD" 'notify_owner(kind: digest)` with both bodies'
+flat_has "$SD" '`business_name` from `context/operating-config.md`'
+assert_contains "$DH" 'Needs your approval'
+assert_contains "$DH" 'For your information'
+assert_contains "$DH" 'Built by Sales Partner'
+assert_contains "$DH" '[business_name]'
+assert_contains "$DH" '<!-- repeat: review lead -->'
+assert_not_contains "$DH" 'border-left'
+assert_not_contains "$DH" 'Next actions'
+flat_has "$SP/capabilities/owner_notify/contract.md" '`html` (optional)'
+flat_has "$SP/capabilities/owner_notify/contract.md" 'the plain-text `body` is always sent'
+flat_has "$SP/capabilities/owner_notify/tools/resend/usage.md" 'the rendered HTML in `html`'
+assert_contains "$SP/context/operating-config.md" 'business_name:'
+flat_has "$SP/context/operating-config.md" '**`business_name`**'
+flat_has "$SP/skills/interview-business/SKILL.md" '`business_name`'
+flat_has "$SP/README.md" 'Upgrading from 8.4'
+assert_contains "$SP/evals/cases.md" "## Case 54: The digest arrives as HTML with the plain text inside"
 
 finish

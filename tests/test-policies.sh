@@ -161,7 +161,7 @@ check 2 "another actor"            $AG2 ${P}apify-slash-instagram-scraper '{}' "
 
 # 8.1 evidence actors, under the server name the restricted connector shows.
 P2=mcp__claude_ai_Apify_Actors__
-REV=compass--Google-Maps-Reviews-Scraper; GADS=scrapesage--google-ads-transparency-scraper
+REV=web_wanderer--google-reviews-scraper; GADS=scrapesage--google-ads-transparency-scraper
 FB=apify--facebook-ads-scraper; JOBS=valig--indeed-jobs-scraper; SITE=apify--website-content-crawler
 jset() { python3 -c 'import json,sys;d=json.loads(sys.argv[1]);d[sys.argv[2]]=json.loads(sys.argv[3]);print(json.dumps(d))' "$@"; }
 jdel() { python3 -c 'import json,sys;d=json.loads(sys.argv[1]);del d[sys.argv[2]];print(json.dumps(d))' "$@"; }
@@ -203,20 +203,23 @@ check 0 "maps on the Apify_Actors server passes" $AG2 ${P2}$MAPS "$MAPS_OK" "" "
 check 2 "Apify_Actors call-actor denied" $AG2 ${P2}call-actor '{}' "is denied" "$W/scraping.md"
 check 2 "reviews tool on another server not allowed" $AG2 mcp__claude_ai_Gmail__$REV '{}' "is not in the allow list" "$W/scraping.md"
 
-REV_OK='{"placeIds":["ChIJkyhXi8iHj4ARLP5o2YRo-iY"],"maxReviews":50,"reviewsSort":"newest","personalData":false,"language":"en","waitSecs":45}'
-check 0 "reviews in limit with personalData false" $AG2 ${P2}$REV "$REV_OK" "" "$W/scraping.md"
-check 0 "reviews tool name matches in any case"    $AG2 ${P2}compass--google-maps-reviews-scraper "$REV_OK" "" "$W/scraping.md"
-check 0 "reviews with date, keyword and origin"    $AG2 ${P2}$REV '{"placeIds":["ChIJkyhXi8iHj4ARLP5o2YRo-iY"],"maxReviews":50,"reviewsSort":"newest","reviewsStartDate":"2025-10-18","reviewsFilterString":"voicemail","reviewsOrigin":"google","personalData":false,"language":"en","waitSecs":45}' "" "$W/scraping.md"
-pins    reviews $REV "$REV_OK" 'maxReviews:max_reviews:10000000'
-lists   reviews $REV "$REV_OK" 'placeIds:max_review_places:["ChIJaaaaaaaaaaaaaaaaaaaaaaa","ChIJbbbbbbbbbbbbbbbbbbbbbbb"]'
-check 2 "reviews respelled key"    $AG2 ${P2}$REV "$(jset "$REV_OK" PlaceIds '["ChIJx"]')" "may not use PlaceIds" "$W/scraping.md"
-refused reviews $REV "$REV_OK" startUrls
-check 2 "reviews startUrls list"   $AG2 ${P2}$REV "$(jset "$REV_OK" startUrls '[{"url":"https://maps.google.com/?cid=1"}]')" "may not use startUrls" "$W/scraping.md"
+REV_OK='{"place_ids":["ChIJkyhXi8iHj4ARLP5o2YRo-iY"],"limit":50,"order":"newest","include_personal":false,"lang":"en","waitSecs":45}'
+check 0 "reviews in limit with include_personal false" $AG2 ${P2}$REV "$REV_OK" "" "$W/scraping.md"
+check 0 "reviews tool name matches in any case"    $AG2 ${P2}web_wanderer--Google-Reviews-Scraper "$REV_OK" "" "$W/scraping.md"
+check 0 "reviews with date, keyword and source"    $AG2 ${P2}$REV '{"place_ids":["ChIJkyhXi8iHj4ARLP5o2YRo-iY"],"limit":50,"order":"newest","anyDate":"2025-10-18","searchKeyword":"voicemail","source":"google","include_personal":false,"lang":"en","waitSecs":45}' "" "$W/scraping.md"
+check 0 "reviews on the Apify_Connector server"    $AG2 mcp__claude_ai_Apify_Connector__$REV "$REV_OK" "" "$W/scraping.md"
+check 2 "old Compass reviews tool not allowed"     $AG2 ${P2}compass--Google-Maps-Reviews-Scraper '{"placeIds":["ChIJkyhXi8iHj4ARLP5o2YRo-iY"],"maxReviews":50,"personalData":false}' "is not in the allow list" "$W/scraping.md"
+pins    reviews $REV "$REV_OK" 'limit:max_reviews:200'
+lists   reviews $REV "$REV_OK" 'place_ids:max_review_places:["ChIJaaaaaaaaaaaaaaaaaaaaaaa","ChIJbbbbbbbbbbbbbbbbbbbbbbb"]'
+check 2 "reviews respelled key"    $AG2 ${P2}$REV "$(jset "$REV_OK" placeIds '["ChIJx"]')" "may not use placeIds" "$W/scraping.md"
+refused reviews $REV "$REV_OK" place_urls search search_location search_limit search_coordination sort_dataset sort_keys
+check 2 "reviews place_urls list"  $AG2 ${P2}$REV "$(jset "$REV_OK" place_urls '["https://maps.google.com/?cid=1"]')" "may not use place_urls" "$W/scraping.md"
+check 2 "reviews keyword search"   $AG2 ${P2}$REV "$(jset "$REV_OK" search '["plumbers"]')" "may not use search" "$W/scraping.md"
 check 2 "reviews without bindings" $AG2 ${P2}$REV "$REV_OK" "no max_reviews line"
-check 2 "reviews personalData true"     $AG2 ${P2}$REV "$(jset "$REV_OK" personalData true)" "must send personalData = false (got true)" "$W/scraping.md"
-check 2 "reviews personalData omitted"  $AG2 ${P2}$REV "$(jdel "$REV_OK" personalData)" "names no personalData" "$W/scraping.md"
-check 2 "reviews personalData as a string" $AG2 ${P2}$REV "$(jset "$REV_OK" personalData '"false"')" "must send personalData = false" "$W/scraping.md"
-check 2 "reviews personalData null"     $AG2 ${P2}$REV "$(jset "$REV_OK" personalData null)" "must send personalData = false (got null)" "$W/scraping.md"
+check 2 "reviews include_personal true"     $AG2 ${P2}$REV "$(jset "$REV_OK" include_personal true)" "must send include_personal = false (got true)" "$W/scraping.md"
+check 2 "reviews include_personal omitted"  $AG2 ${P2}$REV "$(jdel "$REV_OK" include_personal)" "names no include_personal" "$W/scraping.md"
+check 2 "reviews include_personal as a string" $AG2 ${P2}$REV "$(jset "$REV_OK" include_personal '"false"')" "must send include_personal = false" "$W/scraping.md"
+check 2 "reviews include_personal null"     $AG2 ${P2}$REV "$(jset "$REV_OK" include_personal null)" "must send include_personal = false (got null)" "$W/scraping.md"
 
 GADS_OK='{"queries":["bigbrothersplumbinginc.com"],"resultType":"advertisers","maxAdvertisersPerQuery":1,"maxAdsPerSearch":5,"region":"US","waitSecs":45}'
 check 0 "google ads in limit"      $AG2 ${P2}$GADS "$GADS_OK" "" "$W/scraping.md"

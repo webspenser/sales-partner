@@ -129,7 +129,7 @@ in that folder loads the agent. Plugin updates never touch your folder.
 
 Built on [Agent Standard](https://github.com/webspenser/agent-builder/blob/main/STANDARD.md) 7.4
 with [Agent Builder](https://github.com/webspenser/agent-builder).
-Version 8.5.0.
+Version 8.5.1.
 
 ## Use it from source
 
@@ -333,6 +333,23 @@ section. Add `business_name: "<your business>"` to
 `context/operating-config.md` so the title reads
 `Weekly Digest for <your business>`. Nothing else changes: Resend sends
 the HTML through the same pinned sender and recipients.
+
+Upgrading from 8.5.0: the reviews source now runs on
+`web_wanderer/google-reviews-scraper`. Apify moved the old Compass
+reviews tool to an HTTP server interface the connector could not call,
+so every prepare run stopped at its first review call. Your
+`prospecting_sources` and `bindings/scraping.md` stay as they are.
+
+1. Replace the Apify connector's URL with:
+
+   `https://mcp.apify.com?tools=compass/crawler-google-places,vdrmota/contact-info-scraper,web_wanderer/google-reviews-scraper,scrapesage/google-ads-transparency-scraper,apify/facebook-ads-scraper,valig/indeed-jobs-scraper,apify/website-content-crawler,harvestapi/linkedin-profile-search-by-name,apify/instagram-profile-scraper,clockworks/tiktok-profile-scraper`
+
+   Other named actors and the `docs` and `runs` tools may stay on the
+   connector: the guard refuses any tool it does not allow. Leave off
+   the `actors` and `api` tool groups. The connector's name must contain "apify"
+   (for example "Apify Actors" or "Apify Connector"), because the guard
+   finds the server by that word.
+2. Start a new session so the agent loads the new tool.
 
 ## Developing
 

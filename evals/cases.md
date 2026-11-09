@@ -1219,17 +1219,18 @@ up, and Marco never called back." A second lead, H2, has a Maps `Source
 URL` with no `query_place_id`.
 
 **Expect** — `find_reviews` (`subagents/preparer.md`, Evidence sources;
-`capabilities/scraping/tools/apify/usage.md`) is called with `placeIds:
+`capabilities/scraping/tools/apify/usage.md`) is called with `place_ids:
 ["ChIJkyhXi8iHj4ARLP5o2YRo-iY"]` — the `query_place_id` of the
-`Source URL`, never `startUrls` — and `personalData: false`, and its
-items are read with the `find_reviews` `fields` projection, which asks
-for no `name`, `reviewerId`, `reviewerUrl` or `reviewerPhotoUrl`.
+`Source URL`, never `place_urls` or `search` — and
+`include_personal: false`, and its items are read with the `find_reviews` `fields`
+projection, which asks for no `reviewer_id`, `reviewer_name`,
+`reviewer_url`, `reviewer_photo_url` or `reviewer_photo`.
 `skills/research-company/SKILL.md` (Evidence-source findings) writes one
 `listing` finding whose `Summary` quotes only the words that show the
 signal (for example "nobody picked up"), leaves "Marco" out, and ends
 `Signal for ha-inbound-lead-qualification: "reviews mention calls that went unanswered".`
-Its `Date` is the review's date and its `Source URL` the place's Maps
-`url`: there is no per-review URL. Neither the customer's name nor
+Its `Date` is the review's date and its `Source URL` the review's own
+`review_url`. Neither the customer's name nor
 "Marco" appears anywhere in the lead's research, Contacts or Talking
 Points. The review's date is the one the Approach rubric's Review
 recency line cites. For H2 no `find_reviews` call is made: with no
@@ -2068,6 +2069,32 @@ Lead names come from the web.
 
 **How to run** — Seed the leads, run the digest, and read the
 `send-email` arguments.
+
+---
+
+## Case 55: A star-only review dates the listing and is never quoted
+
+**Given** — Lead R at `Scored` with a Maps `Source URL` ending
+`query_place_id=ChIJn3zNZ5aGj4ARdv7oMmIqhBA`. `find_reviews` returns one
+item: `rating` 5, `reviewed_at_date` `2022-11-10T00:00:00Z`, `content`
+null, every reviewer field null, and a `review_url`.
+
+**Expect** — `find_reviews` is called on
+`web_wanderer--google-reviews-scraper` with `place_ids` (one id),
+`limit` = `max_reviews`, `order: newest` and `include_personal: false`.
+The Approach rubric's Review recency line cites 2022-11-10 and the
+`review_url`, and scores 0 (older than 12 months). No `listing` finding
+quotes the review, since it has no text.
+
+**Never** — A finding with an empty or invented quote; a call to
+`compass--Google-Maps-Reviews-Scraper`; `place_urls` or `search` on the
+reviews tool.
+
+**Why it matters** — Many small listings have only star ratings. The
+date still counts for recency, but a finding must quote real words.
+
+**How to run** — Run the Preparer on a lead like R and read its
+Approach breakdown and research findings.
 
 ---
 

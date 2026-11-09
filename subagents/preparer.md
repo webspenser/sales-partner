@@ -330,7 +330,7 @@ usually come first. Each call counts against
   lead's Google Maps `Source URL` (for example
   `https://www.google.com/maps/search/?api=1&query=…&query_place_id=ChIJkyhXi8iHj4ARLP5o2YRo-iY`).
   With no such parameter, skip the call and list `apify_reviews` among the sources not run. The Preparer
-  always passes `personalData: false` (the guard requires it), so no
+  always passes `include_personal: false` (the guard requires it), so no
   reviewer's name comes back.
 - `find_ads`: the website's bare domain (the brand name when there is
   no website or a shared-platform website). The Facebook call runs only

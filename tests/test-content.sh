@@ -530,7 +530,7 @@ assert_contains "$SP/README.md" 'messages only you, through Resend'
 assert_contains "$SP/evals/cases.md" 'A notification never reaches anyone but the owner'
 
 echo "-- 7.0.0: release"
-assert_contains "$SP/agent.yaml" 'version: 8.5.0'
+assert_contains "$SP/agent.yaml" 'version: 8.5.1'
 for m in agent.yaml .claude-plugin/plugin.json .claude-plugin/marketplace.json .codex-plugin/plugin.json gemini-extension.json; do
   grep -qF "$EXPECTED_DESC" "./$m" && _report ok "$m: description is the 8.0.0 string" || _report no "$m: description is not the 8.0.0 string"
 done
@@ -794,10 +794,10 @@ done < <(find AGENT.md README.md subagents skills templates context capabilities
 rm -f "$README_NO_UPGRADE"
 
 echo "-- 8.0.0: release: version, README flow and the upgrade note"
-assert_contains "$SP/agent.yaml" 'version: 8.5.0'
-assert_contains "$SP/README.md" 'Version 8.5.0.'
+assert_contains "$SP/agent.yaml" 'version: 8.5.1'
+assert_contains "$SP/README.md" 'Version 8.5.1.'
 for m in .claude-plugin/plugin.json .codex-plugin/plugin.json gemini-extension.json; do
-  assert_contains "./$m" '"version": "8.5.0"'
+  assert_contains "./$m" '"version": "8.5.1"'
 done
 assert_contains "$SP/README.md" 'Upgrading from 7.4'
 for t in 'Approved' 'Research Anyway' 'Talking Points' 'offer catalog' 'Hero Offer' 'schedule_approach'; do
@@ -1002,9 +1002,9 @@ for d in '`max_reviews` — reviews per reviews call (default 50)' '`max_ads` �
          '`max_site_depth` — link depth for the site reader (default 1)'; do
   printf '%s' "$SETUP" | grep -qF -- "$d" && _report ok "usage.md Setup: $d" || _report no "usage.md Setup missing: $d"
 done
-printf '%s' "$SETUP" | grep -qF 'mcp.apify.com?tools=compass/crawler-google-places,vdrmota/contact-info-scraper,compass/Google-Maps-Reviews-Scraper,scrapesage/google-ads-transparency-scraper,apify/facebook-ads-scraper,valig/indeed-jobs-scraper,apify/website-content-crawler,harvestapi/linkedin-profile-search-by-name,apify/instagram-profile-scraper,clockworks/tiktok-profile-scraper`' \
+printf '%s' "$SETUP" | grep -qF 'mcp.apify.com?tools=compass/crawler-google-places,vdrmota/contact-info-scraper,web_wanderer/google-reviews-scraper,scrapesage/google-ads-transparency-scraper,apify/facebook-ads-scraper,valig/indeed-jobs-scraper,apify/website-content-crawler,harvestapi/linkedin-profile-search-by-name,apify/instagram-profile-scraper,clockworks/tiktok-profile-scraper`' \
   && _report ok "usage.md Setup gives the ten-actor connector URL" || _report no "usage.md Setup lacks the ten-actor connector URL"
-assert_contains "$SU" 'always pass `personalData: false`'
+assert_contains "$SU" 'always pass `include_personal: false`'
 assert_contains "$SU" 'never record reviewer names'
 assert_contains "$SU" 'always pass `onlyTotal: true`'
 assert_contains "$SU" 'With no page URL, skip this call and record no Facebook finding'
@@ -1013,12 +1013,12 @@ assert_contains "$SU" 'the `website` the Maps listing gives'
 assert_contains "$SU" '`"script, style, noscript, svg"`'
 assert_contains "$SU" 'never claim a site lacks chat'
 assert_contains "$SU" 'Do not pass `proxyConfiguration`'
-for t in compass--Google-Maps-Reviews-Scraper scrapesage--google-ads-transparency-scraper apify--facebook-ads-scraper \
+for t in web_wanderer--google-reviews-scraper scrapesage--google-ads-transparency-scraper apify--facebook-ads-scraper \
          valig--indeed-jobs-scraper apify--website-content-crawler; do
   assert_contains "$SU" "\`apify:$t\`"
   grep -qF "$t" "$SP/capabilities/scraping/tools/apify/guard.yaml" && _report ok "guard.yaml allows $t" || _report no "guard.yaml missing $t"
 done
-for c in '`find_reviews` | $0.05' '`find_ads`, Google | $0.01' '`find_ads`, Facebook | $0.03' '`find_jobs` | $0.005' '`read_site` | $0.03'; do
+for c in '`find_reviews` | $0.02' '`find_ads`, Google | $0.01' '`find_ads`, Facebook | $0.03' '`find_jobs` | $0.005' '`read_site` | $0.03'; do
   assert_contains "$SU" "$c"
 done
 assert_not_contains "$SU" 'reviewerId,'
@@ -1070,7 +1070,7 @@ assert_contains "$PP" 'never raised from a session prompt'
 assert_contains "$PP" 'Continue research on a capped lead'
 assert_not_contains "$PP" 'Research Capped stays false'
 assert_contains "$PP" 'never in a scheduled run'
-assert_contains "$PP" 'always passes `personalData: false`'
+assert_contains "$PP" 'always passes `include_personal: false`'
 PR="$SP/subagents/prospector.md"
 assert_contains "$PR" 'Every source listed in `prospecting_sources` is exhausted'
 assert_contains "$PR" 'ignores the Preparer-only sources `apify_contact_info`, `apify_reviews`, `apify_ads`, `apify_jobs` and `apify_site_reader`'
@@ -1098,7 +1098,7 @@ grep -qF 'Set by the agent when research stopped at an Apify cap (per-lead or 7-
   && _report ok "attio research_capped description covers both caps" || _report no "attio research_capped description is narrow"
 assert_not_contains "$SP/capabilities/crm/contract.md" 'a scheduled run stopped at the per-lead Apify cap'
 RC="$SP/skills/research-company/SKILL.md"
-assert_contains "$RC" 'personalData: false'
+assert_contains "$RC" 'include_personal: false'
 assert_contains "$RC" 'A review finding never carries a reviewer'"'"'s name'
 assert_contains "$RC" 'lacks chat'
 assert_contains "$RC" 'only after the home page and the relevant page'
@@ -1129,7 +1129,7 @@ for h in \
 done
 for w in 'Cases 24 to 26 positive checks' 'research capped at $0.07; ' 'per-lead cap $0.07; not run: ' \
   'research capped by the 7-day Apify cap; apify_reviews, apify_site_reader' '7-day Apify cap; not run: ' \
-  '`research_capped: false`' '`continue; `' '`personalData: false`' '`query_place_id`' 'lacks chat' \
+  '`research_capped: false`' '`continue; `' '`include_personal: false`' '`query_place_id`' 'lacks chat' \
   'hero_offer=ps-inbound-lead-qualification; offer_evidence=moderate'; do
   assert_contains "$EV" "$w"
 done
@@ -1150,7 +1150,7 @@ done
 # it (8.3 adds the profile actors, and its own upgrade note carries them).
 APIFY_URL=$(grep -o 'https://mcp\.apify\.com?tools=[^`]*' "$SP/capabilities/scraping/tools/apify/usage.md" | head -1)
 UP81_URL=$(printf '%s' "$UP81" | grep -o 'https://mcp\.apify\.com?tools=[^`]*' | head -1)
-[ -n "$APIFY_URL" ] && [ -n "$UP81_URL" ] && [ "${APIFY_URL#"$UP81_URL"}" != "$APIFY_URL" ] \
+[ -n "$APIFY_URL" ] && [ "$UP81_URL" = 'https://mcp.apify.com?tools=compass/crawler-google-places,vdrmota/contact-info-scraper,compass/Google-Maps-Reviews-Scraper,scrapesage/google-ads-transparency-scraper,apify/facebook-ads-scraper,valig/indeed-jobs-scraper,apify/website-content-crawler' ] \
   && _report ok "8.0 upgrade note carries the connector URL from the Apify usage file" \
   || _report no "8.0 upgrade note lacks the connector URL from the Apify usage file"
 
@@ -1271,7 +1271,7 @@ for f in "$SU" "$PP"; do
 done
 # The guard now requires the four settings; usage.md no longer leaves them to instructions.
 for t in 'cannot pin' "can't pin" 'cannot be pinned'; do flat_lacks "$SU" "$t"; done
-flat_has "$SU" 'always pass `personalData: false`; the guard requires it'
+flat_has "$SU" 'always pass `include_personal: false`; the guard requires it'
 flat_has "$SU" 'always pass `onlyTotal: true` (the count only; the guard requires it)'
 flat_has "$SU" '(the guard requires both, exactly as written)'
 flat_has "$SU" 'The guard requires every start URL to pass its URL rule'
@@ -1644,4 +1644,20 @@ flat_has "$SP/skills/interview-business/SKILL.md" '`business_name`'
 flat_has "$SP/README.md" 'Upgrading from 8.4'
 assert_contains "$SP/evals/cases.md" "## Case 54: The digest arrives as HTML with the plain text inside"
 
+echo "-- 8.5.1: reviews actor swap"
+NEWURL='https://mcp.apify.com?tools=compass/crawler-google-places,vdrmota/contact-info-scraper,web_wanderer/google-reviews-scraper,scrapesage/google-ads-transparency-scraper,apify/facebook-ads-scraper,valig/indeed-jobs-scraper,apify/website-content-crawler,harvestapi/linkedin-profile-search-by-name,apify/instagram-profile-scraper,clockworks/tiktok-profile-scraper'
+UP85=$(awk '/^Upgrading from 8.5.0/,/^## Developing/' "$SP/README.md")
+[ -n "$UP85" ] && _report ok "README has the 8.5.0 upgrade note" || _report no "README lacks the 8.5.0 upgrade note"
+printf '%s' "$UP85" | grep -qF "$NEWURL" && _report ok "8.5.0 note has the new connector URL" || _report no "8.5.0 note lacks the new connector URL"
+flat_has "$SP/README.md" 'must contain "apify"'
+grep -qF "$NEWURL" "$SP/capabilities/scraping/tools/apify/usage.md" && _report ok "usage.md has the new connector URL" || _report no "usage.md lacks the new connector URL"
+G="$SP/capabilities/scraping/tools/apify/guard.yaml"
+grep -qF 'compass--Google-Maps-Reviews-Scraper]' "$G" && _report no "guard still names the Compass reviews tool in a rule" || _report ok "guard names no Compass reviews tool in a rule"
+for f in "$SP/capabilities/scraping/tools/apify/usage.md" "$SP/subagents/preparer.md" "$SP/skills/research-company/SKILL.md"; do
+  grep -qF 'personalData' "$f" && _report no "$f still says personalData" || _report ok "$f drops personalData"
+done
+assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" 'Never `place_urls` or `search`'
+flat_has "$SP/skills/research-company/SKILL.md" 'A star-only review has no text (`content` is null): it still dates the listing, but it is never a quoted finding.'
+assert_contains "$SP/docs/superpowers/notes/2026-11-09-reviews-actor-probe.md" 'web_wanderer--google-reviews-scraper'
+assert_contains "$SP/evals/cases.md" '## Case 55: A star-only review dates the listing and is never quoted'
 finish

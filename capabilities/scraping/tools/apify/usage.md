@@ -33,18 +33,21 @@ names are spelled as the connector shows them, case included.
   Do not pass `proxyConfig`: the actor's proxy defaults apply. Return per
   URL the emails, phones and social links found, each with the page it
   came from.
-- `find_reviews` — `apify:compass--Google-Maps-Reviews-Scraper`. Allowed
+- `find_reviews` — `apify:web_wanderer--google-reviews-scraper`. Allowed
   arguments, and no others:
-  - `placeIds` — exactly one place id, the listing's `placeId`
+  - `place_ids` — exactly one place id, the listing's `placeId`
     (`["ChIJ…"]`);
-  - `maxReviews` = `max_reviews`;
-  - `personalData` — always pass `personalData: false`; the guard requires
-    it, so a call with `true`, the string `"false"` or no `personalData`
-    is blocked. With `false` the actor returns no reviewer name, id,
-    profile or photo;
-  - `reviewsSort` (pass `newest`), `reviewsStartDate`,
-    `reviewsFilterString`, `reviewsOrigin`, `language`, `waitSecs`
+  - `limit` = `max_reviews`;
+  - `include_personal` — always pass `include_personal: false`; the guard
+    requires it, so a call with `true`, the string `"false"` or no
+    `include_personal` is blocked. With `false` the actor returns no
+    reviewer name, id, profile or photo;
+  - `order` (pass `newest`), `anyDate` (a date or `12 months`),
+    `searchKeyword`, `source` (pass `google`), `lang`, `waitSecs`
     (pass 45).
+
+  Never `place_urls` or `search`: the actor can also search Maps by
+  keyword, and the guard blocks both.
 
   Never pass `startUrls`: use the place id.
 - `find_ads` — two actors. Run the Google call whenever `find_ads` runs;
@@ -166,7 +169,7 @@ names are spelled as the connector shows them, case included.
 
 Send only the arguments listed above, spelled exactly as listed, and
 always send each call's list with at least one item: `searchStringsArray`
-(Maps), `startUrls` (contacts, Facebook and the site reader), `placeIds`
+(Maps), `startUrls` (contacts, Facebook and the site reader), `place_ids`
 (reviews), `queries` (Google Ads), `usernames` (Instagram) and `profiles`
 (TikTok).
 
@@ -178,7 +181,7 @@ terms, `max_sites_per_call` URLs, `max_review_places` places,
 `max_ad_queries` Google queries or Facebook pages, `max_site_urls`
 start URLs, `max_profile_reads` handles or `max_profile_locations`
 LinkedIn locations. It also refuses a call that leaves out or changes one
-of the eight fixed values above (`personalData`, `onlyTotal`,
+of the eight fixed values above (`include_personal`, `onlyTotal`,
 `saveMarkdown`, `removeElementsCssSelector`, `profileScraperMode`,
 `strictSearch`, `maxPages`, `resultsPerPage`), and a start URL that
 breaks its URL rule (Website and Facebook URLs). Never call any other Apify tool.
@@ -309,7 +312,7 @@ never read items without a projection):
 
 | Operation | `fields` | Contract fields |
 |---|---|---|
-| `find_reviews` | `text,publishedAtDate,stars,responseFromOwnerText,responseFromOwnerDate,placeId,url` | text, date (`publishedAtDate`), stars (`stars`; `rating` is empty), owner response and date, place id, place URL (`url`) |
+| `find_reviews` | `content,reviewed_at_date,rating,owner_response,owner_response_at_date,place_id,review_url` | text (`content`; null for a star-only review), date (`reviewed_at_date`), stars (`rating`), owner response and date, place id, the review's URL (`review_url`) |
 | `find_ads` (Google) | `name,legalName,advertiserId,advertiserUrl,approxAdCountLow,approxAdCountHigh,verified` | one advertiser per item; zero items means no Google ads for that query in the region |
 | `find_ads` (Facebook) | `inputUrl,totalCount,isResultComplete` | the page (`inputUrl`), its ad count (`totalCount`), whether the count is complete |
 | `find_jobs` | `title,datePublished,employer.name,location.city,jobUrl` | title, date posted, employer, city, URL |
@@ -336,11 +339,12 @@ the first live run: the probe saw `Short` mode only for LinkedIn, so the
 `Full` field names above come from the actor's documentation; if one
 comes back empty, record nothing from it and say so in the run's report.
 
-Reviews: never ask for `name`, `reviewerId`, `reviewerUrl` or
-`reviewerPhotoUrl`, and never record reviewer names. A finding quotes
-only the words of the review that show the signal, with the review's
-date, and links the place's Maps `url` (with `personalData: false` there
-is no review URL). Review text can name people, such as a technician's
+Reviews: never ask for `reviewer_id`, `reviewer_name`, `reviewer_url`,
+`reviewer_photo_url` or `reviewer_photo`,
+and never record reviewer names. A finding quotes only the words of the review that show the
+signal, with the review's date, and links the review's own
+`review_url` (it names the review, not the reviewer; with
+`include_personal: false` the reviewer fields come back null). Review text can name people, such as a technician's
 first name: leave those names out of the snippet.
 
 ## Cost
@@ -354,7 +358,7 @@ actors are a flat worst case per call at the pinned sizes:
 
 | Call | Estimate |
 |---|---|
-| `find_reviews` | $0.05 |
+| `find_reviews` | $0.02 |
 | `find_ads`, Google | $0.01 |
 | `find_ads`, Facebook | $0.03 |
 | `find_jobs` | $0.005 |
@@ -377,7 +381,7 @@ trips early. The operator recalibrates them from Apify Console.
    stop on spend.
 2. Add the hosted connector in claude.ai (Settings → Connectors → Add
    custom connector) at
-   `https://mcp.apify.com?tools=compass/crawler-google-places,vdrmota/contact-info-scraper,compass/Google-Maps-Reviews-Scraper,scrapesage/google-ads-transparency-scraper,apify/facebook-ads-scraper,valig/indeed-jobs-scraper,apify/website-content-crawler,harvestapi/linkedin-profile-search-by-name,apify/instagram-profile-scraper,clockworks/tiktok-profile-scraper`
+   `https://mcp.apify.com?tools=compass/crawler-google-places,vdrmota/contact-info-scraper,web_wanderer/google-reviews-scraper,scrapesage/google-ads-transparency-scraper,apify/facebook-ads-scraper,valig/indeed-jobs-scraper,apify/website-content-crawler,harvestapi/linkedin-profile-search-by-name,apify/instagram-profile-scraper,clockworks/tiktok-profile-scraper`
    and sign in to that Apify account. On an upgrade, replace the
    connector's URL with this one: it adds the five evidence actors and
    the three social profile actors.
@@ -417,7 +421,7 @@ trips early. The operator recalibrates them from Apify Console.
 
 Call ToolSearch for the Apify server's tools (read-only) and confirm the
 exposed tools are `compass--crawler-google-places`,
-`vdrmota--contact-info-scraper`, `compass--Google-Maps-Reviews-Scraper`,
+`vdrmota--contact-info-scraper`, `web_wanderer--google-reviews-scraper`,
 `scrapesage--google-ads-transparency-scraper`,
 `apify--facebook-ads-scraper`, `valig--indeed-jobs-scraper`,
 `apify--website-content-crawler`,
@@ -425,6 +429,9 @@ exposed tools are `compass--crawler-google-places`,
 `apify--instagram-profile-scraper` and
 `clockworks--tiktok-profile-scraper`, plus the two reads the agent uses,
 `get-actor-run` and `get-dataset-items`. If the connector exposes
-`call-actor` or other tools, or lacks one of the ten actors, tell the
-operator to re-add it with the URL in Setup step 2; the guard blocks
-other tools either way.
+`call-actor` (the `actors` or `api` tool groups), or lacks one of the
+ten actors, tell the operator to re-add it with the URL in Setup step 2.
+Other named actors and the `docs` and `runs` reads may be present: the
+guard refuses every tool not in its allow list, so they are not an
+error. The connector's name must contain "apify" (for example "Apify
+Actors" or "Apify Connector"): the guard finds the server by that word.

@@ -1209,47 +1209,52 @@ reviews scraper, and that P's Research Capped is unticked.
 
 ---
 
-## Case 29: A review signal is quoted with its date and link, never the reviewer's name
+## Case 29: A review signal is quoted with its date, link and reviewer's first name
 
 **Given** — Lead H of Case 27 (`home-auto-services`, `Plumbing`), its
 Maps `Source URL` ending `query_place_id=ChIJkyhXi8iHj4ARLP5o2YRo-iY`.
-Its newest Google review, posted under a customer's full name three
-weeks ago, reads "Called twice about a leak on a Sunday, nobody picked
-up, and Marco never called back." A second lead, H2, has a Maps `Source
-URL` with no `query_place_id`.
+Its newest Google review, posted three weeks ago by "Dana Whitfield",
+reads "Called twice about a leak on a Sunday, nobody picked up, and
+Marco never called back." The item also carries a `reviewer_url` and a
+`reviewer_photo_url`. A second lead, H2, has a Maps `Source URL` with no
+`query_place_id`.
 
 **Expect** — `find_reviews` (`subagents/preparer.md`, Evidence sources;
 `capabilities/scraping/tools/apify/usage.md`) is called with `place_ids:
 ["ChIJkyhXi8iHj4ARLP5o2YRo-iY"]` — the `query_place_id` of the
 `Source URL`, never `place_urls` or `search` — and
-`include_personal: false`, and its items are read with the `find_reviews` `fields`
-projection, which asks for no `reviewer_id`, `reviewer_name`,
-`reviewer_url`, `reviewer_photo_url` or `reviewer_photo`.
+`include_personal: true`, and its items are read with the `find_reviews`
+`fields` projection, which asks for `reviewer_name` and never for
+`reviewer_id`, `reviewer_url`, `reviewer_photo_url` or `reviewer_photo`.
 `skills/research-company/SKILL.md` (Evidence-source findings) writes one
-`listing` finding whose `Summary` quotes only the words that show the
-signal (for example "nobody picked up"), leaves "Marco" out, and ends
+`listing` finding whose `Summary` names the review by its reviewer's
+first name and date ("Dana's review on <date>"), quotes only the words
+that show the signal (for example "nobody picked up"; "Marco" may stay
+in the quote as written), and ends
 `Signal for ha-inbound-lead-qualification: "reviews mention calls that went unanswered".`
 Its `Date` is the review's date and its `Source URL` the review's own
-`review_url`. Neither the customer's name nor
-"Marco" appears anywhere in the lead's research, Contacts or Talking
-Points. The review's date is the one the Approach rubric's Review
+`review_url`. "Whitfield", the profile URL and the photo URL appear
+nowhere in the lead's research, Contacts or Talking Points. The review
+is a complaint, so the talking points name it only under `Avoid:`
+(Case 60). The review's date is the one the Approach rubric's Review
 recency line cites. For H2 no `find_reviews` call is made: with no
 `query_place_id` the call is skipped, never run on the business's name.
 
-**Why it matters** — A reviewer is a private person who wrote about a
-business, not a contact. Their name in the CRM, or in a line the
-operator says to the prospect, is personal data the agent has no reason
-to hold, and quoting it back to the business can expose the customer.
-The date and a link the operator can follow are what make the quote
-checkable.
+**Why it matters** — The operator chose names for context: "naming a
+review in an email gives precise context a business owner might need."
+A first name and a date let the owner find the exact review. The
+reviewer's surname, profile and photo add data on someone who is not
+the prospect, so they are never kept. The date and a link the operator
+can follow are what make the quote checkable.
 
 **How to run** — Seed H (pointed at a disposable listing with such a
 review) and H2, and run the Preparer. In the trace, check the reviews
 call's arguments and the `get-dataset-items` `fields`. Read H's research
 with `get_lead`, find the finding with the signal mark, and check its
-`Date` and `Source URL`. Then `grep -c` the reviewer's name and `Marco`
-across the research, the Contacts and the newest Talking Points section:
-each returns `0`. Confirm H2's trace has no reviews call.
+`Date`, `Source URL` and the first name. Then `grep -c` `Whitfield` and
+the reviewer's profile host across the research, the Contacts and the
+newest Talking Points section: each returns `0`. Confirm H2's trace has
+no reviews call.
 
 ---
 
@@ -1594,7 +1599,7 @@ one dated section with the one candidate line.
 **Given** — The default `prospecting_sources` and the lead and contact
 of Case 37. `find_profiles` (`[linkedin]`) returns two LinkedIn
 profiles: `https://www.linkedin.com/in/example-priya-nandakumar`, whose
-`current_employer`, returned by `find_profiles` (`Full` mode), is
+`current_employer`, returned by `find_profiles` (`Full + email search` mode), is
 Brightwater Accounting, location Springfield; and
 `https://www.linkedin.com/in/example-priya-nandakumar-cpa`, whose
 `current_employer` is also Brightwater Accounting, location
@@ -2081,7 +2086,7 @@ null, every reviewer field null, and a `review_url`.
 
 **Expect** — `find_reviews` is called on
 `web_wanderer--google-reviews-scraper` with `place_ids` (one id),
-`limit` = `max_reviews`, `order: newest` and `include_personal: false`.
+`limit` = `max_reviews`, `order: newest` and `include_personal: true`.
 The Approach rubric's Review recency line cites 2022-11-10 and the
 `review_url`, and scores 0 (older than 12 months). No `listing` finding
 quotes the review, since it has no text.
@@ -2187,6 +2192,55 @@ down for good, without a flood of alerts.
 
 **How to run** — Stub `find_ads` to fail for every lead in a run and
 count the error notifications.
+
+---
+
+## Case 60: A complaint review is named only in Avoid and never quoted back
+
+**Given** — Lead H of Case 29, its research holding the finding "Dana's
+review on <date> says nobody picked up" with the hero offer's signal
+mark, and one non-complaint hook (a hiring post two weeks old).
+
+**Expect** — The Opener is the hiring post. The review's signal may feed
+a Point only as the problem the offer answers, without quoting the
+complaint back at the owner; the `Avoid:` line names Dana's review and
+its date, so the operator knows which review not to raise.
+
+**Never** — The complaint review as the Opener; a line telling the owner
+what Dana wrote about them; the reviewer's surname.
+
+**Why it matters** — A name gives the operator precise context, but
+quoting a customer's complaint back to the business, with the customer
+named, can embarrass both.
+
+**How to run** — Run `write-talking-points` on H and read the newest
+Talking Points section.
+
+---
+
+## Case 61: A personal email from LinkedIn email search makes the owner the point of contact
+
+**Given** — Lead P, a two-person landscaping business whose site lists
+only `info@greenlinelandscape.com`. `find_profiles` (LinkedIn, mode
+`Full + email search`) finds the owner, Sam Ortiz, with
+`emails[0].email` `samortiz.greenline@gmail.com`, `free: true`,
+`status: valid`.
+
+**Expect** — `find-decision-makers` writes Sam's Contact with that Gmail
+address in `Email`, `Verified` checked only if the profile matches name
+and current employer, and `notes` saying `email from LinkedIn email
+search`. The info@ row stays as the general inbox. `pick-point-of-contact`
+picks Sam: a named person with an email beats an unnamed row.
+
+**Never** — The Gmail address left out for being personal; a guessed
+`sam@greenlinelandscape.com` written to `Email`; info@ picked over Sam.
+
+**Why it matters** — The operator's words: personal emails "might be the
+best direct path to a business owner especially for non-technical
+owners."
+
+**How to run** — Stub `find_profiles` to return that item for P, run the
+Preparer, and read P's Contacts and point of contact.
 
 ---
 

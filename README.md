@@ -25,8 +25,8 @@ and when.
   it was found. A second score, from that research, is recorded for
   you to read; it doesn't trigger anything.
 - **Evidence from reviews, ads, jobs and the website.** It reads a
-  business's recent Google reviews (quoting a snippet with its date and
-  link, never the reviewer's name), checks whether it runs Google or
+  business's recent Google reviews (quoting a snippet with its date,
+  link and the reviewer's first name, never their profile or photo), checks whether it runs Google or
   Facebook ads, looks for open jobs on Indeed, and reads its website,
   guided by the research tips you gave for each offer. Each source is
   capped, and a lead's Apify spend stops at $0.50 by default. A lead
@@ -150,8 +150,8 @@ Version 8.5.1.
 - Resend for owner notifications, on the client's own account (`capabilities/owner_notify/tools/resend/`); setup pins your address and a no-reply sender, and the guard refuses a send to anyone else.
 - Airtable for the ledger (`capabilities/ledger/tools/airtable/`); `bootstrap.py` creates the base, and the guard keeps the record append-only.
 - Apify for scraping (`capabilities/scraping/tools/apify/`): setup connects the restricted connector URL and pins the limits (results per search, pages per site, and so on) the guard enforces.
-  The guard also requires the safe settings, such as reviews without
-  reviewer names, and checks every start URL: Facebook pages only on
+  The guard also requires the fixed settings, such as reviews with
+  reviewer names and LinkedIn email search (your choice in 8.6.0), and checks every start URL: Facebook pages only on
   facebook.com, and only an https site root on a public host for the
   contact scraper and the site reader. One limit remains: the guard
   can't tie a website to a lead, so data could still leave in the

@@ -51,7 +51,12 @@ public search is a legitimate source.
    seniority — see the failure modes below.
 4. For each person, find a contact route: an email address, a
    direct phone number, a LinkedIn profile URL, or any combination.
-   Note where each came from.
+   Note where each came from. An email address a source shows for the
+   named person (LinkedIn email search in `find_profiles`, a directory
+   listing, the website) goes in `Email` whatever its domain: a Gmail or
+   other personal address is often the most direct route to a
+   non-technical owner, and the Contact's notes say where it was found
+   (`email from LinkedIn email search`).
 5. Write each person via CRM `upsert_contact(lead_id, name, title,
    email, phone, linkedin_url, instagram_url, facebook_url, tiktok_url, x_url,
    profiles_checked_at, role, verified, notes)`. `role` must be

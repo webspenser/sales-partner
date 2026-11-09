@@ -86,7 +86,10 @@ square brackets after the claim it backs.
    the hero offer does, in the words of its `what` in the catalog. Each
    quotes or states the finding as research recorded it, with its source
    URL, adding nothing the finding doesn't say, then links it to the
-   offer. An `offer signal` finding is good material here even without a
+   offer. A point may cite a review by its reviewer and date when the
+   finding names them ("Dana's review on 2026-10-02 says…"), so the owner
+   knows exactly which review is meant; a complaint review still goes
+   only to `Avoid:`, never quoted back at the owner. An `offer signal` finding is good material here even without a
    usable hook; `contact route`, `rule-out` and `no hooks found` findings
    are not. With fewer findings to draw on, write fewer points: one
    finding, one point; none, `- none`. A claim about results or proof

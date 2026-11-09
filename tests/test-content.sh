@@ -1004,8 +1004,8 @@ for d in '`max_reviews` — reviews per reviews call (default 50)' '`max_ads` �
 done
 printf '%s' "$SETUP" | grep -qF 'mcp.apify.com?tools=compass/crawler-google-places,vdrmota/contact-info-scraper,web_wanderer/google-reviews-scraper,scrapesage/google-ads-transparency-scraper,apify/facebook-ads-scraper,valig/indeed-jobs-scraper,apify/website-content-crawler,harvestapi/linkedin-profile-search-by-name,apify/instagram-profile-scraper,clockworks/tiktok-profile-scraper`' \
   && _report ok "usage.md Setup gives the ten-actor connector URL" || _report no "usage.md Setup lacks the ten-actor connector URL"
-assert_contains "$SU" 'always pass `include_personal: false`'
-assert_contains "$SU" 'never record reviewer names'
+assert_contains "$SU" 'always pass `include_personal: true`'
+assert_not_contains "$SU" 'never record reviewer names'
 assert_contains "$SU" 'always pass `onlyTotal: true`'
 assert_contains "$SU" 'With no page URL, skip this call and record no Facebook finding'
 assert_contains "$SU" 'Zero items is a valid result: no open listings'
@@ -1070,7 +1070,7 @@ assert_contains "$PP" 'never raised from a session prompt'
 assert_contains "$PP" 'Continue research on a capped lead'
 assert_not_contains "$PP" 'Research Capped stays false'
 assert_contains "$PP" 'never in a scheduled run'
-assert_contains "$PP" 'always passes `include_personal: false`'
+assert_contains "$PP" 'always passes `include_personal: true`'
 PR="$SP/subagents/prospector.md"
 assert_contains "$PR" 'Every source listed in `prospecting_sources` is exhausted'
 assert_contains "$PR" 'ignores the Preparer-only sources `apify_contact_info`, `apify_reviews`, `apify_ads`, `apify_jobs` and `apify_site_reader`'
@@ -1098,8 +1098,9 @@ grep -qF 'Set by the agent when research stopped at an Apify cap (per-lead or 7-
   && _report ok "attio research_capped description covers both caps" || _report no "attio research_capped description is narrow"
 assert_not_contains "$SP/capabilities/crm/contract.md" 'a scheduled run stopped at the per-lead Apify cap'
 RC="$SP/skills/research-company/SKILL.md"
-assert_contains "$RC" 'include_personal: false'
-assert_contains "$RC" 'A review finding never carries a reviewer'"'"'s name'
+assert_contains "$RC" 'include_personal: true'
+flat_has "$RC" 'A review finding may name its reviewer'
+flat_has "$RC" 'never the reviewer'"'"'s profile URL, photo or ID'
 assert_contains "$RC" 'lacks chat'
 assert_contains "$RC" 'only after the home page and the relevant page'
 assert_contains "$SP/skills/match-offer/SKILL.md" '12 months'
@@ -1122,14 +1123,14 @@ for h in \
   '## Case 26: Research goes past the per-lead cap only when the operator says so in a session' \
   '## Case 27: The offers'"'"' research tips pick the sources that run' \
   '## Case 28: A research source not in `prospecting_sources` never runs, even when a tip points to it' \
-  '## Case 29: A review signal is quoted with its date and link, never the reviewer'"'"'s name' \
+  '## Case 29: A review signal is quoted with its date, link and reviewer'"'"'s first name' \
   '## Case 30: A site "lacks" a feature only after two pages were read, and never "lacks chat"' \
   '## Case 31: An old review doesn'"'"'t count when a newer one shows the same entry'; do
   assert_contains "$EV" "$h"
 done
 for w in 'Cases 24 to 26 positive checks' 'research capped at $0.07; ' 'per-lead cap $0.07; not run: ' \
   'research capped by the 7-day Apify cap; apify_reviews, apify_site_reader' '7-day Apify cap; not run: ' \
-  '`research_capped: false`' '`continue; `' '`include_personal: false`' '`query_place_id`' 'lacks chat' \
+  '`research_capped: false`' '`continue; `' '`include_personal: true`' '`query_place_id`' 'lacks chat' \
   'hero_offer=ps-inbound-lead-qualification; offer_evidence=moderate'; do
   assert_contains "$EV" "$w"
 done
@@ -1271,7 +1272,7 @@ for f in "$SU" "$PP"; do
 done
 # The guard now requires the four settings; usage.md no longer leaves them to instructions.
 for t in 'cannot pin' "can't pin" 'cannot be pinned'; do flat_lacks "$SU" "$t"; done
-flat_has "$SU" 'always pass `include_personal: false`; the guard requires it'
+flat_has "$SU" 'always pass `include_personal: true`; the guard requires it'
 flat_has "$SU" 'always pass `onlyTotal: true` (the count only; the guard requires it)'
 flat_has "$SU" '(the guard requires both, exactly as written)'
 flat_has "$SU" 'The guard requires every start URL to pass its URL rule'
@@ -1530,7 +1531,7 @@ done
 assert_contains "$EV" 'https://www.tiktok.com/@example.priyan'
 assert_contains "$FSP" 'https://www.instagram.com/example.priya.n'
 flat_has "$EV" '`find_profiles` is not called: LinkedIn is filled, and no actor searches the other platforms'
-flat_has "$EV" 'returned by `find_profiles` (`Full` mode)'
+flat_has "$EV" 'returned by `find_profiles` (`Full + email search` mode)'
 flat_has "$EV" 'The pass runs even when the prepare queue is empty'
 # I7: the backlog is bounded per run, with no new key
 flat_has "$PR" 'at most `research_quota_per_week` backlog leads per run'
@@ -1679,5 +1680,27 @@ for h in '## Case 56: An empty mapped field is reported as drift and records not
          '## Case 59: A source failing on every lead sends one error at the end of the run'; do
   assert_contains "$SP/evals/cases.md" "$h"
 done
+
+
+echo "-- 8.6.0: personal data"
+grep -E '^\| `find_reviews` \|' "$SU" | grep -qF 'reviewer_name' && _report ok "reviews fields ask for reviewer_name" || _report no "reviews fields lack reviewer_name"
+for k in reviewer_url reviewer_photo_url reviewer_photo reviewer_id; do
+  grep -E '^\| `find_reviews` \|' "$SU" | grep -qE "[\`,]$k[,\`]" && _report no "reviews fields ask for $k" || _report ok "reviews fields never ask for $k"
+done
+flat_has "$SU" '`profileScraperMode` — always `"Full + email search"`'
+flat_has "$SU" '| `find_profiles`, LinkedIn | $0.15 per call |'
+flat_has "$SU" 'emails.email,emails.free,emails.status,emails.deliverable'
+flat_has "$SP/capabilities/scraping/contract.md" 'the reviewer'"'"'s name; never the reviewer'"'"'s profile'
+flat_has "$SP/skills/write-talking-points/SKILL.md" 'may cite a review by its reviewer and date'
+FD="$SP/skills/find-decision-makers/SKILL.md"
+flat_has "$FD" 'whatever its domain'
+flat_has "$FD" 'the Contact'"'"'s notes say where it was found'
+flat_has "$FD" 'pattern guess, unverified'
+for h in '## Case 60: A complaint review is named only in Avoid and never quoted back' \
+         '## Case 61: A personal email from LinkedIn email search makes the owner the point of contact'; do
+  assert_contains "$SP/evals/cases.md" "$h"
+done
+assert_not_contains "$SP/evals/cases.md" 'include_personal: false'
+assert_not_contains "$SP/README.md" 'never the reviewer'"'"'s name'
 
 finish

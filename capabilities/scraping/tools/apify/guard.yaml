@@ -1,89 +1,68 @@
-# Apify guard policy: ten actors and two reads. Each tool takes only the
-# arguments listed under only_keys (an allowlist: anything else the
-# vendor accepts, such as paid add-ons, proxyConfig or proxyConfiguration,
-# locationQuery or startUrls on Maps, place_urls or search on reviews, custom headers, cookies,
-# page functions, sitemaps or URL globs, is blocked), and each call's size
-# is pinned or capped from the pushed bindings/scraping.md. Everything else
-# on the server (call-actor, search/add actors, store, tasks, webhooks,
-# schedules, aborting runs, key-value stores) is outside allow. Names come
-# from the probe notes: Maps and contacts from
-# docs/superpowers/notes/2026-10-13-apify-connector-probe.md in
-# agent-builder; reviews, ads, jobs and the site reader from this repo's
-# docs/superpowers/notes/2026-10-18-research-actors-probe.md; the LinkedIn
-# search and the Instagram and TikTok readers from this repo's
-# docs/superpowers/notes/2026-11-03-social-profiles-actors-probe.md. Tool names
-# are matched without regard to case (the reviews actor's tool is
-# web_wanderer--google-reviews-scraper), and server_match apify covers any
-# connector whose server name contains apify (claude_ai_Apify_Actors,
-# claude_ai_Apify_Connector, Apify-Actors). The reviews actor replaced
-# compass--Google-Maps-Reviews-Scraper in 8.5.1, after that tool moved to
-# an HTTP server interface the connector could not call
-# (docs/superpowers/notes/2026-11-09-reviews-actor-probe.md). Three text pins fix the Google
-# Ads mode (resultType), the crawler (crawlerType) and the HTML
-# transformer (htmlTransformer). Eight fixed values (Standard 7.3), each
-# required, hold the safety settings that are not operator choices:
-# include_personal false on reviews, onlyTotal true on Facebook,
-# saveMarkdown true and removeElementsCssSelector on the site reader,
-# profileScraperMode "Full" (never the email search mode), strictSearch
-# true and maxPages 1 on the LinkedIn search, and resultsPerPage 1 on the
-# TikTok reader (its default is 100 videos per profile).
-# URL rules check every start URL: Facebook takes https pages on
-# facebook.com or www.facebook.com with no query or fragment; the site
-# reader and the contact scraper take only an https site root on a public
-# host (no path, query, fragment, IP address, local name or odd port).
-# The URL rules check only url: only_keys on startUrls[] still blocks
-# requestsFromUrl and the other start URL fields. The Instagram and
-# TikTok readers take handles, not URLs, so no URL rule applies to them:
-# the guard counts the handles but cannot check what they say. Data could
-# ride out in a handle, the same class of limit as data riding in a
-# hostname on the URL rules. No refuse_args: the
-# allowlists already block every argument not named, so a deny list
-# would add nothing.
+# Apify guard policy: ten actors and two reads, under the retrieval
+# profile (Standard 7.5). Actors are allowed by name; any input not
+# refused, pinned, capped or fixed passes, so a new optional vendor input
+# no longer breaks a call. Everything else on the server (call-actor,
+# search/add actors, store, tasks, webhooks, schedules, aborting runs,
+# key-value stores) is outside allow. Names come from the probe notes:
+# Maps and contacts from docs/superpowers/notes/2026-10-13-apify-connector-probe.md
+# in agent-builder; reviews, ads, jobs and the site reader from this
+# repo's docs/superpowers/notes/2026-10-18-research-actors-probe.md; the
+# LinkedIn search and the Instagram and TikTok readers from
+# docs/superpowers/notes/2026-11-03-social-profiles-actors-probe.md; the
+# reviews swap from docs/superpowers/notes/2026-11-09-reviews-actor-probe.md;
+# the LinkedIn email search mode from
+# docs/superpowers/notes/2026-11-09-linkedin-email-search-probe.md. Tool
+# names are matched without regard to case, and server_match apify covers
+# any connector whose server name contains apify (claude_ai_Apify_Actors,
+# claude_ai_Apify_Connector, Apify-Actors).
+#
+# How inputs are restricted:
+# - refuse_args is one list for the whole policy: the code and
+#   request-control keys no research call needs (page functions,
+#   navigation hooks, headers, cookies, proxies, webhooks, and
+#   requestsFromUrl and the request fields nested in a start URL).
+# - A key that widens one actor's scope or cost, but that another actor
+#   needs (startUrls, maxItems, resultsLimit, placeIds), is refused on
+#   that actor alone with a fixed value of null and no required: the call
+#   passes when the key is absent or null, and is blocked
+#   ("must send <key> = null") otherwise. Each actor's list comes from its
+#   probe.
+# - Every size key is pinned (recipients) or capped (limits, required),
+#   so leaving one out never falls back to a vendor default.
+# - Text pins fix the Google Ads mode (resultType), the crawler
+#   (crawlerType) and the HTML transformer (htmlTransformer).
+# - Fixed values, each required: include_personal true on reviews and
+#   profileScraperMode "Full + email search" on the LinkedIn search (the
+#   operator's choice in 8.6.0: reviewer names and owners' emails help
+#   outreach), onlyTotal true on Facebook, saveMarkdown true and
+#   removeElementsCssSelector on the site reader, strictSearch true and
+#   maxPages 1 on the LinkedIn search, resultsPerPage 1 on the TikTok
+#   reader (its default is 100 videos per profile).
+# - URL rules check every start URL: Facebook takes https pages on
+#   facebook.com or www.facebook.com with no query or fragment; the site
+#   reader and the contact scraper take only an https site root on a
+#   public host (no path, query, fragment, IP address, local name or odd
+#   port).
+# Documented residual (Standard 7.5): a size key no probe found, or a cap
+# key sent again under another spelling beside the real one, is not
+# checked; the agent sends only the inputs usage.md names, and Apify's
+# monthly usage limit is the backstop. The Instagram and TikTok readers
+# take handles, not URLs: the guard counts them but cannot check what
+# they say, so data could ride out in a handle, the same class of limit
+# as data riding in a hostname.
 covers: [no_external_send, allowlisted_actors, pinned_inputs]
 allow: [compass--crawler-google-places, vdrmota--contact-info-scraper, web_wanderer--google-reviews-scraper,
   scrapesage--google-ads-transparency-scraper, apify--facebook-ads-scraper, valig--indeed-jobs-scraper,
   apify--website-content-crawler, harvestapi--linkedin-profile-search-by-name, apify--instagram-profile-scraper,
   clockworks--tiktok-profile-scraper, get-actor-run, get-dataset-items]
 deny: ["*call-actor*", "*call_actor*", "*search-actors*", "*add-actor*", "*fetch-actor*", "*webhook*", "*schedule*"]
+refuse_args: [pageFunction, preNavigationHooks, postNavigationHooks, customData, headers, customHttpHeaders,
+  cookies, cookie, initialCookies, sessionCookies, sessionCookie, li_at, requestsFromUrl, "startUrls[].requestsFromUrl",
+  "startUrls[].headers", "startUrls[].payload", "startUrls[].method", "startUrls[].userData", webhooks,
+  proxyConfiguration, proxyConfig, proxy, proxyCountryCode]
+# Apify's own run and dataset reads keep a key allowlist: their shapes are
+# stable, and a dataset read must not take another export format.
 only_keys:
-  - tools: [compass--crawler-google-places]
-    at: ["$"]
-    keys: [searchStringsArray, city, state, countryCode, maxCrawledPlacesPerSearch, language, waitSecs]
-  - tools: [vdrmota--contact-info-scraper]
-    at: ["$"]
-    keys: [startUrls, maxRequestsPerStartUrl, maxDepth, maxRequests, mergeContacts, sameDomain, considerChildFrames, waitSecs]
-  # requestsFromUrl, method, payload, headers and userData ride on a start URL object.
-  - tools: [vdrmota--contact-info-scraper, apify--facebook-ads-scraper, apify--website-content-crawler]
-    at: ["startUrls[]"]
-    keys: [url]
-  - tools: [web_wanderer--google-reviews-scraper]
-    at: ["$"]
-    keys: [place_ids, limit, order, anyDate, searchKeyword, source, lang, include_personal, waitSecs]
-  - tools: [scrapesage--google-ads-transparency-scraper]
-    at: ["$"]
-    keys: [queries, resultType, maxAdvertisersPerQuery, maxAdsPerSearch, region, waitSecs]
-  - tools: [apify--facebook-ads-scraper]
-    at: ["$"]
-    keys: [startUrls, onlyTotal, resultsLimit, activeStatus, onlyAdsNewerThan, waitSecs]
-  - tools: [valig--indeed-jobs-scraper]
-    at: ["$"]
-    keys: [title, location, country, limit, datePosted, waitSecs]
-  - tools: [apify--website-content-crawler]
-    at: ["$"]
-    keys: [startUrls, crawlerType, maxCrawlPages, maxResults, maxCrawlDepth, htmlTransformer, removeElementsCssSelector, saveMarkdown, waitSecs]
-  # Company, school, title and industry filters stay out: the search is
-  # by name and city only.
-  - tools: [harvestapi--linkedin-profile-search-by-name]
-    at: ["$"]
-    keys: [firstName, lastName, locations, maxItems, maxPages, profileScraperMode, strictSearch, waitSecs]
-  - tools: [apify--instagram-profile-scraper]
-    at: ["$"]
-    keys: [usernames, waitSecs]
-  # Comments, followers, downloads, subtitles, filters, sorting, sections
-  # and the video store stay out.
-  - tools: [clockworks--tiktok-profile-scraper]
-    at: ["$"]
-    keys: [profiles, resultsPerPage, waitSecs]
   - tools: [get-dataset-items]
     at: ["$"]
     keys: [datasetId, fields, limit, offset, clean, omit, desc]
@@ -95,7 +74,7 @@ only_keys:
 fixed:
   - tools: [web_wanderer--google-reviews-scraper]
     at: [include_personal]
-    value: false
+    value: true
     required: true
   - tools: [apify--facebook-ads-scraper]
     at: [onlyTotal]
@@ -111,7 +90,7 @@ fixed:
     required: true
   - tools: [harvestapi--linkedin-profile-search-by-name]
     at: [profileScraperMode]
-    value: 'Full'
+    value: 'Full + email search'
     required: true
   - tools: [harvestapi--linkedin-profile-search-by-name]
     at: [strictSearch]
@@ -125,6 +104,42 @@ fixed:
     at: [resultsPerPage]
     value: 1
     required: true
+  # Per-actor scope and cost keys, refused on that actor alone: null or
+  # absent passes, any other value is blocked.
+  - tools: [compass--crawler-google-places]
+    at: [locationQuery, startUrls, placeIds, customGeolocation, scrapeContacts, maxReviews, scrapePlaceDetailPage, website]
+    value: null
+  - tools: [vdrmota--contact-info-scraper]
+    at: [useBrowser, waitUntil, maximumLeadsEnrichmentRecords, scrapeSocialMediaProfiles]
+    value: null
+  - tools: [web_wanderer--google-reviews-scraper]
+    at: [place_urls, search, search_location, search_limit, search_coordination, sort_dataset, sort_keys]
+    value: null
+  - tools: [scrapesage--google-ads-transparency-scraper]
+    at: [includeDetails, onlyNewAds, monitorStoreName, includeRawData, startUrls, urlsFromFile, domains, advertiserIds]
+    value: null
+  - tools: [apify--facebook-ads-scraper]
+    at: [isDetailsPerAd, includeAboutPage, enrichWithEcommerceData, sorting, onlyAdsOlderThan]
+    value: null
+  - tools: [valig--indeed-jobs-scraper]
+    at: [maxItems, startUrls]
+    value: null
+  - tools: [apify--website-content-crawler]
+    at: [summarize, saveScreenshots, saveContentTypes, saveFiles, saveHtmlAsFile, includeUrlGlobs, useSitemaps, useLlmsTxt,
+      clickElementsCssSelector, waitForSelector, maxConcurrency]
+    value: null
+  - tools: [harvestapi--linkedin-profile-search-by-name]
+    at: [currentCompanies, pastCompanies, schools, currentJobTitles, industryIds, profileUrls, searchQuery]
+    value: null
+  - tools: [apify--instagram-profile-scraper]
+    at: [includeAboutSection, directUrls, resultsLimit, resultsType, searchType]
+    value: null
+  - tools: [clockworks--tiktok-profile-scraper]
+    at: [commentsPerPost, topLevelCommentsPerPost, maxRepliesPerComment, maxFollowersPerProfile,
+      maxFollowingPerProfile, shouldDownloadVideos, shouldDownloadCovers, shouldDownloadSlideshowImages,
+      shouldDownloadAvatars, downloadSubtitlesOptions, oldestPostDateUnified, newestPostDate, leastDiggs, mostDiggs,
+      profileSorting, excludePinnedPosts, profileScrapeSections, videoKvStoreIdOrName]
+    value: null
 # Every start URL must name a url that passes these rules (query and
 # fragment are forbidden by default).
 urls:

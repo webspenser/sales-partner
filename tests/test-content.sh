@@ -1228,7 +1228,7 @@ assert_contains "./$AGD" 'fixed:'
 assert_contains "./$AGD" 'urls:'
 comment_has() { tr '\n#' '  ' < "$1" | tr -s ' ' | grep -qF -- "$2"; } # the file with comment marks and line breaks flattened
 comment_has "$AGD" "can't be pinned" && _report no "$AGD still says the true/false inputs can't be pinned" || _report ok "$AGD no longer says the true/false inputs can't be pinned"
-for s in 'Eight fixed values (Standard 7.3), each required' 'only_keys on startUrls[] still blocks requestsFromUrl'; do
+for s in 'under the retrieval profile (Standard 7.5)' 'with a fixed value of null and no required' 'Fixed values, each required: include_personal true on reviews'; do
   comment_has "$AGD" "$s" && _report ok "$AGD says '$s'" || _report no "$AGD does not say '$s'"
 done
 
@@ -1432,7 +1432,7 @@ assert_contains "$SU" 'never a handle guessed from a name'
 assert_contains "$SU" 'for `linkedin` only, in this release'
 assert_contains "$SU" 'harvestapi/linkedin-profile-search-by-name,apify/instagram-profile-scraper,clockworks/tiktok-profile-scraper'
 assert_contains "$SU" 'verify them in Apify Console'
-assert_contains "$SP/capabilities/scraping/tools/apify/guard.yaml" '# Apify guard policy: ten actors and two reads.'
+assert_contains "$SP/capabilities/scraping/tools/apify/guard.yaml" '# Apify guard policy: ten actors and two reads, under the retrieval'
 WC="$SP/capabilities/web_search/contract.md"
 assert_contains "$WC" '`find-social-profiles` once per contact'
 assert_contains "$WC" 'one-search-per-lead and'

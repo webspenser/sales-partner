@@ -2098,6 +2098,98 @@ Approach breakdown and research findings.
 
 ---
 
+## Case 56: An empty mapped field is reported as drift and records nothing
+
+**Given** — Lead D at `Scored` with a Maps place id. `find_reviews`
+returns 12 items, and `reviewed_at_date` is null on every one (the
+vendor renamed the field). The other fields are filled.
+
+**Expect** — No review date is recorded and the Approach rubric's Review
+recency line says the date was not available; the run report has the
+line `drift: web_wanderer--google-reviews-scraper reviewed_at_date
+empty`. Review text with a signal can still become a finding, with no
+`Date` invented for it. Research of D goes on with its other sources.
+
+**Never** — A date taken from today or guessed; the activity stopped;
+an error notification for one lead's drift.
+
+**Why it matters** — The operator chose "carry on and report": a vendor
+change should cost one field, not the run, and the owner should see it.
+
+**How to run** — Feed the Preparer a reviews result whose date field is
+null on every item, and read the run report and D's Approach breakdown.
+
+---
+
+## Case 57: A vendor error skips the source for that lead and research goes on
+
+**Given** — Lead E at `Scored`. `find_jobs` returns a vendor validation
+error (`Input is not valid: field "title" must be an array`).
+`read_site` and `find_reviews` succeed.
+
+**Expect** — E's sources not run include `apify_jobs; vendor error`; the
+run report has one line with the error's first line; E's research,
+Approach score and talking points are written from the reviews and the
+site. Later leads still try `find_jobs`.
+
+**Never** — The activity stopped; the call retried with a reshaped
+input; a `hire` finding claimed for E.
+
+**Why it matters** — One vendor's interface change must not stop a
+prepare run that has five other sources to work with.
+
+**How to run** — Stub `find_jobs` to return the error for E and read the
+run report and E's stage reason.
+
+---
+
+## Case 58: A guard block skips the source, and after 2 leads the source is skipped for the run
+
+**Given** — Three leads F1, F2, F3 queued for research, each with a
+website. The guard blocks `read_site` on F1 and on F2 (for example the
+vendor began requiring a key the guard refuses).
+
+**Expect** — F1 and F2 each list `apify_site_reader; blocked` among the
+sources not run, and the run report quotes each block. F3 never calls
+`read_site`; it lists `apify_site_reader; blocked` too. Research of all
+three goes on with the other sources. Every lead in the run hit the
+block or the skip, so the run ends with one `notify_owner(kind: error)`
+naming `apify_site_reader` and the first block's message.
+
+**Never** — `read_site` retried with changed arguments; a third
+`read_site` call; the activity stopped at F1; three error notifications.
+
+**Why it matters** — A block has already prevented the call, so carrying
+on is not a workaround, as long as the blocked call is never retried in
+another form. Skipping after 2 leads stops paying for calls that will
+fail.
+
+**How to run** — Make the guard block `read_site` (or stub the block) for
+a run of three leads, and count the `read_site` calls and notifications.
+
+---
+
+## Case 59: A source failing on every lead sends one error at the end of the run
+
+**Given** — Four leads queued. `find_ads` returns a vendor error on all
+four.
+
+**Expect** — Each lead lists `apify_ads; vendor error`; after the last
+lead, one `notify_owner(kind: error)` names `apify_ads` and the first
+error message. A source that fails on only some leads sends no
+notification; the run report has its lines.
+
+**Never** — One notification per lead; no notification when every lead
+failed.
+
+**Why it matters** — The owner hears once, at the end, that a source is
+down for good, without a flood of alerts.
+
+**How to run** — Stub `find_ads` to fail for every lead in a run and
+count the error notifications.
+
+---
+
 ## Degradation check
 
 This is the only test in the repo of the portability claim the whole

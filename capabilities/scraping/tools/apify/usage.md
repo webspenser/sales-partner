@@ -347,6 +347,32 @@ signal, with the review's date, and links the review's own
 `include_personal: false` the reviewer fields come back null). Review text can name people, such as a technician's
 first name: leave those names out of the snippet.
 
+## Drift
+
+A vendor can change an actor without notice. What the agent does when a
+source misbehaves, per lead; the run carries on and its run report says
+what happened:
+
+- **A mapped field comes back missing or empty on every item.** Record
+  nothing from it, and add `drift: <tool> <field> empty` to the run
+  report.
+- **The actor returns a vendor validation error** (bad input, interface
+  changed). The source is not run for this lead (`<source>; vendor
+  error` among the sources not run), research goes on, and the run
+  report has one line with the error's first line.
+- **The guard blocks the call.** The source is not run for this lead
+  (`<source>; blocked`), the call is never retried with changed
+  arguments, research goes on, and the run report quotes the block.
+  After the same source is blocked on 2 leads in one run, it is skipped
+  for the rest of the run.
+- **The same source drifts or is blocked on every lead of a run.** One
+  `notify_owner(kind: error)` at the end of the run, naming the source
+  and its first message.
+
+A lead whose research lost a source is scored from what was found, and
+the run report and the digest's per-lead notes name the sources not run,
+so a low Approach score caused by a missing source is visible.
+
 ## Cost
 
 Apify does not return a USD figure (only compute units). Record an

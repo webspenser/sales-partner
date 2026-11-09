@@ -460,7 +460,15 @@ no source not run, so it is not capped (Sources not run). The 7-day cap is never
 only by editing `apify_spend_cap_usd_per_week` in `operating-config.md`,
 and room the operator grants for a continue never lifts it.
 
-If a call is blocked by the guard, stop the activity and call
+A guard block on a scraping call does not stop the activity: the source
+is not run for this lead, research goes on with the other sources, and
+the block is never retried with changed arguments (Drift in the Apify
+tool's `usage.md`). After the same source is blocked on 2 leads in one
+run, it is skipped for the rest of the run, and each later lead lists it
+as `<source>; blocked`. A source that drifts or is blocked on every lead
+of a run gets one `notify_owner(kind: error)` at the end of the run,
+naming the source and its first message, not one per lead. A guard block
+on any other capability stops the activity and calls
 `notify_owner(kind: error)` with the block's message. Never retry a guard
 block.
 

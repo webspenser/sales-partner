@@ -1660,4 +1660,24 @@ assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" 'Never `place_u
 flat_has "$SP/skills/research-company/SKILL.md" 'A star-only review has no text (`content` is null): it still dates the listing, but it is never a quoted finding.'
 assert_contains "$SP/docs/superpowers/notes/2026-11-09-reviews-actor-probe.md" 'web_wanderer--google-reviews-scraper'
 assert_contains "$SP/evals/cases.md" '## Case 55: A star-only review dates the listing and is never quoted'
+
+echo "-- 8.6.0: drift (carry on and report)"
+for f in "$SP/subagents/preparer.md" "$SP/subagents/prospector.md"; do
+  flat_has "$f" 'A guard block on a scraping call does not stop the activity'
+  flat_has "$f" 'never retried with changed arguments'
+done
+flat_has "$SP/subagents/preparer.md" 'the same source is blocked on 2 leads in one run, it is skipped for the rest of the run'
+flat_has "$SP/subagents/preparer.md" 'one `notify_owner(kind: error)` at the end of the run'
+SUD="$SP/capabilities/scraping/tools/apify/usage.md"
+assert_contains "$SUD" '## Drift'
+for t in '`drift: <tool> <field> empty`' '`<source>; vendor error`' '`<source>; blocked`'; do flat_has "$SUD" "$t"; done
+flat_has "$SP/capabilities/scraping/contract.md" 'A guard block on a scraping call skips that source for the lead'
+assert_not_contains "$SP/capabilities/scraping/contract.md" 'A guard block on a scraping call stops the activity'
+for h in '## Case 56: An empty mapped field is reported as drift and records nothing' \
+         '## Case 57: A vendor error skips the source for that lead and research goes on' \
+         '## Case 58: A guard block skips the source, and after 2 leads the source is skipped for the run' \
+         '## Case 59: A source failing on every lead sends one error at the end of the run'; do
+  assert_contains "$SP/evals/cases.md" "$h"
+done
+
 finish

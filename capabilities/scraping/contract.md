@@ -20,9 +20,10 @@ never a provider's tools.
 
 Each call is a ledger `step` (`capabilities/ledger/contract.md`) with its
 cost in `cost_usd`; an operation that makes two provider calls, such as
-`find_ads`, records a step for each. A guard block on a scraping call stops the activity
-and calls `notify_owner(kind: error)` naming the block; it is never
-retried.
+`find_ads`, records a step for each. A guard block on a scraping call skips that source for the lead
+(the run goes on with the other sources) and is never retried with
+changed arguments; the tool's usage says how drift and blocks are
+reported.
 
 ## Invariants
 

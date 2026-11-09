@@ -127,7 +127,7 @@ check 2 "maps two search terms"    $AG2 ${P}$MAPS '{"maxCrawledPlacesPerSearch":
 check 2 "maps no search term"      $AG2 ${P}$MAPS '{"maxCrawledPlacesPerSearch":60,"city":"Alameda"}' "names no searchStringsArray" "$W/scraping.md"
 check 2 "maps empty search terms"  $AG2 ${P}$MAPS '{"maxCrawledPlacesPerSearch":60,"searchStringsArray":[]}' "" "$W/scraping.md"
 check 2 "maps respelled key alone" $AG2 ${P}$MAPS '{"maxCrawledPlacesPerSearch":60,"SearchStringsArray":["x"]}' "names no searchStringsArray" "$W/scraping.md"
-for a in locationQuery startUrls placeIds customGeolocation scrapeContacts maxReviews scrapePlaceDetailPage website; do
+for a in locationQuery startUrls placeIds customGeolocation scrapeContacts maxReviews scrapePlaceDetailPage website maximumLeadsEnrichmentRecords leadsEnrichmentDepartments verifyLeadsEnrichmentEmails maxImages maxQuestions enableCompetitorAnalysis maxCompetitorsToAnalyze includeWebResults scrapeDirectories scrapeOrderOnline scrapeTableReservationProvider scrapeSocialMediaProfiles scrapeImageAuthors scrapeReviewsPersonalData reviewsFilterString reviewsOrigin reviewsSort reviewsStartDate categoryFilterWords placeMinimumStars searchMatching skipClosedPlaces allPlacesNoSearchAction; do
   check 2 "maps may not set $a"    $AG2 ${P}$MAPS "$(jset "$MAPS_OK" "$a" '"x"')" "must send $a = null" "$W/scraping.md"
 done
 check 2 "maps false add-on"        $AG2 ${P}$MAPS "$(jset "$MAPS_OK" scrapeContacts false)" "must send scrapeContacts = null" "$W/scraping.md"
@@ -147,7 +147,7 @@ check 2 "contacts 11 URLs"         $AG2 ${P}$CONTACTS "{\"startUrls\":$URLS11,$C
 check 2 "contacts no startUrls"    $AG2 ${P}$CONTACTS "{$CT}" "names no startUrls" "$W/scraping.md"
 check 2 "contacts empty startUrls" $AG2 ${P}$CONTACTS "{\"startUrls\":[],$CT}" "" "$W/scraping.md"
 check 2 "contacts proxyConfig"     $AG2 ${P}$CONTACTS "{\"startUrls\":[$U1],$CT,\"proxyConfig\":{\"useApifyProxy\":true,\"apifyProxyGroups\":[\"RESIDENTIAL\"]}}" "may not use" "$W/scraping.md"
-for a in useBrowser waitUntil maximumLeadsEnrichmentRecords scrapeSocialMediaProfiles; do
+for a in useBrowser waitUntil maximumLeadsEnrichmentRecords leadsEnrichmentDepartments verifyLeadsEnrichmentEmails scrapeSocialMediaProfiles; do
   check 2 "contacts may not set $a" $AG2 ${P}$CONTACTS "{\"startUrls\":[$U1],$CT,\"$a\":\"x\"}" "must send $a = null" "$W/scraping.md"
 done
 check 0 "contacts unknown harmless input passes" $AG2 ${P}$CONTACTS "{\"startUrls\":[$U1],$CT,\"someNewVendorOption\":true}" "" "$W/scraping.md"

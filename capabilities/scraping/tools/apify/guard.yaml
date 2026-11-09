@@ -105,12 +105,21 @@ fixed:
     value: 1
     required: true
   # Per-actor scope and cost keys, refused on that actor alone: null or
-  # absent passes, any other value is blocked.
+  # absent passes, any other value is blocked. Each list holds every paid
+  # add-on and scope-widening input its probe note names (Maps and
+  # contacts: agent-builder's 2026-10-13 probe), not only the ones the
+  # agent might plausibly send.
   - tools: [compass--crawler-google-places]
-    at: [locationQuery, startUrls, placeIds, customGeolocation, scrapeContacts, maxReviews, scrapePlaceDetailPage, website]
+    at: [locationQuery, startUrls, placeIds, customGeolocation, scrapeContacts, maxReviews, scrapePlaceDetailPage, website,
+      maximumLeadsEnrichmentRecords, leadsEnrichmentDepartments, verifyLeadsEnrichmentEmails, maxImages, maxQuestions,
+      enableCompetitorAnalysis, maxCompetitorsToAnalyze, includeWebResults, scrapeDirectories, scrapeOrderOnline,
+      scrapeTableReservationProvider, scrapeSocialMediaProfiles, scrapeImageAuthors, scrapeReviewsPersonalData,
+      reviewsFilterString, reviewsOrigin, reviewsSort, reviewsStartDate, categoryFilterWords, placeMinimumStars,
+      searchMatching, skipClosedPlaces, allPlacesNoSearchAction]
     value: null
   - tools: [vdrmota--contact-info-scraper]
-    at: [useBrowser, waitUntil, maximumLeadsEnrichmentRecords, scrapeSocialMediaProfiles]
+    at: [useBrowser, waitUntil, maximumLeadsEnrichmentRecords, leadsEnrichmentDepartments, verifyLeadsEnrichmentEmails,
+      scrapeSocialMediaProfiles]
     value: null
   - tools: [web_wanderer--google-reviews-scraper]
     at: [place_urls, search, search_location, search_limit, search_coordination, sort_dataset, sort_keys]

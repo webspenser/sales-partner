@@ -88,8 +88,7 @@ square brackets after the claim it backs.
    URL, adding nothing the finding doesn't say, then links it to the
    offer. A point may cite a review by its reviewer and date when the
    finding names them ("Dana's review on 2026-10-02 says…"), so the owner
-   knows exactly which review is meant; a complaint review still goes
-   only to `Avoid:`, never quoted back at the owner. An `offer signal` finding is good material here even without a
+   knows exactly which review is meant. A complaint review may feed a Point only as the problem the offer answers, unquoted and unnamed; its reviewer and date go only in `Avoid:`. An `offer signal` finding is good material here even without a
    usable hook; `contact route`, `rule-out` and `no hooks found` findings
    are not. With fewer findings to draw on, write fewer points: one
    finding, one point; none, `- none`. A claim about results or proof
@@ -141,7 +140,7 @@ Offer: Invoice Reconciliation
 Opener: Brightwater posted an accounts clerk role on 2026-10-02 to "chase and reconcile client invoices" [https://jobs.example/brightwater-clerk]
 Points:
 - The 2026-10-02 accounts clerk post asks for someone to "chase and reconcile client invoices" [https://jobs.example/brightwater-clerk]; Invoice Reconciliation matches invoices to payments and flags the differences.
-- A 2026-09-21 review says "they billed me twice for the same quarter and it took weeks to fix" [https://maps.example/brightwater]; Invoice Reconciliation flags the differences, so the books close without manual checking.
+- A recent review describes a client billed twice for the same quarter [https://maps.example/brightwater]; Invoice Reconciliation flags the differences, so the books close without manual checking.
 Avoid:
 - Don't quote the double-billing review back to them; it is a complaint, there only to show the problem [https://maps.example/brightwater].
 - Don't pitch call answering: their contact page says "calls answered 24/7 by our answering service" [https://brightwater.example/contact].

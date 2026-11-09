@@ -114,9 +114,12 @@ The Preparer's cap and time-budget rules for Apify spend apply to every
    `upsert_contact(lead_id, name, …, linkedin_url, instagram_url,
    facebook_url, tiktok_url, x_url)` call, passing the URL for each
    platform found and nothing for the rest. Each is written only when
-   the CRM field is empty. Every `upsert_contact` call here passes the
-   contact's current name, title, email and role unchanged, so it
-   matches the same person; the Preparer never sends a contact with no
+   the CRM field is empty. An email `find_profiles` found for a confident candidate goes in `email` only when the field is empty
+   (LinkedIn email search; a free-mail address included, with `notes`
+   saying `email from LinkedIn email search`), and an uncertain candidate's email goes only in the possible-profiles section, so a
+   stranger's address never becomes a route to the lead. Otherwise every
+   `upsert_contact` call here passes the contact's current name, title,
+   email and role unchanged, so it matches the same person; the Preparer never sends a contact with no
    role to this skill. Everything else, including every candidate
    from a tie and any confident match for a field already filled with a
    different URL, goes into one `log_possible_profiles(lead_id,
@@ -140,7 +143,7 @@ The Preparer's cap and time-budget rules for Apify spend apply to every
 
 ## Failure modes
 
-- `find_profiles` or `read_profile` fails: retry once. If it fails
+- `find_profiles` or `read_profile` fails: retry once. A guard block is never retried: it counts as a failed second try. If it fails
   again, treat that platform as not searched, say so in the report, and
   return `stopped` rather than marking the contact checked.
 - A candidate's profile is private or empty: it has no bio or links to

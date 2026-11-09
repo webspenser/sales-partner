@@ -52,8 +52,8 @@ public search is a legitimate source.
 4. For each person, find a contact route: an email address, a
    direct phone number, a LinkedIn profile URL, or any combination.
    Note where each came from. An email address a source shows for the
-   named person (LinkedIn email search in `find_profiles`, a directory
-   listing, the website) goes in `Email` whatever its domain: a Gmail or
+   named person (a directory listing, the website, a press page; LinkedIn
+   email search adds more later, in the Profile pass) goes in `Email` whatever its domain: a Gmail or
    other personal address is often the most direct route to a
    non-technical owner, and the Contact's notes say where it was found
    (`email from LinkedIn email search`).

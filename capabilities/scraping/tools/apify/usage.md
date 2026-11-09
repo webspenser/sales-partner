@@ -361,11 +361,11 @@ what happened:
   nothing from it, and add `drift: <tool> <field> empty` to the run
   report.
 - **The actor returns a vendor validation error** (bad input, interface
-  changed). The source is not run for this lead (`<source>; vendor
-  error` among the sources not run), research goes on, and the run
+  changed). The source is not run for this lead (`<source> (vendor error)`
+  among the sources not run), research goes on, and the run
   report has one line with the error's first line.
 - **The guard blocks the call.** The source is not run for this lead
-  (`<source>; blocked`), the call is never retried with changed
+  (`<source> (blocked)`), the call is never retried with changed
   arguments, research goes on, and the run report quotes the block.
   After the same source is blocked on 2 leads in one run, it is skipped
   for the rest of the run.
@@ -373,9 +373,11 @@ what happened:
   `notify_owner(kind: error)` at the end of the run, naming the source
   and its first message.
 
-A lead whose research lost a source is scored from what was found, and
-the run report and the digest's per-lead notes name the sources not run,
-so a low Approach score caused by a missing source is visible.
+A lead whose research lost a source is scored from what was found. Its
+`Researched` stage reason ends with `; not run: <source> (<reason>), …`
+(before any `; no point of contact` end), and the digest marks the lead
+with that list, so a low Approach score caused by a missing source is
+visible.
 
 ## Cost
 

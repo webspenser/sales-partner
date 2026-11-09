@@ -183,6 +183,11 @@ First, call `ledger_status`, then write `run_started`
      the lead's stage reason says which cap and which sources did not
      run, and the digest does not repeat it. The mark changes neither
      the order nor the count.
+   - **Sources not run.** Mark a lead whose stage reason has a
+     `; not run: …` part (a source lost to a vendor error or a guard
+     block) with `(sources not run: <that list>)` after the evidence and
+     any other mark, so a low Approach score caused by a missing source
+     shows. The mark changes neither the order nor the count.
    - **Do Not Contact leads.** Mark every lead whose `Do Not Contact` is
      true `⚠ DO NOT SEND — lead is Do Not Contact` and list those first.
      Report only: the digest writes nothing to the CRM.

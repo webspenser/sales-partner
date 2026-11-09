@@ -151,7 +151,7 @@ nothing else is written.
 
 ## Profile pass
 The Profile pass finds the social profiles of the people already
-identified. It runs after every queued lead in the run has been
+identified. When the Profile pass writes an email for a contact of a lead with no point of contact, it runs `pick-point-of-contact` for that lead (a named person with an email is now eligible); it never changes a point of contact already set. It runs after every queued lead in the run has been
 prepared and moved to `Researched`, so profile spend on one lead can
 never push a later lead's evidence calls over a cap. It runs only when
 `apify_profiles` is listed in `prospecting_sources`; a list without it
@@ -241,7 +241,7 @@ cap).
 
 ## Scraping
 **Website URLs** come first. The guard blocks a start URL that breaks
-its URL rule, and a block stops the activity (below), so before a lead's
+its URL rule, and a block loses that source for the lead (below), so before a lead's
 `website` goes to `find_contacts` or `read_site`, read its host
 lowercased, with a single trailing dot dropped (`lakesidecpa.com.` is
 `lakesidecpa.com`; that is not a skip), and check it in this order
@@ -466,7 +466,7 @@ is not run for this lead, research goes on with the other sources, and
 the block is never retried with changed arguments (Drift in the Apify
 tool's `usage.md`). After the same source is blocked on 2 leads in one
 run, it is skipped for the rest of the run, and each later lead lists it
-as `<source>; blocked`. A source that drifts or is blocked on every lead
+as `<source> (blocked)`. A lead that lost a source this way, or to a vendor error (`<source> (vendor error)`), ends its `Researched` stage reason with `; not run: <source> (<reason>)`, one entry per source joined by `, `, before any `; no point of contact` end; these sources are named with a reason, so they never mark the lead Research Capped. A source that drifts or is blocked on every lead
 of a run gets one `notify_owner(kind: error)` at the end of the run,
 naming the source and its first message, not one per lead. A guard block
 on any other capability stops the activity and calls

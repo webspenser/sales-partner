@@ -1309,7 +1309,7 @@ flat_has "$EV" 'a test domain you control that serves only http (Apify fetches f
 C34=$(awk '/^## Case 34:/ { f=1; next } f && /^## Case / { f=0 } f' "$EV")
 printf '%s' "$C34" | grep -qF smithbookkeeping && _report no "Case 34 reuses Case 33's smithbookkeeping" || _report ok "Case 34 has its own page name"
 # README: the standard and the one stated limit left
-assert_contains "$SP/README.md" 'Agent Standard](https://github.com/webspenser/agent-builder/blob/main/STANDARD.md) 7.4'
+assert_contains "$SP/README.md" 'Agent Standard](https://github.com/webspenser/agent-builder/blob/main/STANDARD.md) 7.5'
 flat_has "$SP/README.md" 'data could still leave in the hostname itself'
 # Odd website forms are normalized in both files, so the guard never receives one it refuses
 for f in "$SP/capabilities/scraping/tools/apify/usage.md" "$SP/subagents/preparer.md"; do
@@ -1671,7 +1671,7 @@ flat_has "$SP/subagents/preparer.md" 'the same source is blocked on 2 leads in o
 flat_has "$SP/subagents/preparer.md" 'one `notify_owner(kind: error)` at the end of the run'
 SUD="$SP/capabilities/scraping/tools/apify/usage.md"
 assert_contains "$SUD" '## Drift'
-for t in '`drift: <tool> <field> empty`' '`<source>; vendor error`' '`<source>; blocked`'; do flat_has "$SUD" "$t"; done
+for t in '`drift: <tool> <field> empty`' '`<source> (vendor error)`' '`<source> (blocked)`'; do flat_has "$SUD" "$t"; done
 flat_has "$SP/capabilities/scraping/contract.md" 'A guard block on a scraping call skips that source for the lead'
 assert_not_contains "$SP/capabilities/scraping/contract.md" 'A guard block on a scraping call stops the activity'
 for h in '## Case 56: An empty mapped field is reported as drift and records nothing' \
@@ -1708,5 +1708,27 @@ echo "-- 8.6.0: release"
 assert_contains "$SP/README.md" 'Version 8.6.0.'
 assert_contains "$SP/README.md" 'Upgrading from 8.5.1'
 flat_has "$SP/capabilities/scraping/tools/apify/usage.md" 'confirm that the Apify monthly usage limit is set'
+
+
+echo "-- 8.6.0: final review fixes"
+FSP="$SP/skills/find-social-profiles/SKILL.md"
+flat_has "$FSP" 'An email `find_profiles` found for a confident candidate goes in `email` only when the field is empty'
+flat_has "$FSP" 'an uncertain candidate'"'"'s email goes only in the possible-profiles section'
+flat_has "$FSP" 'A guard block is never retried'
+flat_has "$SP/subagents/preparer.md" 'When the Profile pass writes an email for a contact of a lead with no point of contact, it runs `pick-point-of-contact` for that lead'
+assert_not_contains "$SP/skills/find-decision-makers/SKILL.md" 'LinkedIn email search in `find_profiles`'
+flat_has "$SP/evals/cases.md" 'In the Profile pass, `find-social-profiles` writes'
+WTP="$SP/skills/write-talking-points/SKILL.md"
+flat_has "$WTP" 'A complaint review may feed a Point only as the problem the offer answers, unquoted and unnamed; its reviewer and date go only in `Avoid:`'
+assert_not_contains "$WTP" '- A 2026-09-21 review says "they billed me twice'
+flat_has "$SP/evals/cases.md" 'uses its signal in a Point only unquoted and unnamed'
+flat_has "$SP/subagents/prospector.md" 'one `notify_owner(kind: error)` at the end of the run'
+flat_has "$SP/subagents/preparer.md" '`; not run: <source> (<reason>)'
+flat_has "$SP/skills/send-digest/SKILL.md" '(sources not run: '
+assert_not_contains "$SP/subagents/preparer.md" 'a block stops the activity (below)'
+assert_not_contains "$SP/evals/cases.md" 'stops the activity'
+for t in '; vendor error`' '; blocked`'; do
+  for f in "$SP/subagents/preparer.md" "$SUD" "$SP/evals/cases.md"; do assert_not_contains "$f" "$t"; done
+done
 
 finish

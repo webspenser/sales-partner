@@ -1235,8 +1235,8 @@ in the quote as written), and ends
 Its `Date` is the review's date and its `Source URL` the review's own
 `review_url`. "Whitfield", the profile URL and the photo URL appear
 nowhere in the lead's research, Contacts or Talking Points. The review
-is a complaint, so the talking points name it only under `Avoid:`
-(Case 60). The review's date is the one the Approach rubric's Review
+is a complaint, so `write-talking-points` uses its signal in a Point only unquoted and unnamed, and
+names Dana's review and its date only under `Avoid:` (Case 60). The review's date is the one the Approach rubric's Review
 recency line cites. For H2 no `find_reviews` call is made: with no
 `query_place_id` the call is skipped, never run on the business's name.
 
@@ -1419,7 +1419,7 @@ site root. The `find_contacts` batch carries
 `startUrls: [{"url": "https://smithbookkeeping.com/"}]`: https, the
 host as the listing gives it, the path and query dropped. No Apify call
 in the trace carries an `http://` URL; the guard would block one, and a
-block stops the activity. In a second run, S's website is
+block loses that source for the lead. In a second run, S's website is
 `http://` on a test domain you control that serves only http (Apify
 fetches from its cloud, so a local server won't do), so the https
 fetch of the upgraded website fails: each run reads no page from that
@@ -1468,7 +1468,7 @@ step, because the call was never due.
 
 **Why it matters** — The guard takes Facebook pages only on
 `facebook.com` and `www.facebook.com`, with no query or fragment. A
-mobile link sent as found is blocked and stops the activity, and a
+mobile link sent as found is blocked and loses the Facebook check, and a
 tracking query left on is a channel the rule exists to close.
 
 **How to run** — Seed P with that social link (or set it as
@@ -1499,8 +1499,8 @@ with no page URL.
 
 **Why it matters** — Stripping the query to get past the guard would
 count the ads of a page that isn't the lead's, and the operator would
-quote that count back to the prospect. Sending the query is blocked and
-stops the activity.
+quote that count back to the prospect. Sending the query is blocked, and the
+lead loses its Facebook check.
 
 **How to run** — Seed P with that `facebook_url` and the disposable
 catalog, run the Preparer, and confirm the trace has a Google ads call
@@ -2132,10 +2132,12 @@ null on every item, and read the run report and D's Approach breakdown.
 error (`Input is not valid: field "title" must be an array`).
 `read_site` and `find_reviews` succeed.
 
-**Expect** — E's sources not run include `apify_jobs; vendor error`; the
+**Expect** — E's sources not run include `apify_jobs (vendor error)`; the
 run report has one line with the error's first line; E's research,
 Approach score and talking points are written from the reviews and the
-site. Later leads still try `find_jobs`.
+site, and E's `Researched` stage reason ends `; not run: apify_jobs
+(vendor error)`; the next digest marks E `(sources not run: apify_jobs
+(vendor error))`, and E is not marked Research Capped. Later leads still try `find_jobs`.
 
 **Never** — The activity stopped; the call retried with a reshaped
 input; a `hire` finding claimed for E.
@@ -2154,9 +2156,9 @@ run report and E's stage reason.
 website. The guard blocks `read_site` on F1 and on F2 (for example the
 vendor began requiring a key the guard refuses).
 
-**Expect** — F1 and F2 each list `apify_site_reader; blocked` among the
+**Expect** — F1 and F2 each list `apify_site_reader (blocked)` among the
 sources not run, and the run report quotes each block. F3 never calls
-`read_site`; it lists `apify_site_reader; blocked` too. Research of all
+`read_site`; it lists `apify_site_reader (blocked)` too. Research of all
 three goes on with the other sources. Every lead in the run hit the
 block or the skip, so the run ends with one `notify_owner(kind: error)`
 naming `apify_site_reader` and the first block's message.
@@ -2179,7 +2181,7 @@ a run of three leads, and count the `read_site` calls and notifications.
 **Given** — Four leads queued. `find_ads` returns a vendor error on all
 four.
 
-**Expect** — Each lead lists `apify_ads; vendor error`; after the last
+**Expect** — Each lead lists `apify_ads (vendor error)`; after the last
 lead, one `notify_owner(kind: error)` names `apify_ads` and the first
 error message. A source that fails on only some leads sends no
 notification; the run report has its lines.
@@ -2221,26 +2223,37 @@ Talking Points section.
 ## Case 61: A personal email from LinkedIn email search makes the owner the point of contact
 
 **Given** — Lead P, a two-person landscaping business whose site lists
-only `info@greenlinelandscape.com`. `find_profiles` (LinkedIn, mode
-`Full + email search`) finds the owner, Sam Ortiz, with
-`emails[0].email` `samortiz.greenline@gmail.com`, `free: true`,
-`status: valid`.
+only `info@greenlinelandscape.com`. `find-decision-makers` names the
+owner, Sam Ortiz, with no email, so after preparing P has no point of
+contact (`; no point of contact: no contact has an email`). In the
+Profile pass, `find_profiles` (LinkedIn, mode `Full + email search`)
+finds Sam's profile, a confident match (its current employer is the
+business, and it links to the business's site), with `emails[0].email`
+`samortiz.greenline@gmail.com`, `free: true`, `status: valid`.
 
-**Expect** — `find-decision-makers` writes Sam's Contact with that Gmail
-address in `Email`, `Verified` checked only if the profile matches name
-and current employer, and `notes` saying `email from LinkedIn email
-search`. The info@ row stays as the general inbox. `pick-point-of-contact`
-picks Sam: a named person with an email beats an unnamed row.
+**Expect** — In the Profile pass, `find-social-profiles` writes the
+Gmail address to Sam's empty `Email`, with `notes` saying `email from
+LinkedIn email search`, alongside his `linkedin_url`. Because P has no
+point of contact, the Preparer then runs `pick-point-of-contact` for P,
+which picks Sam: a named person with an email beats the unnamed info@
+row. P's stage and talking points are not changed by the pass. Had the
+LinkedIn candidate been uncertain (a name and city match only), its
+email would sit only in the possible-profiles section and P would keep
+no point of contact.
 
 **Never** — The Gmail address left out for being personal; a guessed
-`sam@greenlinelandscape.com` written to `Email`; info@ picked over Sam.
+`sam@greenlinelandscape.com` written to `Email`; an uncertain
+candidate's email written to `Email`; a point of contact the operator
+set replaced.
 
 **Why it matters** — The operator's words: personal emails "might be the
 best direct path to a business owner especially for non-technical
-owners."
+owners." The email search is paid for, so what it finds has to reach the
+point of contact.
 
-**How to run** — Stub `find_profiles` to return that item for P, run the
-Preparer, and read P's Contacts and point of contact.
+**How to run** — Stub `find_profiles` to return that item for Sam, run
+the Preparer with `apify_profiles` listed, and read P's Contacts and
+point of contact after the Profile pass.
 
 ---
 

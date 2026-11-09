@@ -409,7 +409,9 @@ trips early. The operator recalibrates them from Apify Console.
 
 1. The business owns the Apify account and pays for it; Webspenser
    manages it. In Apify Console set a monthly usage limit: it is the hard
-   stop on spend.
+   stop on spend. Setup asks the operator to confirm that the Apify monthly usage limit is set; the agent
+   never reads it (a connector resource read is a raw Apify API call the
+   guard does not see).
 2. Add the hosted connector in claude.ai (Settings → Connectors → Add
    custom connector) at
    `https://mcp.apify.com?tools=compass/crawler-google-places,vdrmota/contact-info-scraper,web_wanderer/google-reviews-scraper,scrapesage/google-ads-transparency-scraper,apify/facebook-ads-scraper,valig/indeed-jobs-scraper,apify/website-content-crawler,harvestapi/linkedin-profile-search-by-name,apify/instagram-profile-scraper,clockworks/tiktok-profile-scraper`

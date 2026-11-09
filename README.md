@@ -129,7 +129,7 @@ in that folder loads the agent. Plugin updates never touch your folder.
 
 Built on [Agent Standard](https://github.com/webspenser/agent-builder/blob/main/STANDARD.md) 7.4
 with [Agent Builder](https://github.com/webspenser/agent-builder).
-Version 8.5.1.
+Version 8.6.0.
 
 ## Use it from source
 
@@ -350,6 +350,29 @@ so every prepare run stopped at its first review call. Your
    (for example "Apify Actors" or "Apify Connector"), because the guard
    finds the server by that word.
 2. Start a new session so the agent loads the new tool.
+
+Upgrading from 8.5.1: the Apify guard now follows the retrieval profile
+(Agent Standard 7.5). It names the actors it allows, caps every result
+and page count, refuses code, headers, cookies, proxies and each actor's
+paid add-ons, and lets any other new vendor input pass, so a small
+vendor change no longer blocks every call. Three behaviors change:
+
+- A scraping source that fails (an empty field, a vendor error or a
+  guard block) is skipped for that lead and research goes on; the run
+  report says what happened. A source blocked on 2 leads is skipped for
+  the rest of the run, and a source that fails on every lead sends one
+  error notification at the end.
+- Review findings and talking points can name a reviewer by first name
+  and date. Profile links, photos and IDs are never kept.
+- The LinkedIn search runs in `Full + email search` mode, and an email it
+  finds for an owner, a Gmail address included, can become the point of
+  contact. Its cost estimate is $0.15 per search; check the real charge
+  in Apify Console after the first runs.
+
+Your connector URL, `prospecting_sources` and `bindings/scraping.md`
+stay as they are. Confirm that the Apify monthly usage limit is set in
+Apify Console: it is the hard stop on spend. Start a new session so the
+agent loads the new guard.
 
 ## Developing
 

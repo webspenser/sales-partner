@@ -500,7 +500,7 @@ echo "-- 7.0: no Airtable CRM"
 for f in capabilities/crm/contract.md capabilities/crm/tools/attio/usage.md skills/send-digest/SKILL.md; do
   assert_not_contains "./$f" "Airtable"
 done
-assert_contains "$SP/agent.yaml" 'standard: "7.4"'
+assert_contains "$SP/agent.yaml" 'standard: "7.5"'
 assert_contains "$SP/agent.yaml" 'capabilities: crm'
 
 echo "-- 7.0: no email_drafts"
@@ -530,7 +530,7 @@ assert_contains "$SP/README.md" 'messages only you, through Resend'
 assert_contains "$SP/evals/cases.md" 'A notification never reaches anyone but the owner'
 
 echo "-- 7.0.0: release"
-assert_contains "$SP/agent.yaml" 'version: 8.5.1'
+assert_contains "$SP/agent.yaml" 'version: 8.6.0'
 for m in agent.yaml .claude-plugin/plugin.json .claude-plugin/marketplace.json .codex-plugin/plugin.json gemini-extension.json; do
   grep -qF "$EXPECTED_DESC" "./$m" && _report ok "$m: description is the 8.0.0 string" || _report no "$m: description is not the 8.0.0 string"
 done
@@ -546,7 +546,7 @@ printf '%s' "$after_tools" | grep -qF 'git push -u' && _report ok "version contr
 printf '%s' "$after_tools" | grep -qF 'offer one test notification' && _report ok "open step offers the test notification" || _report no "open step does not offer the test notification"
 
 echo "-- 7.1: ledger"
-assert_contains "$SP/agent.yaml" 'standard: "7.4"'
+assert_contains "$SP/agent.yaml" 'standard: "7.5"'
 assert_contains "$SP/agent.yaml" 'capabilities: crm, owner_notify, ledger'
 assert_contains "$SP/agent.yaml" 'activity_prospect: crm, owner_notify, ledger'
 assert_contains "$SP/agent.yaml" 'activity_prepare: crm, owner_notify, ledger, scraping'
@@ -582,7 +582,7 @@ assert_contains "$SP/README.md" 'Upgrading from 7.0'
 wc -c < "$SP/AGENT.md" | awk '{exit !($1 < 6000)}' && _report ok "AGENT.md under 6000 bytes" || _report no "AGENT.md 6000 bytes or more"
 
 echo "-- 7.2: scraping"
-assert_contains "$SP/agent.yaml" 'standard: "7.4"'
+assert_contains "$SP/agent.yaml" 'standard: "7.5"'
 assert_contains "$SP/agent.yaml" 'capabilities: crm, owner_notify, ledger, scraping'
 assert_contains "$SP/capabilities/scraping/contract.md" '`pinned_inputs`'
 assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" 'mcp.apify.com?tools=compass/crawler-google-places,vdrmota/contact-info-scraper'
@@ -794,10 +794,10 @@ done < <(find AGENT.md README.md subagents skills templates context capabilities
 rm -f "$README_NO_UPGRADE"
 
 echo "-- 8.0.0: release: version, README flow and the upgrade note"
-assert_contains "$SP/agent.yaml" 'version: 8.5.1'
-assert_contains "$SP/README.md" 'Version 8.5.1.'
+assert_contains "$SP/agent.yaml" 'version: 8.6.0'
+assert_contains "$SP/README.md" 'Version 8.6.0.'
 for m in .claude-plugin/plugin.json .codex-plugin/plugin.json gemini-extension.json; do
-  assert_contains "./$m" '"version": "8.5.1"'
+  assert_contains "./$m" '"version": "8.6.0"'
 done
 assert_contains "$SP/README.md" 'Upgrading from 7.4'
 for t in 'Approved' 'Research Anyway' 'Talking Points' 'offer catalog' 'Hero Offer' 'schedule_approach'; do
@@ -1223,7 +1223,7 @@ flat_has "$PP" 'rewrite the reason with only the capped start (the start and its
 flat_has "$PP" 'the other starts stay'
 
 echo "-- 7.3: fixed values and URL rules on the Apify tools"
-assert_contains "$SP/agent.yaml" 'standard: "7.4"'
+assert_contains "$SP/agent.yaml" 'standard: "7.5"'
 AGD=capabilities/scraping/tools/apify/guard.yaml
 assert_contains "./$AGD" 'fixed:'
 assert_contains "./$AGD" 'urls:'
@@ -1702,5 +1702,11 @@ for h in '## Case 60: A complaint review is named only in Avoid and never quoted
 done
 assert_not_contains "$SP/evals/cases.md" 'include_personal: false'
 assert_not_contains "$SP/README.md" 'never the reviewer'"'"'s name'
+
+
+echo "-- 8.6.0: release"
+assert_contains "$SP/README.md" 'Version 8.6.0.'
+assert_contains "$SP/README.md" 'Upgrading from 8.5.1'
+flat_has "$SP/capabilities/scraping/tools/apify/usage.md" 'confirm that the Apify monthly usage limit is set'
 
 finish

@@ -125,7 +125,7 @@ Segment and offer).
   (`apify_yelp`), each only when its
   source is listed in `prospecting_sources`
 - Scraping `find_profiles` and `read_profile` (`apify_profiles`), only
-  through `find-social-profiles` in the Profile pass, and only when
+  through `find-social-profiles` in the Profile pass, and the LinkedIn company search through `find-decision-makers` when no source names an owner, and only when
   `apify_profiles` is listed in `prospecting_sources`
 - CRM `query_by_stage` (`stage = "Researched"`), for the Profile pass
 - Every scraping call stays within `apify_cap_usd_per_lead` and

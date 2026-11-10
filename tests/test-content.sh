@@ -1773,4 +1773,17 @@ for t in '`apify:valig--linkedin-jobs-scraper`' 'title,companyName,location,post
 flat_has "$SP/subagents/preparer.md" '`find_jobs` runs Indeed, then LinkedIn'
 flat_has "$SP/evals/cases.md" '## Case 67: A LinkedIn job post from a similarly named company is dropped'
 
+echo "-- 8.7.0: LinkedIn company search and reader"
+for t in '`apify:harvestapi--linkedin-profile-search`' '`apify:harvestapi--linkedin-profile-scraper`' \
+  '`profileScraperMode` — always `"Short"`' '`"Profile details + email search ($10 per 1k)"`' 'Never pass a MongoDB argument' \
+  '| `find_profiles`, LinkedIn company search | $0.10 per call |' '| `read_profile`, LinkedIn | $0.02 per profile |' \
+  'firstName,lastName,linkedinUrl,summary,location.linkedinText,currentPositions'; do flat_has "$SUD" "$t"; done
+flat_lacks "$SUD" 'LinkedIn has no reader'
+flat_has "$SP/skills/find-decision-makers/SKILL.md" 'When no source names an owner and the lead has a LinkedIn company URL, run `find_profiles` as a LinkedIn company search'
+flat_has "$SP/skills/find-social-profiles/SKILL.md" 'A LinkedIn profile URL already known for the contact (an anchor) is read with `read_profile`'
+flat_lacks "$SP/evals/cases.md" 'LinkedIn has no reader'
+flat_has "$SP/evals/cases.md" '## Case 68: A company search finds the owner and the reader finds the email'
+
+flat_has "$SP/subagents/preparer.md" 'and the LinkedIn company search through `find-decision-makers` when no source names an owner'
+
 finish

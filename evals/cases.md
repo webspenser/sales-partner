@@ -1607,8 +1607,8 @@ Springfield. The contact has no `linkedin_url`.
 
 **Expect** — `skills/find-social-profiles/SKILL.md`, Procedure step 3:
 
-- **No LinkedIn read.** `read_profile` is never called for a LinkedIn
-  URL: LinkedIn has no reader.
+- **No LinkedIn read.** `read_profile` is never called for these two
+  URLs: `find_profiles` already returned them with employer and emails.
 - **Both uncertain.** Each qualifies on its own (the employer is this
   business, since each location matches Springfield), but when two
   candidates on one platform both qualify, both are uncertain: neither
@@ -2397,6 +2397,38 @@ signal from the wrong company sends the operator in with a false hook.
 
 **How to run** — Stub the LinkedIn jobs call with those two items; run
 the Preparer for V with `apify_jobs` picked and read its findings.
+
+---
+
+## Case 68: A company search finds the owner and the reader finds the email
+
+**Given** — Lead W, a bakery whose site, Maps listing and BBB name no
+person. Its website footer links
+`https://www.linkedin.com/company/w-bakehouse?trk=footer`. `apify_profiles`
+is listed. The company search returns one profile,
+`https://www.linkedin.com/in/maria-w-baker`, current position "Owner" at
+W Bakehouse. In the Profile pass the reader returns
+`emails[0].email` `maria.wbakes@gmail.com`, `status: valid`.
+
+**Expect** — `find-decision-makers` sends the company search with
+`https://www.linkedin.com/company/w-bakehouse` (query dropped), Short
+mode, one page, and writes Maria as a decision-maker with her LinkedIn
+URL in `Notes`. In the Profile pass `find-social-profiles` reads her
+known URL with `read_profile` (email-search mode), writes the Gmail
+address to her empty `Email` (`notes`: `email from LinkedIn email
+search`), and `pick-point-of-contact` picks her.
+
+**Never** — The company search in `Full` or email mode, or over two
+pages; a MongoDB argument; the reader run for a candidate that was not
+the business's owner; a guessed `maria@wbakehouse.com` written to
+`Email`.
+
+**Why it matters** — Many small businesses name no one online except on
+LinkedIn; the cheap search plus one paid read reaches the owner at a
+fraction of a full email search.
+
+**How to run** — Stub the company search and the reader; run the
+Preparer for W and read its contacts and point of contact.
 
 ---
 

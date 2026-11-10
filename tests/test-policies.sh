@@ -463,13 +463,41 @@ LIJ=valig--linkedin-jobs-scraper
 LIJ_OK='{"companyName":["Franklin Barbecue"],"location":"Austin, TX","datePosted":"r2592000","limit":20,"waitSecs":45}'
 check 0 "linkedin jobs in limit"           $AG2 ${P2}$LIJ "$LIJ_OK" "" "$W/scraping.md"
 harmless "linkedin jobs" $LIJ "$LIJ_OK"
-nulled "linkedin jobs" $LIJ "$LIJ_OK" urlParam urlPath keywords
+nulled "linkedin jobs" $LIJ "$LIJ_OK" urlParam urlPath keywords companyId
 check 2 "linkedin jobs keyword search"     $AG2 ${P2}$LIJ "$(jset "$LIJ_OK" keywords '"barbecue"')" "must send keywords = null" "$W/scraping.md"
 lists "linkedin jobs" $LIJ "$LIJ_OK" 'companyName:max_search_terms:["a","b"]'
 check 2 "linkedin jobs over"               $AG2 ${P2}$LIJ "$(jset "$LIJ_OK" limit 21)" "is not a pinned value (max_jobs)" "$W/scraping.md"
 check 2 "linkedin jobs limit omitted"      $AG2 ${P2}$LIJ "$(jdel "$LIJ_OK" limit)" "names no pinned value" "$W/scraping.md"
 check 2 "linkedin jobs last week only"     $AG2 ${P2}$LIJ "$(jset "$LIJ_OK" datePosted '"r604800"')" 'must send datePosted = "r2592000"' "$W/scraping.md"
 check 2 "linkedin jobs any date"           $AG2 ${P2}$LIJ "$(jdel "$LIJ_OK" datePosted)" "names no datePosted" "$W/scraping.md"
+
+LIS=harvestapi--linkedin-profile-search; LIR=harvestapi--linkedin-profile-scraper
+LIS_OK='{"currentCompanies":["https://www.linkedin.com/company/franklin-barbecue"],"seniorityLevelIds":["310","320"],"maxItems":5,"takePages":1,"profileScraperMode":"Short","waitSecs":45}'
+LIR_OK='{"urls":["https://www.linkedin.com/in/aaron-franklin"],"profileScraperMode":"Profile details + email search ($10 per 1k)","waitSecs":45}'
+check 0 "linkedin company search in limit" $AG2 ${P2}$LIS "$LIS_OK" "" "$W/scraping.md"
+harmless "linkedin company search" $LIS "$LIS_OK"
+nulled "linkedin company search" $LIS "$LIS_OK" mongoDbConnectionString mongoDbDatabaseName profileDeduplicationMode \
+  postFilteringMongoDbQuery postFilteringMongoDbAggregation autoQuerySegmentation autoQuerySegmentationLevels \
+  autoQuerySegmentationTargetCountries searchCoverage startPage pastCompanies excludePastCompanies schools firstNames lastNames
+check 2 "linkedin company search mongo string" $AG2 ${P2}$LIS "$(jset "$LIS_OK" mongoDbConnectionString '"mongodb+srv://u:p@x.example.net"')" "may not use mongoDbConnectionString" "$W/scraping.md"
+check 2 "linkedin company search mongo empty"  $AG2 ${P2}$LIS "$(jset "$LIS_OK" mongoDbConnectionString '""')" "must send mongoDbConnectionString = null" "$W/scraping.md"
+check 2 "linkedin company search Full mode"    $AG2 ${P2}$LIS "$(jset "$LIS_OK" profileScraperMode '"Full"')" 'must send profileScraperMode = "Short"' "$W/scraping.md"
+check 2 "linkedin company search mode omitted" $AG2 ${P2}$LIS "$(jdel "$LIS_OK" profileScraperMode)" "names no profileScraperMode" "$W/scraping.md"
+check 2 "linkedin company search two pages"    $AG2 ${P2}$LIS "$(jset "$LIS_OK" takePages 2)" "must send takePages = 1" "$W/scraping.md"
+check 2 "linkedin company search over"         $AG2 ${P2}$LIS "$(jset "$LIS_OK" maxItems 6)" "is not a pinned value (max_profile_results)" "$W/scraping.md"
+lists "linkedin company search" $LIS "$LIS_OK" 'currentCompanies:max_search_terms:["https://www.linkedin.com/company/a","https://www.linkedin.com/company/b"]'
+check 2 "linkedin company search profile url"  $AG2 ${P2}$LIS "$(jset "$LIS_OK" currentCompanies '["https://www.linkedin.com/in/x"]')" "" "$W/scraping.md"
+check 2 "linkedin company search with query"   $AG2 ${P2}$LIS "$(jset "$LIS_OK" currentCompanies '["https://www.linkedin.com/company/x?trk=1"]')" "" "$W/scraping.md"
+check 0 "linkedin reader in limit"         $AG2 ${P2}$LIR "$LIR_OK" "" "$W/scraping.md"
+harmless "linkedin reader" $LIR "$LIR_OK"
+nulled "linkedin reader" $LIR "$LIR_OK" queries publicIdentifiers profileIds
+check 2 "linkedin reader no-email mode"    $AG2 ${P2}$LIR "$(jset "$LIR_OK" profileScraperMode '"Profile details no email ($4 per 1k)"')" "must send profileScraperMode" "$W/scraping.md"
+check 2 "linkedin reader mode omitted"     $AG2 ${P2}$LIR "$(jdel "$LIR_OK" profileScraperMode)" "names no profileScraperMode" "$W/scraping.md"
+LIR11=$(python3 -c 'import json;print(json.dumps(["https://www.linkedin.com/in/p%d"%i for i in range(11)]))')
+lists "linkedin reader" $LIR "$LIR_OK" "urls:max_profile_reads:$LIR11"
+check 2 "linkedin reader with query"       $AG2 ${P2}$LIR "$(jset "$LIR_OK" urls '["https://www.linkedin.com/in/aaron-franklin?trk=x"]')" "" "$W/scraping.md"
+check 2 "linkedin reader company page"     $AG2 ${P2}$LIR "$(jset "$LIR_OK" urls '["https://www.linkedin.com/company/x"]')" "" "$W/scraping.md"
+check 2 "linkedin reader other host"       $AG2 ${P2}$LIR "$(jset "$LIR_OK" urls '["https://example.com/in/x"]')" "" "$W/scraping.md"
 SM=
 
 echo "-- Attio"

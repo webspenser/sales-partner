@@ -44,7 +44,10 @@ The Preparer's cap and time-budget rules for Apify spend apply to every
    shared-platform host (`subagents/preparer.md`, "Shared platform") is
    never the business's website; it is the business's own page on that
    platform, an anchor like its other social pages.
-   Use `read_profile` (Instagram and TikTok only) on a
+   A LinkedIn profile URL already known for the contact (an anchor) is read with `read_profile`
+   (LinkedIn, email-search mode) instead of searching, for its employer
+   and emails; a candidate `find_profiles` returned is not read again.
+   Use `read_profile` (Instagram and TikTok) on a
    business social page to find people it tags or links to, and on a
    known profile to find the business it links to. A link between the
    business and the person, in either direction, is an anchor.

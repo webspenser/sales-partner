@@ -60,12 +60,14 @@ allow: [compass--crawler-google-places, vdrmota--contact-info-scraper, web_wande
   apify--website-content-crawler, harvestapi--linkedin-profile-search-by-name, apify--instagram-profile-scraper,
   clockworks--tiktok-profile-scraper, apify--web-search, apify--web-fetch, scrapesage--bbb-scraper,
   delicious_zebu--yellowpages-usa-business-lead-scraper, web_wanderer--yelp-reviews-scraper,
-  valig--linkedin-jobs-scraper, get-actor-run, get-dataset-items]
+  valig--linkedin-jobs-scraper, harvestapi--linkedin-profile-search, harvestapi--linkedin-profile-scraper,
+  get-actor-run, get-dataset-items]
 deny: ["*call-actor*", "*call_actor*", "*search-actors*", "*add-actor*", "*fetch-actor*", "*webhook*", "*schedule*"]
 refuse_args: [pageFunction, preNavigationHooks, postNavigationHooks, customData, headers, customHttpHeaders,
   cookies, cookie, initialCookies, sessionCookies, sessionCookie, li_at, requestsFromUrl, "startUrls[].requestsFromUrl",
   "startUrls[].headers", "startUrls[].payload", "startUrls[].method", "startUrls[].userData", webhooks,
-  proxyConfiguration, proxyConfig, proxy, proxyCountryCode, "query.headers", urlsFromFile]
+  proxyConfiguration, proxyConfig, proxy, proxyCountryCode, "query.headers", urlsFromFile,
+  mongoDbConnectionString]
 # Apify's own run and dataset reads keep a key allowlist: their shapes are
 # stable, and a dataset read must not take another export format.
 only_keys:
@@ -151,7 +153,33 @@ fixed:
     value: 'r2592000'
     required: true
   - tools: [valig--linkedin-jobs-scraper]
-    at: [urlParam, urlPath, keywords]
+    at: [urlParam, urlPath, keywords, companyId]
+    value: null
+  # The LinkedIn company search runs in Short mode (no per-profile
+  # charge); only a chosen candidate is read, with email search. The
+  # reader's mode string carries the vendor's price, so a price change
+  # is blocked and reported as drift. The MongoDB inputs would send the
+  # results to any database the call names.
+  - tools: [harvestapi--linkedin-profile-search]
+    at: [profileScraperMode]
+    value: 'Short'
+    required: true
+  - tools: [harvestapi--linkedin-profile-search]
+    at: [takePages]
+    value: 1
+    required: true
+  - tools: [harvestapi--linkedin-profile-search]
+    at: [mongoDbConnectionString, mongoDbDatabaseName, profileDeduplicationMode, postFilteringMongoDbQuery,
+      postFilteringMongoDbAggregation, autoQuerySegmentation, autoQuerySegmentationLevels,
+      autoQuerySegmentationTargetCountries, searchCoverage, startPage, pastCompanies, excludePastCompanies, schools,
+      firstNames, lastNames]
+    value: null
+  - tools: [harvestapi--linkedin-profile-scraper]
+    at: [profileScraperMode]
+    value: 'Profile details + email search ($10 per 1k)'
+    required: true
+  - tools: [harvestapi--linkedin-profile-scraper]
+    at: [queries, publicIdentifiers, profileIds]
     value: null
   # Per-actor scope and cost keys, refused on that actor alone: null or
   # absent passes, any other value is blocked. Each list holds every paid
@@ -219,6 +247,18 @@ urls:
     hosts: [www.yelp.com]
     path: /biz
     required: true
+  - tools: [harvestapi--linkedin-profile-search]
+    at: ["currentCompanies[]"]
+    schemes: [https]
+    hosts: [www.linkedin.com, linkedin.com]
+    path: /company
+    required: true
+  - tools: [harvestapi--linkedin-profile-scraper]
+    at: ["urls[]"]
+    schemes: [https]
+    hosts: [www.linkedin.com, linkedin.com]
+    path: /in
+    required: true
   - tools: [apify--web-fetch]
     at: [query.url]
     schemes: [https]
@@ -285,6 +325,9 @@ recipients:
   - tools: [valig--linkedin-jobs-scraper]
     at: [limit]
     bound: max_jobs
+  - tools: [harvestapi--linkedin-profile-search]
+    at: [maxItems]
+    bound: max_profile_results
 # List lengths multiply the size pins: one search term per Maps call, at
 # most 10 sites per contact call, one place per reviews call, one query
 # per Google Ads call, one page URL per Facebook call, one start URL per
@@ -351,6 +394,16 @@ limits:
   - tools: [valig--linkedin-jobs-scraper]
     at: [companyName]
     bound: max_search_terms
+    kind: count
+    required: true
+  - tools: [harvestapi--linkedin-profile-search]
+    at: [currentCompanies]
+    bound: max_search_terms
+    kind: count
+    required: true
+  - tools: [harvestapi--linkedin-profile-scraper]
+    at: [urls]
+    bound: max_profile_reads
     kind: count
     required: true
   - tools: [delicious_zebu--yellowpages-usa-business-lead-scraper]

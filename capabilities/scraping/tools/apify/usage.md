@@ -115,7 +115,7 @@ names are spelled as the connector shows them, case included.
   - `limit` = `max_jobs`;
   - `titleInclude`, `titleExclude`, `waitSecs` (pass 45).
 
-  Never pass `keywords`, `urlParam` or `urlPath`. LinkedIn matches the
+  Never pass `keywords`, `companyId`, `urlParam` or `urlPath`. LinkedIn matches the
   company name loosely: keep only items whose `companyName` matches the lead's name (ignoring case, punctuation and a trailing
   "LLC", "Inc" or "Co"). Zero items is a valid result.
 - `read_site` — `apify:apify--website-content-crawler`. Send these arguments,
@@ -166,10 +166,41 @@ names are spelled as the connector shows them, case included.
 
   Never pass `currentCompanies`, `pastCompanies`, `schools`,
   `currentJobTitles` or `industryIds`: the search is by name and city.
-- `read_profile` — for Instagram and TikTok only. LinkedIn has no reader
-  (its employer comes from `find_profiles` in `Full + email search` mode) and Facebook
-  has none (anchors and `search_web` only); a LinkedIn or Facebook URL is
-  not read. Both readers take handles, not URLs: cut the handle from a
+
+  `find_profiles` as a LinkedIn company search, when no person's name is
+  known: `apify:harvestapi--linkedin-profile-search`. Send these
+  arguments, and no others:
+  - `currentCompanies` — exactly one, the lead's LinkedIn company page
+    (`https://www.linkedin.com/company/<slug>`, query dropped), from its
+    website's links, its `search_pages` results or `find_contacts`;
+  - `seniorityLevelIds` (pass `["310","320"]`: CXO, Owner / Partner),
+    `currentJobTitles`, `locations`;
+  - `maxItems` = `max_profile_results`;
+  - `profileScraperMode` — always `"Short"` (the guard requires it:
+    $0.10 a page and no charge per profile; the chosen candidate's
+    email comes from `read_profile`); `takePages` — always `1`;
+  - `waitSecs` (pass 45).
+
+  Never pass a MongoDB argument (`mongoDbConnectionString` and the
+  rest: they send the results to an outside database), segmentation,
+  `searchCoverage`, `startPage`, name, school or past-company filters.
+- `read_profile` — for LinkedIn, Instagram and TikTok. Facebook has none
+  (anchors and `search_web` only); a Facebook URL is not read.
+  - LinkedIn: `apify:harvestapi--linkedin-profile-scraper`, for a URL
+    whose host is `linkedin.com` or `www.linkedin.com` and whose path
+    starts `/in/`, query and fragment dropped. Send these arguments,
+    and no others:
+    - `urls` — the profile URLs, at most `max_profile_reads`;
+    - `profileScraperMode` — always `"Profile details + email search ($10 per 1k)"`
+      (the guard requires it exactly; if Apify changes the price in
+      the string, the call is blocked and reported as drift);
+    - `waitSecs` (pass 45).
+
+    Never pass `queries`, `publicIdentifiers` or `profileIds`. A
+    candidate `find_profiles` already returned in `Full + email search`
+    mode is not read again: it has its employer and emails.
+
+  The Instagram and TikTok readers take handles, not URLs: cut the handle from a
   profile URL whose host is the platform's: send only a cut handle,
   never a handle guessed from a name.
   - Instagram: `apify:apify--instagram-profile-scraper`, for a URL whose
@@ -275,7 +306,10 @@ breaks its URL rule (Website and Facebook URLs). On the web search and
 fetch tools it refuses any `method` but `GET`, any `path` but `/`, a
 `body`, `query.headers`, a `maxResults` above `max_web_results`, a BBB call
 without `includeDetails: true` or above `max_bbb_results`, a YellowPages
-call with `maxPages` other than `1`, a LinkedIn jobs call without
+call with `maxPages` other than `1`, a LinkedIn company search not in `Short` mode, over
+`max_profile_results`, on more than one page or with a MongoDB
+argument, a LinkedIn profile read in any mode but the email-search one
+or of a URL that is not a `linkedin.com/in` path, a LinkedIn jobs call without
 `datePosted: "r2592000"`, above `max_jobs` or with `keywords`, a Yelp call without
 `include_personal_data: true`, above `max_reviews` or with a URL that
 is not a `www.yelp.com/biz` path, and a
@@ -428,6 +462,8 @@ The profile actors' items, with these `fields`:
 | Operation | `fields` | Contract fields |
 |---|---|---|
 | `find_profiles` (LinkedIn) | `linkedinUrl,name,position,location,about,experience,emails.email,emails.free,emails.status,emails.deliverable` | platform `linkedin`, URL (`linkedinUrl`), display name (`name`), bio (`position`, the headline, then `about`), location (`location.linkedinText`), current employer (the `companyName` of the `experience[]` entry with no end date; none when every entry has ended); emails (each `emails[].email` whose `status` is not `invalid`, a free-mail address included; an empty `emails[]` is a valid "no email found") |
+| `find_profiles` (LinkedIn company search) | `firstName,lastName,linkedinUrl,summary,location.linkedinText,currentPositions` | platform `linkedin`, URL (`linkedinUrl`), display name (`firstName` and `lastName`), bio (`summary`), location, current employer and title (the `currentPositions[]` entry with `current` true); no emails in Short mode |
+| `read_profile` (LinkedIn) | `linkedinUrl,firstName,lastName,headline,about,location,currentPosition,emails.email,emails.free,emails.status,emails.deliverable` | platform `linkedin`, URL, display name, bio (`headline`, then `about`), location (`location.linkedinText`), current employer (`currentPosition[0].companyName`), emails (as for `find_profiles`) |
 | `read_profile` (Instagram) | `username,url,fullName,biography,externalUrl,externalUrls,private,isBusinessAccount,businessAddress` | platform `instagram`, URL (`url`), display name (`fullName`), bio (`biography`), location (`businessAddress`, when set), external links (`externalUrl` and each `externalUrls[].url`) |
 | `read_profile` (TikTok) | `authorMeta.profileUrl,authorMeta.nickName,authorMeta.signature,authorMeta.bioLink,authorMeta.privateAccount,note` | platform `tiktok`, URL (`authorMeta.profileUrl`), display name (`nickName`), bio (`signature`), external links (`bioLink`) |
 
@@ -492,6 +528,8 @@ actors are a flat worst case per call at the pinned sizes:
 | `find_jobs`, LinkedIn | $0.005 |
 | `read_site` | $0.03 |
 | `find_profiles`, LinkedIn | $0.15 per call |
+| `find_profiles`, LinkedIn company search | $0.10 per call |
+| `read_profile`, LinkedIn | $0.02 per profile |
 | `read_profile`, Instagram | $0.003 per username |
 | `read_profile`, TikTok | $0.005 per profile |
 | `search_pages` | $0.002 |
@@ -570,7 +608,9 @@ exposed tools are `compass--crawler-google-places`,
 `clockworks--tiktok-profile-scraper`, `apify--web-search`,
 `apify--web-fetch`, `scrapesage--bbb-scraper`,
 `delicious_zebu--yellowpages-usa-business-lead-scraper`,
-`web_wanderer--yelp-reviews-scraper` and `valig--linkedin-jobs-scraper`, plus the two reads the agent uses,
+`web_wanderer--yelp-reviews-scraper`, `valig--linkedin-jobs-scraper`,
+`harvestapi--linkedin-profile-search` and
+`harvestapi--linkedin-profile-scraper`, plus the two reads the agent uses,
 `get-actor-run` and `get-dataset-items`. If the connector exposes
 `call-actor` (the `actors` or `api` tool groups), or lacks one of the
 ten actors, tell the operator to re-add it with the URL in Setup step 2.

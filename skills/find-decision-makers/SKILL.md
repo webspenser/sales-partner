@@ -32,6 +32,9 @@ public search is a legitimate source.
    For a local business, also read its map or directory listing
    (owner replies to reviews, "owned by" details) and any of the
    public business registries, which name owners and officers.
+   A BBB principal contact with an owner title is a decision-maker candidate (from the Preparer's `find_listing` BBB result:
+   `principalContacts[]`, such as "Thomas Johnson, Owner/Operator"),
+   with the BBB profile URL in `Notes`.
    Whatever the source, an owner is written with `role: decision-maker`
    and the title the source gives, e.g. "Owner" — never inferred.
    Grade every person by the page that names them (Source strength,

@@ -120,7 +120,8 @@ Segment and offer).
   `prospecting_sources`
 - Scraping `find_reviews` (`apify_reviews`), `find_ads` (`apify_ads`),
   `find_jobs` (`apify_jobs`), `read_site` (`apify_site_reader`) and
-  `search_pages` and `fetch_page` (`apify_web`), each only when its
+  `search_pages` and `fetch_page` (`apify_web`), and `find_listing`
+  (`apify_bbb`, `apify_yellowpages`), each only when its
   source is listed in `prospecting_sources`
 - Scraping `find_profiles` and `read_profile` (`apify_profiles`), only
   through `find-social-profiles` in the Profile pass, and only when
@@ -320,7 +321,9 @@ later, as in Segment and offer, has its tips read then). Pick the
 sources the tips point to (reviews: `apify_reviews`; ads: `apify_ads`;
 job posts: `apify_jobs`; the website's pages and features:
 `apify_site_reader`; press, news and what the web says about the
-business: `apify_web`), from those listed in `prospecting_sources`. A source not listed in `prospecting_sources` never runs, even when a tip points to it.
+business: `apify_web`; a BBB rating, complaints, years in business or
+owners: `apify_bbb`; a directory listing's claimed status and email:
+`apify_yellowpages`), from those listed in `prospecting_sources`. A source not listed in `prospecting_sources` never runs, even when a tip points to it.
 An offer with no tips is researched from its `signals` and `rule_out`
 entries alone, as in 8.0: a source runs for it only when an entry names
 what that source reads. Run the picked sources in the order that gives
@@ -355,6 +358,11 @@ usually come first. Each call counts against
   id. Its search results also feed later steps: a Yelp page URL, a
   LinkedIn company URL and press items. The run report lists each
   fetch not made for a query (`fetch_page; needs query`).
+- `apify_bbb` and `apify_yellowpages`: one `find_listing` call each per lead (the business's name and its city and state). An item counts only when
+  matched to the lead by phone or website host; a name-only match is dropped (another business with a similar name). No item is a
+  result: no listing, not drift. A BBB principal contact goes to
+  `find-decision-makers` as a candidate; a listing's email is recorded
+  like any found address, a free-mail one included.
 - `read_site`: the site root of the `website` the Maps listing gives,
   as the start URL: its scheme and host only, with any path or query
   dropped (`https://example.com/locations/alameda?utm_source=gbp`

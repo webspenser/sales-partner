@@ -116,7 +116,7 @@ printf '%s\n' 'max_places_per_search: 60' 'max_pages_per_site: 3' 'max_crawl_dep
   'max_reviews: 50' 'max_ads: 5' 'max_jobs: 20' 'max_site_pages: 5' 'max_site_depth: 1' 'max_review_places: 1' \
   'max_ad_queries: 1' 'max_ad_advertisers: 1' 'ads_result_type: advertisers' 'site_crawler_type: cheerio' \
   'site_html_transformer: none' 'max_site_urls: 1' 'max_profile_results: 5' 'max_profile_reads: 10' \
-  'max_profile_locations: 1' 'max_web_results: 10' > "$W/scraping.md"
+  'max_profile_locations: 1' 'max_web_results: 10' 'max_bbb_results: 5' > "$W/scraping.md"
 MAPS_OK='{"maxCrawledPlacesPerSearch":60,"searchStringsArray":["HVAC contractor"],"city":"Alameda","state":"CA","countryCode":"us","language":"en","waitSecs":45}'
 CT='"maxRequestsPerStartUrl":3,"maxDepth":1,"maxRequests":30'
 U1='{"url":"https://example.com"}'
@@ -419,6 +419,29 @@ check 2 "web fetch with user info"         $AG2 ${P2}$WF "$(jpset "$WF_OK" query
 check 2 "web fetch url omitted"            $AG2 ${P2}$WF "$(jpdel "$WF_OK" query.url)" "names no query.url" "$W/scraping.md"
 check 2 "web fetch respelled url alone"    $AG2 ${P2}$WF '{"method":"GET","path":"/","query":{"URL":"https://x.com/?a=1"}}' "" "$W/scraping.md"
 check 0 "web fetch a search-result page"   $AG2 ${P2}$WF "$(jpset "$WF_OK" query.url '"https://www.femalefoodie.com/restaurant-reviews/franklin-bbq/"')" "" "$W/scraping.md"
+
+BBB=scrapesage--bbb-scraper; YP=delicious_zebu--yellowpages-usa-business-lead-scraper
+BBB_OK='{"searchTerms":["Franklin Barbecue"],"locations":["Austin, TX"],"maxResults":5,"includeDetails":true,"waitSecs":45}'
+YP_OK='{"searchKeyword":["Franklin Barbecue"],"location":"Austin, TX","maxPages":1,"waitSecs":45}'
+check 0 "bbb in limit"                     $AG2 ${P2}$BBB "$BBB_OK" "" "$W/scraping.md"
+harmless bbb $BBB "$BBB_OK"
+nulled bbb $BBB "$BBB_OK" includeReviews maxReviewsPerBusiness enrichContacts monitorMode monitorKey maxResultsPerSearch \
+  maxConcurrency startUrls
+check 2 "bbb urlsFromFile"                 $AG2 ${P2}$BBB "$(jset "$BBB_OK" urlsFromFile '"https://x.com/list.txt"')" "may not use urlsFromFile" "$W/scraping.md"
+check 2 "bbb maxResults over"              $AG2 ${P2}$BBB "$(jset "$BBB_OK" maxResults 6)" "is not a pinned value (max_bbb_results)" "$W/scraping.md"
+check 2 "bbb maxResults 0 (no limit)"      $AG2 ${P2}$BBB "$(jset "$BBB_OK" maxResults 0)" "is not a pinned value (max_bbb_results)" "$W/scraping.md"
+check 2 "bbb maxResults omitted"           $AG2 ${P2}$BBB "$(jdel "$BBB_OK" maxResults)" "names no pinned value" "$W/scraping.md"
+check 2 "bbb details off"                  $AG2 ${P2}$BBB "$(jset "$BBB_OK" includeDetails false)" "must send includeDetails = true" "$W/scraping.md"
+check 2 "bbb details omitted"              $AG2 ${P2}$BBB "$(jdel "$BBB_OK" includeDetails)" "names no includeDetails" "$W/scraping.md"
+lists bbb $BBB "$BBB_OK" 'searchTerms:max_search_terms:["a","b"]' 'locations:max_search_terms:["Austin, TX","Dallas, TX"]'
+check 2 "bbb proxy"                        $AG2 ${P2}$BBB "$(jset "$BBB_OK" proxyConfiguration '{"useApifyProxy":true}')" "may not use proxyConfiguration" "$W/scraping.md"
+check 2 "bbb without bindings"             $AG2 ${P2}$BBB "$BBB_OK" "no max_bbb_results line"
+check 0 "yellowpages in limit"             $AG2 ${P2}$YP "$YP_OK" "" "$W/scraping.md"
+harmless yellowpages $YP "$YP_OK"
+nulled yellowpages $YP "$YP_OK" urls
+check 2 "yellowpages two pages"            $AG2 ${P2}$YP "$(jset "$YP_OK" maxPages 2)" "must send maxPages = 1" "$W/scraping.md"
+check 2 "yellowpages pages omitted"        $AG2 ${P2}$YP "$(jdel "$YP_OK" maxPages)" "names no maxPages" "$W/scraping.md"
+lists yellowpages $YP "$YP_OK" 'searchKeyword:max_search_terms:["a","b"]'
 SM=
 
 echo "-- Attio"

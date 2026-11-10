@@ -1,7 +1,7 @@
 # Scraping contract
 
 How the agent reads public business listings, contact details, reviews,
-ads, job listings, website pages, public social profiles and open-web
+ads, job listings, website pages, public social profiles, BBB and YellowPages listings, and open-web
 search results and pages through an
 outside scraper. Skills and sub-agent contracts call these operations,
 never a provider's tools.
@@ -20,6 +20,7 @@ never a provider's tools.
 | `read_profile` | `url` (a public profile URL already found) | the same fields as one `find_profiles` candidate, for that profile; plus the run's cost (estimated when the provider does not report it). A platform the tool has no reader for is not read; the tool's usage says which | Same |
 | `search_pages` | `query` (the business's name and city) | results: title, URL, domain, snippet, and the publication date and publisher when the engine gives them; none is a valid result; plus the call's cost (estimated) | Same |
 | `fetch_page` | `url` (https, a public host, a path with no query or fragment) | the page: final URL, title, structured data (JSON-LD), and the page as markdown; plus the call's cost (estimated) | Same |
+| `find_listing` | `directory` (`bbb` or `yellowpages`), `query` (the business's name, or a trade when sourcing), `location` (city, state) | BBB: name, rating, accredited, years in business, complaint counts, review count, email, website, phone, principal contacts (name, title), profile URL. YellowPages: name, claimed, rating, review count, phone, website, email, categories, listing URL. None is a valid "no listing" result; plus the run's cost (estimated) | Same |
 
 Each call is a ledger `step` (`capabilities/ledger/contract.md`) with its
 cost in `cost_usd`; an operation that makes two provider calls, such as

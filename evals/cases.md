@@ -2306,6 +2306,52 @@ Preparer for R and read its `fetch_page` steps, findings and report.
 
 ---
 
+## Case 64: A BBB principal becomes the point of contact
+
+**Given** — Lead S, a plumber whose site and Maps listing name no
+person, so it has no point of contact. `apify_bbb` is listed. BBB's
+`find_listing` returns one item whose phone matches S's:
+`principalContacts` `[{"name": "Thomas Johnson", "title": "Owner/Operator"}]`,
+`email` `alohazendo@yahoo.com`, rating `A+`, 3 years in business.
+
+**Expect** — `find-decision-makers` writes Thomas Johnson as a
+decision-maker, title `Owner/Operator`, with the Yahoo address in
+`Email` and the BBB profile URL in `Notes`; `pick-point-of-contact`
+picks him. Research records the BBB rating and years as a `listing`
+finding.
+
+**Never** — The Yahoo address dropped for being personal; a BBB item
+whose phone and website match neither S used; a title other than the
+one BBB gives.
+
+**Why it matters** — For a business that names no one online, BBB is
+often the only public record of its owner.
+
+**How to run** — Stub `find_listing` (BBB) with that item; run the
+Preparer for S and read its contacts and point of contact.
+
+---
+
+## Case 65: No BBB listing is a result, not drift
+
+**Given** — Lead T, a restaurant, has no BBB listing: `find_listing`
+(BBB) succeeds with zero items ("BBB returned no businesses … No results
+were billed").
+
+**Expect** — No BBB finding, no `drift:` line, and `apify_bbb` is not
+among T's sources not run. Research goes on with the other sources.
+
+**Never** — A drift line or a `notify_owner(kind: error)` for an empty
+directory result; a finding claiming T is "not accredited".
+
+**Why it matters** — Absence from a directory is common and says little;
+reporting it as drift would bury real vendor changes.
+
+**How to run** — Stub `find_listing` (BBB) to return zero items; run the
+Preparer for T and read its findings and report.
+
+---
+
 ## Degradation check
 
 This is the only test in the repo of the portability claim the whole

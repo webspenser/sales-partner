@@ -48,13 +48,14 @@ A scheduled prospecting run, or the count of leads at stages `New` and
 
 ## Tools allowed
 - Sourcing tools — only the sources listed in `prospecting_sources`
-  (`operating-config.md`): its own sources are `apify_google_maps` and
-  `web_search` (and the `apollo` stub; Guardrails). The source `web_search` is the host's built-in web search, never the `web_search` capability (Exa):
+  (`operating-config.md`): its own sources are `apify_google_maps`,
+  `apify_yellowpages` and `web_search` (and the `apollo` stub;
+  Guardrails). The source `web_search` is the host's built-in web search, never the `web_search` capability (Exa):
   the Prospector never calls `search_web`. A source not in that list is never used, even when it
-  would find more leads. The Prospector ignores the Preparer-only sources `apify_contact_info`, `apify_reviews`, `apify_ads`, `apify_jobs` and `apify_site_reader`
+  would find more leads. The Prospector ignores the Preparer-only sources `apify_contact_info`, `apify_reviews`, `apify_ads`, `apify_jobs`, `apify_site_reader`, `apify_web`, `apify_bbb` and `apify_yelp`
   (and `apify_profiles`; as `operating-config.md` says): they research leads already found,
   and never source new ones.
-- Scraping `find_businesses`
+- Scraping `find_businesses`, and `find_listing` with `directory: yellowpages`
 - CRM `create_lead`
 - CRM `get_lead`
 - CRM `query_by_stage`
@@ -70,7 +71,7 @@ A scheduled prospecting run, or the count of leads at stages `New` and
 - Every source listed in `prospecting_sources` is exhausted — no
   further candidates are returned by any listed query or scrape. Only
   the Prospector's own sources count (`apify_google_maps`,
-  `web_search`); the Preparer-only names are skipped, never waited on
+  `apify_yellowpages`, `web_search`); the Preparer-only names are skipped, never waited on
 - The `apify_spend_cap_usd_per_week` cap (from `operating-config.md`) is
   hit
 
@@ -85,6 +86,14 @@ per query. The location is a city and state (the tool passes them as
 structured `city`, `state` and `countryCode`), never free text: a free-text
 location can resolve to the wrong area. Deduplicate against the CRM, score
 and create leads as for any other source.
+
+`apify_yellowpages` sources leads through `find_listing(directory: yellowpages, query, location)`: one call per query, the
+same trade and city as the Maps query. Its listings are deduplicated by phone and website like Maps, against the CRM and against this
+run's Maps results; a listing with neither phone nor website is not a
+lead. A YellowPages lead has no Maps place id, so its `Source URL` is
+the listing's `source_url`, and the Preparer's Google reviews call is
+skipped for it until a Maps match is found. Estimate each call at the
+YellowPages line of `usage.md`'s `## Cost`.
 
 Before each call, add up the Apify spend of the last 7 days (a rolling
 window, not the calendar week): call `find_events` twice, with

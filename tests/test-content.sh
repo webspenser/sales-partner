@@ -1073,8 +1073,8 @@ assert_contains "$PP" 'never in a scheduled run'
 assert_contains "$PP" 'always passes `include_personal: true`'
 PR="$SP/subagents/prospector.md"
 assert_contains "$PR" 'Every source listed in `prospecting_sources` is exhausted'
-assert_contains "$PR" 'ignores the Preparer-only sources `apify_contact_info`, `apify_reviews`, `apify_ads`, `apify_jobs` and `apify_site_reader`'
-assert_contains "$PR" 'its own sources are `apify_google_maps` and'
+assert_contains "$PR" 'ignores the Preparer-only sources `apify_contact_info`, `apify_reviews`, `apify_ads`, `apify_jobs`, `apify_site_reader`, `apify_web`, `apify_bbb` and `apify_yelp`'
+assert_contains "$PR" 'its own sources are `apify_google_maps`,'
 assert_not_contains "$PR" '`apify_google_maps`, `apify_contact_info`,'
 assert_contains "$SP/context/operating-config.md" 'the Preparer, not the Prospector'
 # Fix round 1: rulings A-C, the cap order, the sources-not-run list, one stop_condition per lead
@@ -1742,5 +1742,20 @@ flat_has "$SP/subagents/preparer.md" 'a page on the lead'"'"'s own website host,
 flat_has "$SP/skills/research-company/SKILL.md" 'A press item read with `fetch_page` becomes a `news` finding with its date and URL'
 flat_has "$SP/evals/cases.md" '## Case 62: A recent press item is fetched and an old one is not'
 flat_has "$SP/evals/cases.md" '## Case 63: A search result with a query string is fetched without it'
+
+echo "-- 8.7.0: apify_bbb and apify_yellowpages"
+for t in '`find_listing`' 'businessName,bbbRating,accredited,yearsInBusiness,businessStarted,complaintCount,complaintsLast12Months,customerReviewCount,email,website,phone,principalContacts,profileUrl' \
+  'title,is_claimed,star_rating,rating_count,phone,website,email,source_url,categories' \
+  '| `find_listing`, BBB | $0.02 per business |' '| `find_listing`, YellowPages | $0.06 per call |' \
+  '`max_bbb_results` — businesses per BBB `find_listing` call (default 5)' 'No listing is a valid result, not drift'; do flat_has "$SUD" "$t"; done
+flat_has "$SP/capabilities/scraping/contract.md" '| `find_listing` |'
+flat_has "$SP/subagents/preparer.md" '`apify_bbb` and `apify_yellowpages`: one `find_listing` call each per lead'
+flat_has "$SP/subagents/preparer.md" 'matched to the lead by phone or website host; a name-only match is dropped'
+flat_has "$SP/subagents/prospector.md" '`apify_yellowpages` sources leads through `find_listing(directory: yellowpages'
+flat_has "$SP/subagents/prospector.md" 'deduplicated by phone and website like Maps'
+flat_has "$SP/skills/find-decision-makers/SKILL.md" 'A BBB principal contact with an owner title is a decision-maker candidate'
+for t in '`apify_bbb`' '`apify_yellowpages`'; do flat_has "$SP/context/operating-config.md" "$t"; done
+flat_has "$SP/evals/cases.md" '## Case 64: A BBB principal becomes the point of contact'
+flat_has "$SP/evals/cases.md" '## Case 65: No BBB listing is a result, not drift'
 
 finish

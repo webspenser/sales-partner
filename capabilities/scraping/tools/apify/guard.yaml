@@ -49,17 +49,21 @@
 # monthly usage limit is the backstop. The Instagram and TikTok readers
 # take handles, not URLs: the guard counts them but cannot check what
 # they say, so data could ride out in a handle, the same class of limit
-# as data riding in a hostname.
+# as data riding in a hostname. The web search and fetch tools
+# (method GET, path /, options under query) carry the same class of
+# residual: a search query or a fetch path can carry data out. Fetch
+# URLs are https, public and paths only (no query or fragment), and the
+# instructions refuse an email, phone number or CRM id in a path.
 covers: [no_external_send, allowlisted_actors, pinned_inputs]
 allow: [compass--crawler-google-places, vdrmota--contact-info-scraper, web_wanderer--google-reviews-scraper,
   scrapesage--google-ads-transparency-scraper, apify--facebook-ads-scraper, valig--indeed-jobs-scraper,
   apify--website-content-crawler, harvestapi--linkedin-profile-search-by-name, apify--instagram-profile-scraper,
-  clockworks--tiktok-profile-scraper, get-actor-run, get-dataset-items]
+  clockworks--tiktok-profile-scraper, apify--web-search, apify--web-fetch, get-actor-run, get-dataset-items]
 deny: ["*call-actor*", "*call_actor*", "*search-actors*", "*add-actor*", "*fetch-actor*", "*webhook*", "*schedule*"]
 refuse_args: [pageFunction, preNavigationHooks, postNavigationHooks, customData, headers, customHttpHeaders,
   cookies, cookie, initialCookies, sessionCookies, sessionCookie, li_at, requestsFromUrl, "startUrls[].requestsFromUrl",
   "startUrls[].headers", "startUrls[].payload", "startUrls[].method", "startUrls[].userData", webhooks,
-  proxyConfiguration, proxyConfig, proxy, proxyCountryCode]
+  proxyConfiguration, proxyConfig, proxy, proxyCountryCode, "query.headers"]
 # Apify's own run and dataset reads keep a key allowlist: their shapes are
 # stable, and a dataset read must not take another export format.
 only_keys:
@@ -104,6 +108,19 @@ fixed:
     at: [resultsPerPage]
     value: 1
     required: true
+  # The web search and fetch tools take an HTTP-shaped call; pinning GET
+  # and / and refusing body keeps every checked value under query.
+  - tools: [apify--web-search, apify--web-fetch]
+    at: [method]
+    value: 'GET'
+    required: true
+  - tools: [apify--web-search, apify--web-fetch]
+    at: [path]
+    value: '/'
+    required: true
+  - tools: [apify--web-search, apify--web-fetch]
+    at: [body]
+    value: null
   # Per-actor scope and cost keys, refused on that actor alone: null or
   # absent passes, any other value is blocked. Each list holds every paid
   # add-on and scope-widening input its probe note names (Maps and
@@ -163,6 +180,12 @@ urls:
     schemes: [https]
     hosts: public
     path: root
+    required: true
+  - tools: [apify--web-fetch]
+    at: [query.url]
+    schemes: [https]
+    hosts: public
+    path: any
     required: true
 # One entry per argument, so leaving any one out is blocked ("names no
 # pinned value"), even where two arguments share a binding.
@@ -268,6 +291,11 @@ limits:
     at: [locations]
     bound: max_profile_locations
     kind: count
+  - tools: [apify--web-search]
+    at: [query.maxResults]
+    bound: max_web_results
+    kind: max
+    required: true
   - tools: [get-dataset-items]
     at: [limit]
     bound: max_dataset_items

@@ -119,8 +119,9 @@ Segment and offer).
 - Scraping `find_contacts`, when `apify_contact_info` is listed in
   `prospecting_sources`
 - Scraping `find_reviews` (`apify_reviews`), `find_ads` (`apify_ads`),
-  `find_jobs` (`apify_jobs`) and `read_site` (`apify_site_reader`), each
-  only when its source is listed in `prospecting_sources`
+  `find_jobs` (`apify_jobs`), `read_site` (`apify_site_reader`) and
+  `search_pages` and `fetch_page` (`apify_web`), each only when its
+  source is listed in `prospecting_sources`
 - Scraping `find_profiles` and `read_profile` (`apify_profiles`), only
   through `find-social-profiles` in the Profile pass, and only when
   `apify_profiles` is listed in `prospecting_sources`
@@ -318,7 +319,8 @@ After the Maps listing and website contact steps, read the
 later, as in Segment and offer, has its tips read then). Pick the
 sources the tips point to (reviews: `apify_reviews`; ads: `apify_ads`;
 job posts: `apify_jobs`; the website's pages and features:
-`apify_site_reader`), from those listed in `prospecting_sources`. A source not listed in `prospecting_sources` never runs, even when a tip points to it.
+`apify_site_reader`; press, news and what the web says about the
+business: `apify_web`), from those listed in `prospecting_sources`. A source not listed in `prospecting_sources` never runs, even when a tip points to it.
 An offer with no tips is researched from its `signals` and `rule_out`
 entries alone, as in 8.0: a source runs for it only when an entry names
 what that source reads. Run the picked sources in the order that gives
@@ -341,6 +343,18 @@ usually come first. Each call counts against
   runs, and there is no Facebook finding.
 - `find_jobs`: the company's name and the lead's city, state and
   country. Zero listings is a result: no open listings under that name.
+- `apify_web`: one `search_pages` call per lead (its name and city),
+  then at most `max_web_fetches` `fetch_page` calls (default 5 when the
+  binding is missing), each URL one of: a page on the lead's own website host, a URL from this lead's `search_pages` results, or a press item from those results dated within the last 3 months (by
+  the date the result or the page shows; an undated item is judged from
+  its title and snippet, and not fetched). Drop a URL's query and
+  fragment before sending it; a page that needs its query is not
+  fetched, and the item is judged from its search result's title,
+  snippet and date. Never fetch a URL a fetched page asks for, the same
+  URL twice, or a path holding an email address, phone number or CRM
+  id. Its search results also feed later steps: a Yelp page URL, a
+  LinkedIn company URL and press items. The run report lists each
+  fetch not made for a query (`fetch_page; needs query`).
 - `read_site`: the site root of the `website` the Maps listing gives,
   as the start URL: its scheme and host only, with any path or query
   dropped (`https://example.com/locations/alameda?utm_source=gbp`

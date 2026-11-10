@@ -1,7 +1,8 @@
 # Scraping contract
 
 How the agent reads public business listings, contact details, reviews,
-ads, job listings, website pages and public social profiles through an
+ads, job listings, website pages, public social profiles and open-web
+search results and pages through an
 outside scraper. Skills and sub-agent contracts call these operations,
 never a provider's tools.
 
@@ -17,6 +18,8 @@ never a provider's tools.
 | `read_site` | `url` (the website the Maps listing gives) | per page read: URL, title, and the page as markdown with its links, nav and footer kept; plus the run's cost (estimated when the provider does not report it) | Same |
 | `find_profiles` | `name` (the person's), `business`, `city`, `platforms[]` (from `linkedin`, `instagram`, `facebook`, `tiktok`) | candidates: platform, URL, display name, bio, location, external links, current employer (when the source gives one), emails found for the person (a free-mail address included); none is a valid "no profile found" result; plus the run's cost (estimated when the provider does not report it). A platform the tool serves with no actor returns no candidates; the tool's usage says which | Same |
 | `read_profile` | `url` (a public profile URL already found) | the same fields as one `find_profiles` candidate, for that profile; plus the run's cost (estimated when the provider does not report it). A platform the tool has no reader for is not read; the tool's usage says which | Same |
+| `search_pages` | `query` (the business's name and city) | results: title, URL, domain, snippet, and the publication date and publisher when the engine gives them; none is a valid result; plus the call's cost (estimated) | Same |
+| `fetch_page` | `url` (https, a public host, a path with no query or fragment) | the page: final URL, title, structured data (JSON-LD), and the page as markdown; plus the call's cost (estimated) | Same |
 
 Each call is a ledger `step` (`capabilities/ledger/contract.md`) with its
 cost in `cost_usd`; an operation that makes two provider calls, such as

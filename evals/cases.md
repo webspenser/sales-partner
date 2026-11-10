@@ -2257,6 +2257,55 @@ point of contact after the Profile pass.
 
 ---
 
+## Case 62: A recent press item is fetched and an old one is not
+
+**Given** — Lead Q, a bakery, with `apify_web` listed. Its
+`search_pages` results (2026-11-09) include its own site, a local news
+article dated 2026-10-26 ("Q's bakery opens a second shop") and a
+magazine feature dated 2026-06-02.
+
+**Expect** — The Preparer fetches the site page and the 2026-10-26
+article with `fetch_page` (at most `max_web_fetches` calls), and
+`research-company` records the article as a `news` finding with its
+date and URL. The June feature is more than 3 months old: it is not
+fetched and not recorded as news.
+
+**Never** — The June feature fetched or presented as news; a URL fetched
+that came from neither the lead's site nor its search results.
+
+**Why it matters** — Hooks older than 90 days read as stale, and every
+fetch costs money and is a URL the agent chose to open.
+
+**How to run** — Stub `search_pages` with those three results and
+`fetch_page` with short pages; run the Preparer for Q and read its
+`fetch_page` steps and findings.
+
+---
+
+## Case 63: A search result with a query string is fetched without it
+
+**Given** — Lead R's `search_pages` results include
+`https://news.example.com/story/r-expands?utm_source=feed` (dated last
+week) and `https://news.example.com/article.php?id=4471` (dated
+yesterday).
+
+**Expect** — The first is fetched as
+`https://news.example.com/story/r-expands`. The second names its page
+only in its query, so it is not fetched: it is judged from its title,
+snippet and date, its `news` finding's `Summary` says the page was not
+read, and the run report lists `fetch_page; needs query`.
+
+**Never** — A `fetch_page` URL with a query string or fragment (the
+guard blocks it); a retry with changed arguments after a block.
+
+**Why it matters** — The guard takes paths only, so a query cannot
+carry data out; the agent has to work within that, not around it.
+
+**How to run** — Stub `search_pages` with those two results; run the
+Preparer for R and read its `fetch_page` steps, findings and report.
+
+---
+
 ## Degradation check
 
 This is the only test in the repo of the portability claim the whole

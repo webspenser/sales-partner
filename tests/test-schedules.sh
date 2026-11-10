@@ -26,7 +26,7 @@ scrape() { # scrape <dir>: bind scraping to Apify with every pinned value
     'max_reviews: 50' 'max_ads: 5' 'max_jobs: 20' 'max_site_pages: 5' 'max_site_depth: 1' 'max_review_places: 1' \
     'max_ad_queries: 1' 'max_ad_advertisers: 1' 'ads_result_type: advertisers' 'site_crawler_type: cheerio' \
     'site_html_transformer: none' 'max_site_urls: 1' 'max_profile_results: 5' 'max_profile_reads: 10' \
-    'max_profile_locations: 1' > "$1/bindings/scraping.md"
+    'max_profile_locations: 1' 'max_web_results: 10' > "$1/bindings/scraping.md"
 }
 inst() { # inst <dir> <crm provider>
   mkdir -p "$1"

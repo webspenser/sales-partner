@@ -1731,4 +1731,16 @@ for t in '; vendor error`' '; blocked`'; do
   for f in "$SP/subagents/preparer.md" "$SUD" "$SP/evals/cases.md"; do assert_not_contains "$f" "$t"; done
 done
 
+echo "-- 8.7.0: apify_web"
+for t in '`search_pages`' '`fetch_page`' '"method": "GET"' '`provider: duckduckgo`' '`max_web_fetches`' \
+  'dated within the last 3 months' 'never an email address, phone number or CRM id' '| `search_pages` | $0.002 |' \
+  '| `fetch_page` | $0.002 |' '`max_web_results` — results per `search_pages` call (default 10)'; do flat_has "$SUD" "$t"; done
+flat_has "$SP/capabilities/scraping/contract.md" '| `search_pages` |'
+flat_has "$SP/capabilities/scraping/contract.md" '| `fetch_page` |'
+flat_has "$SP/subagents/preparer.md" '`apify_web`: one `search_pages` call per lead'
+flat_has "$SP/subagents/preparer.md" 'a page on the lead'"'"'s own website host, a URL from this lead'"'"'s `search_pages` results, or a press item from those results dated within the last 3 months'
+flat_has "$SP/skills/research-company/SKILL.md" 'A press item read with `fetch_page` becomes a `news` finding with its date and URL'
+flat_has "$SP/evals/cases.md" '## Case 62: A recent press item is fetched and an old one is not'
+flat_has "$SP/evals/cases.md" '## Case 63: A search result with a query string is fetched without it'
+
 finish

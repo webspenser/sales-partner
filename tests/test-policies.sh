@@ -116,7 +116,7 @@ printf '%s\n' 'max_places_per_search: 60' 'max_pages_per_site: 3' 'max_crawl_dep
   'max_reviews: 50' 'max_ads: 5' 'max_jobs: 20' 'max_site_pages: 5' 'max_site_depth: 1' 'max_review_places: 1' \
   'max_ad_queries: 1' 'max_ad_advertisers: 1' 'ads_result_type: advertisers' 'site_crawler_type: cheerio' \
   'site_html_transformer: none' 'max_site_urls: 1' 'max_profile_results: 5' 'max_profile_reads: 10' \
-  'max_profile_locations: 1' > "$W/scraping.md"
+  'max_profile_locations: 1' 'max_web_results: 10' > "$W/scraping.md"
 MAPS_OK='{"maxCrawledPlacesPerSearch":60,"searchStringsArray":["HVAC contractor"],"city":"Alameda","state":"CA","countryCode":"us","language":"en","waitSecs":45}'
 CT='"maxRequestsPerStartUrl":3,"maxDepth":1,"maxRequests":30'
 U1='{"url":"https://example.com"}'
@@ -382,6 +382,43 @@ check 2 "tiktok read resultsPerPage omitted (default 100)" $AG2 ${P2}$TT "$(jdel
 check 2 "tiktok read resultsPerPage 100"  $AG2 ${P2}$TT "$(jset "$TT_OK" resultsPerPage 100)" "must send resultsPerPage = 1 (got 100)" "$W/scraping.md"
 check 2 "tiktok read resultsPerPage as a string" $AG2 ${P2}$TT "$(jset "$TT_OK" resultsPerPage '"1"')" "must send resultsPerPage = 1" "$W/scraping.md"
 check 2 "tiktok read without bindings"    $AG2 ${P2}$TT "$TT_OK" "no max_profile_reads line"
+
+# Phase B. Nested set and delete for the HTTP-shaped web tools (query.url, query.maxResults).
+jpset() { python3 -c 'import json,sys;d=json.loads(sys.argv[1]);*h,t=sys.argv[2].split(".");n=d
+for k in h: n=n.setdefault(k,{})
+n[t]=json.loads(sys.argv[3]);print(json.dumps(d))' "$@"; }
+jpdel() { python3 -c 'import json,sys;d=json.loads(sys.argv[1]);*h,t=sys.argv[2].split(".");n=d
+for k in h: n=n[k]
+del n[t];print(json.dumps(d))' "$@"; }
+WS=apify--web-search; WF=apify--web-fetch
+WS_OK='{"method":"GET","path":"/","query":{"query":"Franklin Barbecue Austin TX","maxResults":10,"countryCode":"US"}}'
+WF_OK='{"method":"GET","path":"/","query":{"url":"https://franklinbbq.com/about","formats":["markdown"]}}'
+check 0 "web search in limit"              $AG2 ${P2}$WS "$WS_OK" "" "$W/scraping.md"
+check 0 "web fetch a site page"            $AG2 ${P2}$WF "$WF_OK" "" "$W/scraping.md"
+harmless "web search" $WS "$WS_OK"
+harmless "web fetch" $WF "$WF_OK"
+check 0 "web search duckduckgo backup"     $AG2 ${P2}$WS "$(jpset "$WS_OK" query.provider '"duckduckgo"')" "" "$W/scraping.md"
+check 0 "web search maxResults as a string" $AG2 ${P2}$WS "$(jpset "$WS_OK" query.maxResults '"5"')" "" "$W/scraping.md"
+check 2 "web search maxResults over"       $AG2 ${P2}$WS "$(jpset "$WS_OK" query.maxResults 11)" "max_web_results" "$W/scraping.md"
+check 2 "web search maxResults omitted"    $AG2 ${P2}$WS "$(jpdel "$WS_OK" query.maxResults)" "names no query.maxResults" "$W/scraping.md"
+check 2 "web search without bindings"      $AG2 ${P2}$WS "$WS_OK" "no max_web_results line"
+for T in WS WF; do
+  eval "tool=\$$T; ok=\$${T}_OK"
+  check 2 "$T as POST"            $AG2 ${P2}$tool "$(jset "$ok" method '"POST"')" 'must send method = "GET"' "$W/scraping.md"
+  check 2 "$T method omitted"     $AG2 ${P2}$tool "$(jdel "$ok" method)" "names no method" "$W/scraping.md"
+  check 2 "$T other path"         $AG2 ${P2}$tool "$(jset "$ok" path '"/x"')" 'must send path = "/"' "$W/scraping.md"
+  check 2 "$T path omitted"       $AG2 ${P2}$tool "$(jdel "$ok" path)" "names no path" "$W/scraping.md"
+  check 2 "$T body object"        $AG2 ${P2}$tool "$(jset "$ok" body '{"url":"https://x.com/"}')" "must send body = null" "$W/scraping.md"
+  check 2 "$T query headers"      $AG2 ${P2}$tool "$(jpset "$ok" query.headers '"{\"X\":\"1\"}"')" "may not use query.headers" "$W/scraping.md"
+done
+check 2 "web fetch with a query"           $AG2 ${P2}$WF "$(jpset "$WF_OK" query.url '"https://franklinbbq.com/about?a=1"')" "" "$W/scraping.md"
+check 2 "web fetch with a fragment"        $AG2 ${P2}$WF "$(jpset "$WF_OK" query.url '"https://franklinbbq.com/about#x"')" "" "$W/scraping.md"
+check 2 "web fetch over http"              $AG2 ${P2}$WF "$(jpset "$WF_OK" query.url '"http://franklinbbq.com/about"')" "" "$W/scraping.md"
+check 2 "web fetch an IP address"          $AG2 ${P2}$WF "$(jpset "$WF_OK" query.url '"https://127.0.0.1/"')" "" "$W/scraping.md"
+check 2 "web fetch with user info"         $AG2 ${P2}$WF "$(jpset "$WF_OK" query.url '"https://user@franklinbbq.com/"')" "" "$W/scraping.md"
+check 2 "web fetch url omitted"            $AG2 ${P2}$WF "$(jpdel "$WF_OK" query.url)" "names no query.url" "$W/scraping.md"
+check 2 "web fetch respelled url alone"    $AG2 ${P2}$WF '{"method":"GET","path":"/","query":{"URL":"https://x.com/?a=1"}}' "" "$W/scraping.md"
+check 0 "web fetch a search-result page"   $AG2 ${P2}$WF "$(jpset "$WF_OK" query.url '"https://www.femalefoodie.com/restaurant-reviews/franklin-bbq/"')" "" "$W/scraping.md"
 SM=
 
 echo "-- Attio"

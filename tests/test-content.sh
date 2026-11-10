@@ -1758,4 +1758,13 @@ for t in '`apify_bbb`' '`apify_yellowpages`'; do flat_has "$SP/context/operating
 flat_has "$SP/evals/cases.md" '## Case 64: A BBB principal becomes the point of contact'
 flat_has "$SP/evals/cases.md" '## Case 65: No BBB listing is a result, not drift'
 
+echo "-- 8.7.0: apify_yelp"
+for t in 'name,businessRating,totalReviews,rating,reviewDate,text,reviewUrl,publicReply,author.name' \
+  'never asks for `author.profile_photo`, `author.friend_count` or any other `author` field but `author.name`' \
+  'a Yelp page URL from this lead'"'"'s `search_pages` results or its website'"'"'s links' '| `find_reviews`, Yelp | $0.02 |'; do flat_has "$SUD" "$t"; done
+flat_has "$SP/capabilities/scraping/contract.md" '`site` (`google`, the default, or `yelp`)'
+flat_has "$SP/subagents/preparer.md" '`apify_yelp`: when reviews are picked and the lead has a Yelp page URL'
+for t in '`apify_yelp`'; do flat_has "$SP/context/operating-config.md" "$t"; done
+flat_has "$SP/evals/cases.md" '## Case 66: A Yelp complaint is named only in Avoid, like a Google one'
+
 finish

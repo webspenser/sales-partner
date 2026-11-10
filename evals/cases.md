@@ -2352,6 +2352,32 @@ Preparer for T and read its findings and report.
 
 ---
 
+## Case 66: A Yelp complaint is named only in Avoid, like a Google one
+
+**Given** — Lead U, a dentist, with `apify_reviews` and `apify_yelp`
+listed and a Yelp page URL in its search results
+(`https://www.yelp.com/biz/u-dental-austin?osq=dentist`). Yelp returns a
+1-star review dated 2026-10-30 by `author.name` "Priya K.": "waited 40
+minutes past my appointment and nobody called".
+
+**Expect** — `find_reviews(site: yelp)` is sent with
+`https://www.yelp.com/biz/u-dental-austin` (query dropped). The finding
+names the reviewer "Priya" and the date, with the review's URL. In the
+talking points the complaint feeds a Point only as the problem the
+offer answers, unquoted and unnamed; "Priya" and the date appear only
+in `Avoid:`.
+
+**Never** — "Priya K." or her profile photo recorded; the complaint
+quoted in a Point; the URL sent with its query.
+
+**Why it matters** — Yelp is the second review source; it must follow
+the same personal-data and complaint rules as Google.
+
+**How to run** — Stub `search_pages` and the Yelp call; run the
+Preparer for U and read the findings and talking points.
+
+---
+
 ## Degradation check
 
 This is the only test in the repo of the portability claim the whole

@@ -52,6 +52,20 @@ names are spelled as the connector shows them, case included.
   keyword, and the guard blocks both.
 
   Never pass `startUrls`: use the place id.
+- `find_reviews` with `site: yelp` — `apify:web_wanderer--yelp-reviews-scraper`.
+  Send these arguments, and no others:
+  - `biz_urls` — exactly one URL, a Yelp page URL from this lead's `search_pages` results or its website's links: `https://www.yelp.com/biz/<alias>`, with any query
+    (`?start=40`, `?osq=…`) and fragment dropped. The guard takes only
+    `https`, `www.yelp.com` and a path under `/biz`;
+  - `reviews_limit` = `max_reviews` (never 0: the actor reads 0 as "all");
+  - `include_personal_data` — always `true` (the guard requires it), so
+    each review carries its author's display name (`author.name`, such as
+    "Lily C."): research records the first name only;
+  - `reviews_sort` (pass `newest`), `date_from` (a date or `12 months`),
+    `reviews_rating`, `reviews_keywords`, `waitSecs` (pass 45).
+
+  Never pass `biz_ids`, search arguments, `domain`, `reviews_language`
+  or `reviews_translate`. With no Yelp page URL, skip the call.
 - `find_ads` — two actors. Run the Google call whenever `find_ads` runs;
   run the Facebook call only with the lead's own Facebook page URL.
   - Google: `apify:scrapesage--google-ads-transparency-scraper`. Send these
@@ -248,7 +262,9 @@ breaks its URL rule (Website and Facebook URLs). On the web search and
 fetch tools it refuses any `method` but `GET`, any `path` but `/`, a
 `body`, `query.headers`, a `maxResults` above `max_web_results`, a BBB call
 without `includeDetails: true` or above `max_bbb_results`, a YellowPages
-call with `maxPages` other than `1`, and a
+call with `maxPages` other than `1`, a Yelp call without
+`include_personal_data: true`, above `max_reviews` or with a URL that
+is not a `www.yelp.com/biz` path, and a
 fetch URL that is not https, public and paths only. Never call any other Apify tool.
 
 ## Website and Facebook URLs
@@ -382,6 +398,7 @@ never read items without a projection):
 | `find_ads` (Facebook) | `inputUrl,totalCount,isResultComplete` | the page (`inputUrl`), its ad count (`totalCount`), whether the count is complete |
 | `find_jobs` | `title,datePublished,employer.name,location.city,jobUrl` | title, date posted, employer, city, URL |
 | `read_site` | `url,markdown,metadata.title` | URL, title, the page as markdown |
+| `find_reviews` (Yelp) | `name,businessRating,totalReviews,rating,reviewDate,text,reviewUrl,publicReply,author.name` | the business's Yelp rating and review count, then per review: stars, date, text, the review's URL, the owner's public reply, the reviewer's first name (from `author.name`) |
 | `find_listing` (BBB) | `businessName,bbbRating,accredited,yearsInBusiness,businessStarted,complaintCount,complaintsLast12Months,customerReviewCount,email,website,phone,principalContacts,profileUrl` | name, BBB rating, accredited, years in business, started, complaint counts (all, last 12 months), review count, email, website, phone, principal contacts (`name`, `title`), the BBB profile URL |
 | `find_listing` (YellowPages) | `title,is_claimed,star_rating,rating_count,phone,website,email,source_url,categories` | name, claimed (often empty: then unknown), rating, review count, phone, website, email, the listing URL, categories |
 
@@ -407,7 +424,7 @@ the first live run: the probe saw `Short` mode only for LinkedIn, so the
 comes back empty, record nothing from it and say so in the run's report.
 
 Reviews: ask for `reviewer_name`, and never for `reviewer_id`,
-`reviewer_url`, `reviewer_photo_url` or `reviewer_photo`. A finding
+`reviewer_url`, `reviewer_photo_url` or `reviewer_photo`. The Yelp call never asks for `author.profile_photo`, `author.friend_count` or any other `author` field but `author.name`, and never for `photos` or `videos`. A finding
 quotes only the words of the review that show the signal, with the
 review's date, may name the reviewer by first name as the review shows
 it ("Dana"), and links the review's own `review_url`. Names in the
@@ -463,6 +480,7 @@ actors are a flat worst case per call at the pinned sizes:
 | `read_profile`, TikTok | $0.005 per profile |
 | `search_pages` | $0.002 |
 | `fetch_page` | $0.002 |
+| `find_reviews`, Yelp | $0.02 |
 | `find_listing`, BBB | $0.02 per business |
 | `find_listing`, YellowPages | $0.06 per call |
 
@@ -534,8 +552,9 @@ exposed tools are `compass--crawler-google-places`,
 `harvestapi--linkedin-profile-search-by-name`,
 `apify--instagram-profile-scraper`,
 `clockworks--tiktok-profile-scraper`, `apify--web-search`,
-`apify--web-fetch`, `scrapesage--bbb-scraper` and
-`delicious_zebu--yellowpages-usa-business-lead-scraper`, plus the two reads the agent uses,
+`apify--web-fetch`, `scrapesage--bbb-scraper`,
+`delicious_zebu--yellowpages-usa-business-lead-scraper` and
+`web_wanderer--yelp-reviews-scraper`, plus the two reads the agent uses,
 `get-actor-run` and `get-dataset-items`. If the connector exposes
 `call-actor` (the `actors` or `api` tool groups), or lacks one of the
 ten actors, tell the operator to re-add it with the URL in Setup step 2.

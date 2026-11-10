@@ -59,7 +59,7 @@ allow: [compass--crawler-google-places, vdrmota--contact-info-scraper, web_wande
   scrapesage--google-ads-transparency-scraper, apify--facebook-ads-scraper, valig--indeed-jobs-scraper,
   apify--website-content-crawler, harvestapi--linkedin-profile-search-by-name, apify--instagram-profile-scraper,
   clockworks--tiktok-profile-scraper, apify--web-search, apify--web-fetch, scrapesage--bbb-scraper,
-  delicious_zebu--yellowpages-usa-business-lead-scraper, get-actor-run, get-dataset-items]
+  delicious_zebu--yellowpages-usa-business-lead-scraper, web_wanderer--yelp-reviews-scraper, get-actor-run, get-dataset-items]
 deny: ["*call-actor*", "*call_actor*", "*search-actors*", "*add-actor*", "*fetch-actor*", "*webhook*", "*schedule*"]
 refuse_args: [pageFunction, preNavigationHooks, postNavigationHooks, customData, headers, customHttpHeaders,
   cookies, cookie, initialCookies, sessionCookies, sessionCookie, li_at, requestsFromUrl, "startUrls[].requestsFromUrl",
@@ -137,6 +137,14 @@ fixed:
   - tools: [delicious_zebu--yellowpages-usa-business-lead-scraper]
     at: [urls]
     value: null
+  - tools: [web_wanderer--yelp-reviews-scraper]
+    at: [include_personal_data]
+    value: true
+    required: true
+  - tools: [web_wanderer--yelp-reviews-scraper]
+    at: [biz_ids, search_urls, search_location, search_limit, search_sort, search_features, search_price, domain,
+      reviews_language, reviews_translate]
+    value: null
   # Per-actor scope and cost keys, refused on that actor alone: null or
   # absent passes, any other value is blocked. Each list holds every paid
   # add-on and scope-widening input its probe note names (Maps and
@@ -196,6 +204,12 @@ urls:
     schemes: [https]
     hosts: public
     path: root
+    required: true
+  - tools: [web_wanderer--yelp-reviews-scraper]
+    at: ["biz_urls[]"]
+    schemes: [https]
+    hosts: [www.yelp.com]
+    path: /biz
     required: true
   - tools: [apify--web-fetch]
     at: [query.url]
@@ -257,6 +271,9 @@ recipients:
   - tools: [scrapesage--bbb-scraper]
     at: [maxResults]
     bound: max_bbb_results
+  - tools: [web_wanderer--yelp-reviews-scraper]
+    at: [reviews_limit]
+    bound: max_reviews
 # List lengths multiply the size pins: one search term per Maps call, at
 # most 10 sites per contact call, one place per reviews call, one query
 # per Google Ads call, one page URL per Facebook call, one start URL per
@@ -313,6 +330,11 @@ limits:
   - tools: [scrapesage--bbb-scraper]
     at: [searchTerms, locations]
     bound: max_search_terms
+    kind: count
+    required: true
+  - tools: [web_wanderer--yelp-reviews-scraper]
+    at: [biz_urls]
+    bound: max_review_places
     kind: count
     required: true
   - tools: [delicious_zebu--yellowpages-usa-business-lead-scraper]

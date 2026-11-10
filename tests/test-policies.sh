@@ -442,6 +442,22 @@ nulled yellowpages $YP "$YP_OK" urls
 check 2 "yellowpages two pages"            $AG2 ${P2}$YP "$(jset "$YP_OK" maxPages 2)" "must send maxPages = 1" "$W/scraping.md"
 check 2 "yellowpages pages omitted"        $AG2 ${P2}$YP "$(jdel "$YP_OK" maxPages)" "names no maxPages" "$W/scraping.md"
 lists yellowpages $YP "$YP_OK" 'searchKeyword:max_search_terms:["a","b"]'
+YELP=web_wanderer--yelp-reviews-scraper
+YELP_OK='{"biz_urls":["https://www.yelp.com/biz/franklin-barbecue-austin"],"reviews_limit":50,"reviews_sort":"newest","include_personal_data":true,"waitSecs":45}'
+check 0 "yelp in limit"                    $AG2 ${P2}$YELP "$YELP_OK" "" "$W/scraping.md"
+harmless yelp $YELP "$YELP_OK"
+nulled yelp $YELP "$YELP_OK" biz_ids search_urls search_location search_limit search_sort search_features search_price domain \
+  reviews_language reviews_translate
+lists yelp $YELP "$YELP_OK" 'biz_urls:max_review_places:["https://www.yelp.com/biz/a","https://www.yelp.com/biz/b"]'
+check 2 "yelp page with a query"           $AG2 ${P2}$YELP "$(jset "$YELP_OK" biz_urls '["https://www.yelp.com/biz/franklin-barbecue-austin?start=40"]')" "" "$W/scraping.md"
+check 2 "yelp regional host"               $AG2 ${P2}$YELP "$(jset "$YELP_OK" biz_urls '["https://www.yelp.ca/biz/x"]')" "" "$W/scraping.md"
+check 2 "yelp search page"                 $AG2 ${P2}$YELP "$(jset "$YELP_OK" biz_urls '["https://www.yelp.com/search"]')" "" "$W/scraping.md"
+check 2 "yelp other site"                  $AG2 ${P2}$YELP "$(jset "$YELP_OK" biz_urls '["https://example.com/biz/x"]')" "" "$W/scraping.md"
+check 2 "yelp reviews over"                $AG2 ${P2}$YELP "$(jset "$YELP_OK" reviews_limit 51)" "is not a pinned value (max_reviews)" "$W/scraping.md"
+check 2 "yelp reviews 0 (all)"             $AG2 ${P2}$YELP "$(jset "$YELP_OK" reviews_limit 0)" "is not a pinned value (max_reviews)" "$W/scraping.md"
+check 2 "yelp reviews omitted"             $AG2 ${P2}$YELP "$(jdel "$YELP_OK" reviews_limit)" "names no pinned value" "$W/scraping.md"
+check 2 "yelp personal data off"           $AG2 ${P2}$YELP "$(jset "$YELP_OK" include_personal_data false)" "must send include_personal_data = true" "$W/scraping.md"
+check 2 "yelp personal data omitted"       $AG2 ${P2}$YELP "$(jdel "$YELP_OK" include_personal_data)" "names no include_personal_data" "$W/scraping.md"
 SM=
 
 echo "-- Attio"

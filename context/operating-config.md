@@ -56,7 +56,8 @@ business_name: "[the business's name, from the interview]"
   results and pages: press, news and what the web says about a
   business); `apify_bbb` runs `find_listing` on BBB (rating,
   accreditation, years, complaints, owners) and `apify_yellowpages` on
-  YellowPages (a directory listing: claimed, rating, email); these are
+  YellowPages (a directory listing: claimed, rating, email), and
+  `apify_yelp` runs `find_reviews` on a business's Yelp page; these are
   used by the Preparer, and `apify_yellowpages` also by the Prospector,
   which sources leads from it by trade and city;
   `apify_profiles` runs `find_profiles` and `read_profile` (the public

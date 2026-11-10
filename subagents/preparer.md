@@ -121,7 +121,8 @@ Segment and offer).
 - Scraping `find_reviews` (`apify_reviews`), `find_ads` (`apify_ads`),
   `find_jobs` (`apify_jobs`), `read_site` (`apify_site_reader`) and
   `search_pages` and `fetch_page` (`apify_web`), and `find_listing`
-  (`apify_bbb`, `apify_yellowpages`), each only when its
+  (`apify_bbb`, `apify_yellowpages`), and `find_reviews` on Yelp
+  (`apify_yelp`), each only when its
   source is listed in `prospecting_sources`
 - Scraping `find_profiles` and `read_profile` (`apify_profiles`), only
   through `find-social-profiles` in the Profile pass, and only when
@@ -318,7 +319,7 @@ link is usually the business's page, not the person's. A business's own social p
 After the Maps listing and website contact steps, read the
 `research_tips` of every offer in the lead's segment (a segment set
 later, as in Segment and offer, has its tips read then). Pick the
-sources the tips point to (reviews: `apify_reviews`; ads: `apify_ads`;
+sources the tips point to (reviews: `apify_reviews`, and `apify_yelp`; ads: `apify_ads`;
 job posts: `apify_jobs`; the website's pages and features:
 `apify_site_reader`; press, news and what the web says about the
 business: `apify_web`; a BBB rating, complaints, years in business or
@@ -358,6 +359,12 @@ usually come first. Each call counts against
   id. Its search results also feed later steps: a Yelp page URL, a
   LinkedIn company URL and press items. The run report lists each
   fetch not made for a query (`fetch_page; needs query`).
+- `apify_yelp`: when reviews are picked and the lead has a Yelp page URL (from its `search_pages` results or its website's links,
+  normalized as in `usage.md`), one `find_reviews(site: yelp)` call. It
+  runs beside the Google reviews call, not instead of it: Yelp is a
+  second source for recency and complaints. Research records the
+  reviewer's first name only, as for Google. With no Yelp URL, it is not
+  due (not a source not run).
 - `apify_bbb` and `apify_yellowpages`: one `find_listing` call each per lead (the business's name and its city and state). An item counts only when
   matched to the lead by phone or website host; a name-only match is dropped (another business with a similar name). No item is a
   result: no listing, not drift. A BBB principal contact goes to

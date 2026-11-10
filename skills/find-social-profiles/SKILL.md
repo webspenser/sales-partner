@@ -46,7 +46,8 @@ The Preparer's cap and time-budget rules for Apify spend apply to every
    platform, an anchor like its other social pages.
    A LinkedIn profile URL already known for the contact (an anchor) is read with `read_profile`
    (LinkedIn, email-search mode) instead of searching, for its employer
-   and emails; a candidate `find_profiles` returned is not read again.
+   and emails; a candidate a by-name `find_profiles` search (`Full + email search`) returned is not read again; a company-search
+   candidate (Short mode, no email) is read.
    Use `read_profile` (Instagram and TikTok) on a
    business social page to find people it tags or links to, and on a
    known profile to find the business it links to. A link between the

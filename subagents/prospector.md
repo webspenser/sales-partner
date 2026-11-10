@@ -90,7 +90,8 @@ and create leads as for any other source.
 `apify_yellowpages` sources leads through `find_listing(directory: yellowpages, query, location)`: one call per query, the
 same trade and city as the Maps query. Its listings are deduplicated by phone and website like Maps, against the CRM and against this
 run's Maps results; a listing with neither phone nor website is not a
-lead. A YellowPages lead has no Maps place id, so its `Source URL` is
+lead. A YellowPages lead takes its location from the listing's `address` (city and state as the listing gives them, not the query's
+city). A YellowPages lead has no Maps place id, so its `Source URL` is
 the listing's `source_url`, and the Preparer's Google reviews call is
 skipped for it until a Maps match is found. Estimate each call at the
 YellowPages line of `usage.md`'s `## Cost`.
@@ -149,9 +150,10 @@ Call `ledger_status` first; write `run_started` first and `run_finished` last, n
 One `step` per source query: `subject` is the query for web search; for
 `find_businesses` it is `<query>|<city>, <state>` (for example
 `HVAC contractor|Oakland, CA`), the same format used when matching prior
-steps. `items_in` is the results returned, `items_out` the new `Scored`
-leads it produced, and, for a `find_businesses` call, `cost_usd` is the
-run's cost (an estimate; `detail` says `estimated`). Before choosing
+steps; for `find_listing(directory: yellowpages)` it is `yellowpages|<query>|<city>, <state>`, so a YellowPages step never matches
+(or suppresses) a Maps query. `items_in` is the results returned,
+`items_out` the new `Scored` leads it produced, and every Apify step carries `cost_usd`, the call's cost (an estimate; `detail` says
+`estimated`). Before choosing
 queries, call
 `find_events(since: 30 days ago, activity: prospect, event: step)` and
 skip any query whose `subject` matches a step with `outcome` `ok` and

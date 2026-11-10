@@ -109,6 +109,17 @@ URL, under the step 5 and usable-hook rules above.
   people in the text (a technician's first name) may be quoted as
   written. The newest review's date is the Approach rubric's review
   date.
+  A Yelp review (`find_reviews` with `site: yelp`) follows the same rules: its reviewer is named by first name from `author.name`
+  ("Lily C." is "Lily"), its `Date` is `reviewDate`, its `Source URL`
+  is `reviewUrl`, and its date counts for the newest-review date like a
+  Google review's.
+- **Directory listings (`find_listing`) → `listing`.** A BBB item
+  matched to the lead gives one `listing` finding: its rating,
+  accreditation, years in business and complaint counts (all, and last
+  12 months), with the BBB profile URL; a complaint count is stated as
+  BBB gives it, never as a judgment. A YellowPages item gives its
+  claimed status (when not empty), rating and review count, with the
+  listing URL. No listing is not a finding.
 - **Job posts (`find_jobs`) → `hire`.** The title and date posted, with
   the listing's URL. Zero listings means no open listings under that
   name: it is not a finding.

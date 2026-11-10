@@ -593,7 +593,7 @@ assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" '`get-dataset-i
 assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" '`countryCode`'
 assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" '`max_pages_per_call`'
 assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" 'Do not pass `proxyConfig`'
-assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" '`max_search_terms` — search terms per Maps call (default 1)'
+assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" '`max_search_terms` — search terms per Maps call, and also'
 assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" '`max_sites_per_call`'
 assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" '`max_dataset_items`'
 assert_not_contains "$SP/capabilities/scraping/tools/apify/usage.md" 'Arguments to omit'
@@ -1745,7 +1745,7 @@ flat_has "$SP/evals/cases.md" '## Case 63: A search result with a query string i
 
 echo "-- 8.7.0: apify_bbb and apify_yellowpages"
 for t in '`find_listing`' 'businessName,bbbRating,accredited,yearsInBusiness,businessStarted,complaintCount,complaintsLast12Months,customerReviewCount,email,website,phone,principalContacts,profileUrl' \
-  'title,is_claimed,star_rating,rating_count,phone,website,email,source_url,categories' \
+  'title,is_claimed,star_rating,rating_count,phone,website,email,address,source_url,categories' \
   '| `find_listing`, BBB | $0.02 per business |' '| `find_listing`, YellowPages | $0.06 per call |' \
   '`max_bbb_results` — businesses per BBB `find_listing` call (default 5)' 'No listing is a valid result, not drift'; do flat_has "$SUD" "$t"; done
 flat_has "$SP/capabilities/scraping/contract.md" '| `find_listing` |'
@@ -1804,5 +1804,17 @@ flat_lacks "$SUD" 'Runs ten Apify actors'
 flat_lacks "$SUD" 'lacks one of the ten actors'
 flat_has "$SP/subagents/preparer.md" '`apify_web` needs `max_web_results`; `apify_bbb` needs `max_bbb_results`'
 for t in '`apify_web`' '`apify_bbb`' '`apify_yellowpages`' '`apify_yelp`'; do flat_has "$SP/skills/interview-business/SKILL.md" "$t"; done
+
+echo "-- 8.7.0: final review fixes"
+flat_has "$SP/subagents/prospector.md" 'for `find_listing(directory: yellowpages)` it is `yellowpages|<query>|<city>, <state>`'
+flat_has "$SP/subagents/prospector.md" 'every Apify step carries `cost_usd`'
+flat_has "$SUD" 'title,is_claimed,star_rating,rating_count,phone,website,email,address,source_url,categories'
+flat_has "$SP/subagents/prospector.md" 'its location from the listing'"'"'s `address`'
+flat_has "$SP/skills/find-social-profiles/SKILL.md" 'a candidate a by-name `find_profiles` search (`Full + email search`) returned is not read again'
+flat_lacks "$SP/skills/find-social-profiles/SKILL.md" 'a candidate `find_profiles` returned is not read again'
+flat_has "$SP/skills/research-company/SKILL.md" '**Directory listings (`find_listing`) → `listing`.**'
+flat_has "$SP/skills/research-company/SKILL.md" 'A Yelp review (`find_reviews` with `site: yelp`) follows the same rules'
+flat_has "$SUD" '`max_search_terms` — search terms per Maps call, and also the terms per BBB, YellowPages, LinkedIn jobs and LinkedIn company search call'
+flat_has "$SUD" 'and LinkedIn profile URLs per LinkedIn `read_profile` call'
 
 finish

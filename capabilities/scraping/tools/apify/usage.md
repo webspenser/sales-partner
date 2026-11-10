@@ -467,7 +467,7 @@ never read items without a projection):
 | `read_site` | `url,markdown,metadata.title` | URL, title, the page as markdown |
 | `find_reviews` (Yelp) | `name,businessRating,totalReviews,rating,reviewDate,text,reviewUrl,publicReply,author.name` | the business's Yelp rating and review count, then per review: stars, date, text, the review's URL, the owner's public reply, the reviewer's first name (from `author.name`) |
 | `find_listing` (BBB) | `businessName,bbbRating,accredited,yearsInBusiness,businessStarted,complaintCount,complaintsLast12Months,customerReviewCount,email,website,phone,principalContacts,profileUrl` | name, BBB rating, accredited, years in business, started, complaint counts (all, last 12 months), review count, email, website, phone, principal contacts (`name`, `title`), the BBB profile URL |
-| `find_listing` (YellowPages) | `title,is_claimed,star_rating,rating_count,phone,website,email,source_url,categories` | name, claimed (often empty: then unknown), rating, review count, phone, website, email, the listing URL, categories |
+| `find_listing` (YellowPages) | `title,is_claimed,star_rating,rating_count,phone,website,email,address,source_url,categories` | name, claimed (often empty: then unknown), rating, review count, phone, website, email, address, the listing URL, categories |
 
 Check on the first live run: the Google Ads, Facebook and Indeed
 `fields` above come from the actors' item schemas, not from items the
@@ -587,7 +587,9 @@ trips early. The operator recalibrates them from Apify Console.
    - `max_crawl_depth` — link depth on each website (default 1);
    - `max_pages_per_call` — pages the contact scraper reads in one call,
      across all its websites (default 30: 10 websites × 3 pages);
-   - `max_search_terms` — search terms per Maps call (default 1);
+   - `max_search_terms` — search terms per Maps call, and also the terms per BBB, YellowPages, LinkedIn jobs and LinkedIn company search call
+     (BBB counts its terms and its locations); raising it widens all of
+     them (default 1);
    - `max_sites_per_call` — website URLs per contact call (default 10);
    - `max_dataset_items` — items per `get-dataset-items` read (default 100);
    - `max_reviews` — reviews per reviews call (default 50);
@@ -608,7 +610,7 @@ trips early. The operator recalibrates them from Apify Console.
    - `max_profile_results` — LinkedIn profiles per `find_profiles` call
      (default 5);
    - `max_profile_reads` — handles per Instagram or TikTok
-     `read_profile` call (default 10);
+     `read_profile` call, and LinkedIn profile URLs per LinkedIn `read_profile` call ($0.02 each) (default 10);
    - `max_profile_locations` — locations per LinkedIn search (default 1);
    - `max_web_results` — results per `search_pages` call (default 10);
    - `max_bbb_results` — businesses per BBB `find_listing` call (default 5);

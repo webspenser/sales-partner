@@ -105,6 +105,19 @@ names are spelled as the connector shows them, case included.
   - `datePosted`, `waitSecs` (pass 45).
 
   Zero items is a valid result: no open listings under that name.
+
+  Then LinkedIn: `apify:valig--linkedin-jobs-scraper`. Send these
+  arguments, and no others:
+  - `companyName` — exactly one, the company's name;
+  - `location` (`"Austin, TX"`);
+  - `datePosted` — always `"r2592000"` (the last 30 days; the guard
+    requires it: the probe's keyword search returned a 2023 post);
+  - `limit` = `max_jobs`;
+  - `titleInclude`, `titleExclude`, `waitSecs` (pass 45).
+
+  Never pass `keywords`, `urlParam` or `urlPath`. LinkedIn matches the
+  company name loosely: keep only items whose `companyName` matches the lead's name (ignoring case, punctuation and a trailing
+  "LLC", "Inc" or "Co"). Zero items is a valid result.
 - `read_site` — `apify:apify--website-content-crawler`. Send these arguments,
   and no others:
   - `startUrls` — exactly one URL, the site root of
@@ -262,7 +275,8 @@ breaks its URL rule (Website and Facebook URLs). On the web search and
 fetch tools it refuses any `method` but `GET`, any `path` but `/`, a
 `body`, `query.headers`, a `maxResults` above `max_web_results`, a BBB call
 without `includeDetails: true` or above `max_bbb_results`, a YellowPages
-call with `maxPages` other than `1`, a Yelp call without
+call with `maxPages` other than `1`, a LinkedIn jobs call without
+`datePosted: "r2592000"`, above `max_jobs` or with `keywords`, a Yelp call without
 `include_personal_data: true`, above `max_reviews` or with a URL that
 is not a `www.yelp.com/biz` path, and a
 fetch URL that is not https, public and paths only. Never call any other Apify tool.
@@ -397,6 +411,7 @@ never read items without a projection):
 | `find_ads` (Google) | `name,legalName,advertiserId,advertiserUrl,approxAdCountLow,approxAdCountHigh,verified` | one advertiser per item; zero items means no Google ads for that query in the region |
 | `find_ads` (Facebook) | `inputUrl,totalCount,isResultComplete` | the page (`inputUrl`), its ad count (`totalCount`), whether the count is complete |
 | `find_jobs` | `title,datePublished,employer.name,location.city,jobUrl` | title, date posted, employer, city, URL |
+| `find_jobs` (LinkedIn) | `title,companyName,location,postedDate,applicationsCount,url` | title, employer, city, date posted, applicant count, URL |
 | `read_site` | `url,markdown,metadata.title` | URL, title, the page as markdown |
 | `find_reviews` (Yelp) | `name,businessRating,totalReviews,rating,reviewDate,text,reviewUrl,publicReply,author.name` | the business's Yelp rating and review count, then per review: stars, date, text, the review's URL, the owner's public reply, the reviewer's first name (from `author.name`) |
 | `find_listing` (BBB) | `businessName,bbbRating,accredited,yearsInBusiness,businessStarted,complaintCount,complaintsLast12Months,customerReviewCount,email,website,phone,principalContacts,profileUrl` | name, BBB rating, accredited, years in business, started, complaint counts (all, last 12 months), review count, email, website, phone, principal contacts (`name`, `title`), the BBB profile URL |
@@ -474,6 +489,7 @@ actors are a flat worst case per call at the pinned sizes:
 | `find_ads`, Google | $0.01 |
 | `find_ads`, Facebook | $0.03 |
 | `find_jobs` | $0.005 |
+| `find_jobs`, LinkedIn | $0.005 |
 | `read_site` | $0.03 |
 | `find_profiles`, LinkedIn | $0.15 per call |
 | `read_profile`, Instagram | $0.003 per username |
@@ -553,8 +569,8 @@ exposed tools are `compass--crawler-google-places`,
 `apify--instagram-profile-scraper`,
 `clockworks--tiktok-profile-scraper`, `apify--web-search`,
 `apify--web-fetch`, `scrapesage--bbb-scraper`,
-`delicious_zebu--yellowpages-usa-business-lead-scraper` and
-`web_wanderer--yelp-reviews-scraper`, plus the two reads the agent uses,
+`delicious_zebu--yellowpages-usa-business-lead-scraper`,
+`web_wanderer--yelp-reviews-scraper` and `valig--linkedin-jobs-scraper`, plus the two reads the agent uses,
 `get-actor-run` and `get-dataset-items`. If the connector exposes
 `call-actor` (the `actors` or `api` tool groups), or lacks one of the
 ten actors, tell the operator to re-add it with the URL in Setup step 2.

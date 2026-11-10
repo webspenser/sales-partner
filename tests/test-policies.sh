@@ -458,6 +458,18 @@ check 2 "yelp reviews 0 (all)"             $AG2 ${P2}$YELP "$(jset "$YELP_OK" re
 check 2 "yelp reviews omitted"             $AG2 ${P2}$YELP "$(jdel "$YELP_OK" reviews_limit)" "names no pinned value" "$W/scraping.md"
 check 2 "yelp personal data off"           $AG2 ${P2}$YELP "$(jset "$YELP_OK" include_personal_data false)" "must send include_personal_data = true" "$W/scraping.md"
 check 2 "yelp personal data omitted"       $AG2 ${P2}$YELP "$(jdel "$YELP_OK" include_personal_data)" "names no include_personal_data" "$W/scraping.md"
+
+LIJ=valig--linkedin-jobs-scraper
+LIJ_OK='{"companyName":["Franklin Barbecue"],"location":"Austin, TX","datePosted":"r2592000","limit":20,"waitSecs":45}'
+check 0 "linkedin jobs in limit"           $AG2 ${P2}$LIJ "$LIJ_OK" "" "$W/scraping.md"
+harmless "linkedin jobs" $LIJ "$LIJ_OK"
+nulled "linkedin jobs" $LIJ "$LIJ_OK" urlParam urlPath keywords
+check 2 "linkedin jobs keyword search"     $AG2 ${P2}$LIJ "$(jset "$LIJ_OK" keywords '"barbecue"')" "must send keywords = null" "$W/scraping.md"
+lists "linkedin jobs" $LIJ "$LIJ_OK" 'companyName:max_search_terms:["a","b"]'
+check 2 "linkedin jobs over"               $AG2 ${P2}$LIJ "$(jset "$LIJ_OK" limit 21)" "is not a pinned value (max_jobs)" "$W/scraping.md"
+check 2 "linkedin jobs limit omitted"      $AG2 ${P2}$LIJ "$(jdel "$LIJ_OK" limit)" "names no pinned value" "$W/scraping.md"
+check 2 "linkedin jobs last week only"     $AG2 ${P2}$LIJ "$(jset "$LIJ_OK" datePosted '"r604800"')" 'must send datePosted = "r2592000"' "$W/scraping.md"
+check 2 "linkedin jobs any date"           $AG2 ${P2}$LIJ "$(jdel "$LIJ_OK" datePosted)" "names no datePosted" "$W/scraping.md"
 SM=
 
 echo "-- Attio"

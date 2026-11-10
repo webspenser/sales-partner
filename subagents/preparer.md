@@ -347,6 +347,8 @@ usually come first. Each call counts against
   runs, and there is no Facebook finding.
 - `find_jobs`: the company's name and the lead's city, state and
   country. Zero listings is a result: no open listings under that name.
+  `find_jobs` runs Indeed, then LinkedIn (two calls, a ledger `step` each, like `find_ads`); a
+  LinkedIn post counts only when its employer matches the lead's name.
 - `apify_web`: one `search_pages` call per lead (its name and city),
   then at most `max_web_fetches` `fetch_page` calls (default 5 when the
   binding is missing), each URL one of: a page on the lead's own website host, a URL from this lead's `search_pages` results, or a press item from those results dated within the last 3 months (by

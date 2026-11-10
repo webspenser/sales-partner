@@ -59,7 +59,8 @@ allow: [compass--crawler-google-places, vdrmota--contact-info-scraper, web_wande
   scrapesage--google-ads-transparency-scraper, apify--facebook-ads-scraper, valig--indeed-jobs-scraper,
   apify--website-content-crawler, harvestapi--linkedin-profile-search-by-name, apify--instagram-profile-scraper,
   clockworks--tiktok-profile-scraper, apify--web-search, apify--web-fetch, scrapesage--bbb-scraper,
-  delicious_zebu--yellowpages-usa-business-lead-scraper, web_wanderer--yelp-reviews-scraper, get-actor-run, get-dataset-items]
+  delicious_zebu--yellowpages-usa-business-lead-scraper, web_wanderer--yelp-reviews-scraper,
+  valig--linkedin-jobs-scraper, get-actor-run, get-dataset-items]
 deny: ["*call-actor*", "*call_actor*", "*search-actors*", "*add-actor*", "*fetch-actor*", "*webhook*", "*schedule*"]
 refuse_args: [pageFunction, preNavigationHooks, postNavigationHooks, customData, headers, customHttpHeaders,
   cookies, cookie, initialCookies, sessionCookies, sessionCookie, li_at, requestsFromUrl, "startUrls[].requestsFromUrl",
@@ -144,6 +145,13 @@ fixed:
   - tools: [web_wanderer--yelp-reviews-scraper]
     at: [biz_ids, search_urls, search_location, search_limit, search_sort, search_features, search_price, domain,
       reviews_language, reviews_translate]
+    value: null
+  - tools: [valig--linkedin-jobs-scraper]
+    at: [datePosted]
+    value: 'r2592000'
+    required: true
+  - tools: [valig--linkedin-jobs-scraper]
+    at: [urlParam, urlPath, keywords]
     value: null
   # Per-actor scope and cost keys, refused on that actor alone: null or
   # absent passes, any other value is blocked. Each list holds every paid
@@ -274,6 +282,9 @@ recipients:
   - tools: [web_wanderer--yelp-reviews-scraper]
     at: [reviews_limit]
     bound: max_reviews
+  - tools: [valig--linkedin-jobs-scraper]
+    at: [limit]
+    bound: max_jobs
 # List lengths multiply the size pins: one search term per Maps call, at
 # most 10 sites per contact call, one place per reviews call, one query
 # per Google Ads call, one page URL per Facebook call, one start URL per
@@ -335,6 +346,11 @@ limits:
   - tools: [web_wanderer--yelp-reviews-scraper]
     at: [biz_urls]
     bound: max_review_places
+    kind: count
+    required: true
+  - tools: [valig--linkedin-jobs-scraper]
+    at: [companyName]
+    bound: max_search_terms
     kind: count
     required: true
   - tools: [delicious_zebu--yellowpages-usa-business-lead-scraper]

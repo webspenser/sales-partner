@@ -1767,4 +1767,10 @@ flat_has "$SP/subagents/preparer.md" '`apify_yelp`: when reviews are picked and 
 for t in '`apify_yelp`'; do flat_has "$SP/context/operating-config.md" "$t"; done
 flat_has "$SP/evals/cases.md" '## Case 66: A Yelp complaint is named only in Avoid, like a Google one'
 
+echo "-- 8.7.0: LinkedIn jobs"
+for t in '`apify:valig--linkedin-jobs-scraper`' 'title,companyName,location,postedDate,applicationsCount,url' \
+  '`datePosted` — always `"r2592000"`' '| `find_jobs`, LinkedIn | $0.005 |' 'keep only items whose `companyName` matches the lead'; do flat_has "$SUD" "$t"; done
+flat_has "$SP/subagents/preparer.md" '`find_jobs` runs Indeed, then LinkedIn'
+flat_has "$SP/evals/cases.md" '## Case 67: A LinkedIn job post from a similarly named company is dropped'
+
 finish

@@ -2378,6 +2378,28 @@ Preparer for U and read the findings and talking points.
 
 ---
 
+## Case 67: A LinkedIn job post from a similarly named company is dropped
+
+**Given** — Lead V, "Summit Roofing" in Denver. LinkedIn's
+`find_jobs` call returns two posts from the last 30 days: "Roofing
+Estimator" by `Summit Roofing LLC`, and "Project Manager" by `Summit
+Roofing & Solar Group`.
+
+**Expect** — Research records the estimator post as a `hire` finding
+with its date and URL. The second post's employer is a different name,
+so it is dropped.
+
+**Never** — The Summit Roofing & Solar post recorded as V's; a
+LinkedIn call sent with `keywords` or without `datePosted: "r2592000"`.
+
+**Why it matters** — LinkedIn matches company names loosely; a hire
+signal from the wrong company sends the operator in with a false hook.
+
+**How to run** — Stub the LinkedIn jobs call with those two items; run
+the Preparer for V with `apify_jobs` picked and read its findings.
+
+---
+
 ## Degradation check
 
 This is the only test in the repo of the portability claim the whole

@@ -1,12 +1,14 @@
 # Scraping — Apify tool
 
-Runs ten Apify actors through the client's own Apify account: the Google
-Maps scraper for local businesses, the contact-info scraper for emails,
-phones and social links on a business's website, five evidence
-actors for research (Maps reviews, Google Ads Transparency, the Facebook
-Ad Library count, Indeed jobs and a website reader), and three social
-profile actors (a LinkedIn search by name, and Instagram and TikTok
-profile readers). All three read public data with no login: no cookie,
+Runs nineteen Apify tools through the client's own Apify account: the
+Google Maps scraper and YellowPages for local businesses, the
+contact-info scraper for emails, phones and social links on a
+business's website, evidence actors for research (Google and Yelp
+reviews, BBB, Google Ads Transparency, the Facebook Ad Library count and
+its backup, Indeed and LinkedIn jobs, and a website reader), the web
+search and page fetch tools, and five social profile actors (a LinkedIn
+search by name, a LinkedIn company search and profile reader, and
+Instagram and TikTok profile readers). All of them read public data with no login: no cookie,
 session or account of the operator's is ever sent. `apify:` below means
 the connected Apify server's tools, whatever their prefix (with the
 restricted connector in Setup, `mcp__claude_ai_Apify_Actors__`). Tool
@@ -572,10 +574,11 @@ trips early. The operator recalibrates them from Apify Console.
    guard does not see).
 2. Add the hosted connector in claude.ai (Settings → Connectors → Add
    custom connector) at
-   `https://mcp.apify.com?tools=compass/crawler-google-places,vdrmota/contact-info-scraper,web_wanderer/google-reviews-scraper,scrapesage/google-ads-transparency-scraper,apify/facebook-ads-scraper,valig/indeed-jobs-scraper,apify/website-content-crawler,harvestapi/linkedin-profile-search-by-name,apify/instagram-profile-scraper,clockworks/tiktok-profile-scraper`
+   `https://mcp.apify.com?tools=compass/crawler-google-places,vdrmota/contact-info-scraper,web_wanderer/google-reviews-scraper,scrapesage/google-ads-transparency-scraper,apify/facebook-ads-scraper,valig/indeed-jobs-scraper,apify/website-content-crawler,harvestapi/linkedin-profile-search-by-name,apify/instagram-profile-scraper,clockworks/tiktok-profile-scraper,apify/web-search,apify/web-fetch,scrapesage/bbb-scraper,delicious_zebu/yellowpages-usa-business-lead-scraper,web_wanderer/yelp-reviews-scraper,valig/linkedin-jobs-scraper,harvestapi/linkedin-profile-search,harvestapi/linkedin-profile-scraper,scrapesage/facebook-ad-library-scraper`
    and sign in to that Apify account. On an upgrade, replace the
-   connector's URL with this one: it adds the five evidence actors and
-   the three social profile actors.
+   connector's URL with this one: 8.7.0 adds the web search and fetch
+   tools, BBB, YellowPages, Yelp, LinkedIn jobs, the LinkedIn company
+   search and profile reader, and the Facebook Ad Library backup.
 3. Pinned values, written to `bindings/scraping.md` after the operator
    confirms each, then committed and pushed (the guard refuses every
    Apify call until the file matches the pushed copy):
@@ -631,7 +634,7 @@ exposed tools are `compass--crawler-google-places`,
 `scrapesage--facebook-ad-library-scraper`, plus the two reads the agent uses,
 `get-actor-run` and `get-dataset-items`. If the connector exposes
 `call-actor` (the `actors` or `api` tool groups), or lacks one of the
-ten actors, tell the operator to re-add it with the URL in Setup step 2.
+nineteen tools above, tell the operator to re-add it with the URL in Setup step 2.
 Other named actors and the `docs` and `runs` reads may be present: the
 guard refuses every tool not in its allow list, so they are not an
 error. The connector's name must contain "apify" (for example "Apify

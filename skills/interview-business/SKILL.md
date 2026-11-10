@@ -175,6 +175,10 @@ files exists because a human has to answer it in their own words.
    for the ads it runs, `apify_jobs` for its job posts,
    `apify_site_reader` for reading a few pages of its website,
    `apify_profiles` for finding its contacts' public social profiles,
+   `apify_web` for press, news and pages found by web search,
+   `apify_bbb` for a business's BBB rating, complaints and owners,
+   `apify_yellowpages` for YellowPages listings (and new leads by trade
+   and city), `apify_yelp` for a business's Yelp reviews,
    `web_search`; Apify needs the business's own Apify account with a
    monthly usage limit; do not ask about the Apify connection itself,
    because setup's tools step owns it); which activities should

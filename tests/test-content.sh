@@ -530,7 +530,7 @@ assert_contains "$SP/README.md" 'messages only you, through Resend'
 assert_contains "$SP/evals/cases.md" 'A notification never reaches anyone but the owner'
 
 echo "-- 7.0.0: release"
-assert_contains "$SP/agent.yaml" 'version: 8.6.0'
+assert_contains "$SP/agent.yaml" 'version: 8.7.0'
 for m in agent.yaml .claude-plugin/plugin.json .claude-plugin/marketplace.json .codex-plugin/plugin.json gemini-extension.json; do
   grep -qF "$EXPECTED_DESC" "./$m" && _report ok "$m: description is the 8.0.0 string" || _report no "$m: description is not the 8.0.0 string"
 done
@@ -794,10 +794,10 @@ done < <(find AGENT.md README.md subagents skills templates context capabilities
 rm -f "$README_NO_UPGRADE"
 
 echo "-- 8.0.0: release: version, README flow and the upgrade note"
-assert_contains "$SP/agent.yaml" 'version: 8.6.0'
-assert_contains "$SP/README.md" 'Version 8.6.0.'
+assert_contains "$SP/agent.yaml" 'version: 8.7.0'
+assert_contains "$SP/README.md" 'Version 8.7.0.'
 for m in .claude-plugin/plugin.json .codex-plugin/plugin.json gemini-extension.json; do
-  assert_contains "./$m" '"version": "8.6.0"'
+  assert_contains "./$m" '"version": "8.7.0"'
 done
 assert_contains "$SP/README.md" 'Upgrading from 7.4'
 for t in 'Approved' 'Research Anyway' 'Talking Points' 'offer catalog' 'Hero Offer' 'schedule_approach'; do
@@ -1002,8 +1002,8 @@ for d in '`max_reviews` — reviews per reviews call (default 50)' '`max_ads` �
          '`max_site_depth` — link depth for the site reader (default 1)'; do
   printf '%s' "$SETUP" | grep -qF -- "$d" && _report ok "usage.md Setup: $d" || _report no "usage.md Setup missing: $d"
 done
-printf '%s' "$SETUP" | grep -qF 'mcp.apify.com?tools=compass/crawler-google-places,vdrmota/contact-info-scraper,web_wanderer/google-reviews-scraper,scrapesage/google-ads-transparency-scraper,apify/facebook-ads-scraper,valig/indeed-jobs-scraper,apify/website-content-crawler,harvestapi/linkedin-profile-search-by-name,apify/instagram-profile-scraper,clockworks/tiktok-profile-scraper`' \
-  && _report ok "usage.md Setup gives the ten-actor connector URL" || _report no "usage.md Setup lacks the ten-actor connector URL"
+printf '%s' "$SETUP" | grep -qF 'mcp.apify.com?tools=compass/crawler-google-places,vdrmota/contact-info-scraper,web_wanderer/google-reviews-scraper,scrapesage/google-ads-transparency-scraper,apify/facebook-ads-scraper,valig/indeed-jobs-scraper,apify/website-content-crawler,harvestapi/linkedin-profile-search-by-name,apify/instagram-profile-scraper,clockworks/tiktok-profile-scraper,apify/web-search,apify/web-fetch,scrapesage/bbb-scraper,delicious_zebu/yellowpages-usa-business-lead-scraper,web_wanderer/yelp-reviews-scraper,valig/linkedin-jobs-scraper,harvestapi/linkedin-profile-search,harvestapi/linkedin-profile-scraper,scrapesage/facebook-ad-library-scraper`' \
+  && _report ok "usage.md Setup gives the nineteen-tool connector URL" || _report no "usage.md Setup lacks the nineteen-tool connector URL"
 assert_contains "$SU" 'always pass `include_personal: true`'
 assert_not_contains "$SU" 'never record reviewer names'
 assert_contains "$SU" 'always pass `onlyTotal: true`'
@@ -1705,7 +1705,7 @@ assert_not_contains "$SP/README.md" 'never the reviewer'"'"'s name'
 
 
 echo "-- 8.6.0: release"
-assert_contains "$SP/README.md" 'Version 8.6.0.'
+assert_contains "$SP/README.md" 'Upgrading from 8.6.0'
 assert_contains "$SP/README.md" 'Upgrading from 8.5.1'
 flat_has "$SP/capabilities/scraping/tools/apify/usage.md" 'confirm that the Apify monthly usage limit is set'
 
@@ -1791,5 +1791,18 @@ for t in '`apify:scrapesage--facebook-ad-library-scraper`' 'only after the prima
   'pageName,pageId,isActive,status,startDate,endDate,publisherPlatforms,adLibraryUrl' '| `find_ads`, Facebook backup | $0.01 |'; do flat_has "$SUD" "$t"; done
 flat_has "$SP/subagents/preparer.md" 'the Facebook backup runs with the same page URL'
 flat_has "$SP/evals/cases.md" '## Case 69: The Facebook backup runs when the primary fails'
+
+echo "-- 8.7.0: release"
+assert_contains "$SP/README.md" 'Upgrading from 8.6.0'
+flat_has "$SP/README.md" 'before the next scheduled run'
+for a in apify/web-search apify/web-fetch scrapesage/bbb-scraper delicious_zebu/yellowpages-usa-business-lead-scraper \
+  web_wanderer/yelp-reviews-scraper valig/linkedin-jobs-scraper harvestapi/linkedin-profile-search harvestapi/linkedin-profile-scraper \
+  scrapesage/facebook-ad-library-scraper; do
+  flat_has "$SUD" "$a"; flat_has "$SP/README.md" "$a"
+done
+flat_lacks "$SUD" 'Runs ten Apify actors'
+flat_lacks "$SUD" 'lacks one of the ten actors'
+flat_has "$SP/subagents/preparer.md" '`apify_web` needs `max_web_results`; `apify_bbb` needs `max_bbb_results`'
+for t in '`apify_web`' '`apify_bbb`' '`apify_yellowpages`' '`apify_yelp`'; do flat_has "$SP/skills/interview-business/SKILL.md" "$t"; done
 
 finish

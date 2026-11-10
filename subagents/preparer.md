@@ -415,7 +415,7 @@ check that `bindings/scraping.md` has every binding the source passes:
 needs `max_site_pages`, `max_site_depth`, `max_site_urls`,
 `site_crawler_type` and `site_html_transformer`; `apify_profiles` needs
 `max_profile_results` (default 5), `max_profile_reads` (default 10) and
-`max_profile_locations` (default 1). When one is missing (an
+`max_profile_locations` (default 1); `apify_web` needs `max_web_results`; `apify_bbb` needs `max_bbb_results` (a missing `max_web_fetches` means 5). When one is missing (an
 8.0 instance whose setup tools step has not run yet), that source is
 skipped for this run and never called. It is recorded as not run: each
 lead that picked it gets a ledger `step` with `outcome` `skipped`,

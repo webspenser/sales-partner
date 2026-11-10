@@ -129,7 +129,7 @@ in that folder loads the agent. Plugin updates never touch your folder.
 
 Built on [Agent Standard](https://github.com/webspenser/agent-builder/blob/main/STANDARD.md) 7.5
 with [Agent Builder](https://github.com/webspenser/agent-builder).
-Version 8.7.0.
+Version 8.7.1.
 
 ## Use it from source
 

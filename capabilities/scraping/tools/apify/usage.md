@@ -542,25 +542,31 @@ actors are a flat worst case per call at the pinned sizes:
 | `find_reviews` | $0.02 |
 | `find_ads`, Google | $0.01 |
 | `find_ads`, Facebook | $0.03 |
-| `find_ads`, Facebook backup | $0.01 |
+| `find_ads`, Facebook backup | $0.02 |
 | `find_jobs` | $0.005 |
-| `find_jobs`, LinkedIn | $0.005 |
+| `find_jobs`, LinkedIn | $0.01 |
 | `read_site` | $0.03 |
 | `find_profiles`, LinkedIn | $0.15 per call |
-| `find_profiles`, LinkedIn company search | $0.10 per call |
-| `read_profile`, LinkedIn | $0.02 per profile |
+| `find_profiles`, LinkedIn company search | $0.12 per call |
+| `read_profile`, LinkedIn | $0.05 per profile |
 | `read_profile`, Instagram | $0.003 per username |
 | `read_profile`, TikTok | $0.005 per profile |
 | `search_pages` | $0.002 |
 | `fetch_page` | $0.002 |
 | `find_reviews`, Yelp | $0.02 |
 | `find_listing`, BBB | $0.02 per business |
-| `find_listing`, YellowPages | $0.06 per call |
+| `find_listing`, YellowPages | $0.10 per call |
 
-The three profile estimates are from the 2026-11-03 probe, where no run
-reported a dollar cost; the LinkedIn one is three times the Full-mode
-estimate for email search (2026-11-09 probe, whose run reported no cost
-either): verify them in Apify Console after the first live runs.
+The Instagram and TikTok estimates are from the 2026-11-03 probe, where
+no run reported a dollar cost. The LinkedIn search-by-name estimate is
+three times the Full-mode one, for email search; its Console charge is
+still to be read. The 8.7.0 tools' estimates are set from the Apify Console charges for the 2026-11-09 probe runs (BBB $0.01 a business,
+YellowPages $0.08 a page, the LinkedIn company search $0.10 a page,
+the LinkedIn profile reader $0.02 a profile in no-email mode, the
+Facebook backup $0.01 for one ad; Yelp and LinkedIn jobs under a cent at
+2 reviews and 1 job), each raised above the charge at the pinned size.
+The LinkedIn profile reader runs in email-search mode, which has no
+Console charge yet: verify it after the first live runs.
 
 The estimates are deliberately above Apify's list prices, so a spend cap
 trips early. The operator recalibrates them from Apify Console.

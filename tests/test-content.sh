@@ -530,7 +530,7 @@ assert_contains "$SP/README.md" 'messages only you, through Resend'
 assert_contains "$SP/evals/cases.md" 'A notification never reaches anyone but the owner'
 
 echo "-- 7.0.0: release"
-assert_contains "$SP/agent.yaml" 'version: 8.7.0'
+assert_contains "$SP/agent.yaml" 'version: 8.7.1'
 for m in agent.yaml .claude-plugin/plugin.json .claude-plugin/marketplace.json .codex-plugin/plugin.json gemini-extension.json; do
   grep -qF "$EXPECTED_DESC" "./$m" && _report ok "$m: description is the 8.0.0 string" || _report no "$m: description is not the 8.0.0 string"
 done
@@ -794,10 +794,10 @@ done < <(find AGENT.md README.md subagents skills templates context capabilities
 rm -f "$README_NO_UPGRADE"
 
 echo "-- 8.0.0: release: version, README flow and the upgrade note"
-assert_contains "$SP/agent.yaml" 'version: 8.7.0'
-assert_contains "$SP/README.md" 'Version 8.7.0.'
+assert_contains "$SP/agent.yaml" 'version: 8.7.1'
+assert_contains "$SP/README.md" 'Version 8.7.1.'
 for m in .claude-plugin/plugin.json .codex-plugin/plugin.json gemini-extension.json; do
-  assert_contains "./$m" '"version": "8.7.0"'
+  assert_contains "./$m" '"version": "8.7.1"'
 done
 assert_contains "$SP/README.md" 'Upgrading from 7.4'
 for t in 'Approved' 'Research Anyway' 'Talking Points' 'offer catalog' 'Hero Offer' 'schedule_approach'; do
@@ -1432,7 +1432,7 @@ assert_contains "$SU" 'no login'
 assert_contains "$SU" 'never a handle guessed from a name'
 assert_contains "$SU" 'for `linkedin` only, in this release'
 assert_contains "$SU" 'harvestapi/linkedin-profile-search-by-name,apify/instagram-profile-scraper,clockworks/tiktok-profile-scraper'
-assert_contains "$SU" 'verify them in Apify Console'
+assert_contains "$SU" 'verify it after the first live runs'
 assert_contains "$SP/capabilities/scraping/tools/apify/guard.yaml" '# Apify guard policy: ten actors and two reads, under the retrieval'
 WC="$SP/capabilities/web_search/contract.md"
 assert_contains "$WC" '`find-social-profiles` once per contact'
@@ -1746,7 +1746,7 @@ flat_has "$SP/evals/cases.md" '## Case 63: A search result with a query string i
 echo "-- 8.7.0: apify_bbb and apify_yellowpages"
 for t in '`find_listing`' 'businessName,bbbRating,accredited,yearsInBusiness,businessStarted,complaintCount,complaintsLast12Months,customerReviewCount,email,website,phone,principalContacts,profileUrl' \
   'title,is_claimed,star_rating,rating_count,phone,website,email,address,source_url,categories' \
-  '| `find_listing`, BBB | $0.02 per business |' '| `find_listing`, YellowPages | $0.06 per call |' \
+  '| `find_listing`, BBB | $0.02 per business |' '| `find_listing`, YellowPages | $0.10 per call |' \
   '`max_bbb_results` — businesses per BBB `find_listing` call (default 5)' 'No listing is a valid result, not drift'; do flat_has "$SUD" "$t"; done
 flat_has "$SP/capabilities/scraping/contract.md" '| `find_listing` |'
 flat_has "$SP/subagents/preparer.md" '`apify_bbb` and `apify_yellowpages`: one `find_listing` call each per lead'
@@ -1769,14 +1769,14 @@ flat_has "$SP/evals/cases.md" '## Case 66: A Yelp complaint is named only in Avo
 
 echo "-- 8.7.0: LinkedIn jobs"
 for t in '`apify:valig--linkedin-jobs-scraper`' 'title,companyName,location,postedDate,applicationsCount,url' \
-  '`datePosted` — always `"r2592000"`' '| `find_jobs`, LinkedIn | $0.005 |' 'keep only items whose `companyName` matches the lead'; do flat_has "$SUD" "$t"; done
+  '`datePosted` — always `"r2592000"`' '| `find_jobs`, LinkedIn | $0.01 |' 'keep only items whose `companyName` matches the lead'; do flat_has "$SUD" "$t"; done
 flat_has "$SP/subagents/preparer.md" '`find_jobs` runs Indeed, then LinkedIn'
 flat_has "$SP/evals/cases.md" '## Case 67: A LinkedIn job post from a similarly named company is dropped'
 
 echo "-- 8.7.0: LinkedIn company search and reader"
 for t in '`apify:harvestapi--linkedin-profile-search`' '`apify:harvestapi--linkedin-profile-scraper`' \
   '`profileScraperMode` — always `"Short"`' '`"Profile details + email search ($10 per 1k)"`' 'Never pass a MongoDB argument' \
-  '| `find_profiles`, LinkedIn company search | $0.10 per call |' '| `read_profile`, LinkedIn | $0.02 per profile |' \
+  '| `find_profiles`, LinkedIn company search | $0.12 per call |' '| `read_profile`, LinkedIn | $0.05 per profile |' \
   'firstName,lastName,linkedinUrl,summary,location.linkedinText,currentPositions'; do flat_has "$SUD" "$t"; done
 flat_lacks "$SUD" 'LinkedIn has no reader'
 flat_has "$SP/skills/find-decision-makers/SKILL.md" 'When no source names an owner and the lead has a LinkedIn company URL, run `find_profiles` as a LinkedIn company search'
@@ -1788,7 +1788,7 @@ flat_has "$SP/subagents/preparer.md" 'and the LinkedIn company search through `f
 
 echo "-- 8.7.0: Facebook backup"
 for t in '`apify:scrapesage--facebook-ad-library-scraper`' 'only after the primary Facebook call returns a vendor error or a guard block' \
-  'pageName,pageId,isActive,status,startDate,endDate,publisherPlatforms,adLibraryUrl' '| `find_ads`, Facebook backup | $0.01 |'; do flat_has "$SUD" "$t"; done
+  'pageName,pageId,isActive,status,startDate,endDate,publisherPlatforms,adLibraryUrl' '| `find_ads`, Facebook backup | $0.02 |'; do flat_has "$SUD" "$t"; done
 flat_has "$SP/subagents/preparer.md" 'the Facebook backup runs with the same page URL'
 flat_has "$SP/evals/cases.md" '## Case 69: The Facebook backup runs when the primary fails'
 
@@ -1816,5 +1816,9 @@ flat_has "$SP/skills/research-company/SKILL.md" '**Directory listings (`find_lis
 flat_has "$SP/skills/research-company/SKILL.md" 'A Yelp review (`find_reviews` with `site: yelp`) follows the same rules'
 flat_has "$SUD" '`max_search_terms` — search terms per Maps call, and also the terms per BBB, YellowPages, LinkedIn jobs and LinkedIn company search call'
 flat_has "$SUD" 'and LinkedIn profile URLs per LinkedIn `read_profile` call'
+
+echo "-- 8.7.1: cost estimates from Apify Console"
+flat_has "$SUD" 'Apify Console charges for the 2026-11-09 probe runs'
+flat_lacks "$SUD" 'The three profile estimates'
 
 finish

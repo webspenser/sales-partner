@@ -101,14 +101,14 @@ Each result becomes findings of the seven types, each with its source
 URL, under the step 5 and usable-hook rules above.
 
 - **Reviews (`find_reviews`) → `listing`.** The Preparer passes
-  `include_personal: false`, so the reviews come back without their
-  reviewers. A finding quotes only the words of the review that show the
-  signal or rule-out, gives the review's date as `Date`, and links the
-  review's own `review_url` as `Source URL` (it names the review, never
-  the reviewer). A star-only review has no text (`content` is null): it
-  still dates the listing, but it is never a quoted finding. A review finding never carries a reviewer's name, and names of people in
-  the text (a technician's first name) are left out of the quote. The
-  newest review's date is the Approach rubric's review date.
+  `include_personal: true`, so each review comes back with its
+  reviewer's name. A finding quotes only the words of the review that
+  show the signal or rule-out, gives the review's date as `Date`, and
+  links the review's own `review_url` as `Source URL`. A review finding may name its reviewer by first name, as the review shows it ("Dana's review on 2026-10-02 says…"), and never the reviewer's profile URL, photo or ID. A star-only review has no text (`content` is null): it
+  still dates the listing, but it is never a quoted finding. Names of
+  people in the text (a technician's first name) may be quoted as
+  written. The newest review's date is the Approach rubric's review
+  date.
 - **Job posts (`find_jobs`) → `hire`.** The title and date posted, with
   the listing's URL. Zero listings means no open listings under that
   name: it is not a finding.

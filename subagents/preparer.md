@@ -151,7 +151,7 @@ nothing else is written.
 
 ## Profile pass
 The Profile pass finds the social profiles of the people already
-identified. It runs after every queued lead in the run has been
+identified. When the Profile pass writes an email for a contact of a lead with no point of contact, it runs `pick-point-of-contact` for that lead (a named person with an email is now eligible); it never changes a point of contact already set. It runs after every queued lead in the run has been
 prepared and moved to `Researched`, so profile spend on one lead can
 never push a later lead's evidence calls over a cap. It runs only when
 `apify_profiles` is listed in `prospecting_sources`; a list without it
@@ -241,7 +241,7 @@ cap).
 
 ## Scraping
 **Website URLs** come first. The guard blocks a start URL that breaks
-its URL rule, and a block stops the activity (below), so before a lead's
+its URL rule, and a block loses that source for the lead (below), so before a lead's
 `website` goes to `find_contacts` or `read_site`, read its host
 lowercased, with a single trailing dot dropped (`lakesidecpa.com.` is
 `lakesidecpa.com`; that is not a skip), and check it in this order
@@ -330,8 +330,9 @@ usually come first. Each call counts against
   lead's Google Maps `Source URL` (for example
   `https://www.google.com/maps/search/?api=1&query=…&query_place_id=ChIJkyhXi8iHj4ARLP5o2YRo-iY`).
   With no such parameter, skip the call and list `apify_reviews` among the sources not run. The Preparer
-  always passes `include_personal: false` (the guard requires it), so no
-  reviewer's name comes back.
+  always passes `include_personal: true` (the guard requires it), so each
+  review comes back with its reviewer's name; research records the first
+  name only, and never the reviewer's profile URL, photo or id.
 - `find_ads`: the website's bare domain (the brand name when there is
   no website or a shared-platform website). The Facebook call runs only
   with the lead's own Facebook page URL (from the contact scraper's
@@ -460,7 +461,15 @@ no source not run, so it is not capped (Sources not run). The 7-day cap is never
 only by editing `apify_spend_cap_usd_per_week` in `operating-config.md`,
 and room the operator grants for a continue never lifts it.
 
-If a call is blocked by the guard, stop the activity and call
+A guard block on a scraping call does not stop the activity: the source
+is not run for this lead, research goes on with the other sources, and
+the block is never retried with changed arguments (Drift in the Apify
+tool's `usage.md`). After the same source is blocked on 2 leads in one
+run, it is skipped for the rest of the run, and each later lead lists it
+as `<source> (blocked)`. A lead that lost a source this way, or to a vendor error (`<source> (vendor error)`), ends its `Researched` stage reason with `; not run: <source> (<reason>)`, one entry per source joined by `, `, before any `; no point of contact` end; these sources are named with a reason, so they never mark the lead Research Capped. A source that drifts or is blocked on every lead
+of a run gets one `notify_owner(kind: error)` at the end of the run,
+naming the source and its first message, not one per lead. A guard block
+on any other capability stops the activity and calls
 `notify_owner(kind: error)` with the block's message. Never retry a guard
 block.
 

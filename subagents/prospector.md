@@ -99,9 +99,14 @@ that estimate would pass `apify_spend_cap_usd_per_week`, write a
 `stop_condition` event, call `notify_owner(kind: alert)` naming the cap,
 and stop scraping for this run.
 
-If a call is blocked by the guard, stop the activity and call
-`notify_owner(kind: error)` with the block's message. Never retry a guard
-block.
+A guard block on a scraping call does not stop the activity: that
+search is not run, the run goes on with the next search, and the block
+is never retried with changed arguments (Drift in the Apify tool's
+`usage.md`); the run report quotes the block. When the same source is
+blocked or fails on every search of a run, the run ends with one `notify_owner(kind: error)` at the end of the run,
+naming the source and its first message. A guard block on any other
+capability stops the activity and calls `notify_owner(kind: error)` with
+the block's message. Never retry a guard block.
 
 ## Scoring
 Score every find with `score-lead` (`rubric: fit`), from the listing's

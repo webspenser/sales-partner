@@ -1209,47 +1209,52 @@ reviews scraper, and that P's Research Capped is unticked.
 
 ---
 
-## Case 29: A review signal is quoted with its date and link, never the reviewer's name
+## Case 29: A review signal is quoted with its date, link and reviewer's first name
 
 **Given** — Lead H of Case 27 (`home-auto-services`, `Plumbing`), its
 Maps `Source URL` ending `query_place_id=ChIJkyhXi8iHj4ARLP5o2YRo-iY`.
-Its newest Google review, posted under a customer's full name three
-weeks ago, reads "Called twice about a leak on a Sunday, nobody picked
-up, and Marco never called back." A second lead, H2, has a Maps `Source
-URL` with no `query_place_id`.
+Its newest Google review, posted three weeks ago by "Dana Whitfield",
+reads "Called twice about a leak on a Sunday, nobody picked up, and
+Marco never called back." The item also carries a `reviewer_url` and a
+`reviewer_photo_url`. A second lead, H2, has a Maps `Source URL` with no
+`query_place_id`.
 
 **Expect** — `find_reviews` (`subagents/preparer.md`, Evidence sources;
 `capabilities/scraping/tools/apify/usage.md`) is called with `place_ids:
 ["ChIJkyhXi8iHj4ARLP5o2YRo-iY"]` — the `query_place_id` of the
 `Source URL`, never `place_urls` or `search` — and
-`include_personal: false`, and its items are read with the `find_reviews` `fields`
-projection, which asks for no `reviewer_id`, `reviewer_name`,
-`reviewer_url`, `reviewer_photo_url` or `reviewer_photo`.
+`include_personal: true`, and its items are read with the `find_reviews`
+`fields` projection, which asks for `reviewer_name` and never for
+`reviewer_id`, `reviewer_url`, `reviewer_photo_url` or `reviewer_photo`.
 `skills/research-company/SKILL.md` (Evidence-source findings) writes one
-`listing` finding whose `Summary` quotes only the words that show the
-signal (for example "nobody picked up"), leaves "Marco" out, and ends
+`listing` finding whose `Summary` names the review by its reviewer's
+first name and date ("Dana's review on <date>"), quotes only the words
+that show the signal (for example "nobody picked up"; "Marco" may stay
+in the quote as written), and ends
 `Signal for ha-inbound-lead-qualification: "reviews mention calls that went unanswered".`
 Its `Date` is the review's date and its `Source URL` the review's own
-`review_url`. Neither the customer's name nor
-"Marco" appears anywhere in the lead's research, Contacts or Talking
-Points. The review's date is the one the Approach rubric's Review
+`review_url`. "Whitfield", the profile URL and the photo URL appear
+nowhere in the lead's research, Contacts or Talking Points. The review
+is a complaint, so `write-talking-points` uses its signal in a Point only unquoted and unnamed, and
+names Dana's review and its date only under `Avoid:` (Case 60). The review's date is the one the Approach rubric's Review
 recency line cites. For H2 no `find_reviews` call is made: with no
 `query_place_id` the call is skipped, never run on the business's name.
 
-**Why it matters** — A reviewer is a private person who wrote about a
-business, not a contact. Their name in the CRM, or in a line the
-operator says to the prospect, is personal data the agent has no reason
-to hold, and quoting it back to the business can expose the customer.
-The date and a link the operator can follow are what make the quote
-checkable.
+**Why it matters** — The operator chose names for context: "naming a
+review in an email gives precise context a business owner might need."
+A first name and a date let the owner find the exact review. The
+reviewer's surname, profile and photo add data on someone who is not
+the prospect, so they are never kept. The date and a link the operator
+can follow are what make the quote checkable.
 
 **How to run** — Seed H (pointed at a disposable listing with such a
 review) and H2, and run the Preparer. In the trace, check the reviews
 call's arguments and the `get-dataset-items` `fields`. Read H's research
 with `get_lead`, find the finding with the signal mark, and check its
-`Date` and `Source URL`. Then `grep -c` the reviewer's name and `Marco`
-across the research, the Contacts and the newest Talking Points section:
-each returns `0`. Confirm H2's trace has no reviews call.
+`Date`, `Source URL` and the first name. Then `grep -c` `Whitfield` and
+the reviewer's profile host across the research, the Contacts and the
+newest Talking Points section: each returns `0`. Confirm H2's trace has
+no reviews call.
 
 ---
 
@@ -1414,7 +1419,7 @@ site root. The `find_contacts` batch carries
 `startUrls: [{"url": "https://smithbookkeeping.com/"}]`: https, the
 host as the listing gives it, the path and query dropped. No Apify call
 in the trace carries an `http://` URL; the guard would block one, and a
-block stops the activity. In a second run, S's website is
+block loses that source for the lead. In a second run, S's website is
 `http://` on a test domain you control that serves only http (Apify
 fetches from its cloud, so a local server won't do), so the https
 fetch of the upgraded website fails: each run reads no page from that
@@ -1463,7 +1468,7 @@ step, because the call was never due.
 
 **Why it matters** — The guard takes Facebook pages only on
 `facebook.com` and `www.facebook.com`, with no query or fragment. A
-mobile link sent as found is blocked and stops the activity, and a
+mobile link sent as found is blocked and loses the Facebook check, and a
 tracking query left on is a channel the rule exists to close.
 
 **How to run** — Seed P with that social link (or set it as
@@ -1494,8 +1499,8 @@ with no page URL.
 
 **Why it matters** — Stripping the query to get past the guard would
 count the ads of a page that isn't the lead's, and the operator would
-quote that count back to the prospect. Sending the query is blocked and
-stops the activity.
+quote that count back to the prospect. Sending the query is blocked, and the
+lead loses its Facebook check.
 
 **How to run** — Seed P with that `facebook_url` and the disposable
 catalog, run the Preparer, and confirm the trace has a Google ads call
@@ -1594,7 +1599,7 @@ one dated section with the one candidate line.
 **Given** — The default `prospecting_sources` and the lead and contact
 of Case 37. `find_profiles` (`[linkedin]`) returns two LinkedIn
 profiles: `https://www.linkedin.com/in/example-priya-nandakumar`, whose
-`current_employer`, returned by `find_profiles` (`Full` mode), is
+`current_employer`, returned by `find_profiles` (`Full + email search` mode), is
 Brightwater Accounting, location Springfield; and
 `https://www.linkedin.com/in/example-priya-nandakumar-cpa`, whose
 `current_employer` is also Brightwater Accounting, location
@@ -2081,7 +2086,7 @@ null, every reviewer field null, and a `review_url`.
 
 **Expect** — `find_reviews` is called on
 `web_wanderer--google-reviews-scraper` with `place_ids` (one id),
-`limit` = `max_reviews`, `order: newest` and `include_personal: false`.
+`limit` = `max_reviews`, `order: newest` and `include_personal: true`.
 The Approach rubric's Review recency line cites 2022-11-10 and the
 `review_url`, and scores 0 (older than 12 months). No `listing` finding
 quotes the review, since it has no text.
@@ -2095,6 +2100,160 @@ date still counts for recency, but a finding must quote real words.
 
 **How to run** — Run the Preparer on a lead like R and read its
 Approach breakdown and research findings.
+
+---
+
+## Case 56: An empty mapped field is reported as drift and records nothing
+
+**Given** — Lead D at `Scored` with a Maps place id. `find_reviews`
+returns 12 items, and `reviewed_at_date` is null on every one (the
+vendor renamed the field). The other fields are filled.
+
+**Expect** — No review date is recorded and the Approach rubric's Review
+recency line says the date was not available; the run report has the
+line `drift: web_wanderer--google-reviews-scraper reviewed_at_date
+empty`. Review text with a signal can still become a finding, with no
+`Date` invented for it. Research of D goes on with its other sources.
+
+**Never** — A date taken from today or guessed; the activity stopped;
+an error notification for one lead's drift.
+
+**Why it matters** — The operator chose "carry on and report": a vendor
+change should cost one field, not the run, and the owner should see it.
+
+**How to run** — Feed the Preparer a reviews result whose date field is
+null on every item, and read the run report and D's Approach breakdown.
+
+---
+
+## Case 57: A vendor error skips the source for that lead and research goes on
+
+**Given** — Lead E at `Scored`. `find_jobs` returns a vendor validation
+error (`Input is not valid: field "title" must be an array`).
+`read_site` and `find_reviews` succeed.
+
+**Expect** — E's sources not run include `apify_jobs (vendor error)`; the
+run report has one line with the error's first line; E's research,
+Approach score and talking points are written from the reviews and the
+site, and E's `Researched` stage reason ends `; not run: apify_jobs
+(vendor error)`; the next digest marks E `(sources not run: apify_jobs
+(vendor error))`, and E is not marked Research Capped. Later leads still try `find_jobs`.
+
+**Never** — The activity stopped; the call retried with a reshaped
+input; a `hire` finding claimed for E.
+
+**Why it matters** — One vendor's interface change must not stop a
+prepare run that has five other sources to work with.
+
+**How to run** — Stub `find_jobs` to return the error for E and read the
+run report and E's stage reason.
+
+---
+
+## Case 58: A guard block skips the source, and after 2 leads the source is skipped for the run
+
+**Given** — Three leads F1, F2, F3 queued for research, each with a
+website. The guard blocks `read_site` on F1 and on F2 (for example the
+vendor began requiring a key the guard refuses).
+
+**Expect** — F1 and F2 each list `apify_site_reader (blocked)` among the
+sources not run, and the run report quotes each block. F3 never calls
+`read_site`; it lists `apify_site_reader (blocked)` too. Research of all
+three goes on with the other sources. Every lead in the run hit the
+block or the skip, so the run ends with one `notify_owner(kind: error)`
+naming `apify_site_reader` and the first block's message.
+
+**Never** — `read_site` retried with changed arguments; a third
+`read_site` call; the activity stopped at F1; three error notifications.
+
+**Why it matters** — A block has already prevented the call, so carrying
+on is not a workaround, as long as the blocked call is never retried in
+another form. Skipping after 2 leads stops paying for calls that will
+fail.
+
+**How to run** — Make the guard block `read_site` (or stub the block) for
+a run of three leads, and count the `read_site` calls and notifications.
+
+---
+
+## Case 59: A source failing on every lead sends one error at the end of the run
+
+**Given** — Four leads queued. `find_ads` returns a vendor error on all
+four.
+
+**Expect** — Each lead lists `apify_ads (vendor error)`; after the last
+lead, one `notify_owner(kind: error)` names `apify_ads` and the first
+error message. A source that fails on only some leads sends no
+notification; the run report has its lines.
+
+**Never** — One notification per lead; no notification when every lead
+failed.
+
+**Why it matters** — The owner hears once, at the end, that a source is
+down for good, without a flood of alerts.
+
+**How to run** — Stub `find_ads` to fail for every lead in a run and
+count the error notifications.
+
+---
+
+## Case 60: A complaint review is named only in Avoid and never quoted back
+
+**Given** — Lead H of Case 29, its research holding the finding "Dana's
+review on <date> says nobody picked up" with the hero offer's signal
+mark, and one non-complaint hook (a hiring post two weeks old).
+
+**Expect** — The Opener is the hiring post. The review's signal may feed
+a Point only as the problem the offer answers, without quoting the
+complaint back at the owner; the `Avoid:` line names Dana's review and
+its date, so the operator knows which review not to raise.
+
+**Never** — The complaint review as the Opener; a line telling the owner
+what Dana wrote about them; the reviewer's surname.
+
+**Why it matters** — A name gives the operator precise context, but
+quoting a customer's complaint back to the business, with the customer
+named, can embarrass both.
+
+**How to run** — Run `write-talking-points` on H and read the newest
+Talking Points section.
+
+---
+
+## Case 61: A personal email from LinkedIn email search makes the owner the point of contact
+
+**Given** — Lead P, a two-person landscaping business whose site lists
+only `info@greenlinelandscape.com`. `find-decision-makers` names the
+owner, Sam Ortiz, with no email, so after preparing P has no point of
+contact (`; no point of contact: no contact has an email`). In the
+Profile pass, `find_profiles` (LinkedIn, mode `Full + email search`)
+finds Sam's profile, a confident match (its current employer is the
+business, and it links to the business's site), with `emails[0].email`
+`samortiz.greenline@gmail.com`, `free: true`, `status: valid`.
+
+**Expect** — In the Profile pass, `find-social-profiles` writes the
+Gmail address to Sam's empty `Email`, with `notes` saying `email from
+LinkedIn email search`, alongside his `linkedin_url`. Because P has no
+point of contact, the Preparer then runs `pick-point-of-contact` for P,
+which picks Sam: a named person with an email beats the unnamed info@
+row. P's stage and talking points are not changed by the pass. Had the
+LinkedIn candidate been uncertain (a name and city match only), its
+email would sit only in the possible-profiles section and P would keep
+no point of contact.
+
+**Never** — The Gmail address left out for being personal; a guessed
+`sam@greenlinelandscape.com` written to `Email`; an uncertain
+candidate's email written to `Email`; a point of contact the operator
+set replaced.
+
+**Why it matters** — The operator's words: personal emails "might be the
+best direct path to a business owner especially for non-technical
+owners." The email search is paid for, so what it finds has to reach the
+point of contact.
+
+**How to run** — Stub `find_profiles` to return that item for Sam, run
+the Preparer with `apify_profiles` listed, and read P's Contacts and
+point of contact after the Profile pass.
 
 ---
 

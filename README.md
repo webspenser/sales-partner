@@ -25,8 +25,8 @@ and when.
   it was found. A second score, from that research, is recorded for
   you to read; it doesn't trigger anything.
 - **Evidence from reviews, ads, jobs and the website.** It reads a
-  business's recent Google reviews (quoting a snippet with its date and
-  link, never the reviewer's name), checks whether it runs Google or
+  business's recent Google reviews (quoting a snippet with its date,
+  link and the reviewer's first name, never their profile or photo), checks whether it runs Google or
   Facebook ads, looks for open jobs on Indeed, and reads its website,
   guided by the research tips you gave for each offer. Each source is
   capped, and a lead's Apify spend stops at $0.50 by default. A lead
@@ -127,9 +127,9 @@ where your data lives — and run `/sales-partner:setup`. It writes
 make the folder a private git repo. From then on, opening Claude Code
 in that folder loads the agent. Plugin updates never touch your folder.
 
-Built on [Agent Standard](https://github.com/webspenser/agent-builder/blob/main/STANDARD.md) 7.4
+Built on [Agent Standard](https://github.com/webspenser/agent-builder/blob/main/STANDARD.md) 7.5
 with [Agent Builder](https://github.com/webspenser/agent-builder).
-Version 8.5.1.
+Version 8.6.0.
 
 ## Use it from source
 
@@ -150,8 +150,8 @@ Version 8.5.1.
 - Resend for owner notifications, on the client's own account (`capabilities/owner_notify/tools/resend/`); setup pins your address and a no-reply sender, and the guard refuses a send to anyone else.
 - Airtable for the ledger (`capabilities/ledger/tools/airtable/`); `bootstrap.py` creates the base, and the guard keeps the record append-only.
 - Apify for scraping (`capabilities/scraping/tools/apify/`): setup connects the restricted connector URL and pins the limits (results per search, pages per site, and so on) the guard enforces.
-  The guard also requires the safe settings, such as reviews without
-  reviewer names, and checks every start URL: Facebook pages only on
+  The guard also requires the fixed settings, such as reviews with
+  reviewer names and LinkedIn email search (your choice in 8.6.0), and checks every start URL: Facebook pages only on
   facebook.com, and only an https site root on a public host for the
   contact scraper and the site reader. One limit remains: the guard
   can't tie a website to a lead, so data could still leave in the
@@ -350,6 +350,29 @@ so every prepare run stopped at its first review call. Your
    (for example "Apify Actors" or "Apify Connector"), because the guard
    finds the server by that word.
 2. Start a new session so the agent loads the new tool.
+
+Upgrading from 8.5.1: the Apify guard now follows the retrieval profile
+(Agent Standard 7.5). It names the actors it allows, caps every result
+and page count, refuses code, headers, cookies, proxies and each actor's
+paid add-ons, and lets any other new vendor input pass, so a small
+vendor change no longer blocks every call. Three behaviors change:
+
+- A scraping source that fails (an empty field, a vendor error or a
+  guard block) is skipped for that lead and research goes on; the run
+  report says what happened. A source blocked on 2 leads is skipped for
+  the rest of the run, and a source that fails on every lead sends one
+  error notification at the end.
+- Review findings and talking points can name a reviewer by first name
+  and date. Profile links, photos and IDs are never kept.
+- The LinkedIn search runs in `Full + email search` mode, and an email it
+  finds for an owner, a Gmail address included, can become the point of
+  contact. Its cost estimate is $0.15 per search; check the real charge
+  in Apify Console after the first runs.
+
+Your connector URL, `prospecting_sources` and `bindings/scraping.md`
+stay as they are. Confirm that the Apify monthly usage limit is set in
+Apify Console: it is the hard stop on spend. Start a new session so the
+agent loads the new guard.
 
 ## Developing
 

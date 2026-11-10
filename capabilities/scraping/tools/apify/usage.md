@@ -12,7 +12,7 @@ the connected Apify server's tools, whatever their prefix (with the
 restricted connector in Setup, `mcp__claude_ai_Apify_Actors__`). Tool
 names are spelled as the connector shows them, case included.
 
-- `find_businesses` — `apify:compass--crawler-google-places`. Allowed
+- `find_businesses` — `apify:compass--crawler-google-places`. Send these
   arguments, and no others:
   - `searchStringsArray` — exactly one search term (`["HVAC contractor"]`);
   - `city`, `state`, `countryCode` — the location, structured. Never use
@@ -20,7 +20,7 @@ names are spelled as the connector shows them, case included.
     Alameda County, and every result came from Livermore;
   - `maxCrawledPlacesPerSearch` = the `max_places_per_search` binding;
   - `language`, `waitSecs` (pass 45).
-- `find_contacts` — `apify:vdrmota--contact-info-scraper`. Allowed
+- `find_contacts` — `apify:vdrmota--contact-info-scraper`. Send these
   arguments, and no others:
   - `startUrls` — at most 10 site roots, one per lead, each the lead's
     website normalized as in Website and Facebook URLs (`https://` and
@@ -33,15 +33,17 @@ names are spelled as the connector shows them, case included.
   Do not pass `proxyConfig`: the actor's proxy defaults apply. Return per
   URL the emails, phones and social links found, each with the page it
   came from.
-- `find_reviews` — `apify:web_wanderer--google-reviews-scraper`. Allowed
+- `find_reviews` — `apify:web_wanderer--google-reviews-scraper`. Send these
   arguments, and no others:
   - `place_ids` — exactly one place id, the listing's `placeId`
     (`["ChIJ…"]`);
   - `limit` = `max_reviews`;
-  - `include_personal` — always pass `include_personal: false`; the guard
-    requires it, so a call with `true`, the string `"false"` or no
-    `include_personal` is blocked. With `false` the actor returns no
-    reviewer name, id, profile or photo;
+  - `include_personal` — always pass `include_personal: true`; the guard
+    requires it, so a call with `false`, the string `"true"` or no
+    `include_personal` is blocked. With `true` the actor returns the
+    reviewer's name (the operator's choice in 8.6.0: a review named in an
+    email gives the owner precise context); the `fields` projection still
+    never asks for the reviewer's id, profile URL or photo;
   - `order` (pass `newest`), `anyDate` (a date or `12 months`),
     `searchKeyword`, `source` (pass `google`), `lang`, `waitSecs`
     (pass 45).
@@ -52,7 +54,7 @@ names are spelled as the connector shows them, case included.
   Never pass `startUrls`: use the place id.
 - `find_ads` — two actors. Run the Google call whenever `find_ads` runs;
   run the Facebook call only with the lead's own Facebook page URL.
-  - Google: `apify:scrapesage--google-ads-transparency-scraper`. Allowed
+  - Google: `apify:scrapesage--google-ads-transparency-scraper`. Send these
     arguments, and no others:
     - `queries` — exactly one query, the business's bare website domain
       (`["bigbrothersplumbinginc.com"]`), or its brand name when it has
@@ -65,7 +67,7 @@ names are spelled as the connector shows them, case included.
     Do not pass `proxyConfiguration`: the free plan has no datacenter
     proxy, and the actor's default (residential) applies when it is left
     out.
-  - Facebook: `apify:apify--facebook-ads-scraper`. Allowed arguments, and
+  - Facebook: `apify:apify--facebook-ads-scraper`. Send these arguments, and
     no others:
     - `startUrls` — exactly one URL, the lead's own Facebook page
       (`[{"url": "https://www.facebook.com/<page>"}]`), from the contact
@@ -81,7 +83,7 @@ names are spelled as the connector shows them, case included.
       ads is unverified;
     - `resultsLimit` = `max_ads`;
     - `activeStatus`, `onlyAdsNewerThan`, `waitSecs` (pass 45).
-- `find_jobs` — `apify:valig--indeed-jobs-scraper`. Allowed arguments, and
+- `find_jobs` — `apify:valig--indeed-jobs-scraper`. Send these arguments, and
   no others:
   - `title` — the company's name;
   - `location` (`"Alameda, CA"`), `country` (`us`);
@@ -89,7 +91,7 @@ names are spelled as the connector shows them, case included.
   - `datePosted`, `waitSecs` (pass 45).
 
   Zero items is a valid result: no open listings under that name.
-- `read_site` — `apify:apify--website-content-crawler`. Allowed arguments,
+- `read_site` — `apify:apify--website-content-crawler`. Send these arguments,
   and no others:
   - `startUrls` — exactly one URL, the site root of
     the `website` the Maps listing gives: its scheme and host, with no path or query (the
@@ -118,7 +120,7 @@ names are spelled as the connector shows them, case included.
   (the business's own pages and links already found) and, when
   `web_search` is bound, from its `search_web`
   (`capabilities/web_search/contract.md`). Pass names and cities only,
-  never a handle guessed from the name. Allowed arguments, and no others:
+  never a handle guessed from the name. Send these arguments, and no others:
   - `firstName`, `lastName` — the person's name, split at the last space.
     The guard does not require `firstName` or
     `lastName`, so a search with neither is allowed; it costs a call and
@@ -126,17 +128,19 @@ names are spelled as the connector shows them, case included.
   - `locations` — at most one, the lead's city (`["Springfield"]`), or
     leave it out;
   - `maxItems` = `max_profile_results`;
-  - `profileScraperMode` — always `"Full"` (the current employer is only
-    in `Full` mode's `experience[]`); `strictSearch` — always `true`;
-    `maxPages` — always `1`. The guard requires all three, exactly as
-    written, so `"Short"`, `"Full + email search"`, a second page or a
-    loose name match is blocked;
+  - `profileScraperMode` — always `"Full + email search"` (the current
+    employer is only in the Full modes' `experience[]`, and email search
+    adds the emails a business owner can be reached at, personal ones
+    included; the operator's choice in 8.6.0); `strictSearch` — always
+    `true`; `maxPages` — always `1`. The guard requires all three, exactly
+    as written, so `"Short"`, `"Full"`, a second page or a loose name
+    match is blocked;
   - `waitSecs` (pass 45).
 
   Never pass `currentCompanies`, `pastCompanies`, `schools`,
   `currentJobTitles` or `industryIds`: the search is by name and city.
 - `read_profile` — for Instagram and TikTok only. LinkedIn has no reader
-  (its employer comes from `find_profiles` in `Full` mode) and Facebook
+  (its employer comes from `find_profiles` in `Full + email search` mode) and Facebook
   has none (anchors and `search_web` only); a LinkedIn or Facebook URL is
   not read. Both readers take handles, not URLs: cut the handle from a
   profile URL whose host is the platform's: send only a cut handle,
@@ -145,7 +149,7 @@ names are spelled as the connector shows them, case included.
     host is `instagram.com` or `www.instagram.com`. The handle is the
     path's first segment (`https://www.instagram.com/example.handle/` is
     `example.handle`); a post, reel or story URL (`/p/`, `/reel/`,
-    `/stories/`) or `/explore/` names no profile and is not read. Allowed arguments, and no others:
+    `/stories/`) or `/explore/` names no profile and is not read. Send these arguments, and no others:
     - `usernames` — the handles, at most `max_profile_reads`;
     - `waitSecs` (pass 45).
 
@@ -153,7 +157,7 @@ names are spelled as the connector shows them, case included.
   - TikTok: `apify:clockworks--tiktok-profile-scraper`, for a URL whose
     host is `tiktok.com` or `www.tiktok.com` and whose path starts
     `/@<handle>` (`https://www.tiktok.com/@example.handle` is
-    `example.handle`). Allowed arguments, and no others:
+    `example.handle`). Send these arguments, and no others:
     - `profiles` — the handles, at most `max_profile_reads`;
     - `resultsPerPage` — always `1` (the guard requires it; the actor's
       default scrapes 100 videos per profile);
@@ -192,7 +196,7 @@ The guard requires every start URL to pass its URL rule: `find_contacts`
 and `read_site` take only an https site root on a public host, with no
 path, query or fragment; the Facebook call takes only an https page on
 `facebook.com` or `www.facebook.com`, with no query or fragment. A
-blocked call stops the activity, so normalize each URL before the call.
+blocked call loses that source for the lead (Drift), so normalize each URL before the call.
 Read a website's host lowercased, with a single trailing dot dropped
 (`lakesidecpa.com.` is `lakesidecpa.com`; that is not a skip), then check
 it in this order. Each skip below applies to whichever of `find_contacts`
@@ -312,7 +316,7 @@ never read items without a projection):
 
 | Operation | `fields` | Contract fields |
 |---|---|---|
-| `find_reviews` | `content,reviewed_at_date,rating,owner_response,owner_response_at_date,place_id,review_url` | text (`content`; null for a star-only review), date (`reviewed_at_date`), stars (`rating`), owner response and date, place id, the review's URL (`review_url`) |
+| `find_reviews` | `content,reviewed_at_date,rating,owner_response,owner_response_at_date,place_id,review_url,reviewer_name` | text (`content`; null for a star-only review), date (`reviewed_at_date`), stars (`rating`), owner response and date, place id, the review's URL (`review_url`), the reviewer's first name (from `reviewer_name`) |
 | `find_ads` (Google) | `name,legalName,advertiserId,advertiserUrl,approxAdCountLow,approxAdCountHigh,verified` | one advertiser per item; zero items means no Google ads for that query in the region |
 | `find_ads` (Facebook) | `inputUrl,totalCount,isResultComplete` | the page (`inputUrl`), its ad count (`totalCount`), whether the count is complete |
 | `find_jobs` | `title,datePublished,employer.name,location.city,jobUrl` | title, date posted, employer, city, URL |
@@ -328,7 +332,7 @@ The profile actors' items, with these `fields`:
 
 | Operation | `fields` | Contract fields |
 |---|---|---|
-| `find_profiles` (LinkedIn) | `linkedinUrl,name,position,location,about,experience` | platform `linkedin`, URL (`linkedinUrl`), display name (`name`), bio (`position`, the headline, then `about`), location (`location.linkedinText`), current employer (the `companyName` of the `experience[]` entry with no end date; none when every entry has ended) |
+| `find_profiles` (LinkedIn) | `linkedinUrl,name,position,location,about,experience,emails.email,emails.free,emails.status,emails.deliverable` | platform `linkedin`, URL (`linkedinUrl`), display name (`name`), bio (`position`, the headline, then `about`), location (`location.linkedinText`), current employer (the `companyName` of the `experience[]` entry with no end date; none when every entry has ended); emails (each `emails[].email` whose `status` is not `invalid`, a free-mail address included; an empty `emails[]` is a valid "no email found") |
 | `read_profile` (Instagram) | `username,url,fullName,biography,externalUrl,externalUrls,private,isBusinessAccount,businessAddress` | platform `instagram`, URL (`url`), display name (`fullName`), bio (`biography`), location (`businessAddress`, when set), external links (`externalUrl` and each `externalUrls[].url`) |
 | `read_profile` (TikTok) | `authorMeta.profileUrl,authorMeta.nickName,authorMeta.signature,authorMeta.bioLink,authorMeta.privateAccount,note` | platform `tiktok`, URL (`authorMeta.profileUrl`), display name (`nickName`), bio (`signature`), external links (`bioLink`) |
 
@@ -339,13 +343,41 @@ the first live run: the probe saw `Short` mode only for LinkedIn, so the
 `Full` field names above come from the actor's documentation; if one
 comes back empty, record nothing from it and say so in the run's report.
 
-Reviews: never ask for `reviewer_id`, `reviewer_name`, `reviewer_url`,
-`reviewer_photo_url` or `reviewer_photo`,
-and never record reviewer names. A finding quotes only the words of the review that show the
-signal, with the review's date, and links the review's own
-`review_url` (it names the review, not the reviewer; with
-`include_personal: false` the reviewer fields come back null). Review text can name people, such as a technician's
-first name: leave those names out of the snippet.
+Reviews: ask for `reviewer_name`, and never for `reviewer_id`,
+`reviewer_url`, `reviewer_photo_url` or `reviewer_photo`. A finding
+quotes only the words of the review that show the signal, with the
+review's date, may name the reviewer by first name as the review shows
+it ("Dana"), and links the review's own `review_url`. Names in the
+review text, such as a technician's first name, may be quoted as
+written.
+
+## Drift
+
+A vendor can change an actor without notice. What the agent does when a
+source misbehaves, per lead; the run carries on and its run report says
+what happened:
+
+- **A mapped field comes back missing or empty on every item.** Record
+  nothing from it, and add `drift: <tool> <field> empty` to the run
+  report.
+- **The actor returns a vendor validation error** (bad input, interface
+  changed). The source is not run for this lead (`<source> (vendor error)`
+  among the sources not run), research goes on, and the run
+  report has one line with the error's first line.
+- **The guard blocks the call.** The source is not run for this lead
+  (`<source> (blocked)`), the call is never retried with changed
+  arguments, research goes on, and the run report quotes the block.
+  After the same source is blocked on 2 leads in one run, it is skipped
+  for the rest of the run.
+- **The same source drifts or is blocked on every lead of a run.** One
+  `notify_owner(kind: error)` at the end of the run, naming the source
+  and its first message.
+
+A lead whose research lost a source is scored from what was found. Its
+`Researched` stage reason ends with `; not run: <source> (<reason>), …`
+(before any `; no point of contact` end), and the digest marks the lead
+with that list, so a low Approach score caused by a missing source is
+visible.
 
 ## Cost
 
@@ -363,13 +395,14 @@ actors are a flat worst case per call at the pinned sizes:
 | `find_ads`, Facebook | $0.03 |
 | `find_jobs` | $0.005 |
 | `read_site` | $0.03 |
-| `find_profiles`, LinkedIn | $0.05 per call |
+| `find_profiles`, LinkedIn | $0.15 per call |
 | `read_profile`, Instagram | $0.003 per username |
 | `read_profile`, TikTok | $0.005 per profile |
 
 The three profile estimates are from the 2026-11-03 probe, where no run
-reported a dollar cost: verify them in Apify Console after the first
-live runs.
+reported a dollar cost; the LinkedIn one is three times the Full-mode
+estimate for email search (2026-11-09 probe, whose run reported no cost
+either): verify them in Apify Console after the first live runs.
 
 The estimates are deliberately above Apify's list prices, so a spend cap
 trips early. The operator recalibrates them from Apify Console.
@@ -378,7 +411,9 @@ trips early. The operator recalibrates them from Apify Console.
 
 1. The business owns the Apify account and pays for it; Webspenser
    manages it. In Apify Console set a monthly usage limit: it is the hard
-   stop on spend.
+   stop on spend. Setup asks the operator to confirm that the Apify monthly usage limit is set; the agent
+   never reads it (a connector resource read is a raw Apify API call the
+   guard does not see).
 2. Add the hosted connector in claude.ai (Settings → Connectors → Add
    custom connector) at
    `https://mcp.apify.com?tools=compass/crawler-google-places,vdrmota/contact-info-scraper,web_wanderer/google-reviews-scraper,scrapesage/google-ads-transparency-scraper,apify/facebook-ads-scraper,valig/indeed-jobs-scraper,apify/website-content-crawler,harvestapi/linkedin-profile-search-by-name,apify/instagram-profile-scraper,clockworks/tiktok-profile-scraper`

@@ -500,7 +500,7 @@ echo "-- 7.0: no Airtable CRM"
 for f in capabilities/crm/contract.md capabilities/crm/tools/attio/usage.md skills/send-digest/SKILL.md; do
   assert_not_contains "./$f" "Airtable"
 done
-assert_contains "$SP/agent.yaml" 'standard: "7.4"'
+assert_contains "$SP/agent.yaml" 'standard: "7.5"'
 assert_contains "$SP/agent.yaml" 'capabilities: crm'
 
 echo "-- 7.0: no email_drafts"
@@ -530,7 +530,7 @@ assert_contains "$SP/README.md" 'messages only you, through Resend'
 assert_contains "$SP/evals/cases.md" 'A notification never reaches anyone but the owner'
 
 echo "-- 7.0.0: release"
-assert_contains "$SP/agent.yaml" 'version: 8.5.1'
+assert_contains "$SP/agent.yaml" 'version: 8.6.0'
 for m in agent.yaml .claude-plugin/plugin.json .claude-plugin/marketplace.json .codex-plugin/plugin.json gemini-extension.json; do
   grep -qF "$EXPECTED_DESC" "./$m" && _report ok "$m: description is the 8.0.0 string" || _report no "$m: description is not the 8.0.0 string"
 done
@@ -546,7 +546,7 @@ printf '%s' "$after_tools" | grep -qF 'git push -u' && _report ok "version contr
 printf '%s' "$after_tools" | grep -qF 'offer one test notification' && _report ok "open step offers the test notification" || _report no "open step does not offer the test notification"
 
 echo "-- 7.1: ledger"
-assert_contains "$SP/agent.yaml" 'standard: "7.4"'
+assert_contains "$SP/agent.yaml" 'standard: "7.5"'
 assert_contains "$SP/agent.yaml" 'capabilities: crm, owner_notify, ledger'
 assert_contains "$SP/agent.yaml" 'activity_prospect: crm, owner_notify, ledger'
 assert_contains "$SP/agent.yaml" 'activity_prepare: crm, owner_notify, ledger, scraping'
@@ -582,7 +582,7 @@ assert_contains "$SP/README.md" 'Upgrading from 7.0'
 wc -c < "$SP/AGENT.md" | awk '{exit !($1 < 6000)}' && _report ok "AGENT.md under 6000 bytes" || _report no "AGENT.md 6000 bytes or more"
 
 echo "-- 7.2: scraping"
-assert_contains "$SP/agent.yaml" 'standard: "7.4"'
+assert_contains "$SP/agent.yaml" 'standard: "7.5"'
 assert_contains "$SP/agent.yaml" 'capabilities: crm, owner_notify, ledger, scraping'
 assert_contains "$SP/capabilities/scraping/contract.md" '`pinned_inputs`'
 assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" 'mcp.apify.com?tools=compass/crawler-google-places,vdrmota/contact-info-scraper'
@@ -794,10 +794,10 @@ done < <(find AGENT.md README.md subagents skills templates context capabilities
 rm -f "$README_NO_UPGRADE"
 
 echo "-- 8.0.0: release: version, README flow and the upgrade note"
-assert_contains "$SP/agent.yaml" 'version: 8.5.1'
-assert_contains "$SP/README.md" 'Version 8.5.1.'
+assert_contains "$SP/agent.yaml" 'version: 8.6.0'
+assert_contains "$SP/README.md" 'Version 8.6.0.'
 for m in .claude-plugin/plugin.json .codex-plugin/plugin.json gemini-extension.json; do
-  assert_contains "./$m" '"version": "8.5.1"'
+  assert_contains "./$m" '"version": "8.6.0"'
 done
 assert_contains "$SP/README.md" 'Upgrading from 7.4'
 for t in 'Approved' 'Research Anyway' 'Talking Points' 'offer catalog' 'Hero Offer' 'schedule_approach'; do
@@ -1004,8 +1004,8 @@ for d in '`max_reviews` — reviews per reviews call (default 50)' '`max_ads` �
 done
 printf '%s' "$SETUP" | grep -qF 'mcp.apify.com?tools=compass/crawler-google-places,vdrmota/contact-info-scraper,web_wanderer/google-reviews-scraper,scrapesage/google-ads-transparency-scraper,apify/facebook-ads-scraper,valig/indeed-jobs-scraper,apify/website-content-crawler,harvestapi/linkedin-profile-search-by-name,apify/instagram-profile-scraper,clockworks/tiktok-profile-scraper`' \
   && _report ok "usage.md Setup gives the ten-actor connector URL" || _report no "usage.md Setup lacks the ten-actor connector URL"
-assert_contains "$SU" 'always pass `include_personal: false`'
-assert_contains "$SU" 'never record reviewer names'
+assert_contains "$SU" 'always pass `include_personal: true`'
+assert_not_contains "$SU" 'never record reviewer names'
 assert_contains "$SU" 'always pass `onlyTotal: true`'
 assert_contains "$SU" 'With no page URL, skip this call and record no Facebook finding'
 assert_contains "$SU" 'Zero items is a valid result: no open listings'
@@ -1070,7 +1070,7 @@ assert_contains "$PP" 'never raised from a session prompt'
 assert_contains "$PP" 'Continue research on a capped lead'
 assert_not_contains "$PP" 'Research Capped stays false'
 assert_contains "$PP" 'never in a scheduled run'
-assert_contains "$PP" 'always passes `include_personal: false`'
+assert_contains "$PP" 'always passes `include_personal: true`'
 PR="$SP/subagents/prospector.md"
 assert_contains "$PR" 'Every source listed in `prospecting_sources` is exhausted'
 assert_contains "$PR" 'ignores the Preparer-only sources `apify_contact_info`, `apify_reviews`, `apify_ads`, `apify_jobs` and `apify_site_reader`'
@@ -1098,8 +1098,9 @@ grep -qF 'Set by the agent when research stopped at an Apify cap (per-lead or 7-
   && _report ok "attio research_capped description covers both caps" || _report no "attio research_capped description is narrow"
 assert_not_contains "$SP/capabilities/crm/contract.md" 'a scheduled run stopped at the per-lead Apify cap'
 RC="$SP/skills/research-company/SKILL.md"
-assert_contains "$RC" 'include_personal: false'
-assert_contains "$RC" 'A review finding never carries a reviewer'"'"'s name'
+assert_contains "$RC" 'include_personal: true'
+flat_has "$RC" 'A review finding may name its reviewer'
+flat_has "$RC" 'never the reviewer'"'"'s profile URL, photo or ID'
 assert_contains "$RC" 'lacks chat'
 assert_contains "$RC" 'only after the home page and the relevant page'
 assert_contains "$SP/skills/match-offer/SKILL.md" '12 months'
@@ -1122,14 +1123,14 @@ for h in \
   '## Case 26: Research goes past the per-lead cap only when the operator says so in a session' \
   '## Case 27: The offers'"'"' research tips pick the sources that run' \
   '## Case 28: A research source not in `prospecting_sources` never runs, even when a tip points to it' \
-  '## Case 29: A review signal is quoted with its date and link, never the reviewer'"'"'s name' \
+  '## Case 29: A review signal is quoted with its date, link and reviewer'"'"'s first name' \
   '## Case 30: A site "lacks" a feature only after two pages were read, and never "lacks chat"' \
   '## Case 31: An old review doesn'"'"'t count when a newer one shows the same entry'; do
   assert_contains "$EV" "$h"
 done
 for w in 'Cases 24 to 26 positive checks' 'research capped at $0.07; ' 'per-lead cap $0.07; not run: ' \
   'research capped by the 7-day Apify cap; apify_reviews, apify_site_reader' '7-day Apify cap; not run: ' \
-  '`research_capped: false`' '`continue; `' '`include_personal: false`' '`query_place_id`' 'lacks chat' \
+  '`research_capped: false`' '`continue; `' '`include_personal: true`' '`query_place_id`' 'lacks chat' \
   'hero_offer=ps-inbound-lead-qualification; offer_evidence=moderate'; do
   assert_contains "$EV" "$w"
 done
@@ -1222,13 +1223,13 @@ flat_has "$PP" 'rewrite the reason with only the capped start (the start and its
 flat_has "$PP" 'the other starts stay'
 
 echo "-- 7.3: fixed values and URL rules on the Apify tools"
-assert_contains "$SP/agent.yaml" 'standard: "7.4"'
+assert_contains "$SP/agent.yaml" 'standard: "7.5"'
 AGD=capabilities/scraping/tools/apify/guard.yaml
 assert_contains "./$AGD" 'fixed:'
 assert_contains "./$AGD" 'urls:'
 comment_has() { tr '\n#' '  ' < "$1" | tr -s ' ' | grep -qF -- "$2"; } # the file with comment marks and line breaks flattened
 comment_has "$AGD" "can't be pinned" && _report no "$AGD still says the true/false inputs can't be pinned" || _report ok "$AGD no longer says the true/false inputs can't be pinned"
-for s in 'Eight fixed values (Standard 7.3), each required' 'only_keys on startUrls[] still blocks requestsFromUrl'; do
+for s in 'under the retrieval profile (Standard 7.5)' 'with a fixed value of null and no required' 'Fixed values, each required: include_personal true on reviews'; do
   comment_has "$AGD" "$s" && _report ok "$AGD says '$s'" || _report no "$AGD does not say '$s'"
 done
 
@@ -1271,7 +1272,7 @@ for f in "$SU" "$PP"; do
 done
 # The guard now requires the four settings; usage.md no longer leaves them to instructions.
 for t in 'cannot pin' "can't pin" 'cannot be pinned'; do flat_lacks "$SU" "$t"; done
-flat_has "$SU" 'always pass `include_personal: false`; the guard requires it'
+flat_has "$SU" 'always pass `include_personal: true`; the guard requires it'
 flat_has "$SU" 'always pass `onlyTotal: true` (the count only; the guard requires it)'
 flat_has "$SU" '(the guard requires both, exactly as written)'
 flat_has "$SU" 'The guard requires every start URL to pass its URL rule'
@@ -1308,7 +1309,7 @@ flat_has "$EV" 'a test domain you control that serves only http (Apify fetches f
 C34=$(awk '/^## Case 34:/ { f=1; next } f && /^## Case / { f=0 } f' "$EV")
 printf '%s' "$C34" | grep -qF smithbookkeeping && _report no "Case 34 reuses Case 33's smithbookkeeping" || _report ok "Case 34 has its own page name"
 # README: the standard and the one stated limit left
-assert_contains "$SP/README.md" 'Agent Standard](https://github.com/webspenser/agent-builder/blob/main/STANDARD.md) 7.4'
+assert_contains "$SP/README.md" 'Agent Standard](https://github.com/webspenser/agent-builder/blob/main/STANDARD.md) 7.5'
 flat_has "$SP/README.md" 'data could still leave in the hostname itself'
 # Odd website forms are normalized in both files, so the guard never receives one it refuses
 for f in "$SP/capabilities/scraping/tools/apify/usage.md" "$SP/subagents/preparer.md"; do
@@ -1432,7 +1433,7 @@ assert_contains "$SU" 'never a handle guessed from a name'
 assert_contains "$SU" 'for `linkedin` only, in this release'
 assert_contains "$SU" 'harvestapi/linkedin-profile-search-by-name,apify/instagram-profile-scraper,clockworks/tiktok-profile-scraper'
 assert_contains "$SU" 'verify them in Apify Console'
-assert_contains "$SP/capabilities/scraping/tools/apify/guard.yaml" '# Apify guard policy: ten actors and two reads.'
+assert_contains "$SP/capabilities/scraping/tools/apify/guard.yaml" '# Apify guard policy: ten actors and two reads, under the retrieval'
 WC="$SP/capabilities/web_search/contract.md"
 assert_contains "$WC" '`find-social-profiles` once per contact'
 assert_contains "$WC" 'one-search-per-lead and'
@@ -1530,7 +1531,7 @@ done
 assert_contains "$EV" 'https://www.tiktok.com/@example.priyan'
 assert_contains "$FSP" 'https://www.instagram.com/example.priya.n'
 flat_has "$EV" '`find_profiles` is not called: LinkedIn is filled, and no actor searches the other platforms'
-flat_has "$EV" 'returned by `find_profiles` (`Full` mode)'
+flat_has "$EV" 'returned by `find_profiles` (`Full + email search` mode)'
 flat_has "$EV" 'The pass runs even when the prepare queue is empty'
 # I7: the backlog is bounded per run, with no new key
 flat_has "$PR" 'at most `research_quota_per_week` backlog leads per run'
@@ -1660,4 +1661,74 @@ assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" 'Never `place_u
 flat_has "$SP/skills/research-company/SKILL.md" 'A star-only review has no text (`content` is null): it still dates the listing, but it is never a quoted finding.'
 assert_contains "$SP/docs/superpowers/notes/2026-11-09-reviews-actor-probe.md" 'web_wanderer--google-reviews-scraper'
 assert_contains "$SP/evals/cases.md" '## Case 55: A star-only review dates the listing and is never quoted'
+
+echo "-- 8.6.0: drift (carry on and report)"
+for f in "$SP/subagents/preparer.md" "$SP/subagents/prospector.md"; do
+  flat_has "$f" 'A guard block on a scraping call does not stop the activity'
+  flat_has "$f" 'never retried with changed arguments'
+done
+flat_has "$SP/subagents/preparer.md" 'the same source is blocked on 2 leads in one run, it is skipped for the rest of the run'
+flat_has "$SP/subagents/preparer.md" 'one `notify_owner(kind: error)` at the end of the run'
+SUD="$SP/capabilities/scraping/tools/apify/usage.md"
+assert_contains "$SUD" '## Drift'
+for t in '`drift: <tool> <field> empty`' '`<source> (vendor error)`' '`<source> (blocked)`'; do flat_has "$SUD" "$t"; done
+flat_has "$SP/capabilities/scraping/contract.md" 'A guard block on a scraping call skips that source for the lead'
+assert_not_contains "$SP/capabilities/scraping/contract.md" 'A guard block on a scraping call stops the activity'
+for h in '## Case 56: An empty mapped field is reported as drift and records nothing' \
+         '## Case 57: A vendor error skips the source for that lead and research goes on' \
+         '## Case 58: A guard block skips the source, and after 2 leads the source is skipped for the run' \
+         '## Case 59: A source failing on every lead sends one error at the end of the run'; do
+  assert_contains "$SP/evals/cases.md" "$h"
+done
+
+
+echo "-- 8.6.0: personal data"
+grep -E '^\| `find_reviews` \|' "$SU" | grep -qF 'reviewer_name' && _report ok "reviews fields ask for reviewer_name" || _report no "reviews fields lack reviewer_name"
+for k in reviewer_url reviewer_photo_url reviewer_photo reviewer_id; do
+  grep -E '^\| `find_reviews` \|' "$SU" | grep -qE "[\`,]$k[,\`]" && _report no "reviews fields ask for $k" || _report ok "reviews fields never ask for $k"
+done
+flat_has "$SU" '`profileScraperMode` — always `"Full + email search"`'
+flat_has "$SU" '| `find_profiles`, LinkedIn | $0.15 per call |'
+flat_has "$SU" 'emails.email,emails.free,emails.status,emails.deliverable'
+flat_has "$SP/capabilities/scraping/contract.md" 'the reviewer'"'"'s name; never the reviewer'"'"'s profile'
+flat_has "$SP/skills/write-talking-points/SKILL.md" 'may cite a review by its reviewer and date'
+FD="$SP/skills/find-decision-makers/SKILL.md"
+flat_has "$FD" 'whatever its domain'
+flat_has "$FD" 'the Contact'"'"'s notes say where it was found'
+flat_has "$FD" 'pattern guess, unverified'
+for h in '## Case 60: A complaint review is named only in Avoid and never quoted back' \
+         '## Case 61: A personal email from LinkedIn email search makes the owner the point of contact'; do
+  assert_contains "$SP/evals/cases.md" "$h"
+done
+assert_not_contains "$SP/evals/cases.md" 'include_personal: false'
+assert_not_contains "$SP/README.md" 'never the reviewer'"'"'s name'
+
+
+echo "-- 8.6.0: release"
+assert_contains "$SP/README.md" 'Version 8.6.0.'
+assert_contains "$SP/README.md" 'Upgrading from 8.5.1'
+flat_has "$SP/capabilities/scraping/tools/apify/usage.md" 'confirm that the Apify monthly usage limit is set'
+
+
+echo "-- 8.6.0: final review fixes"
+FSP="$SP/skills/find-social-profiles/SKILL.md"
+flat_has "$FSP" 'An email `find_profiles` found for a confident candidate goes in `email` only when the field is empty'
+flat_has "$FSP" 'an uncertain candidate'"'"'s email goes only in the possible-profiles section'
+flat_has "$FSP" 'A guard block is never retried'
+flat_has "$SP/subagents/preparer.md" 'When the Profile pass writes an email for a contact of a lead with no point of contact, it runs `pick-point-of-contact` for that lead'
+assert_not_contains "$SP/skills/find-decision-makers/SKILL.md" 'LinkedIn email search in `find_profiles`'
+flat_has "$SP/evals/cases.md" 'In the Profile pass, `find-social-profiles` writes'
+WTP="$SP/skills/write-talking-points/SKILL.md"
+flat_has "$WTP" 'A complaint review may feed a Point only as the problem the offer answers, unquoted and unnamed; its reviewer and date go only in `Avoid:`'
+assert_not_contains "$WTP" '- A 2026-09-21 review says "they billed me twice'
+flat_has "$SP/evals/cases.md" 'uses its signal in a Point only unquoted and unnamed'
+flat_has "$SP/subagents/prospector.md" 'one `notify_owner(kind: error)` at the end of the run'
+flat_has "$SP/subagents/preparer.md" '`; not run: <source> (<reason>)'
+flat_has "$SP/skills/send-digest/SKILL.md" '(sources not run: '
+assert_not_contains "$SP/subagents/preparer.md" 'a block stops the activity (below)'
+assert_not_contains "$SP/evals/cases.md" 'stops the activity'
+for t in '; vendor error`' '; blocked`'; do
+  for f in "$SP/subagents/preparer.md" "$SUD" "$SP/evals/cases.md"; do assert_not_contains "$f" "$t"; done
+done
+
 finish

@@ -107,6 +107,8 @@ check 0 "read records"        $LG ${A}list_records_for_table "{$R}" "" "$W/ledge
 SM=
 
 echo "-- scraping (apify)"
+jset() { python3 -c 'import json,sys;d=json.loads(sys.argv[1]);d[sys.argv[2]]=json.loads(sys.argv[3]);print(json.dumps(d))' "$@"; }
+jdel() { python3 -c 'import json,sys;d=json.loads(sys.argv[1]);del d[sys.argv[2]];print(json.dumps(d))' "$@"; }
 AG2=capabilities/scraping/tools/apify/guard.yaml; P=mcp__claude_ai_Apify__; SM=apify
 MAPS=compass--crawler-google-places; CONTACTS=vdrmota--contact-info-scraper
 printf '%s\n' 'max_places_per_search: 60' 'max_pages_per_site: 3' 'max_crawl_depth: 1' 'max_pages_per_call: 30' \
@@ -124,11 +126,16 @@ check 2 "maps limit omitted"       $AG2 ${P}$MAPS '{"searchStringsArray":["x"]}'
 check 2 "maps two search terms"    $AG2 ${P}$MAPS '{"maxCrawledPlacesPerSearch":60,"searchStringsArray":["a","b"]}' "exceeds max_search_terms" "$W/scraping.md"
 check 2 "maps no search term"      $AG2 ${P}$MAPS '{"maxCrawledPlacesPerSearch":60,"city":"Alameda"}' "names no searchStringsArray" "$W/scraping.md"
 check 2 "maps empty search terms"  $AG2 ${P}$MAPS '{"maxCrawledPlacesPerSearch":60,"searchStringsArray":[]}' "" "$W/scraping.md"
-check 2 "maps respelled key"       $AG2 ${P}$MAPS '{"maxCrawledPlacesPerSearch":60,"SearchStringsArray":["x"]}' "may not use" "$W/scraping.md"
-for a in locationQuery startUrls placeIds customGeolocation scrapeContacts maxReviews scrapePlaceDetailPage website; do
-  check 2 "maps may not use $a"    $AG2 ${P}$MAPS "{\"maxCrawledPlacesPerSearch\":60,\"$a\":\"x\"}" "may not use" "$W/scraping.md"
+check 2 "maps respelled key alone" $AG2 ${P}$MAPS '{"maxCrawledPlacesPerSearch":60,"SearchStringsArray":["x"]}' "names no searchStringsArray" "$W/scraping.md"
+for a in locationQuery startUrls placeIds customGeolocation scrapeContacts maxReviews scrapePlaceDetailPage website maximumLeadsEnrichmentRecords leadsEnrichmentDepartments verifyLeadsEnrichmentEmails maxImages maxQuestions enableCompetitorAnalysis maxCompetitorsToAnalyze includeWebResults scrapeDirectories scrapeOrderOnline scrapeTableReservationProvider scrapeSocialMediaProfiles scrapeImageAuthors scrapeReviewsPersonalData reviewsFilterString reviewsOrigin reviewsSort reviewsStartDate categoryFilterWords placeMinimumStars searchMatching skipClosedPlaces allPlacesNoSearchAction; do
+  check 2 "maps may not set $a"    $AG2 ${P}$MAPS "$(jset "$MAPS_OK" "$a" '"x"')" "must send $a = null" "$W/scraping.md"
 done
-check 2 "maps false add-on"        $AG2 ${P}$MAPS '{"maxCrawledPlacesPerSearch":60,"scrapeContacts":false}' "may not use" "$W/scraping.md"
+check 2 "maps false add-on"        $AG2 ${P}$MAPS "$(jset "$MAPS_OK" scrapeContacts false)" "must send scrapeContacts = null" "$W/scraping.md"
+check 0 "maps null scope key passes" $AG2 ${P}$MAPS "$(jset "$MAPS_OK" startUrls null)" "" "$W/scraping.md"
+check 0 "maps unknown harmless input passes" $AG2 ${P}$MAPS "$(jset "$MAPS_OK" someNewVendorOption true)" "" "$W/scraping.md"
+for a in pageFunction headers cookies proxyConfiguration webhooks; do
+  check 2 "maps shared refusal $a" $AG2 ${P}$MAPS "$(jset "$MAPS_OK" "$a" '"x"')" "may not use $a" "$W/scraping.md"
+done
 check 0 "contacts in limit"        $AG2 ${P}$CONTACTS "{\"startUrls\":[$U1],$CT,\"sameDomain\":true,\"mergeContacts\":true,\"considerChildFrames\":false,\"waitSecs\":45}" "" "$W/scraping.md"
 check 2 "contacts pages raised"    $AG2 ${P}$CONTACTS '{"startUrls":[{"url":"https://example.com"}],"maxRequestsPerStartUrl":50,"maxDepth":1,"maxRequests":30}' "is not a pinned value (max_pages_per_site)" "$W/scraping.md"
 check 2 "contacts depth raised"    $AG2 ${P}$CONTACTS '{"startUrls":[{"url":"https://example.com"}],"maxRequestsPerStartUrl":3,"maxDepth":5,"maxRequests":30}' "is not a pinned value (max_crawl_depth)" "$W/scraping.md"
@@ -140,9 +147,10 @@ check 2 "contacts 11 URLs"         $AG2 ${P}$CONTACTS "{\"startUrls\":$URLS11,$C
 check 2 "contacts no startUrls"    $AG2 ${P}$CONTACTS "{$CT}" "names no startUrls" "$W/scraping.md"
 check 2 "contacts empty startUrls" $AG2 ${P}$CONTACTS "{\"startUrls\":[],$CT}" "" "$W/scraping.md"
 check 2 "contacts proxyConfig"     $AG2 ${P}$CONTACTS "{\"startUrls\":[$U1],$CT,\"proxyConfig\":{\"useApifyProxy\":true,\"apifyProxyGroups\":[\"RESIDENTIAL\"]}}" "may not use" "$W/scraping.md"
-for a in useBrowser waitUntil maximumLeadsEnrichmentRecords scrapeSocialMediaProfiles; do
-  check 2 "contacts may not use $a" $AG2 ${P}$CONTACTS "{\"startUrls\":[$U1],$CT,\"$a\":\"x\"}" "may not use" "$W/scraping.md"
+for a in useBrowser waitUntil maximumLeadsEnrichmentRecords leadsEnrichmentDepartments verifyLeadsEnrichmentEmails scrapeSocialMediaProfiles; do
+  check 2 "contacts may not set $a" $AG2 ${P}$CONTACTS "{\"startUrls\":[$U1],$CT,\"$a\":\"x\"}" "must send $a = null" "$W/scraping.md"
 done
+check 0 "contacts unknown harmless input passes" $AG2 ${P}$CONTACTS "{\"startUrls\":[$U1],$CT,\"someNewVendorOption\":true}" "" "$W/scraping.md"
 check 2 "start URL requestsFromUrl" $AG2 ${P}$CONTACTS "{\"startUrls\":[{\"url\":\"https://example.com\",\"requestsFromUrl\":\"https://x.test/list.txt\"}],$CT}" "may not use" "$W/scraping.md"
 check 2 "start URL method"         $AG2 ${P}$CONTACTS "{\"startUrls\":[{\"url\":\"https://example.com\",\"method\":\"POST\"}],$CT}" "may not use" "$W/scraping.md"
 check 2 "start URL headers"        $AG2 ${P}$CONTACTS "{\"startUrls\":[{\"url\":\"https://example.com\",\"headers\":{}}],$CT}" "may not use" "$W/scraping.md"
@@ -163,8 +171,6 @@ check 2 "another actor"            $AG2 ${P}apify-slash-instagram-scraper '{}' "
 P2=mcp__claude_ai_Apify_Actors__
 REV=web_wanderer--google-reviews-scraper; GADS=scrapesage--google-ads-transparency-scraper
 FB=apify--facebook-ads-scraper; JOBS=valig--indeed-jobs-scraper; SITE=apify--website-content-crawler
-jset() { python3 -c 'import json,sys;d=json.loads(sys.argv[1]);d[sys.argv[2]]=json.loads(sys.argv[3]);print(json.dumps(d))' "$@"; }
-jdel() { python3 -c 'import json,sys;d=json.loads(sys.argv[1]);del d[sys.argv[2]];print(json.dumps(d))' "$@"; }
 pins() { # pins <label> <tool> <ok json> <key>:<bound>:<raised json>...: each pin raised, then omitted
   local label=$1 tool=$2 ok=$3 spec key bound; shift 3
   for spec in "$@"; do
@@ -188,12 +194,21 @@ refused() { # refused <label> <tool> <ok json> <key>...: each key blocked, even 
     check 2 "$label may not use $key (false)" $AG2 ${P2}$tool "$(jset "$ok" "$key" false)" "may not use $key" "$W/scraping.md"
   done
 }
+nulled() { # nulled <label> <tool> <ok json> <key>...: each per-tool scope key blocked, even set to false
+  local label=$1 tool=$2 ok=$3 key; shift 3
+  for key in "$@"; do
+    check 2 "$label may not set $key (false)" $AG2 ${P2}$tool "$(jset "$ok" "$key" false)" "must send $key = null" "$W/scraping.md"
+  done
+}
+harmless() { # harmless <label> <tool> <ok json>: an unknown vendor option passes (open profile)
+  check 0 "$1 unknown harmless input passes" $AG2 ${P2}$2 "$(jset "$3" someNewVendorOption true)" "" "$W/scraping.md"
+}
 start_extras() { # start_extras <label> <tool> <ok json> <allowed url>: nothing but url on a start URL
   local a
   for a in requestsFromUrl method headers payload userData; do
     check 2 "$1 start URL $a" $AG2 ${P2}$2 "$(jset "$3" startUrls "[{\"url\":\"$4\",\"$a\":\"x\"}]")" "may not use startUrls[].$a" "$W/scraping.md"
   done
-  check 2 "$1 start URL as a bare string" $AG2 ${P2}$2 "$(jset "$3" startUrls "[\"$4\"]")" "expected an object" "$W/scraping.md"
+  check 2 "$1 start URL as a bare string" $AG2 ${P2}$2 "$(jset "$3" startUrls "[\"$4\"]")" "startUrls[].requestsFromUrl: unexpected shape" "$W/scraping.md"
 }
 start_url() { # start_url <rc> <label> <tool> <ok json> <url> [text]: the ok call with one start URL
   check "$1" "$2" $AG2 ${P2}$3 "$(jset "$4" startUrls "[{\"url\":\"$5\"}]")" "${6:-}" "$W/scraping.md"
@@ -203,33 +218,36 @@ check 0 "maps on the Apify_Actors server passes" $AG2 ${P2}$MAPS "$MAPS_OK" "" "
 check 2 "Apify_Actors call-actor denied" $AG2 ${P2}call-actor '{}' "is denied" "$W/scraping.md"
 check 2 "reviews tool on another server not allowed" $AG2 mcp__claude_ai_Gmail__$REV '{}' "is not in the allow list" "$W/scraping.md"
 
-REV_OK='{"place_ids":["ChIJkyhXi8iHj4ARLP5o2YRo-iY"],"limit":50,"order":"newest","include_personal":false,"lang":"en","waitSecs":45}'
-check 0 "reviews in limit with include_personal false" $AG2 ${P2}$REV "$REV_OK" "" "$W/scraping.md"
+REV_OK='{"place_ids":["ChIJkyhXi8iHj4ARLP5o2YRo-iY"],"limit":50,"order":"newest","include_personal":true,"lang":"en","waitSecs":45}'
+check 0 "reviews in limit with include_personal true" $AG2 ${P2}$REV "$REV_OK" "" "$W/scraping.md"
 check 0 "reviews tool name matches in any case"    $AG2 ${P2}web_wanderer--Google-Reviews-Scraper "$REV_OK" "" "$W/scraping.md"
-check 0 "reviews with date, keyword and source"    $AG2 ${P2}$REV '{"place_ids":["ChIJkyhXi8iHj4ARLP5o2YRo-iY"],"limit":50,"order":"newest","anyDate":"2025-10-18","searchKeyword":"voicemail","source":"google","include_personal":false,"lang":"en","waitSecs":45}' "" "$W/scraping.md"
+check 0 "reviews with date, keyword and source"    $AG2 ${P2}$REV '{"place_ids":["ChIJkyhXi8iHj4ARLP5o2YRo-iY"],"limit":50,"order":"newest","anyDate":"2025-10-18","searchKeyword":"voicemail","source":"google","include_personal":true,"lang":"en","waitSecs":45}' "" "$W/scraping.md"
 check 0 "reviews on the Apify_Connector server"    $AG2 mcp__claude_ai_Apify_Connector__$REV "$REV_OK" "" "$W/scraping.md"
 check 2 "old Compass reviews tool not allowed"     $AG2 ${P2}compass--Google-Maps-Reviews-Scraper '{"placeIds":["ChIJkyhXi8iHj4ARLP5o2YRo-iY"],"maxReviews":50,"personalData":false}' "is not in the allow list" "$W/scraping.md"
 pins    reviews $REV "$REV_OK" 'limit:max_reviews:200'
 lists   reviews $REV "$REV_OK" 'place_ids:max_review_places:["ChIJaaaaaaaaaaaaaaaaaaaaaaa","ChIJbbbbbbbbbbbbbbbbbbbbbbb"]'
-check 2 "reviews respelled key"    $AG2 ${P2}$REV "$(jset "$REV_OK" placeIds '["ChIJx"]')" "may not use placeIds" "$W/scraping.md"
-refused reviews $REV "$REV_OK" place_urls search search_location search_limit search_coordination sort_dataset sort_keys
-check 2 "reviews place_urls list"  $AG2 ${P2}$REV "$(jset "$REV_OK" place_urls '["https://maps.google.com/?cid=1"]')" "may not use place_urls" "$W/scraping.md"
-check 2 "reviews keyword search"   $AG2 ${P2}$REV "$(jset "$REV_OK" search '["plumbers"]')" "may not use search" "$W/scraping.md"
+check 0 "reviews respelled key beside the real one passes" $AG2 ${P2}$REV "$(jset "$REV_OK" placeIds '["ChIJx"]')" "" "$W/scraping.md"
+harmless reviews $REV "$REV_OK"
+nulled reviews $REV "$REV_OK" place_urls search search_location search_limit search_coordination sort_dataset sort_keys
+check 2 "reviews place_urls list"  $AG2 ${P2}$REV "$(jset "$REV_OK" place_urls '["https://maps.google.com/?cid=1"]')" "must send place_urls = null" "$W/scraping.md"
+check 2 "reviews keyword search"   $AG2 ${P2}$REV "$(jset "$REV_OK" search '["plumbers"]')" "must send search = null" "$W/scraping.md"
 check 2 "reviews without bindings" $AG2 ${P2}$REV "$REV_OK" "no max_reviews line"
-check 2 "reviews include_personal true"     $AG2 ${P2}$REV "$(jset "$REV_OK" include_personal true)" "must send include_personal = false (got true)" "$W/scraping.md"
+check 2 "reviews include_personal false"    $AG2 ${P2}$REV "$(jset "$REV_OK" include_personal false)" "must send include_personal = true (got false)" "$W/scraping.md"
 check 2 "reviews include_personal omitted"  $AG2 ${P2}$REV "$(jdel "$REV_OK" include_personal)" "names no include_personal" "$W/scraping.md"
-check 2 "reviews include_personal as a string" $AG2 ${P2}$REV "$(jset "$REV_OK" include_personal '"false"')" "must send include_personal = false" "$W/scraping.md"
-check 2 "reviews include_personal null"     $AG2 ${P2}$REV "$(jset "$REV_OK" include_personal null)" "must send include_personal = false (got null)" "$W/scraping.md"
+check 2 "reviews include_personal as a string" $AG2 ${P2}$REV "$(jset "$REV_OK" include_personal '"true"')" "must send include_personal = true" "$W/scraping.md"
+check 2 "reviews include_personal null"     $AG2 ${P2}$REV "$(jset "$REV_OK" include_personal null)" "must send include_personal = true (got null)" "$W/scraping.md"
 
 GADS_OK='{"queries":["bigbrothersplumbinginc.com"],"resultType":"advertisers","maxAdvertisersPerQuery":1,"maxAdsPerSearch":5,"region":"US","waitSecs":45}'
 check 0 "google ads in limit"      $AG2 ${P2}$GADS "$GADS_OK" "" "$W/scraping.md"
 pins    "google ads" $GADS "$GADS_OK" 'maxAdsPerSearch:max_ads:100' 'maxAdvertisersPerQuery:max_ad_advertisers:5' 'resultType:ads_result_type:"ads"'
 lists   "google ads" $GADS "$GADS_OK" 'queries:max_ad_queries:["a.com","b.com"]'
-check 2 "google ads respelled key" $AG2 ${P2}$GADS "$(jset "$GADS_OK" max_ads_per_search 5)" "may not use max_ads_per_search" "$W/scraping.md"
-refused "google ads" $GADS "$GADS_OK" includeDetails onlyNewAds monitorStoreName includeRawData proxyConfiguration startUrls urlsFromFile domains advertiserIds
+check 0 "google ads respelled key passes" $AG2 ${P2}$GADS "$(jset "$GADS_OK" max_ads_per_search 5)" "" "$W/scraping.md"
+harmless "google ads" $GADS "$GADS_OK"
+refused "google ads" $GADS "$GADS_OK" proxyConfiguration
+nulled "google ads" $GADS "$GADS_OK" includeDetails onlyNewAds monitorStoreName includeRawData startUrls urlsFromFile domains advertiserIds
 check 2 "google ads proxyConfiguration object" $AG2 ${P2}$GADS "$(jset "$GADS_OK" proxyConfiguration '{"useApifyProxy":true,"apifyProxyGroups":["DATACENTER"]}')" "may not use proxyConfiguration" "$W/scraping.md"
-check 2 "google ads domains list"  $AG2 ${P2}$GADS "$(jset "$GADS_OK" domains '["bigbrothersplumbinginc.com"]')" "may not use domains" "$W/scraping.md"
-check 2 "google ads includeDetails true" $AG2 ${P2}$GADS "$(jset "$GADS_OK" includeDetails true)" "may not use includeDetails" "$W/scraping.md"
+check 2 "google ads domains list"  $AG2 ${P2}$GADS "$(jset "$GADS_OK" domains '["bigbrothersplumbinginc.com"]')" "must send domains = null" "$W/scraping.md"
+check 2 "google ads includeDetails true" $AG2 ${P2}$GADS "$(jset "$GADS_OK" includeDetails true)" "must send includeDetails = null" "$W/scraping.md"
 grep -v '^ads_result_type:' "$W/scraping.md" > "$W/scraping-notext.md"
 check 2 "google ads without the text pin" $AG2 ${P2}$GADS "$GADS_OK" "no ads_result_type line" "$W/scraping-notext.md"
 
@@ -239,9 +257,11 @@ pins    facebook $FB "$FB_OK" 'resultsLimit:max_ads:100'
 check 2 "facebook resultsLimit empty (unlimited)" $AG2 ${P2}$FB "$(jset "$FB_OK" resultsLimit '""')" "is not a pinned value (max_ads)" "$W/scraping.md"
 check 2 "facebook resultsLimit null" $AG2 ${P2}$FB "$(jset "$FB_OK" resultsLimit null)" "names no pinned value at resultsLimit" "$W/scraping.md"
 lists   facebook $FB "$FB_OK" 'startUrls:max_ad_queries:[{"url":"https://www.facebook.com/a"},{"url":"https://www.facebook.com/b"}]'
-check 2 "facebook respelled key"   $AG2 ${P2}$FB "$(jset "$FB_OK" ResultsLimit 5)" "may not use ResultsLimit" "$W/scraping.md"
-refused facebook $FB "$FB_OK" isDetailsPerAd includeAboutPage enrichWithEcommerceData sorting onlyAdsOlderThan proxyConfiguration
-check 2 "facebook enrichWithEcommerceData true" $AG2 ${P2}$FB "$(jset "$FB_OK" enrichWithEcommerceData true)" "may not use enrichWithEcommerceData" "$W/scraping.md"
+check 0 "facebook respelled key passes" $AG2 ${P2}$FB "$(jset "$FB_OK" ResultsLimit 5)" "" "$W/scraping.md"
+harmless facebook $FB "$FB_OK"
+refused facebook $FB "$FB_OK" proxyConfiguration
+nulled facebook $FB "$FB_OK" isDetailsPerAd includeAboutPage enrichWithEcommerceData sorting onlyAdsOlderThan
+check 2 "facebook enrichWithEcommerceData true" $AG2 ${P2}$FB "$(jset "$FB_OK" enrichWithEcommerceData true)" "must send enrichWithEcommerceData = null" "$W/scraping.md"
 start_extras facebook $FB "$FB_OK" https://www.facebook.com/bigbrothersplumbinginc
 check 2 "facebook onlyTotal omitted" $AG2 ${P2}$FB "$(jdel "$FB_OK" onlyTotal)" "names no onlyTotal" "$W/scraping.md"
 check 2 "facebook onlyTotal false"   $AG2 ${P2}$FB "$(jset "$FB_OK" onlyTotal false)" "must send onlyTotal = true (got false)" "$W/scraping.md"
@@ -262,23 +282,27 @@ check 2 "facebook start URL not a string" $AG2 ${P2}$FB "$(jset "$FB_OK" startUr
 JOBS_OK='{"title":"Big Brothers Plumbing","location":"Alameda, CA","country":"us","limit":20,"datePosted":"30","waitSecs":45}'
 check 0 "jobs in limit"            $AG2 ${P2}$JOBS "$JOBS_OK" "" "$W/scraping.md"
 pins    jobs $JOBS "$JOBS_OK" 'limit:max_jobs:100'
-check 2 "jobs respelled key"       $AG2 ${P2}$JOBS "$(jset "$JOBS_OK" Title '"x"')" "may not use Title" "$W/scraping.md"
-refused jobs $JOBS "$JOBS_OK" maxItems proxyConfiguration startUrls
+check 0 "jobs respelled key passes" $AG2 ${P2}$JOBS "$(jset "$JOBS_OK" Title '"x"')" "" "$W/scraping.md"
+harmless jobs $JOBS "$JOBS_OK"
+refused jobs $JOBS "$JOBS_OK" proxyConfiguration
+nulled jobs $JOBS "$JOBS_OK" maxItems startUrls
 
 SITE_OK='{"startUrls":[{"url":"https://bigbrothersplumbinginc.com/"}],"crawlerType":"cheerio","maxCrawlPages":5,"maxResults":5,"maxCrawlDepth":1,"htmlTransformer":"none","removeElementsCssSelector":"script, style, noscript, svg","saveMarkdown":true,"waitSecs":45}'
 check 0 "site reader in limit"     $AG2 ${P2}$SITE "$SITE_OK" "" "$W/scraping.md"
 pins    "site reader" $SITE "$SITE_OK" 'crawlerType:site_crawler_type:"playwright:firefox"' 'htmlTransformer:site_html_transformer:"readableText"' \
   'maxCrawlPages:max_site_pages:9999999' 'maxResults:max_site_pages:9999999' 'maxCrawlDepth:max_site_depth:20'
 lists   "site reader" $SITE "$SITE_OK" 'startUrls:max_site_urls:[{"url":"https://example.com"},{"url":"https://www.example.com"}]'
-check 2 "site reader respelled key" $AG2 ${P2}$SITE "$(jset "$SITE_OK" maxCrawlpages 5)" "may not use maxCrawlpages" "$W/scraping.md"
-refused "site reader" $SITE "$SITE_OK" customHttpHeaders pageFunction initialCookies summarize saveScreenshots saveContentTypes \
-  saveFiles saveHtmlAsFile includeUrlGlobs useSitemaps useLlmsTxt clickElementsCssSelector waitForSelector maxConcurrency proxyConfiguration
+check 0 "site reader respelled key passes" $AG2 ${P2}$SITE "$(jset "$SITE_OK" maxCrawlpages 5)" "" "$W/scraping.md"
+harmless "site reader" $SITE "$SITE_OK"
+refused "site reader" $SITE "$SITE_OK" customHttpHeaders pageFunction initialCookies proxyConfiguration preNavigationHooks postNavigationHooks
+nulled "site reader" $SITE "$SITE_OK" summarize saveScreenshots saveContentTypes \
+  saveFiles saveHtmlAsFile includeUrlGlobs useSitemaps useLlmsTxt clickElementsCssSelector waitForSelector maxConcurrency
 check 2 "site reader customHttpHeaders object" $AG2 ${P2}$SITE "$(jset "$SITE_OK" customHttpHeaders '{"Cookie":"session=x"}')" "may not use customHttpHeaders" "$W/scraping.md"
-check 2 "site reader summarize true"    $AG2 ${P2}$SITE "$(jset "$SITE_OK" summarize true)" "may not use summarize" "$W/scraping.md"
-check 2 "site reader useSitemaps true"  $AG2 ${P2}$SITE "$(jset "$SITE_OK" useSitemaps true)" "may not use useSitemaps" "$W/scraping.md"
-check 2 "site reader includeUrlGlobs list" $AG2 ${P2}$SITE "$(jset "$SITE_OK" includeUrlGlobs '[{"glob":"https://example.com/**"}]')" "may not use includeUrlGlobs" "$W/scraping.md"
+check 2 "site reader summarize true"    $AG2 ${P2}$SITE "$(jset "$SITE_OK" summarize true)" "must send summarize = null" "$W/scraping.md"
+check 2 "site reader useSitemaps true"  $AG2 ${P2}$SITE "$(jset "$SITE_OK" useSitemaps true)" "must send useSitemaps = null" "$W/scraping.md"
+check 2 "site reader includeUrlGlobs list" $AG2 ${P2}$SITE "$(jset "$SITE_OK" includeUrlGlobs '[{"glob":"https://example.com/**"}]')" "must send includeUrlGlobs = null" "$W/scraping.md"
 check 2 "site reader proxyConfiguration object" $AG2 ${P2}$SITE "$(jset "$SITE_OK" proxyConfiguration '{"useApifyProxy":true}')" "may not use proxyConfiguration" "$W/scraping.md"
-check 2 "site reader maxConcurrency 200" $AG2 ${P2}$SITE "$(jset "$SITE_OK" maxConcurrency 200)" "may not use maxConcurrency" "$W/scraping.md"
+check 2 "site reader maxConcurrency 200" $AG2 ${P2}$SITE "$(jset "$SITE_OK" maxConcurrency 200)" "must send maxConcurrency = null" "$W/scraping.md"
 start_extras "site reader" $SITE "$SITE_OK" https://bigbrothersplumbinginc.com
 start_url 0 "site reader root without a slash" $SITE "$SITE_OK" https://bigbrothersplumbinginc.com
 start_url 0 "site reader root with the default port" $SITE "$SITE_OK" https://bigbrothersplumbinginc.com:443/
@@ -310,19 +334,20 @@ check 2 "contacts start URL without url" $AG2 ${P2}$CONTACTS "$(jset "$CT_OK" st
 # 8.3 social profiles: find_profiles (LinkedIn search by name) and
 # read_profile (Instagram and TikTok readers, which take handles).
 LI=harvestapi--linkedin-profile-search-by-name; IG=apify--instagram-profile-scraper; TT=clockworks--tiktok-profile-scraper
-LI_OK='{"firstName":"Alex","lastName":"Example","locations":["Springfield"],"maxItems":5,"maxPages":1,"profileScraperMode":"Full","strictSearch":true,"waitSecs":45}'
+LI_OK='{"firstName":"Alex","lastName":"Example","locations":["Springfield"],"maxItems":5,"maxPages":1,"profileScraperMode":"Full + email search","strictSearch":true,"waitSecs":45}'
 check 0 "linkedin search in limit"        $AG2 ${P2}$LI "$LI_OK" "" "$W/scraping.md"
 check 0 "linkedin search without a location" $AG2 ${P2}$LI "$(jdel "$LI_OK" locations)" "" "$W/scraping.md"
 pins    "linkedin search" $LI "$LI_OK" 'maxItems:max_profile_results:1000'
 check 2 "linkedin search maxItems null"   $AG2 ${P2}$LI "$(jset "$LI_OK" maxItems null)" "names no pinned value at maxItems" "$W/scraping.md"
 check 2 "linkedin search two locations"   $AG2 ${P2}$LI "$(jset "$LI_OK" locations '["Springfield","California"]')" "exceeds max_profile_locations at locations" "$W/scraping.md"
-check 2 "linkedin search respelled key"   $AG2 ${P2}$LI "$(jset "$LI_OK" MaxItems 5)" "may not use MaxItems" "$W/scraping.md"
-refused "linkedin search" $LI "$LI_OK" currentCompanies pastCompanies schools currentJobTitles industryIds \
-  cookies cookie sessionCookie li_at proxyConfiguration proxy headers customHttpHeaders profileUrls searchQuery
-check 2 "linkedin search company filter list" $AG2 ${P2}$LI "$(jset "$LI_OK" currentCompanies '["https://www.linkedin.com/company/example"]')" "may not use currentCompanies" "$W/scraping.md"
+check 0 "linkedin search respelled cap beside the real one passes" $AG2 ${P2}$LI "$(jset "$LI_OK" MaxItems 5000)" "" "$W/scraping.md"
+harmless "linkedin search" $LI "$LI_OK"
+refused "linkedin search" $LI "$LI_OK" cookies cookie sessionCookie li_at proxyConfiguration proxy headers customHttpHeaders
+nulled "linkedin search" $LI "$LI_OK" currentCompanies pastCompanies schools currentJobTitles industryIds profileUrls searchQuery
+check 2 "linkedin search company filter list" $AG2 ${P2}$LI "$(jset "$LI_OK" currentCompanies '["https://www.linkedin.com/company/example"]')" "must send currentCompanies = null" "$W/scraping.md"
 check 2 "linkedin search mode omitted"    $AG2 ${P2}$LI "$(jdel "$LI_OK" profileScraperMode)" "names no profileScraperMode" "$W/scraping.md"
-check 2 "linkedin search Short mode"      $AG2 ${P2}$LI "$(jset "$LI_OK" profileScraperMode '"Short"')" "must send profileScraperMode = \"Full\"" "$W/scraping.md"
-check 2 "linkedin search email search mode" $AG2 ${P2}$LI "$(jset "$LI_OK" profileScraperMode '"Full + email search"')" "must send profileScraperMode = \"Full\"" "$W/scraping.md"
+check 2 "linkedin search Short mode"      $AG2 ${P2}$LI "$(jset "$LI_OK" profileScraperMode '"Short"')" "must send profileScraperMode = \"Full + email search\"" "$W/scraping.md"
+check 2 "linkedin search Full mode without email search" $AG2 ${P2}$LI "$(jset "$LI_OK" profileScraperMode '"Full"')" "must send profileScraperMode = \"Full + email search\"" "$W/scraping.md"
 check 2 "linkedin search strictSearch omitted" $AG2 ${P2}$LI "$(jdel "$LI_OK" strictSearch)" "names no strictSearch" "$W/scraping.md"
 check 2 "linkedin search strictSearch false"   $AG2 ${P2}$LI "$(jset "$LI_OK" strictSearch false)" "must send strictSearch = true (got false)" "$W/scraping.md"
 check 2 "linkedin search strictSearch as a string" $AG2 ${P2}$LI "$(jset "$LI_OK" strictSearch '"true"')" "must send strictSearch = true" "$W/scraping.md"
@@ -334,22 +359,25 @@ IG_OK='{"usernames":["example.handle"],"waitSecs":45}'
 check 0 "instagram read in limit"         $AG2 ${P2}$IG "$IG_OK" "" "$W/scraping.md"
 IG11=$(python3 -c 'import json;print(json.dumps(["example%d"%i for i in range(11)]))')
 lists   "instagram read" $IG "$IG_OK" "usernames:max_profile_reads:$IG11"
-check 2 "instagram read respelled key"    $AG2 ${P2}$IG "$(jset "$IG_OK" userNames '["example"]')" "may not use userNames" "$W/scraping.md"
-refused "instagram read" $IG "$IG_OK" includeAboutSection directUrls resultsLimit resultsType searchType cookies sessionCookie \
-  proxyConfiguration proxy headers customHttpHeaders
-check 2 "instagram read includeAboutSection true" $AG2 ${P2}$IG "$(jset "$IG_OK" includeAboutSection true)" "may not use includeAboutSection" "$W/scraping.md"
+check 0 "instagram read respelled key passes" $AG2 ${P2}$IG "$(jset "$IG_OK" userNames '["example"]')" "" "$W/scraping.md"
+harmless "instagram read" $IG "$IG_OK"
+refused "instagram read" $IG "$IG_OK" cookies sessionCookie proxyConfiguration proxy headers customHttpHeaders
+nulled "instagram read" $IG "$IG_OK" includeAboutSection directUrls resultsLimit resultsType searchType
+check 2 "instagram read includeAboutSection true" $AG2 ${P2}$IG "$(jset "$IG_OK" includeAboutSection true)" "must send includeAboutSection = null" "$W/scraping.md"
 check 2 "instagram read without bindings" $AG2 ${P2}$IG "$IG_OK" "no max_profile_reads line"
 
 TT_OK='{"profiles":["example.handle"],"resultsPerPage":1,"waitSecs":45}'
 check 0 "tiktok read in limit"            $AG2 ${P2}$TT "$TT_OK" "" "$W/scraping.md"
 TT11=$(python3 -c 'import json;print(json.dumps(["example%d"%i for i in range(11)]))')
 lists   "tiktok read" $TT "$TT_OK" "profiles:max_profile_reads:$TT11"
-check 2 "tiktok read respelled key"       $AG2 ${P2}$TT "$(jset "$TT_OK" Profiles '["example"]')" "may not use Profiles" "$W/scraping.md"
-refused "tiktok read" $TT "$TT_OK" commentsPerPost topLevelCommentsPerPost maxRepliesPerComment maxFollowersPerProfile \
+check 0 "tiktok read respelled key passes" $AG2 ${P2}$TT "$(jset "$TT_OK" Profiles '["example"]')" "" "$W/scraping.md"
+harmless "tiktok read" $TT "$TT_OK"
+refused "tiktok read" $TT "$TT_OK" cookies proxyConfiguration proxyCountryCode headers
+nulled "tiktok read" $TT "$TT_OK" commentsPerPost topLevelCommentsPerPost maxRepliesPerComment maxFollowersPerProfile \
   maxFollowingPerProfile shouldDownloadVideos shouldDownloadCovers shouldDownloadSlideshowImages shouldDownloadAvatars \
   downloadSubtitlesOptions oldestPostDateUnified newestPostDate leastDiggs mostDiggs profileSorting excludePinnedPosts \
-  profileScrapeSections videoKvStoreIdOrName cookies proxyConfiguration proxyCountryCode headers
-check 2 "tiktok read video download true" $AG2 ${P2}$TT "$(jset "$TT_OK" shouldDownloadVideos true)" "may not use shouldDownloadVideos" "$W/scraping.md"
+  profileScrapeSections videoKvStoreIdOrName
+check 2 "tiktok read video download true" $AG2 ${P2}$TT "$(jset "$TT_OK" shouldDownloadVideos true)" "must send shouldDownloadVideos = null" "$W/scraping.md"
 check 2 "tiktok read resultsPerPage omitted (default 100)" $AG2 ${P2}$TT "$(jdel "$TT_OK" resultsPerPage)" "names no resultsPerPage" "$W/scraping.md"
 check 2 "tiktok read resultsPerPage 100"  $AG2 ${P2}$TT "$(jset "$TT_OK" resultsPerPage 100)" "must send resultsPerPage = 1 (got 100)" "$W/scraping.md"
 check 2 "tiktok read resultsPerPage as a string" $AG2 ${P2}$TT "$(jset "$TT_OK" resultsPerPage '"1"')" "must send resultsPerPage = 1" "$W/scraping.md"

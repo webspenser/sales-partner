@@ -2432,6 +2432,32 @@ Preparer for W and read its contacts and point of contact.
 
 ---
 
+## Case 69: The Facebook backup runs when the primary fails
+
+**Given** — Lead X has its own Facebook page,
+`https://www.facebook.com/xfitnessstudio`. The primary Facebook call
+(`apify/facebook-ads-scraper`) returns a vendor validation error. The
+backup returns 3 ads for that page, 2 of them active.
+
+**Expect** — The Preparer runs the backup once with `pageUrls`
+`["https://www.facebook.com/xfitnessstudio"]` and `maxResults` =
+`max_ads`. Research records a `web_presence` finding: X runs Facebook
+ads (2 active), with the page URL. The run report has the primary's
+vendor-error line; `apify_ads` is not among X's sources not run.
+
+**Never** — The backup sent with `searchTerms`; the backup run when the
+primary succeeded; the backup's 3 ads presented as X's total ad count.
+
+**Why it matters** — A backup that hides the primary's failure would
+mask drift; one that runs a keyword search would credit another
+advertiser's ads to the lead.
+
+**How to run** — Stub the primary Facebook call with a vendor error and
+the backup with those items; run the Preparer for X with `apify_ads`
+picked.
+
+---
+
 ## Degradation check
 
 This is the only test in the repo of the portability claim the whole

@@ -97,6 +97,20 @@ names are spelled as the connector shows them, case included.
       ads is unverified;
     - `resultsLimit` = `max_ads`;
     - `activeStatus`, `onlyAdsNewerThan`, `waitSecs` (pass 45).
+  - Facebook backup: `apify:scrapesage--facebook-ad-library-scraper`,
+    only after the primary Facebook call returns a vendor error or a guard block for the lead, never instead of
+    it. Send these arguments, and no others:
+    - `pageUrls` — exactly one, the same normalized page URL the primary
+      call sent (a URL, never a page name or id);
+    - `maxResults` = `max_ads` (never 0: the actor reads 0 as "no
+      limit");
+    - `country`, `adActiveStatus`, `dateFrom`, `waitSecs` (pass 45).
+
+    Never pass `searchTerms` (the probe's keyword search returned an
+    unrelated advertiser), `startUrls`, `urlsFromFile`, monitoring
+    arguments or `proxyConfiguration`. Its finding is presence only:
+    the number of ads returned and how many are active, not the
+    primary's total.
 - `find_jobs` — `apify:valig--indeed-jobs-scraper`. Send these arguments, and
   no others:
   - `title` — the company's name;
@@ -306,7 +320,8 @@ breaks its URL rule (Website and Facebook URLs). On the web search and
 fetch tools it refuses any `method` but `GET`, any `path` but `/`, a
 `body`, `query.headers`, a `maxResults` above `max_web_results`, a BBB call
 without `includeDetails: true` or above `max_bbb_results`, a YellowPages
-call with `maxPages` other than `1`, a LinkedIn company search not in `Short` mode, over
+call with `maxPages` other than `1`, a Facebook backup call with `searchTerms`, over
+`max_ads` or with a page that is not a facebook.com URL, a LinkedIn company search not in `Short` mode, over
 `max_profile_results`, on more than one page or with a MongoDB
 argument, a LinkedIn profile read in any mode but the email-search one
 or of a URL that is not a `linkedin.com/in` path, a LinkedIn jobs call without
@@ -444,6 +459,7 @@ never read items without a projection):
 | `find_reviews` | `content,reviewed_at_date,rating,owner_response,owner_response_at_date,place_id,review_url,reviewer_name` | text (`content`; null for a star-only review), date (`reviewed_at_date`), stars (`rating`), owner response and date, place id, the review's URL (`review_url`), the reviewer's first name (from `reviewer_name`) |
 | `find_ads` (Google) | `name,legalName,advertiserId,advertiserUrl,approxAdCountLow,approxAdCountHigh,verified` | one advertiser per item; zero items means no Google ads for that query in the region |
 | `find_ads` (Facebook) | `inputUrl,totalCount,isResultComplete` | the page (`inputUrl`), its ad count (`totalCount`), whether the count is complete |
+| `find_ads` (Facebook backup) | `pageName,pageId,isActive,status,startDate,endDate,publisherPlatforms,adLibraryUrl` | per ad: the page, active or not, run dates, platforms, the Ad Library URL |
 | `find_jobs` | `title,datePublished,employer.name,location.city,jobUrl` | title, date posted, employer, city, URL |
 | `find_jobs` (LinkedIn) | `title,companyName,location,postedDate,applicationsCount,url` | title, employer, city, date posted, applicant count, URL |
 | `read_site` | `url,markdown,metadata.title` | URL, title, the page as markdown |
@@ -524,6 +540,7 @@ actors are a flat worst case per call at the pinned sizes:
 | `find_reviews` | $0.02 |
 | `find_ads`, Google | $0.01 |
 | `find_ads`, Facebook | $0.03 |
+| `find_ads`, Facebook backup | $0.01 |
 | `find_jobs` | $0.005 |
 | `find_jobs`, LinkedIn | $0.005 |
 | `read_site` | $0.03 |
@@ -609,8 +626,9 @@ exposed tools are `compass--crawler-google-places`,
 `apify--web-fetch`, `scrapesage--bbb-scraper`,
 `delicious_zebu--yellowpages-usa-business-lead-scraper`,
 `web_wanderer--yelp-reviews-scraper`, `valig--linkedin-jobs-scraper`,
-`harvestapi--linkedin-profile-search` and
-`harvestapi--linkedin-profile-scraper`, plus the two reads the agent uses,
+`harvestapi--linkedin-profile-search`,
+`harvestapi--linkedin-profile-scraper` and
+`scrapesage--facebook-ad-library-scraper`, plus the two reads the agent uses,
 `get-actor-run` and `get-dataset-items`. If the connector exposes
 `call-actor` (the `actors` or `api` tool groups), or lacks one of the
 ten actors, tell the operator to re-add it with the URL in Setup step 2.

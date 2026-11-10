@@ -1786,4 +1786,10 @@ flat_has "$SP/evals/cases.md" '## Case 68: A company search finds the owner and 
 
 flat_has "$SP/subagents/preparer.md" 'and the LinkedIn company search through `find-decision-makers` when no source names an owner'
 
+echo "-- 8.7.0: Facebook backup"
+for t in '`apify:scrapesage--facebook-ad-library-scraper`' 'only after the primary Facebook call returns a vendor error or a guard block' \
+  'pageName,pageId,isActive,status,startDate,endDate,publisherPlatforms,adLibraryUrl' '| `find_ads`, Facebook backup | $0.01 |'; do flat_has "$SUD" "$t"; done
+flat_has "$SP/subagents/preparer.md" 'the Facebook backup runs with the same page URL'
+flat_has "$SP/evals/cases.md" '## Case 69: The Facebook backup runs when the primary fails'
+
 finish

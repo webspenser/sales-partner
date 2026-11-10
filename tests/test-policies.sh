@@ -498,6 +498,22 @@ lists "linkedin reader" $LIR "$LIR_OK" "urls:max_profile_reads:$LIR11"
 check 2 "linkedin reader with query"       $AG2 ${P2}$LIR "$(jset "$LIR_OK" urls '["https://www.linkedin.com/in/aaron-franklin?trk=x"]')" "" "$W/scraping.md"
 check 2 "linkedin reader company page"     $AG2 ${P2}$LIR "$(jset "$LIR_OK" urls '["https://www.linkedin.com/company/x"]')" "" "$W/scraping.md"
 check 2 "linkedin reader other host"       $AG2 ${P2}$LIR "$(jset "$LIR_OK" urls '["https://example.com/in/x"]')" "" "$W/scraping.md"
+
+FBB=scrapesage--facebook-ad-library-scraper
+FBB_OK='{"pageUrls":["https://www.facebook.com/franklinbbq"],"maxResults":5,"country":"US","adActiveStatus":"ALL","waitSecs":45}'
+check 0 "facebook backup in limit"         $AG2 ${P2}$FBB "$FBB_OK" "" "$W/scraping.md"
+harmless "facebook backup" $FBB "$FBB_OK"
+nulled "facebook backup" $FBB "$FBB_OK" searchTerms startUrls monitoringMode monitorId
+check 2 "facebook backup keyword search"   $AG2 ${P2}$FBB "$(jset "$FBB_OK" searchTerms '["Franklin Barbecue"]')" "must send searchTerms = null" "$W/scraping.md"
+check 2 "facebook backup urlsFromFile"     $AG2 ${P2}$FBB "$(jset "$FBB_OK" urlsFromFile '"https://x.com/l.txt"')" "may not use urlsFromFile" "$W/scraping.md"
+check 2 "facebook backup over"             $AG2 ${P2}$FBB "$(jset "$FBB_OK" maxResults 6)" "is not a pinned value (max_ads)" "$W/scraping.md"
+check 2 "facebook backup unlimited"        $AG2 ${P2}$FBB "$(jset "$FBB_OK" maxResults 0)" "is not a pinned value (max_ads)" "$W/scraping.md"
+check 2 "facebook backup limit omitted"    $AG2 ${P2}$FBB "$(jdel "$FBB_OK" maxResults)" "names no pinned value" "$W/scraping.md"
+lists "facebook backup" $FBB "$FBB_OK" 'pageUrls:max_ad_queries:["https://www.facebook.com/a","https://www.facebook.com/b"]'
+check 2 "facebook backup page name"        $AG2 ${P2}$FBB "$(jset "$FBB_OK" pageUrls '["franklinbbq"]')" "" "$W/scraping.md"
+check 2 "facebook backup page with query"  $AG2 ${P2}$FBB "$(jset "$FBB_OK" pageUrls '["https://www.facebook.com/franklinbbq?ref=x"]')" "" "$W/scraping.md"
+check 2 "facebook backup other host"       $AG2 ${P2}$FBB "$(jset "$FBB_OK" pageUrls '["https://fb.com/franklinbbq"]')" "" "$W/scraping.md"
+check 2 "facebook backup proxy"            $AG2 ${P2}$FBB "$(jset "$FBB_OK" proxyConfiguration '{"useApifyProxy":true}')" "may not use proxyConfiguration" "$W/scraping.md"
 SM=
 
 echo "-- Attio"

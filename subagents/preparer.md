@@ -344,7 +344,10 @@ usually come first. Each call counts against
   with the lead's own Facebook page URL (from the contact scraper's
   social links, `facebook_url` or a Facebook-page website), normalized
   first (Facebook page URLs, below); with none, only the Google call
-  runs, and there is no Facebook finding.
+  runs, and there is no Facebook finding. When the Facebook call
+  returns a vendor error or a guard block, the Facebook backup runs with the same page URL (`usage.md`); the drift
+  or block is still reported for the primary, and `apify_ads` is not
+  among the sources not run when the backup succeeded.
 - `find_jobs`: the company's name and the lead's city, state and
   country. Zero listings is a result: no open listings under that name.
   `find_jobs` runs Indeed, then LinkedIn (two calls, a ledger `step` each, like `find_ads`); a

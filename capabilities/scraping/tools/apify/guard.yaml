@@ -61,7 +61,7 @@ allow: [compass--crawler-google-places, vdrmota--contact-info-scraper, web_wande
   clockworks--tiktok-profile-scraper, apify--web-search, apify--web-fetch, scrapesage--bbb-scraper,
   delicious_zebu--yellowpages-usa-business-lead-scraper, web_wanderer--yelp-reviews-scraper,
   valig--linkedin-jobs-scraper, harvestapi--linkedin-profile-search, harvestapi--linkedin-profile-scraper,
-  get-actor-run, get-dataset-items]
+  scrapesage--facebook-ad-library-scraper, get-actor-run, get-dataset-items]
 deny: ["*call-actor*", "*call_actor*", "*search-actors*", "*add-actor*", "*fetch-actor*", "*webhook*", "*schedule*"]
 refuse_args: [pageFunction, preNavigationHooks, postNavigationHooks, customData, headers, customHttpHeaders,
   cookies, cookie, initialCookies, sessionCookies, sessionCookie, li_at, requestsFromUrl, "startUrls[].requestsFromUrl",
@@ -181,6 +181,11 @@ fixed:
   - tools: [harvestapi--linkedin-profile-scraper]
     at: [queries, publicIdentifiers, profileIds]
     value: null
+  # The Facebook Ad Library backup takes the lead's page URL only: its
+  # keyword search matches any advertiser's words.
+  - tools: [scrapesage--facebook-ad-library-scraper]
+    at: [searchTerms, startUrls, urlsFromFile, monitoringMode, monitorId]
+    value: null
   # Per-actor scope and cost keys, refused on that actor alone: null or
   # absent passes, any other value is blocked. Each list holds every paid
   # add-on and scope-widening input its probe note names (Maps and
@@ -246,6 +251,12 @@ urls:
     schemes: [https]
     hosts: [www.yelp.com]
     path: /biz
+    required: true
+  - tools: [scrapesage--facebook-ad-library-scraper]
+    at: ["pageUrls[]"]
+    schemes: [https]
+    hosts: [facebook.com, www.facebook.com]
+    path: any
     required: true
   - tools: [harvestapi--linkedin-profile-search]
     at: ["currentCompanies[]"]
@@ -328,6 +339,9 @@ recipients:
   - tools: [harvestapi--linkedin-profile-search]
     at: [maxItems]
     bound: max_profile_results
+  - tools: [scrapesage--facebook-ad-library-scraper]
+    at: [maxResults]
+    bound: max_ads
 # List lengths multiply the size pins: one search term per Maps call, at
 # most 10 sites per contact call, one place per reviews call, one query
 # per Google Ads call, one page URL per Facebook call, one start URL per
@@ -399,6 +413,11 @@ limits:
   - tools: [harvestapi--linkedin-profile-search]
     at: [currentCompanies]
     bound: max_search_terms
+    kind: count
+    required: true
+  - tools: [scrapesage--facebook-ad-library-scraper]
+    at: [pageUrls]
+    bound: max_ad_queries
     kind: count
     required: true
   - tools: [harvestapi--linkedin-profile-scraper]

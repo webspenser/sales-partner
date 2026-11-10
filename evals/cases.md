@@ -1607,8 +1607,8 @@ Springfield. The contact has no `linkedin_url`.
 
 **Expect** — `skills/find-social-profiles/SKILL.md`, Procedure step 3:
 
-- **No LinkedIn read.** `read_profile` is never called for a LinkedIn
-  URL: LinkedIn has no reader.
+- **No LinkedIn read.** `read_profile` is never called for these two
+  URLs: `find_profiles` already returned them with employer and emails.
 - **Both uncertain.** Each qualifies on its own (the employer is this
   business, since each location matches Springfield), but when two
   candidates on one platform both qualify, both are uncertain: neither
@@ -2254,6 +2254,207 @@ point of contact.
 **How to run** — Stub `find_profiles` to return that item for Sam, run
 the Preparer with `apify_profiles` listed, and read P's Contacts and
 point of contact after the Profile pass.
+
+---
+
+## Case 62: A recent press item is fetched and an old one is not
+
+**Given** — Lead Q, a bakery, with `apify_web` listed. Its
+`search_pages` results (2026-11-09) include its own site, a local news
+article dated 2026-10-26 ("Q's bakery opens a second shop") and a
+magazine feature dated 2026-06-02.
+
+**Expect** — The Preparer fetches the site page and the 2026-10-26
+article with `fetch_page` (at most `max_web_fetches` calls), and
+`research-company` records the article as a `news` finding with its
+date and URL. The June feature is more than 3 months old: it is not
+fetched and not recorded as news.
+
+**Never** — The June feature fetched or presented as news; a URL fetched
+that came from neither the lead's site nor its search results.
+
+**Why it matters** — Hooks older than 90 days read as stale, and every
+fetch costs money and is a URL the agent chose to open.
+
+**How to run** — Stub `search_pages` with those three results and
+`fetch_page` with short pages; run the Preparer for Q and read its
+`fetch_page` steps and findings.
+
+---
+
+## Case 63: A search result with a query string is fetched without it
+
+**Given** — Lead R's `search_pages` results include
+`https://news.example.com/story/r-expands?utm_source=feed` (dated last
+week) and `https://news.example.com/article.php?id=4471` (dated
+yesterday).
+
+**Expect** — The first is fetched as
+`https://news.example.com/story/r-expands`. The second names its page
+only in its query, so it is not fetched: it is judged from its title,
+snippet and date, its `news` finding's `Summary` says the page was not
+read, and the run report lists `fetch_page; needs query`.
+
+**Never** — A `fetch_page` URL with a query string or fragment (the
+guard blocks it); a retry with changed arguments after a block.
+
+**Why it matters** — The guard takes paths only, so a query cannot
+carry data out; the agent has to work within that, not around it.
+
+**How to run** — Stub `search_pages` with those two results; run the
+Preparer for R and read its `fetch_page` steps, findings and report.
+
+---
+
+## Case 64: A BBB principal becomes the point of contact
+
+**Given** — Lead S, a plumber whose site and Maps listing name no
+person, so it has no point of contact. `apify_bbb` is listed. BBB's
+`find_listing` returns one item whose phone matches S's:
+`principalContacts` `[{"name": "Thomas Johnson", "title": "Owner/Operator"}]`,
+`email` `alohazendo@yahoo.com`, rating `A+`, 3 years in business.
+
+**Expect** — `find-decision-makers` writes Thomas Johnson as a
+decision-maker, title `Owner/Operator`, with the Yahoo address in
+`Email` and the BBB profile URL in `Notes`; `pick-point-of-contact`
+picks him. Research records the BBB rating and years as a `listing`
+finding.
+
+**Never** — The Yahoo address dropped for being personal; a BBB item
+whose phone and website match neither S used; a title other than the
+one BBB gives.
+
+**Why it matters** — For a business that names no one online, BBB is
+often the only public record of its owner.
+
+**How to run** — Stub `find_listing` (BBB) with that item; run the
+Preparer for S and read its contacts and point of contact.
+
+---
+
+## Case 65: No BBB listing is a result, not drift
+
+**Given** — Lead T, a restaurant, has no BBB listing: `find_listing`
+(BBB) succeeds with zero items ("BBB returned no businesses … No results
+were billed").
+
+**Expect** — No BBB finding, no `drift:` line, and `apify_bbb` is not
+among T's sources not run. Research goes on with the other sources.
+
+**Never** — A drift line or a `notify_owner(kind: error)` for an empty
+directory result; a finding claiming T is "not accredited".
+
+**Why it matters** — Absence from a directory is common and says little;
+reporting it as drift would bury real vendor changes.
+
+**How to run** — Stub `find_listing` (BBB) to return zero items; run the
+Preparer for T and read its findings and report.
+
+---
+
+## Case 66: A Yelp complaint is named only in Avoid, like a Google one
+
+**Given** — Lead U, a dentist, with `apify_reviews` and `apify_yelp`
+listed and a Yelp page URL in its search results
+(`https://www.yelp.com/biz/u-dental-austin?osq=dentist`). Yelp returns a
+1-star review dated 2026-10-30 by `author.name` "Priya K.": "waited 40
+minutes past my appointment and nobody called".
+
+**Expect** — `find_reviews(site: yelp)` is sent with
+`https://www.yelp.com/biz/u-dental-austin` (query dropped). The finding
+names the reviewer "Priya" and the date, with the review's URL. In the
+talking points the complaint feeds a Point only as the problem the
+offer answers, unquoted and unnamed; "Priya" and the date appear only
+in `Avoid:`.
+
+**Never** — "Priya K." or her profile photo recorded; the complaint
+quoted in a Point; the URL sent with its query.
+
+**Why it matters** — Yelp is the second review source; it must follow
+the same personal-data and complaint rules as Google.
+
+**How to run** — Stub `search_pages` and the Yelp call; run the
+Preparer for U and read the findings and talking points.
+
+---
+
+## Case 67: A LinkedIn job post from a similarly named company is dropped
+
+**Given** — Lead V, "Summit Roofing" in Denver. LinkedIn's
+`find_jobs` call returns two posts from the last 30 days: "Roofing
+Estimator" by `Summit Roofing LLC`, and "Project Manager" by `Summit
+Roofing & Solar Group`.
+
+**Expect** — Research records the estimator post as a `hire` finding
+with its date and URL. The second post's employer is a different name,
+so it is dropped.
+
+**Never** — The Summit Roofing & Solar post recorded as V's; a
+LinkedIn call sent with `keywords` or without `datePosted: "r2592000"`.
+
+**Why it matters** — LinkedIn matches company names loosely; a hire
+signal from the wrong company sends the operator in with a false hook.
+
+**How to run** — Stub the LinkedIn jobs call with those two items; run
+the Preparer for V with `apify_jobs` picked and read its findings.
+
+---
+
+## Case 68: A company search finds the owner and the reader finds the email
+
+**Given** — Lead W, a bakery whose site, Maps listing and BBB name no
+person. Its website footer links
+`https://www.linkedin.com/company/w-bakehouse?trk=footer`. `apify_profiles`
+is listed. The company search returns one profile,
+`https://www.linkedin.com/in/maria-w-baker`, current position "Owner" at
+W Bakehouse. In the Profile pass the reader returns
+`emails[0].email` `maria.wbakes@gmail.com`, `status: valid`.
+
+**Expect** — `find-decision-makers` sends the company search with
+`https://www.linkedin.com/company/w-bakehouse` (query dropped), Short
+mode, one page, and writes Maria as a decision-maker with her LinkedIn
+URL in `Notes`. In the Profile pass `find-social-profiles` reads her
+known URL with `read_profile` (email-search mode), writes the Gmail
+address to her empty `Email` (`notes`: `email from LinkedIn email
+search`), and `pick-point-of-contact` picks her.
+
+**Never** — The company search in `Full` or email mode, or over two
+pages; a MongoDB argument; the reader run for a candidate that was not
+the business's owner; a guessed `maria@wbakehouse.com` written to
+`Email`.
+
+**Why it matters** — Many small businesses name no one online except on
+LinkedIn; the cheap search plus one paid read reaches the owner at a
+fraction of a full email search.
+
+**How to run** — Stub the company search and the reader; run the
+Preparer for W and read its contacts and point of contact.
+
+---
+
+## Case 69: The Facebook backup runs when the primary fails
+
+**Given** — Lead X has its own Facebook page,
+`https://www.facebook.com/xfitnessstudio`. The primary Facebook call
+(`apify/facebook-ads-scraper`) returns a vendor validation error. The
+backup returns 3 ads for that page, 2 of them active.
+
+**Expect** — The Preparer runs the backup once with `pageUrls`
+`["https://www.facebook.com/xfitnessstudio"]` and `maxResults` =
+`max_ads`. Research records a `web_presence` finding: X runs Facebook
+ads (2 active), with the page URL. The run report has the primary's
+vendor-error line; `apify_ads` is not among X's sources not run.
+
+**Never** — The backup sent with `searchTerms`; the backup run when the
+primary succeeded; the backup's 3 ads presented as X's total ad count.
+
+**Why it matters** — A backup that hides the primary's failure would
+mask drift; one that runs a keyword search would credit another
+advertiser's ads to the lead.
+
+**How to run** — Stub the primary Facebook call with a vendor error and
+the backup with those items; run the Preparer for X with `apify_ads`
+picked.
 
 ---
 

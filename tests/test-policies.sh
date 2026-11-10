@@ -116,7 +116,7 @@ printf '%s\n' 'max_places_per_search: 60' 'max_pages_per_site: 3' 'max_crawl_dep
   'max_reviews: 50' 'max_ads: 5' 'max_jobs: 20' 'max_site_pages: 5' 'max_site_depth: 1' 'max_review_places: 1' \
   'max_ad_queries: 1' 'max_ad_advertisers: 1' 'ads_result_type: advertisers' 'site_crawler_type: cheerio' \
   'site_html_transformer: none' 'max_site_urls: 1' 'max_profile_results: 5' 'max_profile_reads: 10' \
-  'max_profile_locations: 1' > "$W/scraping.md"
+  'max_profile_locations: 1' 'max_web_results: 10' 'max_bbb_results: 5' > "$W/scraping.md"
 MAPS_OK='{"maxCrawledPlacesPerSearch":60,"searchStringsArray":["HVAC contractor"],"city":"Alameda","state":"CA","countryCode":"us","language":"en","waitSecs":45}'
 CT='"maxRequestsPerStartUrl":3,"maxDepth":1,"maxRequests":30'
 U1='{"url":"https://example.com"}'
@@ -382,6 +382,138 @@ check 2 "tiktok read resultsPerPage omitted (default 100)" $AG2 ${P2}$TT "$(jdel
 check 2 "tiktok read resultsPerPage 100"  $AG2 ${P2}$TT "$(jset "$TT_OK" resultsPerPage 100)" "must send resultsPerPage = 1 (got 100)" "$W/scraping.md"
 check 2 "tiktok read resultsPerPage as a string" $AG2 ${P2}$TT "$(jset "$TT_OK" resultsPerPage '"1"')" "must send resultsPerPage = 1" "$W/scraping.md"
 check 2 "tiktok read without bindings"    $AG2 ${P2}$TT "$TT_OK" "no max_profile_reads line"
+
+# Phase B. Nested set and delete for the HTTP-shaped web tools (query.url, query.maxResults).
+jpset() { python3 -c 'import json,sys;d=json.loads(sys.argv[1]);*h,t=sys.argv[2].split(".");n=d
+for k in h: n=n.setdefault(k,{})
+n[t]=json.loads(sys.argv[3]);print(json.dumps(d))' "$@"; }
+jpdel() { python3 -c 'import json,sys;d=json.loads(sys.argv[1]);*h,t=sys.argv[2].split(".");n=d
+for k in h: n=n[k]
+del n[t];print(json.dumps(d))' "$@"; }
+WS=apify--web-search; WF=apify--web-fetch
+WS_OK='{"method":"GET","path":"/","query":{"query":"Franklin Barbecue Austin TX","maxResults":10,"countryCode":"US"}}'
+WF_OK='{"method":"GET","path":"/","query":{"url":"https://franklinbbq.com/about","formats":["markdown"]}}'
+check 0 "web search in limit"              $AG2 ${P2}$WS "$WS_OK" "" "$W/scraping.md"
+check 0 "web fetch a site page"            $AG2 ${P2}$WF "$WF_OK" "" "$W/scraping.md"
+harmless "web search" $WS "$WS_OK"
+harmless "web fetch" $WF "$WF_OK"
+check 0 "web search duckduckgo backup"     $AG2 ${P2}$WS "$(jpset "$WS_OK" query.provider '"duckduckgo"')" "" "$W/scraping.md"
+check 0 "web search maxResults as a string" $AG2 ${P2}$WS "$(jpset "$WS_OK" query.maxResults '"5"')" "" "$W/scraping.md"
+check 2 "web search maxResults over"       $AG2 ${P2}$WS "$(jpset "$WS_OK" query.maxResults 11)" "max_web_results" "$W/scraping.md"
+check 2 "web search maxResults omitted"    $AG2 ${P2}$WS "$(jpdel "$WS_OK" query.maxResults)" "names no query.maxResults" "$W/scraping.md"
+check 2 "web search without bindings"      $AG2 ${P2}$WS "$WS_OK" "no max_web_results line"
+for T in WS WF; do
+  eval "tool=\$$T; ok=\$${T}_OK"
+  check 2 "$T as POST"            $AG2 ${P2}$tool "$(jset "$ok" method '"POST"')" 'must send method = "GET"' "$W/scraping.md"
+  check 2 "$T method omitted"     $AG2 ${P2}$tool "$(jdel "$ok" method)" "names no method" "$W/scraping.md"
+  check 2 "$T other path"         $AG2 ${P2}$tool "$(jset "$ok" path '"/x"')" 'must send path = "/"' "$W/scraping.md"
+  check 2 "$T path omitted"       $AG2 ${P2}$tool "$(jdel "$ok" path)" "names no path" "$W/scraping.md"
+  check 2 "$T body object"        $AG2 ${P2}$tool "$(jset "$ok" body '{"url":"https://x.com/"}')" "must send body = null" "$W/scraping.md"
+  check 2 "$T query headers"      $AG2 ${P2}$tool "$(jpset "$ok" query.headers '"{\"X\":\"1\"}"')" "may not use query.headers" "$W/scraping.md"
+done
+check 2 "web fetch with a query"           $AG2 ${P2}$WF "$(jpset "$WF_OK" query.url '"https://franklinbbq.com/about?a=1"')" "" "$W/scraping.md"
+check 2 "web fetch with a fragment"        $AG2 ${P2}$WF "$(jpset "$WF_OK" query.url '"https://franklinbbq.com/about#x"')" "" "$W/scraping.md"
+check 2 "web fetch over http"              $AG2 ${P2}$WF "$(jpset "$WF_OK" query.url '"http://franklinbbq.com/about"')" "" "$W/scraping.md"
+check 2 "web fetch an IP address"          $AG2 ${P2}$WF "$(jpset "$WF_OK" query.url '"https://127.0.0.1/"')" "" "$W/scraping.md"
+check 2 "web fetch with user info"         $AG2 ${P2}$WF "$(jpset "$WF_OK" query.url '"https://user@franklinbbq.com/"')" "" "$W/scraping.md"
+check 2 "web fetch url omitted"            $AG2 ${P2}$WF "$(jpdel "$WF_OK" query.url)" "names no query.url" "$W/scraping.md"
+check 2 "web fetch respelled url alone"    $AG2 ${P2}$WF '{"method":"GET","path":"/","query":{"URL":"https://x.com/?a=1"}}' "" "$W/scraping.md"
+check 0 "web fetch a search-result page"   $AG2 ${P2}$WF "$(jpset "$WF_OK" query.url '"https://www.femalefoodie.com/restaurant-reviews/franklin-bbq/"')" "" "$W/scraping.md"
+
+BBB=scrapesage--bbb-scraper; YP=delicious_zebu--yellowpages-usa-business-lead-scraper
+BBB_OK='{"searchTerms":["Franklin Barbecue"],"locations":["Austin, TX"],"maxResults":5,"includeDetails":true,"waitSecs":45}'
+YP_OK='{"searchKeyword":["Franklin Barbecue"],"location":"Austin, TX","maxPages":1,"waitSecs":45}'
+check 0 "bbb in limit"                     $AG2 ${P2}$BBB "$BBB_OK" "" "$W/scraping.md"
+harmless bbb $BBB "$BBB_OK"
+nulled bbb $BBB "$BBB_OK" includeReviews maxReviewsPerBusiness enrichContacts monitorMode monitorKey maxResultsPerSearch \
+  maxConcurrency startUrls
+check 2 "bbb urlsFromFile"                 $AG2 ${P2}$BBB "$(jset "$BBB_OK" urlsFromFile '"https://x.com/list.txt"')" "may not use urlsFromFile" "$W/scraping.md"
+check 2 "bbb maxResults over"              $AG2 ${P2}$BBB "$(jset "$BBB_OK" maxResults 6)" "is not a pinned value (max_bbb_results)" "$W/scraping.md"
+check 2 "bbb maxResults 0 (no limit)"      $AG2 ${P2}$BBB "$(jset "$BBB_OK" maxResults 0)" "is not a pinned value (max_bbb_results)" "$W/scraping.md"
+check 2 "bbb maxResults omitted"           $AG2 ${P2}$BBB "$(jdel "$BBB_OK" maxResults)" "names no pinned value" "$W/scraping.md"
+check 2 "bbb details off"                  $AG2 ${P2}$BBB "$(jset "$BBB_OK" includeDetails false)" "must send includeDetails = true" "$W/scraping.md"
+check 2 "bbb details omitted"              $AG2 ${P2}$BBB "$(jdel "$BBB_OK" includeDetails)" "names no includeDetails" "$W/scraping.md"
+lists bbb $BBB "$BBB_OK" 'searchTerms:max_search_terms:["a","b"]' 'locations:max_search_terms:["Austin, TX","Dallas, TX"]'
+check 2 "bbb proxy"                        $AG2 ${P2}$BBB "$(jset "$BBB_OK" proxyConfiguration '{"useApifyProxy":true}')" "may not use proxyConfiguration" "$W/scraping.md"
+check 2 "bbb without bindings"             $AG2 ${P2}$BBB "$BBB_OK" "no max_bbb_results line"
+check 0 "yellowpages in limit"             $AG2 ${P2}$YP "$YP_OK" "" "$W/scraping.md"
+harmless yellowpages $YP "$YP_OK"
+nulled yellowpages $YP "$YP_OK" urls
+check 2 "yellowpages two pages"            $AG2 ${P2}$YP "$(jset "$YP_OK" maxPages 2)" "must send maxPages = 1" "$W/scraping.md"
+check 2 "yellowpages pages omitted"        $AG2 ${P2}$YP "$(jdel "$YP_OK" maxPages)" "names no maxPages" "$W/scraping.md"
+lists yellowpages $YP "$YP_OK" 'searchKeyword:max_search_terms:["a","b"]'
+YELP=web_wanderer--yelp-reviews-scraper
+YELP_OK='{"biz_urls":["https://www.yelp.com/biz/franklin-barbecue-austin"],"reviews_limit":50,"reviews_sort":"newest","include_personal_data":true,"waitSecs":45}'
+check 0 "yelp in limit"                    $AG2 ${P2}$YELP "$YELP_OK" "" "$W/scraping.md"
+harmless yelp $YELP "$YELP_OK"
+nulled yelp $YELP "$YELP_OK" biz_ids search_urls search_location search_limit search_sort search_features search_price domain \
+  reviews_language reviews_translate
+lists yelp $YELP "$YELP_OK" 'biz_urls:max_review_places:["https://www.yelp.com/biz/a","https://www.yelp.com/biz/b"]'
+check 2 "yelp page with a query"           $AG2 ${P2}$YELP "$(jset "$YELP_OK" biz_urls '["https://www.yelp.com/biz/franklin-barbecue-austin?start=40"]')" "" "$W/scraping.md"
+check 2 "yelp regional host"               $AG2 ${P2}$YELP "$(jset "$YELP_OK" biz_urls '["https://www.yelp.ca/biz/x"]')" "" "$W/scraping.md"
+check 2 "yelp search page"                 $AG2 ${P2}$YELP "$(jset "$YELP_OK" biz_urls '["https://www.yelp.com/search"]')" "" "$W/scraping.md"
+check 2 "yelp other site"                  $AG2 ${P2}$YELP "$(jset "$YELP_OK" biz_urls '["https://example.com/biz/x"]')" "" "$W/scraping.md"
+check 2 "yelp reviews over"                $AG2 ${P2}$YELP "$(jset "$YELP_OK" reviews_limit 51)" "is not a pinned value (max_reviews)" "$W/scraping.md"
+check 2 "yelp reviews 0 (all)"             $AG2 ${P2}$YELP "$(jset "$YELP_OK" reviews_limit 0)" "is not a pinned value (max_reviews)" "$W/scraping.md"
+check 2 "yelp reviews omitted"             $AG2 ${P2}$YELP "$(jdel "$YELP_OK" reviews_limit)" "names no pinned value" "$W/scraping.md"
+check 2 "yelp personal data off"           $AG2 ${P2}$YELP "$(jset "$YELP_OK" include_personal_data false)" "must send include_personal_data = true" "$W/scraping.md"
+check 2 "yelp personal data omitted"       $AG2 ${P2}$YELP "$(jdel "$YELP_OK" include_personal_data)" "names no include_personal_data" "$W/scraping.md"
+
+LIJ=valig--linkedin-jobs-scraper
+LIJ_OK='{"companyName":["Franklin Barbecue"],"location":"Austin, TX","datePosted":"r2592000","limit":20,"waitSecs":45}'
+check 0 "linkedin jobs in limit"           $AG2 ${P2}$LIJ "$LIJ_OK" "" "$W/scraping.md"
+harmless "linkedin jobs" $LIJ "$LIJ_OK"
+nulled "linkedin jobs" $LIJ "$LIJ_OK" urlParam urlPath keywords companyId
+check 2 "linkedin jobs keyword search"     $AG2 ${P2}$LIJ "$(jset "$LIJ_OK" keywords '"barbecue"')" "must send keywords = null" "$W/scraping.md"
+lists "linkedin jobs" $LIJ "$LIJ_OK" 'companyName:max_search_terms:["a","b"]'
+check 2 "linkedin jobs over"               $AG2 ${P2}$LIJ "$(jset "$LIJ_OK" limit 21)" "is not a pinned value (max_jobs)" "$W/scraping.md"
+check 2 "linkedin jobs limit omitted"      $AG2 ${P2}$LIJ "$(jdel "$LIJ_OK" limit)" "names no pinned value" "$W/scraping.md"
+check 2 "linkedin jobs last week only"     $AG2 ${P2}$LIJ "$(jset "$LIJ_OK" datePosted '"r604800"')" 'must send datePosted = "r2592000"' "$W/scraping.md"
+check 2 "linkedin jobs any date"           $AG2 ${P2}$LIJ "$(jdel "$LIJ_OK" datePosted)" "names no datePosted" "$W/scraping.md"
+
+LIS=harvestapi--linkedin-profile-search; LIR=harvestapi--linkedin-profile-scraper
+LIS_OK='{"currentCompanies":["https://www.linkedin.com/company/franklin-barbecue"],"seniorityLevelIds":["310","320"],"maxItems":5,"takePages":1,"profileScraperMode":"Short","waitSecs":45}'
+LIR_OK='{"urls":["https://www.linkedin.com/in/aaron-franklin"],"profileScraperMode":"Profile details + email search ($10 per 1k)","waitSecs":45}'
+check 0 "linkedin company search in limit" $AG2 ${P2}$LIS "$LIS_OK" "" "$W/scraping.md"
+harmless "linkedin company search" $LIS "$LIS_OK"
+nulled "linkedin company search" $LIS "$LIS_OK" mongoDbConnectionString mongoDbDatabaseName profileDeduplicationMode \
+  postFilteringMongoDbQuery postFilteringMongoDbAggregation autoQuerySegmentation autoQuerySegmentationLevels \
+  autoQuerySegmentationTargetCountries searchCoverage startPage pastCompanies excludePastCompanies schools firstNames lastNames
+check 2 "linkedin company search mongo string" $AG2 ${P2}$LIS "$(jset "$LIS_OK" mongoDbConnectionString '"mongodb+srv://u:p@x.example.net"')" "may not use mongoDbConnectionString" "$W/scraping.md"
+check 2 "linkedin company search mongo empty"  $AG2 ${P2}$LIS "$(jset "$LIS_OK" mongoDbConnectionString '""')" "must send mongoDbConnectionString = null" "$W/scraping.md"
+check 2 "linkedin company search Full mode"    $AG2 ${P2}$LIS "$(jset "$LIS_OK" profileScraperMode '"Full"')" 'must send profileScraperMode = "Short"' "$W/scraping.md"
+check 2 "linkedin company search mode omitted" $AG2 ${P2}$LIS "$(jdel "$LIS_OK" profileScraperMode)" "names no profileScraperMode" "$W/scraping.md"
+check 2 "linkedin company search two pages"    $AG2 ${P2}$LIS "$(jset "$LIS_OK" takePages 2)" "must send takePages = 1" "$W/scraping.md"
+check 2 "linkedin company search over"         $AG2 ${P2}$LIS "$(jset "$LIS_OK" maxItems 6)" "is not a pinned value (max_profile_results)" "$W/scraping.md"
+lists "linkedin company search" $LIS "$LIS_OK" 'currentCompanies:max_search_terms:["https://www.linkedin.com/company/a","https://www.linkedin.com/company/b"]'
+check 2 "linkedin company search profile url"  $AG2 ${P2}$LIS "$(jset "$LIS_OK" currentCompanies '["https://www.linkedin.com/in/x"]')" "" "$W/scraping.md"
+check 2 "linkedin company search with query"   $AG2 ${P2}$LIS "$(jset "$LIS_OK" currentCompanies '["https://www.linkedin.com/company/x?trk=1"]')" "" "$W/scraping.md"
+check 0 "linkedin reader in limit"         $AG2 ${P2}$LIR "$LIR_OK" "" "$W/scraping.md"
+harmless "linkedin reader" $LIR "$LIR_OK"
+nulled "linkedin reader" $LIR "$LIR_OK" queries publicIdentifiers profileIds
+check 2 "linkedin reader no-email mode"    $AG2 ${P2}$LIR "$(jset "$LIR_OK" profileScraperMode '"Profile details no email ($4 per 1k)"')" "must send profileScraperMode" "$W/scraping.md"
+check 2 "linkedin reader mode omitted"     $AG2 ${P2}$LIR "$(jdel "$LIR_OK" profileScraperMode)" "names no profileScraperMode" "$W/scraping.md"
+LIR11=$(python3 -c 'import json;print(json.dumps(["https://www.linkedin.com/in/p%d"%i for i in range(11)]))')
+lists "linkedin reader" $LIR "$LIR_OK" "urls:max_profile_reads:$LIR11"
+check 2 "linkedin reader with query"       $AG2 ${P2}$LIR "$(jset "$LIR_OK" urls '["https://www.linkedin.com/in/aaron-franklin?trk=x"]')" "" "$W/scraping.md"
+check 2 "linkedin reader company page"     $AG2 ${P2}$LIR "$(jset "$LIR_OK" urls '["https://www.linkedin.com/company/x"]')" "" "$W/scraping.md"
+check 2 "linkedin reader other host"       $AG2 ${P2}$LIR "$(jset "$LIR_OK" urls '["https://example.com/in/x"]')" "" "$W/scraping.md"
+
+FBB=scrapesage--facebook-ad-library-scraper
+FBB_OK='{"pageUrls":["https://www.facebook.com/franklinbbq"],"maxResults":5,"country":"US","adActiveStatus":"ALL","waitSecs":45}'
+check 0 "facebook backup in limit"         $AG2 ${P2}$FBB "$FBB_OK" "" "$W/scraping.md"
+harmless "facebook backup" $FBB "$FBB_OK"
+nulled "facebook backup" $FBB "$FBB_OK" searchTerms startUrls monitoringMode monitorId
+check 2 "facebook backup keyword search"   $AG2 ${P2}$FBB "$(jset "$FBB_OK" searchTerms '["Franklin Barbecue"]')" "must send searchTerms = null" "$W/scraping.md"
+check 2 "facebook backup urlsFromFile"     $AG2 ${P2}$FBB "$(jset "$FBB_OK" urlsFromFile '"https://x.com/l.txt"')" "may not use urlsFromFile" "$W/scraping.md"
+check 2 "facebook backup over"             $AG2 ${P2}$FBB "$(jset "$FBB_OK" maxResults 6)" "is not a pinned value (max_ads)" "$W/scraping.md"
+check 2 "facebook backup unlimited"        $AG2 ${P2}$FBB "$(jset "$FBB_OK" maxResults 0)" "is not a pinned value (max_ads)" "$W/scraping.md"
+check 2 "facebook backup limit omitted"    $AG2 ${P2}$FBB "$(jdel "$FBB_OK" maxResults)" "names no pinned value" "$W/scraping.md"
+lists "facebook backup" $FBB "$FBB_OK" 'pageUrls:max_ad_queries:["https://www.facebook.com/a","https://www.facebook.com/b"]'
+check 2 "facebook backup page name"        $AG2 ${P2}$FBB "$(jset "$FBB_OK" pageUrls '["franklinbbq"]')" "" "$W/scraping.md"
+check 2 "facebook backup page with query"  $AG2 ${P2}$FBB "$(jset "$FBB_OK" pageUrls '["https://www.facebook.com/franklinbbq?ref=x"]')" "" "$W/scraping.md"
+check 2 "facebook backup other host"       $AG2 ${P2}$FBB "$(jset "$FBB_OK" pageUrls '["https://fb.com/franklinbbq"]')" "" "$W/scraping.md"
+check 2 "facebook backup proxy"            $AG2 ${P2}$FBB "$(jset "$FBB_OK" proxyConfiguration '{"useApifyProxy":true}')" "may not use proxyConfiguration" "$W/scraping.md"
 SM=
 
 echo "-- Attio"

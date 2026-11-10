@@ -32,6 +32,16 @@ public search is a legitimate source.
    For a local business, also read its map or directory listing
    (owner replies to reviews, "owned by" details) and any of the
    public business registries, which name owners and officers.
+   A BBB principal contact with an owner title is a decision-maker candidate (from the Preparer's `find_listing` BBB result:
+   `principalContacts[]`, such as "Thomas Johnson, Owner/Operator"),
+   with the BBB profile URL in `Notes`.
+   When no source names an owner and the lead has a LinkedIn company URL, run `find_profiles` as a LinkedIn company search
+   (`company_url`, roles owner and executive; only when
+   `apify_profiles` is listed). A result whose current position is at
+   this business, with an owner, founder, president or partner title, is
+   a decision-maker (Strong: a LinkedIn profile whose current role is at
+   this business); `Notes` keep its LinkedIn URL. Its email comes later,
+   in the Profile pass.
    Whatever the source, an owner is written with `role: decision-maker`
    and the title the source gives, e.g. "Owner" — never inferred.
    Grade every person by the page that names them (Source strength,

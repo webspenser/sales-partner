@@ -49,17 +49,25 @@
 # monthly usage limit is the backstop. The Instagram and TikTok readers
 # take handles, not URLs: the guard counts them but cannot check what
 # they say, so data could ride out in a handle, the same class of limit
-# as data riding in a hostname.
+# as data riding in a hostname. The web search and fetch tools
+# (method GET, path /, options under query) carry the same class of
+# residual: a search query or a fetch path can carry data out. Fetch
+# URLs are https, public and paths only (no query or fragment), and the
+# instructions refuse an email, phone number or CRM id in a path.
 covers: [no_external_send, allowlisted_actors, pinned_inputs]
 allow: [compass--crawler-google-places, vdrmota--contact-info-scraper, web_wanderer--google-reviews-scraper,
   scrapesage--google-ads-transparency-scraper, apify--facebook-ads-scraper, valig--indeed-jobs-scraper,
   apify--website-content-crawler, harvestapi--linkedin-profile-search-by-name, apify--instagram-profile-scraper,
-  clockworks--tiktok-profile-scraper, get-actor-run, get-dataset-items]
+  clockworks--tiktok-profile-scraper, apify--web-search, apify--web-fetch, scrapesage--bbb-scraper,
+  delicious_zebu--yellowpages-usa-business-lead-scraper, web_wanderer--yelp-reviews-scraper,
+  valig--linkedin-jobs-scraper, harvestapi--linkedin-profile-search, harvestapi--linkedin-profile-scraper,
+  scrapesage--facebook-ad-library-scraper, get-actor-run, get-dataset-items]
 deny: ["*call-actor*", "*call_actor*", "*search-actors*", "*add-actor*", "*fetch-actor*", "*webhook*", "*schedule*"]
 refuse_args: [pageFunction, preNavigationHooks, postNavigationHooks, customData, headers, customHttpHeaders,
   cookies, cookie, initialCookies, sessionCookies, sessionCookie, li_at, requestsFromUrl, "startUrls[].requestsFromUrl",
   "startUrls[].headers", "startUrls[].payload", "startUrls[].method", "startUrls[].userData", webhooks,
-  proxyConfiguration, proxyConfig, proxy, proxyCountryCode]
+  proxyConfiguration, proxyConfig, proxy, proxyCountryCode, "query.headers", urlsFromFile,
+  mongoDbConnectionString]
 # Apify's own run and dataset reads keep a key allowlist: their shapes are
 # stable, and a dataset read must not take another export format.
 only_keys:
@@ -104,6 +112,80 @@ fixed:
     at: [resultsPerPage]
     value: 1
     required: true
+  # The web search and fetch tools take an HTTP-shaped call; pinning GET
+  # and / and refusing body keeps every checked value under query.
+  - tools: [apify--web-search, apify--web-fetch]
+    at: [method]
+    value: 'GET'
+    required: true
+  - tools: [apify--web-search, apify--web-fetch]
+    at: [path]
+    value: '/'
+    required: true
+  - tools: [apify--web-search, apify--web-fetch]
+    at: [body]
+    value: null
+  - tools: [scrapesage--bbb-scraper]
+    at: [includeDetails]
+    value: true
+    required: true
+  - tools: [delicious_zebu--yellowpages-usa-business-lead-scraper]
+    at: [maxPages]
+    value: 1
+    required: true
+  - tools: [scrapesage--bbb-scraper]
+    at: [includeReviews, maxReviewsPerBusiness, enrichContacts, monitorMode, monitorKey, maxResultsPerSearch,
+      maxConcurrency, startUrls, urlsFromFile]
+    value: null
+  - tools: [delicious_zebu--yellowpages-usa-business-lead-scraper]
+    at: [urls]
+    value: null
+  - tools: [web_wanderer--yelp-reviews-scraper]
+    at: [include_personal_data]
+    value: true
+    required: true
+  - tools: [web_wanderer--yelp-reviews-scraper]
+    at: [biz_ids, search_urls, search_location, search_limit, search_sort, search_features, search_price, domain,
+      reviews_language, reviews_translate]
+    value: null
+  - tools: [valig--linkedin-jobs-scraper]
+    at: [datePosted]
+    value: 'r2592000'
+    required: true
+  - tools: [valig--linkedin-jobs-scraper]
+    at: [urlParam, urlPath, keywords, companyId]
+    value: null
+  # The LinkedIn company search runs in Short mode (no per-profile
+  # charge); only a chosen candidate is read, with email search. The
+  # reader's mode string carries the vendor's price, so a price change
+  # is blocked and reported as drift. The MongoDB inputs would send the
+  # results to any database the call names.
+  - tools: [harvestapi--linkedin-profile-search]
+    at: [profileScraperMode]
+    value: 'Short'
+    required: true
+  - tools: [harvestapi--linkedin-profile-search]
+    at: [takePages]
+    value: 1
+    required: true
+  - tools: [harvestapi--linkedin-profile-search]
+    at: [mongoDbConnectionString, mongoDbDatabaseName, profileDeduplicationMode, postFilteringMongoDbQuery,
+      postFilteringMongoDbAggregation, autoQuerySegmentation, autoQuerySegmentationLevels,
+      autoQuerySegmentationTargetCountries, searchCoverage, startPage, pastCompanies, excludePastCompanies, schools,
+      firstNames, lastNames]
+    value: null
+  - tools: [harvestapi--linkedin-profile-scraper]
+    at: [profileScraperMode]
+    value: 'Profile details + email search ($10 per 1k)'
+    required: true
+  - tools: [harvestapi--linkedin-profile-scraper]
+    at: [queries, publicIdentifiers, profileIds]
+    value: null
+  # The Facebook Ad Library backup takes the lead's page URL only: its
+  # keyword search matches any advertiser's words.
+  - tools: [scrapesage--facebook-ad-library-scraper]
+    at: [searchTerms, startUrls, urlsFromFile, monitoringMode, monitorId]
+    value: null
   # Per-actor scope and cost keys, refused on that actor alone: null or
   # absent passes, any other value is blocked. Each list holds every paid
   # add-on and scope-widening input its probe note names (Maps and
@@ -164,6 +246,36 @@ urls:
     hosts: public
     path: root
     required: true
+  - tools: [web_wanderer--yelp-reviews-scraper]
+    at: ["biz_urls[]"]
+    schemes: [https]
+    hosts: [www.yelp.com]
+    path: /biz
+    required: true
+  - tools: [scrapesage--facebook-ad-library-scraper]
+    at: ["pageUrls[]"]
+    schemes: [https]
+    hosts: [facebook.com, www.facebook.com]
+    path: any
+    required: true
+  - tools: [harvestapi--linkedin-profile-search]
+    at: ["currentCompanies[]"]
+    schemes: [https]
+    hosts: [www.linkedin.com, linkedin.com]
+    path: /company
+    required: true
+  - tools: [harvestapi--linkedin-profile-scraper]
+    at: ["urls[]"]
+    schemes: [https]
+    hosts: [www.linkedin.com, linkedin.com]
+    path: /in
+    required: true
+  - tools: [apify--web-fetch]
+    at: [query.url]
+    schemes: [https]
+    hosts: public
+    path: any
+    required: true
 # One entry per argument, so leaving any one out is blocked ("names no
 # pinned value"), even where two arguments share a binding.
 recipients:
@@ -215,6 +327,21 @@ recipients:
   - tools: [harvestapi--linkedin-profile-search-by-name]
     at: [maxItems]
     bound: max_profile_results
+  - tools: [scrapesage--bbb-scraper]
+    at: [maxResults]
+    bound: max_bbb_results
+  - tools: [web_wanderer--yelp-reviews-scraper]
+    at: [reviews_limit]
+    bound: max_reviews
+  - tools: [valig--linkedin-jobs-scraper]
+    at: [limit]
+    bound: max_jobs
+  - tools: [harvestapi--linkedin-profile-search]
+    at: [maxItems]
+    bound: max_profile_results
+  - tools: [scrapesage--facebook-ad-library-scraper]
+    at: [maxResults]
+    bound: max_ads
 # List lengths multiply the size pins: one search term per Maps call, at
 # most 10 sites per contact call, one place per reviews call, one query
 # per Google Ads call, one page URL per Facebook call, one start URL per
@@ -268,6 +395,46 @@ limits:
     at: [locations]
     bound: max_profile_locations
     kind: count
+  - tools: [scrapesage--bbb-scraper]
+    at: [searchTerms, locations]
+    bound: max_search_terms
+    kind: count
+    required: true
+  - tools: [web_wanderer--yelp-reviews-scraper]
+    at: [biz_urls]
+    bound: max_review_places
+    kind: count
+    required: true
+  - tools: [valig--linkedin-jobs-scraper]
+    at: [companyName]
+    bound: max_search_terms
+    kind: count
+    required: true
+  - tools: [harvestapi--linkedin-profile-search]
+    at: [currentCompanies]
+    bound: max_search_terms
+    kind: count
+    required: true
+  - tools: [scrapesage--facebook-ad-library-scraper]
+    at: [pageUrls]
+    bound: max_ad_queries
+    kind: count
+    required: true
+  - tools: [harvestapi--linkedin-profile-scraper]
+    at: [urls]
+    bound: max_profile_reads
+    kind: count
+    required: true
+  - tools: [delicious_zebu--yellowpages-usa-business-lead-scraper]
+    at: [searchKeyword]
+    bound: max_search_terms
+    kind: count
+    required: true
+  - tools: [apify--web-search]
+    at: [query.maxResults]
+    bound: max_web_results
+    kind: max
+    required: true
   - tools: [get-dataset-items]
     at: [limit]
     bound: max_dataset_items

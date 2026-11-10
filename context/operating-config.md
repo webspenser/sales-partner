@@ -52,6 +52,14 @@ business_name: "[the business's name, from the interview]"
   `read_site` (the text, links and markup of a few pages of a
   business's website); these four are used by the Preparer, which picks
   among them from the lead's segment's offers' `research_tips`;
+  `apify_web` runs `search_pages` and `fetch_page` (open-web search
+  results and pages: press, news and what the web says about a
+  business); `apify_bbb` runs `find_listing` on BBB (rating,
+  accreditation, years, complaints, owners) and `apify_yellowpages` on
+  YellowPages (a directory listing: claimed, rating, email), and
+  `apify_yelp` runs `find_reviews` on a business's Yelp page; these are
+  used by the Preparer, and `apify_yellowpages` also by the Prospector,
+  which sources leads from it by trade and city;
   `apify_profiles` runs `find_profiles` and `read_profile` (the public
   social profiles of a lead's named contacts) in the Preparer's Profile
   pass, after the run's leads are prepared; a list without it means no

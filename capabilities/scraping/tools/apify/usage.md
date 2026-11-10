@@ -1,12 +1,14 @@
 # Scraping — Apify tool
 
-Runs ten Apify actors through the client's own Apify account: the Google
-Maps scraper for local businesses, the contact-info scraper for emails,
-phones and social links on a business's website, five evidence
-actors for research (Maps reviews, Google Ads Transparency, the Facebook
-Ad Library count, Indeed jobs and a website reader), and three social
-profile actors (a LinkedIn search by name, and Instagram and TikTok
-profile readers). All three read public data with no login: no cookie,
+Runs nineteen Apify tools through the client's own Apify account: the
+Google Maps scraper and YellowPages for local businesses, the
+contact-info scraper for emails, phones and social links on a
+business's website, evidence actors for research (Google and Yelp
+reviews, BBB, Google Ads Transparency, the Facebook Ad Library count and
+its backup, Indeed and LinkedIn jobs, and a website reader), the web
+search and page fetch tools, and five social profile actors (a LinkedIn
+search by name, a LinkedIn company search and profile reader, and
+Instagram and TikTok profile readers). All of them read public data with no login: no cookie,
 session or account of the operator's is ever sent. `apify:` below means
 the connected Apify server's tools, whatever their prefix (with the
 restricted connector in Setup, `mcp__claude_ai_Apify_Actors__`). Tool
@@ -52,6 +54,20 @@ names are spelled as the connector shows them, case included.
   keyword, and the guard blocks both.
 
   Never pass `startUrls`: use the place id.
+- `find_reviews` with `site: yelp` — `apify:web_wanderer--yelp-reviews-scraper`.
+  Send these arguments, and no others:
+  - `biz_urls` — exactly one URL, a Yelp page URL from this lead's `search_pages` results or its website's links: `https://www.yelp.com/biz/<alias>`, with any query
+    (`?start=40`, `?osq=…`) and fragment dropped. The guard takes only
+    `https`, `www.yelp.com` and a path under `/biz`;
+  - `reviews_limit` = `max_reviews` (never 0: the actor reads 0 as "all");
+  - `include_personal_data` — always `true` (the guard requires it), so
+    each review carries its author's display name (`author.name`, such as
+    "Lily C."): research records the first name only;
+  - `reviews_sort` (pass `newest`), `date_from` (a date or `12 months`),
+    `reviews_rating`, `reviews_keywords`, `waitSecs` (pass 45).
+
+  Never pass `biz_ids`, search arguments, `domain`, `reviews_language`
+  or `reviews_translate`. With no Yelp page URL, skip the call.
 - `find_ads` — two actors. Run the Google call whenever `find_ads` runs;
   run the Facebook call only with the lead's own Facebook page URL.
   - Google: `apify:scrapesage--google-ads-transparency-scraper`. Send these
@@ -83,6 +99,20 @@ names are spelled as the connector shows them, case included.
       ads is unverified;
     - `resultsLimit` = `max_ads`;
     - `activeStatus`, `onlyAdsNewerThan`, `waitSecs` (pass 45).
+  - Facebook backup: `apify:scrapesage--facebook-ad-library-scraper`,
+    only after the primary Facebook call returns a vendor error or a guard block for the lead, never instead of
+    it. Send these arguments, and no others:
+    - `pageUrls` — exactly one, the same normalized page URL the primary
+      call sent (a URL, never a page name or id);
+    - `maxResults` = `max_ads` (never 0: the actor reads 0 as "no
+      limit");
+    - `country`, `adActiveStatus`, `dateFrom`, `waitSecs` (pass 45).
+
+    Never pass `searchTerms` (the probe's keyword search returned an
+    unrelated advertiser), `startUrls`, `urlsFromFile`, monitoring
+    arguments or `proxyConfiguration`. Its finding is presence only:
+    the number of ads returned and how many are active, not the
+    primary's total.
 - `find_jobs` — `apify:valig--indeed-jobs-scraper`. Send these arguments, and
   no others:
   - `title` — the company's name;
@@ -91,6 +121,19 @@ names are spelled as the connector shows them, case included.
   - `datePosted`, `waitSecs` (pass 45).
 
   Zero items is a valid result: no open listings under that name.
+
+  Then LinkedIn: `apify:valig--linkedin-jobs-scraper`. Send these
+  arguments, and no others:
+  - `companyName` — exactly one, the company's name;
+  - `location` (`"Austin, TX"`);
+  - `datePosted` — always `"r2592000"` (the last 30 days; the guard
+    requires it: the probe's keyword search returned a 2023 post);
+  - `limit` = `max_jobs`;
+  - `titleInclude`, `titleExclude`, `waitSecs` (pass 45).
+
+  Never pass `keywords`, `companyId`, `urlParam` or `urlPath`. LinkedIn matches the
+  company name loosely: keep only items whose `companyName` matches the lead's name (ignoring case, punctuation and a trailing
+  "LLC", "Inc" or "Co"). Zero items is a valid result.
 - `read_site` — `apify:apify--website-content-crawler`. Send these arguments,
   and no others:
   - `startUrls` — exactly one URL, the site root of
@@ -139,10 +182,41 @@ names are spelled as the connector shows them, case included.
 
   Never pass `currentCompanies`, `pastCompanies`, `schools`,
   `currentJobTitles` or `industryIds`: the search is by name and city.
-- `read_profile` — for Instagram and TikTok only. LinkedIn has no reader
-  (its employer comes from `find_profiles` in `Full + email search` mode) and Facebook
-  has none (anchors and `search_web` only); a LinkedIn or Facebook URL is
-  not read. Both readers take handles, not URLs: cut the handle from a
+
+  `find_profiles` as a LinkedIn company search, when no person's name is
+  known: `apify:harvestapi--linkedin-profile-search`. Send these
+  arguments, and no others:
+  - `currentCompanies` — exactly one, the lead's LinkedIn company page
+    (`https://www.linkedin.com/company/<slug>`, query dropped), from its
+    website's links, its `search_pages` results or `find_contacts`;
+  - `seniorityLevelIds` (pass `["310","320"]`: CXO, Owner / Partner),
+    `currentJobTitles`, `locations`;
+  - `maxItems` = `max_profile_results`;
+  - `profileScraperMode` — always `"Short"` (the guard requires it:
+    $0.10 a page and no charge per profile; the chosen candidate's
+    email comes from `read_profile`); `takePages` — always `1`;
+  - `waitSecs` (pass 45).
+
+  Never pass a MongoDB argument (`mongoDbConnectionString` and the
+  rest: they send the results to an outside database), segmentation,
+  `searchCoverage`, `startPage`, name, school or past-company filters.
+- `read_profile` — for LinkedIn, Instagram and TikTok. Facebook has none
+  (anchors and `search_web` only); a Facebook URL is not read.
+  - LinkedIn: `apify:harvestapi--linkedin-profile-scraper`, for a URL
+    whose host is `linkedin.com` or `www.linkedin.com` and whose path
+    starts `/in/`, query and fragment dropped. Send these arguments,
+    and no others:
+    - `urls` — the profile URLs, at most `max_profile_reads`;
+    - `profileScraperMode` — always `"Profile details + email search ($10 per 1k)"`
+      (the guard requires it exactly; if Apify changes the price in
+      the string, the call is blocked and reported as drift);
+    - `waitSecs` (pass 45).
+
+    Never pass `queries`, `publicIdentifiers` or `profileIds`. A
+    candidate `find_profiles` already returned in `Full + email search`
+    mode is not read again: it has its employer and emails.
+
+  The Instagram and TikTok readers take handles, not URLs: cut the handle from a
   profile URL whose host is the platform's: send only a cut handle,
   never a handle guessed from a name.
   - Instagram: `apify:apify--instagram-profile-scraper`, for a URL whose
@@ -167,6 +241,62 @@ names are spelled as the connector shows them, case included.
     date or popularity filter, sorting, section or storage arguments.
 
   A URL on any other host, or a TikTok URL without `/@`, is not read.
+- `search_pages` — `apify:apify--web-search`. It is not an actor run:
+  the call is HTTP-shaped and answers inline. Send exactly
+  `{"method": "GET", "path": "/", "query": {…}}` (the guard requires
+  `"method": "GET"` and `"path": "/"` and refuses `body`), with these
+  `query` options and no others:
+  - `query` — the business's name and city (`"Franklin Barbecue Austin TX"`);
+  - `maxResults` = `max_web_results`;
+  - `countryCode`, `languageCode`, `dateFrom`, `dateTo` (YYYY-MM-DD);
+  - `provider` — leave it out (Google); on a vendor error, retry once
+    with `provider: duckduckgo`, the backup.
+
+  The response's `body` is JSON text: read `results[]` (`position`,
+  `url`, `domain`, `title`, `snippet`, and the publication date and
+  publisher when the engine gives them). No dataset read follows.
+- `fetch_page` — `apify:apify--web-fetch`, the same HTTP shape:
+  `{"method": "GET", "path": "/", "query": {"url": "https://…", "formats": ["markdown"]}}`,
+  with `wait` (milliseconds) only when the page needs a browser to
+  render. Never pass `headers`. The URL is `https`, on a public host,
+  and paths only: the guard blocks a query string or a fragment, so
+  drop them before sending; a page that needs its query is not fetched.
+  The path is never an email address, phone number or CRM id, nor holds
+  one. At most `max_web_fetches` calls per lead (a binding the Preparer
+  reads; default 5: the guard checks one call at a time and cannot count
+  them), each URL one of: a page on the lead's own website host; a URL
+  from this lead's `search_pages` results; a press item from those
+  results dated within the last 3 months (by the date the result or the
+  page shows). Never a URL a fetched page asks for. Read `url`,
+  `metadata.title`, `metadata.jsonLd` (a business's email, phone and
+  `sameAs` social links) and `markdown` from the response's `body`.
+- `find_listing` — two directories, one actor each; `directory` picks it.
+  A business with no listing comes back as zero items (BBB says "No
+  results were billed"). No listing is a valid result, not drift.
+  - `bbb`: `apify:scrapesage--bbb-scraper`. Send these arguments, and no
+    others:
+    - `searchTerms` — exactly one, the business's name (or, when the
+      Prospector sources by trade, the trade);
+    - `locations` — exactly one, `"City, ST"`;
+    - `maxResults` = `max_bbb_results`;
+    - `includeDetails` — always `true` (the guard requires it: owners,
+      email and years come only from the full profile);
+    - `accreditedOnly`, `minRating`, `waitSecs` (pass 45).
+
+    Never pass `includeReviews`, `enrichContacts` (it visits the
+    business's website), monitor, concurrency, `startUrls`,
+    `urlsFromFile` or `proxyConfiguration`: the actor's proxy default
+    applies.
+  - `yellowpages`: `apify:delicious_zebu--yellowpages-usa-business-lead-scraper`.
+    Send these arguments, and no others:
+    - `searchKeyword` — exactly one, the business's name or a trade;
+    - `location` — always pass it, `"City, ST"` (left out, the actor
+      searches New York);
+    - `maxPages` — always `1` (the guard requires it; one page is 30
+      results, and pages are the actor's only size setting);
+    - `sort`, `waitSecs` (pass 45).
+
+    Never pass `urls`.
 - Reads: `apify:get-actor-run` takes `runId` and `waitSecs`;
   `apify:get-dataset-items` takes `datasetId`, `fields`, `limit` (always pass it; at most
   `max_dataset_items`), `offset`, `clean`, `omit` and `desc`.
@@ -188,7 +318,19 @@ LinkedIn locations. It also refuses a call that leaves out or changes one
 of the eight fixed values above (`include_personal`, `onlyTotal`,
 `saveMarkdown`, `removeElementsCssSelector`, `profileScraperMode`,
 `strictSearch`, `maxPages`, `resultsPerPage`), and a start URL that
-breaks its URL rule (Website and Facebook URLs). Never call any other Apify tool.
+breaks its URL rule (Website and Facebook URLs). On the web search and
+fetch tools it refuses any `method` but `GET`, any `path` but `/`, a
+`body`, `query.headers`, a `maxResults` above `max_web_results`, a BBB call
+without `includeDetails: true` or above `max_bbb_results`, a YellowPages
+call with `maxPages` other than `1`, a Facebook backup call with `searchTerms`, over
+`max_ads` or with a page that is not a facebook.com URL, a LinkedIn company search not in `Short` mode, over
+`max_profile_results`, on more than one page or with a MongoDB
+argument, a LinkedIn profile read in any mode but the email-search one
+or of a URL that is not a `linkedin.com/in` path, a LinkedIn jobs call without
+`datePosted: "r2592000"`, above `max_jobs` or with `keywords`, a Yelp call without
+`include_personal_data: true`, above `max_reviews` or with a URL that
+is not a `www.yelp.com/biz` path, and a
+fetch URL that is not https, public and paths only. Never call any other Apify tool.
 
 ## Website and Facebook URLs
 
@@ -319,8 +461,13 @@ never read items without a projection):
 | `find_reviews` | `content,reviewed_at_date,rating,owner_response,owner_response_at_date,place_id,review_url,reviewer_name` | text (`content`; null for a star-only review), date (`reviewed_at_date`), stars (`rating`), owner response and date, place id, the review's URL (`review_url`), the reviewer's first name (from `reviewer_name`) |
 | `find_ads` (Google) | `name,legalName,advertiserId,advertiserUrl,approxAdCountLow,approxAdCountHigh,verified` | one advertiser per item; zero items means no Google ads for that query in the region |
 | `find_ads` (Facebook) | `inputUrl,totalCount,isResultComplete` | the page (`inputUrl`), its ad count (`totalCount`), whether the count is complete |
+| `find_ads` (Facebook backup) | `pageName,pageId,isActive,status,startDate,endDate,publisherPlatforms,adLibraryUrl` | per ad: the page, active or not, run dates, platforms, the Ad Library URL |
 | `find_jobs` | `title,datePublished,employer.name,location.city,jobUrl` | title, date posted, employer, city, URL |
+| `find_jobs` (LinkedIn) | `title,companyName,location,postedDate,applicationsCount,url` | title, employer, city, date posted, applicant count, URL |
 | `read_site` | `url,markdown,metadata.title` | URL, title, the page as markdown |
+| `find_reviews` (Yelp) | `name,businessRating,totalReviews,rating,reviewDate,text,reviewUrl,publicReply,author.name` | the business's Yelp rating and review count, then per review: stars, date, text, the review's URL, the owner's public reply, the reviewer's first name (from `author.name`) |
+| `find_listing` (BBB) | `businessName,bbbRating,accredited,yearsInBusiness,businessStarted,complaintCount,complaintsLast12Months,customerReviewCount,email,website,phone,principalContacts,profileUrl` | name, BBB rating, accredited, years in business, started, complaint counts (all, last 12 months), review count, email, website, phone, principal contacts (`name`, `title`), the BBB profile URL |
+| `find_listing` (YellowPages) | `title,is_claimed,star_rating,rating_count,phone,website,email,address,source_url,categories` | name, claimed (often empty: then unknown), rating, review count, phone, website, email, address, the listing URL, categories |
 
 Check on the first live run: the Google Ads, Facebook and Indeed
 `fields` above come from the actors' item schemas, not from items the
@@ -333,6 +480,8 @@ The profile actors' items, with these `fields`:
 | Operation | `fields` | Contract fields |
 |---|---|---|
 | `find_profiles` (LinkedIn) | `linkedinUrl,name,position,location,about,experience,emails.email,emails.free,emails.status,emails.deliverable` | platform `linkedin`, URL (`linkedinUrl`), display name (`name`), bio (`position`, the headline, then `about`), location (`location.linkedinText`), current employer (the `companyName` of the `experience[]` entry with no end date; none when every entry has ended); emails (each `emails[].email` whose `status` is not `invalid`, a free-mail address included; an empty `emails[]` is a valid "no email found") |
+| `find_profiles` (LinkedIn company search) | `firstName,lastName,linkedinUrl,summary,location.linkedinText,currentPositions` | platform `linkedin`, URL (`linkedinUrl`), display name (`firstName` and `lastName`), bio (`summary`), location, current employer and title (the `currentPositions[]` entry with `current` true); no emails in Short mode |
+| `read_profile` (LinkedIn) | `linkedinUrl,firstName,lastName,headline,about,location,currentPosition,emails.email,emails.free,emails.status,emails.deliverable` | platform `linkedin`, URL, display name, bio (`headline`, then `about`), location (`location.linkedinText`), current employer (`currentPosition[0].companyName`), emails (as for `find_profiles`) |
 | `read_profile` (Instagram) | `username,url,fullName,biography,externalUrl,externalUrls,private,isBusinessAccount,businessAddress` | platform `instagram`, URL (`url`), display name (`fullName`), bio (`biography`), location (`businessAddress`, when set), external links (`externalUrl` and each `externalUrls[].url`) |
 | `read_profile` (TikTok) | `authorMeta.profileUrl,authorMeta.nickName,authorMeta.signature,authorMeta.bioLink,authorMeta.privateAccount,note` | platform `tiktok`, URL (`authorMeta.profileUrl`), display name (`nickName`), bio (`signature`), external links (`bioLink`) |
 
@@ -344,7 +493,7 @@ the first live run: the probe saw `Short` mode only for LinkedIn, so the
 comes back empty, record nothing from it and say so in the run's report.
 
 Reviews: ask for `reviewer_name`, and never for `reviewer_id`,
-`reviewer_url`, `reviewer_photo_url` or `reviewer_photo`. A finding
+`reviewer_url`, `reviewer_photo_url` or `reviewer_photo`. The Yelp call never asks for `author.profile_photo`, `author.friend_count` or any other `author` field but `author.name`, and never for `photos` or `videos`. A finding
 quotes only the words of the review that show the signal, with the
 review's date, may name the reviewer by first name as the review shows
 it ("Dana"), and links the review's own `review_url`. Names in the
@@ -393,11 +542,20 @@ actors are a flat worst case per call at the pinned sizes:
 | `find_reviews` | $0.02 |
 | `find_ads`, Google | $0.01 |
 | `find_ads`, Facebook | $0.03 |
+| `find_ads`, Facebook backup | $0.01 |
 | `find_jobs` | $0.005 |
+| `find_jobs`, LinkedIn | $0.005 |
 | `read_site` | $0.03 |
 | `find_profiles`, LinkedIn | $0.15 per call |
+| `find_profiles`, LinkedIn company search | $0.10 per call |
+| `read_profile`, LinkedIn | $0.02 per profile |
 | `read_profile`, Instagram | $0.003 per username |
 | `read_profile`, TikTok | $0.005 per profile |
+| `search_pages` | $0.002 |
+| `fetch_page` | $0.002 |
+| `find_reviews`, Yelp | $0.02 |
+| `find_listing`, BBB | $0.02 per business |
+| `find_listing`, YellowPages | $0.06 per call |
 
 The three profile estimates are from the 2026-11-03 probe, where no run
 reported a dollar cost; the LinkedIn one is three times the Full-mode
@@ -416,10 +574,11 @@ trips early. The operator recalibrates them from Apify Console.
    guard does not see).
 2. Add the hosted connector in claude.ai (Settings → Connectors → Add
    custom connector) at
-   `https://mcp.apify.com?tools=compass/crawler-google-places,vdrmota/contact-info-scraper,web_wanderer/google-reviews-scraper,scrapesage/google-ads-transparency-scraper,apify/facebook-ads-scraper,valig/indeed-jobs-scraper,apify/website-content-crawler,harvestapi/linkedin-profile-search-by-name,apify/instagram-profile-scraper,clockworks/tiktok-profile-scraper`
+   `https://mcp.apify.com?tools=compass/crawler-google-places,vdrmota/contact-info-scraper,web_wanderer/google-reviews-scraper,scrapesage/google-ads-transparency-scraper,apify/facebook-ads-scraper,valig/indeed-jobs-scraper,apify/website-content-crawler,harvestapi/linkedin-profile-search-by-name,apify/instagram-profile-scraper,clockworks/tiktok-profile-scraper,apify/web-search,apify/web-fetch,scrapesage/bbb-scraper,delicious_zebu/yellowpages-usa-business-lead-scraper,web_wanderer/yelp-reviews-scraper,valig/linkedin-jobs-scraper,harvestapi/linkedin-profile-search,harvestapi/linkedin-profile-scraper,scrapesage/facebook-ad-library-scraper`
    and sign in to that Apify account. On an upgrade, replace the
-   connector's URL with this one: it adds the five evidence actors and
-   the three social profile actors.
+   connector's URL with this one: 8.7.0 adds the web search and fetch
+   tools, BBB, YellowPages, Yelp, LinkedIn jobs, the LinkedIn company
+   search and profile reader, and the Facebook Ad Library backup.
 3. Pinned values, written to `bindings/scraping.md` after the operator
    confirms each, then committed and pushed (the guard refuses every
    Apify call until the file matches the pushed copy):
@@ -428,7 +587,9 @@ trips early. The operator recalibrates them from Apify Console.
    - `max_crawl_depth` — link depth on each website (default 1);
    - `max_pages_per_call` — pages the contact scraper reads in one call,
      across all its websites (default 30: 10 websites × 3 pages);
-   - `max_search_terms` — search terms per Maps call (default 1);
+   - `max_search_terms` — search terms per Maps call, and also the terms per BBB, YellowPages, LinkedIn jobs and LinkedIn company search call
+     (BBB counts its terms and its locations); raising it widens all of
+     them (default 1);
    - `max_sites_per_call` — website URLs per contact call (default 10);
    - `max_dataset_items` — items per `get-dataset-items` read (default 100);
    - `max_reviews` — reviews per reviews call (default 50);
@@ -449,8 +610,12 @@ trips early. The operator recalibrates them from Apify Console.
    - `max_profile_results` — LinkedIn profiles per `find_profiles` call
      (default 5);
    - `max_profile_reads` — handles per Instagram or TikTok
-     `read_profile` call (default 10);
-   - `max_profile_locations` — locations per LinkedIn search (default 1).
+     `read_profile` call, and LinkedIn profile URLs per LinkedIn `read_profile` call ($0.02 each) (default 10);
+   - `max_profile_locations` — locations per LinkedIn search (default 1);
+   - `max_web_results` — results per `search_pages` call (default 10);
+   - `max_bbb_results` — businesses per BBB `find_listing` call (default 5);
+   - `max_web_fetches` — `fetch_page` calls per lead (default 5; the
+     Preparer counts them, the guard does not).
 
 ## Probe
 
@@ -461,11 +626,17 @@ exposed tools are `compass--crawler-google-places`,
 `apify--facebook-ads-scraper`, `valig--indeed-jobs-scraper`,
 `apify--website-content-crawler`,
 `harvestapi--linkedin-profile-search-by-name`,
-`apify--instagram-profile-scraper` and
-`clockworks--tiktok-profile-scraper`, plus the two reads the agent uses,
+`apify--instagram-profile-scraper`,
+`clockworks--tiktok-profile-scraper`, `apify--web-search`,
+`apify--web-fetch`, `scrapesage--bbb-scraper`,
+`delicious_zebu--yellowpages-usa-business-lead-scraper`,
+`web_wanderer--yelp-reviews-scraper`, `valig--linkedin-jobs-scraper`,
+`harvestapi--linkedin-profile-search`,
+`harvestapi--linkedin-profile-scraper` and
+`scrapesage--facebook-ad-library-scraper`, plus the two reads the agent uses,
 `get-actor-run` and `get-dataset-items`. If the connector exposes
 `call-actor` (the `actors` or `api` tool groups), or lacks one of the
-ten actors, tell the operator to re-add it with the URL in Setup step 2.
+nineteen tools above, tell the operator to re-add it with the URL in Setup step 2.
 Other named actors and the `docs` and `runs` reads may be present: the
 guard refuses every tool not in its allow list, so they are not an
 error. The connector's name must contain "apify" (for example "Apify

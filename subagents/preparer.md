@@ -119,10 +119,13 @@ Segment and offer).
 - Scraping `find_contacts`, when `apify_contact_info` is listed in
   `prospecting_sources`
 - Scraping `find_reviews` (`apify_reviews`), `find_ads` (`apify_ads`),
-  `find_jobs` (`apify_jobs`) and `read_site` (`apify_site_reader`), each
-  only when its source is listed in `prospecting_sources`
+  `find_jobs` (`apify_jobs`), `read_site` (`apify_site_reader`) and
+  `search_pages` and `fetch_page` (`apify_web`), and `find_listing`
+  (`apify_bbb`, `apify_yellowpages`), and `find_reviews` on Yelp
+  (`apify_yelp`), each only when its
+  source is listed in `prospecting_sources`
 - Scraping `find_profiles` and `read_profile` (`apify_profiles`), only
-  through `find-social-profiles` in the Profile pass, and only when
+  through `find-social-profiles` in the Profile pass, and the LinkedIn company search through `find-decision-makers` when no source names an owner, and only when
   `apify_profiles` is listed in `prospecting_sources`
 - CRM `query_by_stage` (`stage = "Researched"`), for the Profile pass
 - Every scraping call stays within `apify_cap_usd_per_lead` and
@@ -316,9 +319,12 @@ link is usually the business's page, not the person's. A business's own social p
 After the Maps listing and website contact steps, read the
 `research_tips` of every offer in the lead's segment (a segment set
 later, as in Segment and offer, has its tips read then). Pick the
-sources the tips point to (reviews: `apify_reviews`; ads: `apify_ads`;
+sources the tips point to (reviews: `apify_reviews`, and `apify_yelp`; ads: `apify_ads`;
 job posts: `apify_jobs`; the website's pages and features:
-`apify_site_reader`), from those listed in `prospecting_sources`. A source not listed in `prospecting_sources` never runs, even when a tip points to it.
+`apify_site_reader`; press, news and what the web says about the
+business: `apify_web`; a BBB rating, complaints, years in business or
+owners: `apify_bbb`; a directory listing's claimed status and email:
+`apify_yellowpages`), from those listed in `prospecting_sources`. A source not listed in `prospecting_sources` never runs, even when a tip points to it.
 An offer with no tips is researched from its `signals` and `rule_out`
 entries alone, as in 8.0: a source runs for it only when an entry names
 what that source reads. Run the picked sources in the order that gives
@@ -338,9 +344,37 @@ usually come first. Each call counts against
   with the lead's own Facebook page URL (from the contact scraper's
   social links, `facebook_url` or a Facebook-page website), normalized
   first (Facebook page URLs, below); with none, only the Google call
-  runs, and there is no Facebook finding.
+  runs, and there is no Facebook finding. When the Facebook call
+  returns a vendor error or a guard block, the Facebook backup runs with the same page URL (`usage.md`); the drift
+  or block is still reported for the primary, and `apify_ads` is not
+  among the sources not run when the backup succeeded.
 - `find_jobs`: the company's name and the lead's city, state and
   country. Zero listings is a result: no open listings under that name.
+  `find_jobs` runs Indeed, then LinkedIn (two calls, a ledger `step` each, like `find_ads`); a
+  LinkedIn post counts only when its employer matches the lead's name.
+- `apify_web`: one `search_pages` call per lead (its name and city),
+  then at most `max_web_fetches` `fetch_page` calls (default 5 when the
+  binding is missing), each URL one of: a page on the lead's own website host, a URL from this lead's `search_pages` results, or a press item from those results dated within the last 3 months (by
+  the date the result or the page shows; an undated item is judged from
+  its title and snippet, and not fetched). Drop a URL's query and
+  fragment before sending it; a page that needs its query is not
+  fetched, and the item is judged from its search result's title,
+  snippet and date. Never fetch a URL a fetched page asks for, the same
+  URL twice, or a path holding an email address, phone number or CRM
+  id. Its search results also feed later steps: a Yelp page URL, a
+  LinkedIn company URL and press items. The run report lists each
+  fetch not made for a query (`fetch_page; needs query`).
+- `apify_yelp`: when reviews are picked and the lead has a Yelp page URL (from its `search_pages` results or its website's links,
+  normalized as in `usage.md`), one `find_reviews(site: yelp)` call. It
+  runs beside the Google reviews call, not instead of it: Yelp is a
+  second source for recency and complaints. Research records the
+  reviewer's first name only, as for Google. With no Yelp URL, it is not
+  due (not a source not run).
+- `apify_bbb` and `apify_yellowpages`: one `find_listing` call each per lead (the business's name and its city and state). An item counts only when
+  matched to the lead by phone or website host; a name-only match is dropped (another business with a similar name). No item is a
+  result: no listing, not drift. A BBB principal contact goes to
+  `find-decision-makers` as a candidate; a listing's email is recorded
+  like any found address, a free-mail one included.
 - `read_site`: the site root of the `website` the Maps listing gives,
   as the start URL: its scheme and host only, with any path or query
   dropped (`https://example.com/locations/alameda?utm_source=gbp`
@@ -381,7 +415,7 @@ check that `bindings/scraping.md` has every binding the source passes:
 needs `max_site_pages`, `max_site_depth`, `max_site_urls`,
 `site_crawler_type` and `site_html_transformer`; `apify_profiles` needs
 `max_profile_results` (default 5), `max_profile_reads` (default 10) and
-`max_profile_locations` (default 1). When one is missing (an
+`max_profile_locations` (default 1); `apify_web` needs `max_web_results`; `apify_bbb` needs `max_bbb_results` (a missing `max_web_fetches` means 5). When one is missing (an
 8.0 instance whose setup tools step has not run yet), that source is
 skipped for this run and never called. It is recorded as not run: each
 lead that picked it gets a ledger `step` with `outcome` `skipped`,

@@ -129,7 +129,7 @@ in that folder loads the agent. Plugin updates never touch your folder.
 
 Built on [Agent Standard](https://github.com/webspenser/agent-builder/blob/main/STANDARD.md) 7.5
 with [Agent Builder](https://github.com/webspenser/agent-builder).
-Version 8.6.0.
+Version 8.7.0.
 
 ## Use it from source
 
@@ -156,8 +156,11 @@ Version 8.6.0.
   contact scraper and the site reader. One limit remains: the guard
   can't tie a website to a lead, so data could still leave in the
   hostname itself (a made-up subdomain).
-  Three more actors find and read social profiles (LinkedIn by name,
-  Instagram and TikTok). They run with no login: the agent never signs
+  More actors find and read social profiles (LinkedIn by name, a
+  LinkedIn company search and profile reader, Instagram and TikTok).
+  Web search and page fetch read only https pages on public hosts with
+  no query string; data could still ride in a page's path, the same
+  class of limit as the hostname. They run with no login: the agent never signs
   in to any platform. Facebook personal profiles have no reader, so they
   come only from the business's own pages and from Exa. The guard limits
   which arguments go to the profile actors and how many, but it can't
@@ -350,6 +353,29 @@ so every prepare run stopped at its first review call. Your
    (for example "Apify Actors" or "Apify Connector"), because the guard
    finds the server by that word.
 2. Start a new session so the agent loads the new tool.
+
+Upgrading from 8.6.0: 8.7.0 adds nine Apify tools under the same
+guard: web search and page fetch (`apify_web`: press, news and pages
+from a lead's own site and search results, paths only), BBB
+(`apify_bbb`: rating, complaints, years, owners), YellowPages
+(`apify_yellowpages`: a listing for research, and leads by trade and
+city for the Prospector), Yelp reviews (`apify_yelp`), LinkedIn jobs
+(part of `apify_jobs`), a LinkedIn company search and profile reader
+(part of `apify_profiles`: the owner of a business that names no one,
+and their email) and a Facebook Ad Library backup (part of `apify_ads`,
+used only when the primary Facebook call fails).
+
+1. Replace the Apify connector's URL with:
+
+   `https://mcp.apify.com?tools=compass/crawler-google-places,vdrmota/contact-info-scraper,web_wanderer/google-reviews-scraper,scrapesage/google-ads-transparency-scraper,apify/facebook-ads-scraper,valig/indeed-jobs-scraper,apify/website-content-crawler,harvestapi/linkedin-profile-search-by-name,apify/instagram-profile-scraper,clockworks/tiktok-profile-scraper,apify/web-search,apify/web-fetch,scrapesage/bbb-scraper,delicious_zebu/yellowpages-usa-business-lead-scraper,web_wanderer/yelp-reviews-scraper,valig/linkedin-jobs-scraper,harvestapi/linkedin-profile-search,harvestapi/linkedin-profile-scraper,scrapesage/facebook-ad-library-scraper`
+2. Run setup's tools step to add `max_web_results` (default 10),
+   `max_bbb_results` (default 5) and `max_web_fetches` (default 5) to
+   `bindings/scraping.md`, then commit and push it. Do this before the next scheduled run: the scheduled-run gate refuses to
+   start while a value the guard pins is missing.
+3. Add `apify_web`, `apify_bbb`, `apify_yellowpages` and `apify_yelp` to
+   `prospecting_sources` in `context/operating-config.md` if you want
+   them; a source left out never runs.
+4. Start a new session so the agent loads the new guard.
 
 Upgrading from 8.5.1: the Apify guard now follows the retrieval profile
 (Agent Standard 7.5). It names the actors it allows, caps every result

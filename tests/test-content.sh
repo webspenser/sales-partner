@@ -530,7 +530,7 @@ assert_contains "$SP/README.md" 'messages only you, through Resend'
 assert_contains "$SP/evals/cases.md" 'A notification never reaches anyone but the owner'
 
 echo "-- 7.0.0: release"
-assert_contains "$SP/agent.yaml" 'version: 8.6.0'
+assert_contains "$SP/agent.yaml" 'version: 8.7.0'
 for m in agent.yaml .claude-plugin/plugin.json .claude-plugin/marketplace.json .codex-plugin/plugin.json gemini-extension.json; do
   grep -qF "$EXPECTED_DESC" "./$m" && _report ok "$m: description is the 8.0.0 string" || _report no "$m: description is not the 8.0.0 string"
 done
@@ -593,7 +593,7 @@ assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" '`get-dataset-i
 assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" '`countryCode`'
 assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" '`max_pages_per_call`'
 assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" 'Do not pass `proxyConfig`'
-assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" '`max_search_terms` — search terms per Maps call (default 1)'
+assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" '`max_search_terms` — search terms per Maps call, and also'
 assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" '`max_sites_per_call`'
 assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" '`max_dataset_items`'
 assert_not_contains "$SP/capabilities/scraping/tools/apify/usage.md" 'Arguments to omit'
@@ -794,10 +794,10 @@ done < <(find AGENT.md README.md subagents skills templates context capabilities
 rm -f "$README_NO_UPGRADE"
 
 echo "-- 8.0.0: release: version, README flow and the upgrade note"
-assert_contains "$SP/agent.yaml" 'version: 8.6.0'
-assert_contains "$SP/README.md" 'Version 8.6.0.'
+assert_contains "$SP/agent.yaml" 'version: 8.7.0'
+assert_contains "$SP/README.md" 'Version 8.7.0.'
 for m in .claude-plugin/plugin.json .codex-plugin/plugin.json gemini-extension.json; do
-  assert_contains "./$m" '"version": "8.6.0"'
+  assert_contains "./$m" '"version": "8.7.0"'
 done
 assert_contains "$SP/README.md" 'Upgrading from 7.4'
 for t in 'Approved' 'Research Anyway' 'Talking Points' 'offer catalog' 'Hero Offer' 'schedule_approach'; do
@@ -1002,8 +1002,8 @@ for d in '`max_reviews` — reviews per reviews call (default 50)' '`max_ads` �
          '`max_site_depth` — link depth for the site reader (default 1)'; do
   printf '%s' "$SETUP" | grep -qF -- "$d" && _report ok "usage.md Setup: $d" || _report no "usage.md Setup missing: $d"
 done
-printf '%s' "$SETUP" | grep -qF 'mcp.apify.com?tools=compass/crawler-google-places,vdrmota/contact-info-scraper,web_wanderer/google-reviews-scraper,scrapesage/google-ads-transparency-scraper,apify/facebook-ads-scraper,valig/indeed-jobs-scraper,apify/website-content-crawler,harvestapi/linkedin-profile-search-by-name,apify/instagram-profile-scraper,clockworks/tiktok-profile-scraper`' \
-  && _report ok "usage.md Setup gives the ten-actor connector URL" || _report no "usage.md Setup lacks the ten-actor connector URL"
+printf '%s' "$SETUP" | grep -qF 'mcp.apify.com?tools=compass/crawler-google-places,vdrmota/contact-info-scraper,web_wanderer/google-reviews-scraper,scrapesage/google-ads-transparency-scraper,apify/facebook-ads-scraper,valig/indeed-jobs-scraper,apify/website-content-crawler,harvestapi/linkedin-profile-search-by-name,apify/instagram-profile-scraper,clockworks/tiktok-profile-scraper,apify/web-search,apify/web-fetch,scrapesage/bbb-scraper,delicious_zebu/yellowpages-usa-business-lead-scraper,web_wanderer/yelp-reviews-scraper,valig/linkedin-jobs-scraper,harvestapi/linkedin-profile-search,harvestapi/linkedin-profile-scraper,scrapesage/facebook-ad-library-scraper`' \
+  && _report ok "usage.md Setup gives the nineteen-tool connector URL" || _report no "usage.md Setup lacks the nineteen-tool connector URL"
 assert_contains "$SU" 'always pass `include_personal: true`'
 assert_not_contains "$SU" 'never record reviewer names'
 assert_contains "$SU" 'always pass `onlyTotal: true`'
@@ -1073,8 +1073,8 @@ assert_contains "$PP" 'never in a scheduled run'
 assert_contains "$PP" 'always passes `include_personal: true`'
 PR="$SP/subagents/prospector.md"
 assert_contains "$PR" 'Every source listed in `prospecting_sources` is exhausted'
-assert_contains "$PR" 'ignores the Preparer-only sources `apify_contact_info`, `apify_reviews`, `apify_ads`, `apify_jobs` and `apify_site_reader`'
-assert_contains "$PR" 'its own sources are `apify_google_maps` and'
+assert_contains "$PR" 'ignores the Preparer-only sources `apify_contact_info`, `apify_reviews`, `apify_ads`, `apify_jobs`, `apify_site_reader`, `apify_web`, `apify_bbb` and `apify_yelp`'
+assert_contains "$PR" 'its own sources are `apify_google_maps`,'
 assert_not_contains "$PR" '`apify_google_maps`, `apify_contact_info`,'
 assert_contains "$SP/context/operating-config.md" 'the Preparer, not the Prospector'
 # Fix round 1: rulings A-C, the cap order, the sources-not-run list, one stop_condition per lead
@@ -1705,7 +1705,7 @@ assert_not_contains "$SP/README.md" 'never the reviewer'"'"'s name'
 
 
 echo "-- 8.6.0: release"
-assert_contains "$SP/README.md" 'Version 8.6.0.'
+assert_contains "$SP/README.md" 'Upgrading from 8.6.0'
 assert_contains "$SP/README.md" 'Upgrading from 8.5.1'
 flat_has "$SP/capabilities/scraping/tools/apify/usage.md" 'confirm that the Apify monthly usage limit is set'
 
@@ -1730,5 +1730,91 @@ assert_not_contains "$SP/evals/cases.md" 'stops the activity'
 for t in '; vendor error`' '; blocked`'; do
   for f in "$SP/subagents/preparer.md" "$SUD" "$SP/evals/cases.md"; do assert_not_contains "$f" "$t"; done
 done
+
+echo "-- 8.7.0: apify_web"
+for t in '`search_pages`' '`fetch_page`' '"method": "GET"' '`provider: duckduckgo`' '`max_web_fetches`' \
+  'dated within the last 3 months' 'never an email address, phone number or CRM id' '| `search_pages` | $0.002 |' \
+  '| `fetch_page` | $0.002 |' '`max_web_results` — results per `search_pages` call (default 10)'; do flat_has "$SUD" "$t"; done
+flat_has "$SP/capabilities/scraping/contract.md" '| `search_pages` |'
+flat_has "$SP/capabilities/scraping/contract.md" '| `fetch_page` |'
+flat_has "$SP/subagents/preparer.md" '`apify_web`: one `search_pages` call per lead'
+flat_has "$SP/subagents/preparer.md" 'a page on the lead'"'"'s own website host, a URL from this lead'"'"'s `search_pages` results, or a press item from those results dated within the last 3 months'
+flat_has "$SP/skills/research-company/SKILL.md" 'A press item read with `fetch_page` becomes a `news` finding with its date and URL'
+flat_has "$SP/evals/cases.md" '## Case 62: A recent press item is fetched and an old one is not'
+flat_has "$SP/evals/cases.md" '## Case 63: A search result with a query string is fetched without it'
+
+echo "-- 8.7.0: apify_bbb and apify_yellowpages"
+for t in '`find_listing`' 'businessName,bbbRating,accredited,yearsInBusiness,businessStarted,complaintCount,complaintsLast12Months,customerReviewCount,email,website,phone,principalContacts,profileUrl' \
+  'title,is_claimed,star_rating,rating_count,phone,website,email,address,source_url,categories' \
+  '| `find_listing`, BBB | $0.02 per business |' '| `find_listing`, YellowPages | $0.06 per call |' \
+  '`max_bbb_results` — businesses per BBB `find_listing` call (default 5)' 'No listing is a valid result, not drift'; do flat_has "$SUD" "$t"; done
+flat_has "$SP/capabilities/scraping/contract.md" '| `find_listing` |'
+flat_has "$SP/subagents/preparer.md" '`apify_bbb` and `apify_yellowpages`: one `find_listing` call each per lead'
+flat_has "$SP/subagents/preparer.md" 'matched to the lead by phone or website host; a name-only match is dropped'
+flat_has "$SP/subagents/prospector.md" '`apify_yellowpages` sources leads through `find_listing(directory: yellowpages'
+flat_has "$SP/subagents/prospector.md" 'deduplicated by phone and website like Maps'
+flat_has "$SP/skills/find-decision-makers/SKILL.md" 'A BBB principal contact with an owner title is a decision-maker candidate'
+for t in '`apify_bbb`' '`apify_yellowpages`'; do flat_has "$SP/context/operating-config.md" "$t"; done
+flat_has "$SP/evals/cases.md" '## Case 64: A BBB principal becomes the point of contact'
+flat_has "$SP/evals/cases.md" '## Case 65: No BBB listing is a result, not drift'
+
+echo "-- 8.7.0: apify_yelp"
+for t in 'name,businessRating,totalReviews,rating,reviewDate,text,reviewUrl,publicReply,author.name' \
+  'never asks for `author.profile_photo`, `author.friend_count` or any other `author` field but `author.name`' \
+  'a Yelp page URL from this lead'"'"'s `search_pages` results or its website'"'"'s links' '| `find_reviews`, Yelp | $0.02 |'; do flat_has "$SUD" "$t"; done
+flat_has "$SP/capabilities/scraping/contract.md" '`site` (`google`, the default, or `yelp`)'
+flat_has "$SP/subagents/preparer.md" '`apify_yelp`: when reviews are picked and the lead has a Yelp page URL'
+for t in '`apify_yelp`'; do flat_has "$SP/context/operating-config.md" "$t"; done
+flat_has "$SP/evals/cases.md" '## Case 66: A Yelp complaint is named only in Avoid, like a Google one'
+
+echo "-- 8.7.0: LinkedIn jobs"
+for t in '`apify:valig--linkedin-jobs-scraper`' 'title,companyName,location,postedDate,applicationsCount,url' \
+  '`datePosted` — always `"r2592000"`' '| `find_jobs`, LinkedIn | $0.005 |' 'keep only items whose `companyName` matches the lead'; do flat_has "$SUD" "$t"; done
+flat_has "$SP/subagents/preparer.md" '`find_jobs` runs Indeed, then LinkedIn'
+flat_has "$SP/evals/cases.md" '## Case 67: A LinkedIn job post from a similarly named company is dropped'
+
+echo "-- 8.7.0: LinkedIn company search and reader"
+for t in '`apify:harvestapi--linkedin-profile-search`' '`apify:harvestapi--linkedin-profile-scraper`' \
+  '`profileScraperMode` — always `"Short"`' '`"Profile details + email search ($10 per 1k)"`' 'Never pass a MongoDB argument' \
+  '| `find_profiles`, LinkedIn company search | $0.10 per call |' '| `read_profile`, LinkedIn | $0.02 per profile |' \
+  'firstName,lastName,linkedinUrl,summary,location.linkedinText,currentPositions'; do flat_has "$SUD" "$t"; done
+flat_lacks "$SUD" 'LinkedIn has no reader'
+flat_has "$SP/skills/find-decision-makers/SKILL.md" 'When no source names an owner and the lead has a LinkedIn company URL, run `find_profiles` as a LinkedIn company search'
+flat_has "$SP/skills/find-social-profiles/SKILL.md" 'A LinkedIn profile URL already known for the contact (an anchor) is read with `read_profile`'
+flat_lacks "$SP/evals/cases.md" 'LinkedIn has no reader'
+flat_has "$SP/evals/cases.md" '## Case 68: A company search finds the owner and the reader finds the email'
+
+flat_has "$SP/subagents/preparer.md" 'and the LinkedIn company search through `find-decision-makers` when no source names an owner'
+
+echo "-- 8.7.0: Facebook backup"
+for t in '`apify:scrapesage--facebook-ad-library-scraper`' 'only after the primary Facebook call returns a vendor error or a guard block' \
+  'pageName,pageId,isActive,status,startDate,endDate,publisherPlatforms,adLibraryUrl' '| `find_ads`, Facebook backup | $0.01 |'; do flat_has "$SUD" "$t"; done
+flat_has "$SP/subagents/preparer.md" 'the Facebook backup runs with the same page URL'
+flat_has "$SP/evals/cases.md" '## Case 69: The Facebook backup runs when the primary fails'
+
+echo "-- 8.7.0: release"
+assert_contains "$SP/README.md" 'Upgrading from 8.6.0'
+flat_has "$SP/README.md" 'before the next scheduled run'
+for a in apify/web-search apify/web-fetch scrapesage/bbb-scraper delicious_zebu/yellowpages-usa-business-lead-scraper \
+  web_wanderer/yelp-reviews-scraper valig/linkedin-jobs-scraper harvestapi/linkedin-profile-search harvestapi/linkedin-profile-scraper \
+  scrapesage/facebook-ad-library-scraper; do
+  flat_has "$SUD" "$a"; flat_has "$SP/README.md" "$a"
+done
+flat_lacks "$SUD" 'Runs ten Apify actors'
+flat_lacks "$SUD" 'lacks one of the ten actors'
+flat_has "$SP/subagents/preparer.md" '`apify_web` needs `max_web_results`; `apify_bbb` needs `max_bbb_results`'
+for t in '`apify_web`' '`apify_bbb`' '`apify_yellowpages`' '`apify_yelp`'; do flat_has "$SP/skills/interview-business/SKILL.md" "$t"; done
+
+echo "-- 8.7.0: final review fixes"
+flat_has "$SP/subagents/prospector.md" 'for `find_listing(directory: yellowpages)` it is `yellowpages|<query>|<city>, <state>`'
+flat_has "$SP/subagents/prospector.md" 'every Apify step carries `cost_usd`'
+flat_has "$SUD" 'title,is_claimed,star_rating,rating_count,phone,website,email,address,source_url,categories'
+flat_has "$SP/subagents/prospector.md" 'its location from the listing'"'"'s `address`'
+flat_has "$SP/skills/find-social-profiles/SKILL.md" 'a candidate a by-name `find_profiles` search (`Full + email search`) returned is not read again'
+flat_lacks "$SP/skills/find-social-profiles/SKILL.md" 'a candidate `find_profiles` returned is not read again'
+flat_has "$SP/skills/research-company/SKILL.md" '**Directory listings (`find_listing`) → `listing`.**'
+flat_has "$SP/skills/research-company/SKILL.md" 'A Yelp review (`find_reviews` with `site: yelp`) follows the same rules'
+flat_has "$SUD" '`max_search_terms` — search terms per Maps call, and also the terms per BBB, YellowPages, LinkedIn jobs and LinkedIn company search call'
+flat_has "$SUD" 'and LinkedIn profile URLs per LinkedIn `read_profile` call'
 
 finish

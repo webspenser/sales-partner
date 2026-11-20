@@ -530,7 +530,7 @@ assert_contains "$SP/README.md" 'messages only you, through Resend'
 assert_contains "$SP/evals/cases.md" 'A notification never reaches anyone but the owner'
 
 echo "-- 7.0.0: release"
-assert_contains "$SP/agent.yaml" 'version: 8.7.1'
+assert_contains "$SP/agent.yaml" 'version: 9.0.0'
 for m in agent.yaml .claude-plugin/plugin.json .claude-plugin/marketplace.json .codex-plugin/plugin.json gemini-extension.json; do
   grep -qF "$EXPECTED_DESC" "./$m" && _report ok "$m: description is the 8.0.0 string" || _report no "$m: description is not the 8.0.0 string"
 done
@@ -782,10 +782,10 @@ done < <(find AGENT.md README.md subagents skills templates context capabilities
 rm -f "$README_NO_UPGRADE"
 
 echo "-- 8.0.0: release: version, README flow and the upgrade note"
-assert_contains "$SP/agent.yaml" 'version: 8.7.1'
-assert_contains "$SP/README.md" 'Version 8.7.1.'
+assert_contains "$SP/agent.yaml" 'version: 9.0.0'
+assert_contains "$SP/README.md" 'Version 9.0.0.'
 for m in .claude-plugin/plugin.json .codex-plugin/plugin.json gemini-extension.json; do
-  assert_contains "./$m" '"version": "8.7.1"'
+  assert_contains "./$m" '"version": "9.0.0"'
 done
 assert_contains "$SP/README.md" 'Upgrading from 7.4'
 for t in 'Approved' 'Research Anyway' 'Talking Points' 'offer catalog' 'Hero Offer' 'schedule_approach'; do
@@ -1666,8 +1666,12 @@ flat_lacks "$SP/skills/find-social-profiles/SKILL.md" 'a candidate `find_profile
 flat_has "$SP/skills/research-company/SKILL.md" '**Directory listings (`find_listing`) → `listing`.**'
 flat_has "$SP/skills/research-company/SKILL.md" 'A Yelp review (`find_reviews` with `site: yelp`) follows the same rules'
 
-echo "-- 8.7.1: cost estimates from Apify Console"
-flat_lacks "$SUD" 'The three profile estimates'
+echo "-- 9.0.0: release"
+# Apify is named only in rename stops, the 8.7 upgrade note, the connector removal,
+# the agent guard's leftover-connector deny, and tests.
+left=$(grep -rli apify --exclude-dir=.git --exclude-dir=docs --exclude-dir=.superpowers . | LC_ALL=C sort | tr '\n' ' ')
+allowed='./README.md ./context/operating-config.md ./guard.yaml ./skills/schedule/SKILL.md ./skills/setup/SKILL.md ./subagents/preparer.md ./subagents/prospector.md ./tests/test-content.sh ./tests/test-policies.sh ./tests/test-schedules.sh '
+[ "$left" = "$allowed" ] && _report ok "Apify named only in rename and upgrade text" || _report no "Apify still named in: $left"
 
 echo "-- 9.0.0: webspenser scraping tool"
 SUD=$SP/capabilities/scraping/tools/webspenser/usage.md

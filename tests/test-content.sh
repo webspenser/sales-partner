@@ -600,7 +600,7 @@ assert_not_contains "$SP/subagents/preparer.md" 'Apify connectors are not'
 assert_not_contains "$SP/README.md" 'Apify is never attached'
 assert_not_contains "$SP/README.md" 'Apify connectors are not'
 assert_contains "$SP/subagents/prospector.md" '`find_businesses`'
-assert_contains "$SP/subagents/prospector.md" 'apify_spend_cap_usd_per_week'
+assert_contains "$SP/subagents/prospector.md" 'scraping_spend_cap_usd_per_week'
 assert_contains "$SP/subagents/prospector.md" 'Never retry a guard'
 assert_contains "$SP/subagents/prospector.md" '`<query>|<city>, <state>`'
 assert_not_contains "$SP/subagents/prospector.md" '`<city>|<industry>`'
@@ -1035,9 +1035,9 @@ assert_contains "$PP" 'never in a scheduled run'
 assert_contains "$PP" 'always passes `include_personal: true`'
 PR="$SP/subagents/prospector.md"
 assert_contains "$PR" 'Every source listed in `prospecting_sources` is exhausted'
-assert_contains "$PR" 'ignores the Preparer-only sources `apify_contact_info`, `apify_reviews`, `apify_ads`, `apify_jobs`, `apify_site_reader`, `apify_web`, `apify_bbb` and `apify_yelp`'
-assert_contains "$PR" 'its own sources are `apify_google_maps`,'
-assert_not_contains "$PR" '`apify_google_maps`, `apify_contact_info`,'
+assert_contains "$PR" 'ignores the Preparer-only sources `contact_info`, `reviews`, `ads`, `jobs`, `site_reader`, `open_web`, `bbb` and `yelp`'
+assert_contains "$PR" 'its own sources are `google_maps`,'
+assert_not_contains "$PR" '`google_maps`, `contact_info`,'
 assert_contains "$SP/context/operating-config.md" 'the Preparer, not the Prospector'
 # Fix round 1: rulings A-C, the cap order, the sources-not-run list, one stop_condition per lead
 assert_contains "$PP" 'the `query_place_id` parameter of the'
@@ -1596,9 +1596,10 @@ assert_contains "$SP/evals/cases.md" '## Case 55: A star-only review dates the l
 
 echo "-- 8.6.0: drift (carry on and report)"
 for f in "$SP/subagents/preparer.md" "$SP/subagents/prospector.md"; do
-  flat_has "$f" 'A guard block on a scraping call does not stop the activity'
   flat_has "$f" 'never retried with changed arguments'
 done
+flat_has "$SP/subagents/preparer.md" 'A guard block on a scraping call does not stop the activity'
+flat_has "$SP/subagents/prospector.md" 'A guard block, `input_refused` or `unavailable` on a scraping call does not stop the activity'
 flat_has "$SP/subagents/preparer.md" 'the same source is blocked on 2 leads in one run, it is skipped for the rest of the run'
 flat_has "$SP/subagents/preparer.md" 'one `notify_owner(kind: error)` at the end of the run'
 SUD="$SP/capabilities/scraping/tools/webspenser/usage.md"
@@ -1674,7 +1675,7 @@ for t in '`find_listing`' '| `find_listing` BBB | $0.10 |' '| `find_listing` Yel
 flat_has "$SP/capabilities/scraping/contract.md" '| `find_listing` |'
 flat_has "$SP/subagents/preparer.md" '`apify_bbb` and `apify_yellowpages`: one `find_listing` call each per lead'
 flat_has "$SP/subagents/preparer.md" 'matched to the lead by phone or website host; a name-only match is dropped'
-flat_has "$SP/subagents/prospector.md" '`apify_yellowpages` sources leads through `find_listing(directory: yellowpages'
+flat_has "$SP/subagents/prospector.md" '`yellowpages` sources leads through `find_listing(directory: yellowpages'
 flat_has "$SP/subagents/prospector.md" 'deduplicated by phone and website like Maps'
 flat_has "$SP/skills/find-decision-makers/SKILL.md" 'A BBB principal contact with an owner title is a decision-maker candidate'
 for t in '`bbb`' '`yellowpages`'; do flat_has "$SP/context/operating-config.md" "$t"; done
@@ -1723,7 +1724,6 @@ for t in '`open_web`' '`bbb`' '`yellowpages`' '`yelp`'; do flat_has "$SP/skills/
 
 echo "-- 8.7.0: final review fixes"
 flat_has "$SP/subagents/prospector.md" 'for `find_listing(directory: yellowpages)` it is `yellowpages|<query>|<city>, <state>`'
-flat_has "$SP/subagents/prospector.md" 'every Apify step carries `cost_usd`'
 flat_has "$SP/subagents/prospector.md" 'its location from the listing'"'"'s `address`'
 flat_has "$SP/skills/find-social-profiles/SKILL.md" 'a candidate a by-name `find_profiles` search (`Full + email search`) returned is not read again'
 flat_lacks "$SP/skills/find-social-profiles/SKILL.md" 'a candidate `find_profiles` returned is not read again'
@@ -1755,5 +1755,16 @@ for f in "$SP/subagents/prospector.md" "$SP/subagents/preparer.md"; do
   flat_has "$f" 'lists a name renamed in 9.0.0 (an `apify_` source or cap key), stop and report `<old> was renamed <new> in 9.0.0`'
 done
 flat_lacks "$SP/skills/interview-business/SKILL.md" 'Apify'
+
+echo "-- 9.0.0: prospector reads envelopes"
+PR=$SP/subagents/prospector.md
+flat_has "$PR" 'one `step` per entry in the envelope'"'"'s `calls[]`'
+flat_has "$PR" 'On `budget_exhausted`, make no further scraping call this run'
+flat_has "$PR" 'up to 20 places per search: for more leads, run another search'
+flat_has "$PR" 'its worst case from the scraping tool'"'"'s `## Cost`'
+flat_has "$PR" 'every scraping step carries `cost_usd`'
+flat_has "$PR" 'the listing'"'"'s `listing_url`'
+flat_lacks "$PR" 'Apify'
+flat_lacks "$PR" 'max_places_per_search'
 
 finish

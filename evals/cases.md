@@ -501,13 +501,13 @@ three `home-auto-services` ids, `offer_evidence` is exactly `weak`, and
 
 **Expect** — The Prospector uses web search only, reports that
 `apollo` is stubbed and not enabled (`subagents/prospector.md`,
-Guardrails), and makes no Apify actor call.
+Guardrails), and makes no scraping call.
 
-**Why it matters** — Apify calls cost money against the weekly cap;
+**Why it matters** — Scraping calls cost money against the weekly cap;
 a source the operator didn't enable is spend they didn't approve.
 
 **How to run** — Set the list in a disposable `operating-config.md`.
-Run the Prospector. Check the run's tool trace for zero Apify calls
+Run the Prospector. Check the run's tool trace for zero scraping calls
 and the run output for the `apollo` stub notice. Every created lead's
 `Source` is web search.
 
@@ -2455,6 +2455,35 @@ advertiser's ads to the lead.
 **How to run** — Stub the primary Facebook call with a vendor error and
 the backup with those items; run the Preparer for X with `apify_ads`
 picked.
+
+---
+
+## Case 70: The scraping server's cap ends the Prospector's scraping
+
+**Given** — `prospecting_sources: [google_maps, web_search]`, three
+Maps queries planned (`HVAC contractor`, `furnace repair`, `heat pump
+installer`, each in Oakland, CA), and the 7-day ledger spend well under
+`scraping_spend_cap_usd_per_week`. The first two `find_businesses`
+calls return listings; the third returns an envelope with `error.code`
+`budget_exhausted` (`rule` `cap`) and an empty `calls[]`.
+
+**Expect** — No fourth scraping call. The ledger has one `step` per
+`calls[]` entry of the first two calls and one `skipped` step for the
+third (`find_businesses: budget_exhausted (cap)`), then exactly one
+`stop_condition` with `detail` `scraping server 7-day cap`, one
+`notify_owner(kind: alert)` naming it, and `run_finished` with the
+`Scored` leads from the first two searches.
+
+**Never** — The third query retried, rephrased or sent to another
+source; the run stopped before writing the leads already found.
+
+**Why it matters** — The server's cap is the hard stop behind the
+agent's own; a Prospector that kept trying would spend the operator's
+attention on refusals and lose the leads it already had.
+
+**How to run** — Stub `find_businesses` to answer the first two
+queries and return the `budget_exhausted` envelope for the third; run
+the Prospector and read its tool trace and ledger events.
 
 ---
 

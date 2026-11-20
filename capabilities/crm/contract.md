@@ -59,7 +59,7 @@ names, so a workflow routing on them is unaffected by a rename.
 | Offer Reason (text) | the Preparer, with `update_lead` |
 | Offer Evidence (`strong`, `moderate` or `weak`) | the Preparer, with `update_lead`; empty when every offer in the segment is ruled out, or no segment fits |
 | Research Anyway (checkbox) | the operator only; no operation writes it, and every tool's guard policy refuses it to the agent |
-| Research Capped (checkbox) | the Preparer, with `update_lead`: `true` when research stopped at an Apify cap (per-lead or 7-day) or the operator declined to continue; cleared (`false`) when a continue completes. Unlike Research Anyway, no guard policy forbids it |
+| Research Capped (checkbox) | the Preparer, with `update_lead`: `true` when research stopped at a scraping cap (per-lead, 7-day or the server's) or the operator declined to continue; cleared (`false`) when a continue completes. Unlike Research Anyway, no guard policy forbids it |
 
 `Offer Evidence` is `strong` with two or more sourced signals,
 `moderate` with one, and `weak` when only the segment or industry fits.

@@ -381,8 +381,8 @@ Create these once in HubSpot. The connector can't create views.
   (`sp_research_capped`) as columns, with `Point of contact`
   (`sp_point_of_contact`) and `Point of contact reason`
   (`sp_point_of_contact_reason`), so you approve on the match you can
-  see, and a lead whose research stopped at an Apify cap (per-lead or
-  7-day) is obvious. On the Contacts view, show the contact's social fields
+  see, and a lead whose research stopped at a scraping cap (per-lead, 7-day or the
+  server's) is obvious. On the Contacts view, show the contact's social fields
   (`hs_linkedin_url`, `sp_instagram_url`, `sp_facebook_url`,
   `sp_tiktok_url`, `sp_x_url`) and `sp_profiles_checked_at`; the
   Possible Profiles Notes are on the contact.

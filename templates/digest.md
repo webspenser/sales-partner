@@ -28,5 +28,5 @@
 
 ## Spend
 
-[$ spent] of [$ cap]/week Apify cap ([percent]%) — [$ remaining]; per-lead cap [$ per-lead cap]
+[$ spent] of [$ cap]/week scraping cap ([percent]%) — [$ remaining]; per-lead cap [$ per-lead cap]
 Exa web search: [$ spent] ([count] searches, [failed] failed) — only when the week had Exa searches

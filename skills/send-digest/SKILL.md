@@ -4,7 +4,7 @@ description: Use when the digest's scheduled run fires (`schedule_digest` in the
 ---
 
 This skill produces a report, not a pipeline action. It reads the CRM
-and Apify usage, renders five fixed sections in a fixed order, and
+and scraping usage, renders five fixed sections in a fixed order, and
 sends the result to the owner with `notify_owner`. It never advances a stage, edits
 a lead field, logs talking points, or logs research — see **This skill
 reads the CRM; it never writes to it** below.
@@ -132,7 +132,7 @@ stage moves, no field edits, no talking-points or research section, not even a
   filtered client-side to the `(anchor, nominal_time]` window on
   `Stage Changed At` — Section 4, Movement.
 - Ledger **`find_events`** — Section 5. This is the one section with no
-  CRM read at all; Apify spend is not CRM data and never was.
+  CRM read at all; scraping spend is not CRM data and never was.
 
 Every one of the above is a call through `capabilities/crm/contract.md`'s ten
 provider-neutral operations — none of the five sections reads a
@@ -179,7 +179,7 @@ First, call `ledger_status`, then write `run_started`
    - **Research capped leads.** Mark a lead whose `Research Capped` is
      true with `(research capped)` after the evidence (after the `weak`
      mark when it has one). The flag is true when research stopped at an
-     Apify cap, per lead or 7-day, or the operator declined to continue;
+     scraping cap, per lead, 7-day or the server's, or the operator declined to continue;
      the lead's stage reason says which cap and which sources did not
      run, and the digest does not repeat it. The mark changes neither
      the order nor the count.
@@ -290,15 +290,16 @@ First, call `ledger_status`, then write `run_started`
    score or `Next Action` was edited without its status moving does
    not appear here. Heading with the count of leads that actually
    moved.
-6. **Section 5 — Spend.** Read the week's Apify cost from the ledger:
+6. **Section 5 — Spend.** Read the week's scraping cost from the ledger:
    the sum of `cost_usd` over this cap week's `step` events for `prospect`
    and `prepare` (`find_events`), leaving out every step whose `detail` starts with `search_web` — the same weekly boundary the anchor
    uses, so spend and digest windows line up. Compare it to
    `scraping_spend_cap_usd_per_week` from `operating-config.md`. Report the
    dollar amount spent, the weekly cap, and the percentage, then the
    per-lead cap, `scraping_cap_usd_per_lead` from the same file, next to
-   it as `$<cap> per lead`. The amounts are
-   estimates (Apify does not return cost). When the week has
+   it as `$<cap> per lead`. The amount is the
+   server's reported cost, partly estimated (each step's `detail` says
+   `estimated` when the server estimated it). When the week has
    `search_web` steps, add one line, `Exa web search: $<sum of their
    cost_usd> (<count> searches, <failed> failed)`; with none, leave the
    line out. This section does not touch the CRM.
@@ -379,7 +380,7 @@ matches the wall clock exactly this week. Anchor: Monday, 2026-08-24,
 - Owner's pipeline now: Contacted 4, Engaged 1, Open Deal 1, Nurture 2, Customer 0
 
 ## Spend
-$18.40 of $25.00/week Apify cap (74%) — $6.60 remaining this cap week; per-lead cap $0.50
+$11.10 of $15.00/week scraping cap (74%) — $3.90 remaining this cap week; per-lead cap $0.50
 ```
 
 Sent with `notify_owner(kind: digest)` to the owner's pinned address.

@@ -23,7 +23,7 @@ while IFS= read -r f; do
 done < <(find "$SP" -name '*.md' -not -path './docs/*' -not -path './tests/*' -not -path './.git/*' -not -name README.md -not -path './.claude/*' -not -path './CLAUDE.md' -not -path './GEMINI.md' -not -path './AGENTS.md')
 
 echo "-- prospecting sources"
-assert_contains "$SP/context/operating-config.md" 'prospecting_sources: [apify_google_maps, apify_contact_info, apify_reviews, apify_ads, apify_jobs, apify_site_reader, apify_profiles, web_search]'
+assert_contains "$SP/context/operating-config.md" 'prospecting_sources: [google_maps, contact_info, reviews, ads, jobs, site_reader, profiles, web_search]'
 assert_contains "$SP/context/operating-config.md" '**`prospecting_sources`**'
 assert_contains "$SP/subagents/prospector.md" 'only the sources listed in `prospecting_sources`'
 assert_contains "$SP/subagents/prospector.md" '`apollo` is listed'
@@ -590,7 +590,7 @@ assert_contains "$SP/capabilities/scraping/tools/webspenser/usage.md" '`estimate
 assert_not_contains "$SP/capabilities/scraping/tools/webspenser/usage.md" 'Arguments to omit'
 
 echo "-- 7.2: Apify wiring"
-assert_contains "$SP/context/operating-config.md" 'apify_contact_info'
+assert_contains "$SP/context/operating-config.md" 'contact_info'
 assert_not_contains "$SP/context/operating-config.md" 'apify_site_scraper:'
 assert_contains "$SP/context/operating-config.md" 'apify_site_scraper was renamed apify_contact_info'
 assert_not_contains "$SP/subagents/prospector.md" 'Apify is never attached'
@@ -763,7 +763,7 @@ for k in approach_threshold enabled_channels sending_identity callback_phone; do
   assert_not_contains "$SP/context/operating-config.md" "$k"
 done
 assert_contains "$SP/context/operating-config.md" 'write-talking-points'
-for k in research_threshold research_quota_per_week research_budget_per_lead_minutes leads_per_week prospecting_sources apify_spend_cap_usd_per_week tone; do
+for k in research_threshold research_quota_per_week research_budget_per_lead_minutes leads_per_week prospecting_sources scraping_spend_cap_usd_per_week scraping_cap_usd_per_lead max_web_fetches_per_lead tone; do
   assert_contains "$SP/context/operating-config.md" "$k:"
 done
 # The retired terms appear nowhere in the package, except in the README's "Upgrading from
@@ -1003,19 +1003,19 @@ grep -qF 'prop("sp_research_capped", "Research capped", "bool", "booleancheckbox
 
 echo "-- 8.1.0: catalog research tips, new config keys, interview"
 OC="$SP/context/operating-config.md"
-assert_contains "$OC" 'apify_cap_usd_per_lead: 0.50'
+assert_contains "$OC" 'scraping_cap_usd_per_lead: 0.50'
 assert_contains "$OC" 'research_budget_per_lead_minutes: 15'
 assert_not_contains "$OC" 'research_budget_per_lead_minutes: 8'
-for k in apify_reviews apify_ads apify_jobs apify_site_reader; do
+for k in reviews ads jobs site_reader; do
   grep -E '^prospecting_sources:' "$OC" | grep -qF "$k" && _report ok "prospecting_sources lists $k" || _report no "prospecting_sources lacks $k"
   assert_contains "$OC" "\`$k\`"
 done
-assert_contains "$OC" '**`apify_cap_usd_per_lead`**'
+assert_contains "$OC" '**`scraping_cap_usd_per_lead`**'
 assert_contains "$OC" '**`research_budget_per_lead_minutes`**'
 assert_contains "$SP/context/offer-catalog.md" 'research_tips'
 assert_contains "$SP/skills/interview-business/SKILL.md" 'research_tips'
 assert_contains "$SP/skills/interview-business/SKILL.md" 'research_tips: >'
-for k in apify_reviews apify_ads apify_jobs apify_site_reader; do
+for k in reviews ads jobs site_reader; do
   assert_contains "$SP/skills/interview-business/SKILL.md" "\`$k\`"
 done
 assert_not_contains "$SP/skills/interview-business/SKILL.md" 'Apify connector URL'
@@ -1387,7 +1387,7 @@ assert_contains "$SP/subagents/preparer.md" 're-check the stage'
 assert_contains "$SP/subagents/preparer.md" 'not Research Capped'
 assert_contains "$SP/subagents/preparer.md" "no person's name"
 assert_contains "$SP/subagents/preparer.md" 'opt-out'
-assert_contains "$SP/context/operating-config.md" '`apify_profiles`'
+assert_contains "$SP/context/operating-config.md" '`profiles`'
 
 # Evals: seven social profile cases
 for h in \
@@ -1677,7 +1677,7 @@ flat_has "$SP/subagents/preparer.md" 'matched to the lead by phone or website ho
 flat_has "$SP/subagents/prospector.md" '`apify_yellowpages` sources leads through `find_listing(directory: yellowpages'
 flat_has "$SP/subagents/prospector.md" 'deduplicated by phone and website like Maps'
 flat_has "$SP/skills/find-decision-makers/SKILL.md" 'A BBB principal contact with an owner title is a decision-maker candidate'
-for t in '`apify_bbb`' '`apify_yellowpages`'; do flat_has "$SP/context/operating-config.md" "$t"; done
+for t in '`bbb`' '`yellowpages`'; do flat_has "$SP/context/operating-config.md" "$t"; done
 flat_has "$SP/evals/cases.md" '## Case 64: A BBB principal becomes the point of contact'
 flat_has "$SP/evals/cases.md" '## Case 65: No BBB listing is a result, not drift'
 
@@ -1685,7 +1685,7 @@ echo "-- 8.7.0: apify_yelp"
 for t in 'a Yelp page URL from this lead'"'"'s `search_pages` results or its website'"'"'s links' '| `find_reviews` (Google or Yelp) | $0.02 |'; do flat_has "$SUD" "$t"; done
 flat_has "$SP/capabilities/scraping/contract.md" '`site` (`google`, the default, or `yelp`)'
 flat_has "$SP/subagents/preparer.md" '`apify_yelp`: when reviews are picked and the lead has a Yelp page URL'
-for t in '`apify_yelp`'; do flat_has "$SP/context/operating-config.md" "$t"; done
+for t in '`yelp`'; do flat_has "$SP/context/operating-config.md" "$t"; done
 flat_has "$SP/evals/cases.md" '## Case 66: A Yelp complaint is named only in Avoid, like a Google one'
 
 echo "-- 8.7.0: LinkedIn jobs"
@@ -1719,7 +1719,7 @@ done
 flat_lacks "$SUD" 'Runs ten Apify actors'
 flat_lacks "$SUD" 'lacks one of the ten actors'
 flat_has "$SP/subagents/preparer.md" '`apify_web` needs `max_web_results`; `apify_bbb` needs `max_bbb_results`'
-for t in '`apify_web`' '`apify_bbb`' '`apify_yellowpages`' '`apify_yelp`'; do flat_has "$SP/skills/interview-business/SKILL.md" "$t"; done
+for t in '`open_web`' '`bbb`' '`yellowpages`' '`yelp`'; do flat_has "$SP/skills/interview-business/SKILL.md" "$t"; done
 
 echo "-- 8.7.0: final review fixes"
 flat_has "$SP/subagents/prospector.md" 'for `find_listing(directory: yellowpages)` it is `yellowpages|<query>|<city>, <state>`'
@@ -1743,5 +1743,17 @@ flat_has "$SUD" 'Never attach the `N8N Webspenser Newsletter` connector'
 flat_lacks "$SUD" 'get-dataset-items'
 assert_contains "$SP/capabilities/scraping/tools/webspenser/identity.yaml" 'server_match: webspenser_scraping'
 [ -z "$(ls capabilities/scraping/tools | grep -vx webspenser)" ] && _report ok "webspenser is the only scraping tool" || _report no "another scraping tool folder remains"
+
+echo "-- 9.0.0: renamed keys"
+OC=$SP/context/operating-config.md
+assert_contains "$OC" 'prospecting_sources: [google_maps, contact_info, reviews, ads, jobs, site_reader, profiles, web_search]'
+assert_contains "$OC" 'scraping_spend_cap_usd_per_week: 15'
+assert_contains "$OC" 'scraping_cap_usd_per_lead: 0.50'
+assert_contains "$OC" 'max_web_fetches_per_lead: 5'
+flat_has "$OC" 'the Webspenser scraping server'"'"'s own 7-day cap ($20) is the hard stop behind it'
+for f in "$SP/subagents/prospector.md" "$SP/subagents/preparer.md"; do
+  flat_has "$f" 'lists a name renamed in 9.0.0 (an `apify_` source or cap key), stop and report `<old> was renamed <new> in 9.0.0`'
+done
+flat_lacks "$SP/skills/interview-business/SKILL.md" 'Apify'
 
 finish

@@ -709,6 +709,8 @@ the queue is empty; then move to the next phase.
 ### Guardrails
 - If `prospecting_sources` lists `apify_site_scraper`, stop and report
   `apify_site_scraper was renamed apify_contact_info`.
+- If `context/operating-config.md` lists a name renamed in 9.0.0 (an `apify_` source or cap key), stop and report `<old> was renamed <new> in 9.0.0`
+  (the table in the README's 8.7 upgrade note), naming each old key it found.
 - Nothing behind a login is used as a source.
 - A `Source URL` is required on every finding —
   `log_research` itself rejects a call when any finding has an empty

@@ -194,6 +194,8 @@ for correct behavior.
   `offer_evidence` or `research_anyway`.
 - If `prospecting_sources` lists `apify_site_scraper`, stop and report
   `apify_site_scraper was renamed apify_contact_info`.
+- If `context/operating-config.md` lists a name renamed in 9.0.0 (an `apify_` source or cap key), stop and report `<old> was renamed <new> in 9.0.0`
+  (the table in the README's 8.7 upgrade note), naming each old key it found.
 - If `apollo` is listed in `prospecting_sources`, report that the
   Apollo tool is stubbed and not yet enabled, and continue with the
   remaining listed sources — never quietly swap in an unlisted one.

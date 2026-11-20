@@ -169,25 +169,24 @@ files exists because a human has to answer it in their own words.
    it. Never write into the package's `samples/`.
 8. **Round 4 — the operating parameters.** Ask, one at a time: how many
    leads per week should the pipeline target; which sourcing tools may
-   it use (`apify_google_maps` for local-business listings,
-   `apify_contact_info` for contact details on business websites,
-   `apify_reviews` for a business's Google Maps reviews, `apify_ads`
-   for the ads it runs, `apify_jobs` for its job posts,
-   `apify_site_reader` for reading a few pages of its website,
-   `apify_profiles` for finding its contacts' public social profiles,
-   `apify_web` for press, news and pages found by web search,
-   `apify_bbb` for a business's BBB rating, complaints and owners,
-   `apify_yellowpages` for YellowPages listings (and new leads by trade
-   and city), `apify_yelp` for a business's Yelp reviews,
-   `web_search`; Apify needs the business's own Apify account with a
-   monthly usage limit; do not ask about the Apify connection itself,
-   because setup's tools step owns it); which activities should
+   it use (`google_maps` for local-business listings,
+   `contact_info` for contact details on business websites,
+   `reviews` for a business's Google Maps reviews, `ads`
+   for the ads it runs, `jobs` for its job posts,
+   `site_reader` for reading a few pages of its website,
+   `profiles` for finding its contacts' public social profiles,
+   `open_web` for press, news and pages found by web search,
+   `bbb` for a business's BBB rating, complaints and owners,
+   `yellowpages` for YellowPages listings (and new leads by trade
+   and city), `yelp` for a business's Yelp reviews,
+   `web_search`; scraping runs through the Webspenser server; do not ask
+   about its connection, because setup's tools step owns it); which activities should
    run on a schedule (prospecting, research, the
    digest — the shipped default is prospecting
    then research on Monday at 07:00 and the digest on Monday at 08:00),
    and for each one the weekday and time, or daily, plus your time zone
    as an IANA name such as `America/New_York`); what is the weekly
-   Apify spend cap; how should the
+   scraping spend cap (below the server's $20; default $15); how should the
    talking points sound (three to five adjectives, plus one example
    sentence in that voice). Last, ask which email
    address or addresses should receive the digest and the agent's
@@ -197,7 +196,7 @@ files exists because a human has to answer it in their own words.
    operator confirms.
 9. Write the answers to `context/operating-config.md`'s keys
    (`leads_per_week`, `prospecting_sources`,
-   `apify_spend_cap_usd_per_week`, `tone`, and `business_name`, the
+   `scraping_spend_cap_usd_per_week`, `tone`, and `business_name`, the
    business's name as the operator writes it), to
    `context/business-profile.md`'s "Voice" section (the adjectives plus
    the example sentence), and to
@@ -256,7 +255,7 @@ companies.
   reference calls. Operator pastes an actual outbound email they sent
   Meridian — saved verbatim to `context/samples/`.
 - Round 4 answers: 40 leads/week, prospecting
-  Monday 07:00 and digest Monday 08:00 Eastern, $25/week Apify cap,
+  Monday 07:00 and digest Monday 08:00 Eastern, $15/week scraping cap,
   tone "direct, technical, no fluff" with the example line "We don't
   do discovery calls to sell you discovery calls — here's the
   finding." Written to `operating-config.md`, `schedules.yaml`

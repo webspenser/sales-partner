@@ -44,6 +44,16 @@ for t in mcp__claude_ai_Attio__list-comment-replies mcp__claude_ai_Attio__list-r
   acheck 0 "read or CRM write passes: $t" "$t"
 done
 
+# 9.0.0: no Apify tool folder; a leftover Apify connector gets no tool policy, so the
+# agent policy denies its dispatchers and every owner--actor tool.
+for t in mcp__claude_ai_Apify_Connector__call-actor mcp__claude_ai_Apify_Actors__call_actor \
+         mcp__claude_ai_Apify_Connector__add-actor mcp__claude_ai_Apify_Connector__compass--crawler-google-places \
+         mcp__claude_ai_Apify_Connector__apify--web-fetch mcp__claude_ai_Apify_Connector__create-webhook; do
+  acheck 2 "leftover Apify tool denied: $t" "$t"
+done
+for t in mcp__claude_ai_Webspenser_Scraping__find_jobs mcp__claude_ai_Webspenser_Scraping__read_site; do
+  acheck 0 "scraping server tool passes the agent policy: $t" "$t"
+done
 for t in execute_workflow test_workflow create_workflow_from_code update_workflow archive_workflow publish_workflow unpublish_workflow restore_workflow_version; do
   acheck 2 "n8n dispatcher denied: $t" "mcp__claude_ai_N8N_Webspenser_Newsletter__$t"
 done

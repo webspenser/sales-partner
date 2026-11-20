@@ -7,8 +7,10 @@
 # call_tool: a generic dispatcher (Zernio) would hide any tool behind it.
 # *_workflow*: n8n's instance-level tools run or rebuild any workflow, a
 # dispatcher that could reach a workflow which sends.
-# *call-actor*, *call_actor*, *add-actor*, *webhook*, *--*: Apify's
-# run-any-actor dispatchers, its webhooks and every owner--actor tool.
+# *-actor*, *_actor*, *webhook*, *--*, *-slash-*, *_slash_*: Apify's
+# actor tools in every spelling (call, add, search, fetch details, abort,
+# run reads), its webhooks, every owner--actor tool and the older
+# apify-slash-<actor> names. The guard matches tool names, not servers.
 # Since 9.0.0 the agent scrapes only through the Webspenser server, so an
 # Apify connector left attached to a routine has no tool policy of its own.
 covers: [no_external_send]
@@ -16,5 +18,5 @@ deny: ["*send*", "*reply*", "*forward*", "*publish*", "*schedule_message*",
        "*cross_post*", "*posts_create*", "*bulk_upload_posts*", "*posts_retry*",
        "*execute_write*", "*call_tool*", "*create_event*", "*update_event*",
        "*respond_to_event*", "*_workflow*", "*restore_workflow*",
-       "*call-actor*", "*call_actor*", "*add-actor*", "*webhook*", "*--*"]
+       "*-actor*", "*_actor*", "*webhook*", "*--*", "*-slash-*", "*_slash_*"]
 exempt: [owner_notify]

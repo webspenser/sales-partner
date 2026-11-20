@@ -48,7 +48,10 @@ done
 # agent policy denies its dispatchers and every owner--actor tool.
 for t in mcp__claude_ai_Apify_Connector__call-actor mcp__claude_ai_Apify_Actors__call_actor \
          mcp__claude_ai_Apify_Connector__add-actor mcp__claude_ai_Apify_Connector__compass--crawler-google-places \
-         mcp__claude_ai_Apify_Connector__apify--web-fetch mcp__claude_ai_Apify_Connector__create-webhook; do
+         mcp__claude_ai_Apify_Connector__apify--web-fetch mcp__claude_ai_Apify_Connector__create-webhook \
+         mcp__claude_ai_Apify_Actors__add_actor mcp__claude_ai_Apify__search-actors mcp__claude_ai_Apify__search_actors \
+         mcp__claude_ai_Apify__fetch-actor-details mcp__claude_ai_Apify__fetch_actor_details mcp__claude_ai_Apify__abort-actor-run \
+         mcp__Apify-Actors__apify-slash-rag-web-browser mcp__Apify__apify_slash_web_scraper; do
   acheck 2 "leftover Apify tool denied: $t" "$t"
 done
 for t in mcp__claude_ai_Webspenser_Scraping__find_jobs mcp__claude_ai_Webspenser_Scraping__read_site; do

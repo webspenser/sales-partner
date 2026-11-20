@@ -612,7 +612,7 @@ assert_contains "$SP/subagents/preparer.md" 'sum `cost_usd` over those `step`'
 assert_contains "$SP/subagents/preparer.md" 'apify_site_scraper was renamed apify_contact_info'
 assert_contains "$SP/skills/send-digest/SKILL.md" 'scraping cost from the ledger'
 assert_contains "$SP/README.md" 'Upgrading from 7.1'
-assert_contains "$SP/evals/cases.md" 'A scrape never exceeds its pinned limits'
+assert_contains "$SP/evals/cases.md" 'A scrape never sends a size'
 
 
 echo "-- 7.3: two-gate scoring"
@@ -1209,8 +1209,8 @@ for h in \
   assert_contains "$EV" "$h"
 done
 for w in 'Cases 33 and 34 positive checks' '`find_contacts; shared-platform website`' '`read_site; shared-platform website`' \
-  '{"url": "https://www.facebook.com/harborbooks"}' '`https://smithbookkeeping.com/` in `urls`' '`read_site; https fetch failed`' \
-  '{"url": "https://www.facebook.com/lakesidecpa/"}' '`find_ads facebook; profile id page`' \
+  'facebook_page_url: "https://www.facebook.com/harborbooks"' '`https://smithbookkeeping.com/` in `urls`' '`read_site; https fetch failed`' \
+  'facebook_page_url: "https://www.facebook.com/lakesidecpa/"' '`find_ads facebook; profile id page`' \
   '`find_contacts; website host refused`' '`read_site; website host refused`' '{"url": "https://lakesidecpa.com/"}'; do
   assert_contains "$EV" "$w"
 done
@@ -1419,7 +1419,7 @@ done
 assert_contains "$EV" 'https://www.tiktok.com/@example.priyan'
 assert_contains "$FSP" 'https://www.instagram.com/example.priya.n'
 flat_has "$EV" '`find_profiles` is not called: LinkedIn is filled, and no actor searches the other platforms'
-flat_has "$EV" 'returned by `find_profiles` (`Full + email search` mode)'
+flat_has "$EV" '`current_employer`, returned by `find_profiles`, is'
 flat_has "$EV" 'The pass runs even when the prepare queue is empty'
 # I7: the backlog is bounded per run, with no new key
 flat_has "$PR" 'at most `research_quota_per_week` backlog leads per run'
@@ -1675,13 +1675,13 @@ allowed='./README.md ./context/operating-config.md ./guard.yaml ./skills/schedul
 
 echo "-- 9.0.0: webspenser scraping tool"
 SUD=$SP/capabilities/scraping/tools/webspenser/usage.md
-flat_has "$SUD" '`webspenser_scraping:find_jobs`'
+flat_has "$SUD" '`scraping:find_jobs`'
 flat_has "$SUD" 'one `step` per `calls[]` entry'
 flat_has "$SUD" '`input_refused` gives `<source> (refused)`'
 flat_has "$SUD" 'never carry the reviewer'"'"'s profile URL, photo or ID'
 flat_has "$SUD" 'Never attach the `N8N Webspenser Newsletter` connector'
 flat_lacks "$SUD" 'get-dataset-items'
-assert_contains "$SP/capabilities/scraping/tools/webspenser/identity.yaml" 'server_match: webspenser_scraping'
+assert_contains "$SP/capabilities/scraping/tools/webspenser/identity.yaml" 'server_match: scraping'
 [ -z "$(ls capabilities/scraping/tools | grep -vx webspenser)" ] && _report ok "webspenser is the only scraping tool" || _report no "another scraping tool folder remains"
 
 echo "-- 9.0.0: renamed keys"
@@ -1744,5 +1744,22 @@ flat_has "$ST" 'renames the config keys listed in the README'"'"'s 8.7 upgrade n
 flat_lacks "$ST" 'max_places_per_search'
 flat_has "$SC" 'never attach the `N8N Webspenser Newsletter` connector'
 flat_has "$SC" 'remove a connector the scraping tool no longer uses (an Apify connector)'
+
+echo "-- 9.0.0: final review fixes"
+SM_WS=$(sed -n 's/^server_match: //p' ./capabilities/scraping/tools/webspenser/identity.yaml)
+for n in claude_ai_webspenser_scraping webspenser-scraping webspenser_scraping; do
+  case "$n" in *"$SM_WS"*) _report ok "server_match $SM_WS matches $n" ;; *) _report no "server_match $SM_WS misses $n" ;; esac
+done
+PP=$SP/subagents/preparer.md
+flat_has "$PP" 'its own `stop_condition` with `detail` `scraping server cap; not run: <sources>`'
+flat_lacks "$PP" 'write one `stop_condition` for the run'
+flat_has "$PP" 'On `budget_exhausted` in the Profile pass'
+flat_has "$SP/skills/find-social-profiles/SKILL.md" '`budget_exhausted`: return `stopped`'
+SUD=$SP/capabilities/scraping/tools/webspenser/usage.md
+flat_has "$SUD" '`ok` and `empty` are written as `ok`, `failed` and `timeout` as `failed`'
+flat_has "$SUD" 'the entry that answered carries the items; the others carry 0'
+EV=$SP/evals/cases.md
+for t in onlyTotal get-dataset-items 'Full + email search' 'bindings/scraping.md'; do flat_lacks "$EV" "$t"; done
+assert_contains "$EV" "## Case 71: The scraping server's cap mid-run caps every lead still in research"
 
 finish

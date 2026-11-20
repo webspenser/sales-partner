@@ -477,13 +477,17 @@ and room the operator grants for a continue never lifts it.
 ### Server cap
 The scraping server holds its own 7-day cap. A call that returns
 `budget_exhausted` is handled like the 7-day cap above, with its own
-reason start: write one `stop_condition` for the run, call
-`notify_owner(kind: alert)` once naming the scraping server's cap, and
-stop scraping for the rest of the run; research carries on with web
-search only. Every lead the run still researches after it gets
-`research_capped: true`, and its stage reason starts `research capped
-by the scraping server's 7-day cap; <sources not run>`. It is never
-retried in the same run.
+reason start: call `notify_owner(kind: alert)` once naming the scraping
+server's cap, and stop scraping for the rest of the run; research
+carries on with web search only. Every lead the run still researches
+after it (the lead in progress and each later lead in the queue) gets
+`research_capped: true`, a stage reason starting `research capped by the
+scraping server's 7-day cap; <sources not run>`, and its own `stop_condition` with `detail` `scraping server cap; not run: <sources>`,
+as for any capped lead (Ledger). It is never retried in the same run.
+On `budget_exhausted` in the Profile pass, the pass ends as when the
+7-day cap would be passed (Profile pass, Caps and time): the contact in
+progress and every lead not yet reached stay unchecked, one alert at
+most, and no lead is marked Research Capped for it.
 
 A guard block, `input_refused` or `unavailable` on a scraping call does
 not stop the activity: the source is not run for this lead, research

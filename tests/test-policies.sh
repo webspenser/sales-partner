@@ -122,7 +122,7 @@ SM=
 echo "-- scraping (webspenser)"
 jset() { python3 -c 'import json,sys;d=json.loads(sys.argv[1]);d[sys.argv[2]]=json.loads(sys.argv[3]);print(json.dumps(d))' "$@"; }
 jnest() { python3 -c 'import json,sys;d=json.loads(sys.argv[1]);d[sys.argv[2]][sys.argv[3]]=json.loads(sys.argv[4]);print(json.dumps(d))' "$@"; }
-AG2=capabilities/scraping/tools/webspenser/guard.yaml; P=mcp__claude_ai_Webspenser_Scraping__; SM=webspenser_scraping
+AG2=capabilities/scraping/tools/webspenser/guard.yaml; P=mcp__claude_ai_Webspenser_Scraping__; SM=scraping
 LOC='{"city":"Alameda","state":"CA","country":"US"}'
 FB_OK="{\"query\":\"HVAC contractor\",\"location\":$LOC}"
 FC_OK='{"urls":["https://example.com"]}'
@@ -159,6 +159,9 @@ check 2 "read_profile refuses another host" $AG2 ${P}read_profile '{"url":"https
 check 2 "find_ads refuses fb.com"           $AG2 ${P}find_ads '{"business":"example.com","facebook_page_url":"https://fb.com/joes"}' "" -
 check 2 "find_reviews refuses a Yelp search" $AG2 ${P}find_reviews '{"site":"yelp","url":"https://www.yelp.com/search?q=x"}' "" -
 check 2 "find_profiles refuses a person URL" $AG2 ${P}find_profiles '{"company_url":"https://www.linkedin.com/in/someone","roles":["owner"]}' "" -
+check 0 "cloud routine prefix: find_jobs passes" $AG2 mcp__Webspenser-Scraping__find_jobs "$FJ_OK" "" -
+check 2 "cloud routine prefix: extra key blocked" $AG2 mcp__Webspenser-Scraping__find_jobs "$(jset "$FJ_OK" maxItems 5)" "may not use" -
+check 2 "cloud routine prefix: other tool blocked" $AG2 mcp__Webspenser-Scraping__execute_workflow '{}' "not in the allow list" -
 for t in execute_workflow call-actor find_everything; do
   check 2 "$t not in the allow list" $AG2 ${P}$t '{}' "not in the allow list" -
 done

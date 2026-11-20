@@ -6,10 +6,10 @@
 # 11 tools, each with only its contract arguments (a size key, an actor
 # option or any other extra key is blocked here, not just dropped by the
 # server), and the URL rules for every argument that takes a URL.
-# server_match webspenser_scraping matches the claude.ai connector
-# "Webspenser Scraping" (claude_ai_Webspenser_Scraping), never the
-# N8N Webspenser Newsletter connector, whose instance tools the root
-# guard denies. find_contacts' limit of 10 URLs is the server's schema.
+# server_match scraping matches the connector "Webspenser Scraping" as a
+# claude.ai session names it (claude_ai_Webspenser_Scraping) and as a
+# cloud routine does (Webspenser-Scraping), never the N8N Webspenser
+# Newsletter connector, whose instance tools the root guard denies. find_contacts' limit of 10 URLs is the server's schema.
 covers: [no_external_send, allowlisted_tools]
 allow: [find_businesses, find_contacts, find_reviews, find_ads, find_jobs, read_site,
   find_profiles, read_profile, search_pages, fetch_page, find_listing]

@@ -151,6 +151,9 @@ The Preparer's cap and time-budget rules for scraping spend apply to every
   return `stopped` rather than marking the contact checked. Never retry
   it: the server already retried. `input_refused` skips the platform for
   this contact.
+- `budget_exhausted`: return `stopped` at once, without marking the
+  contact checked and without another scraping call; the Preparer ends
+  the pass (its Server cap).
 - A candidate's profile is private or empty: it has no bio or links to
   score, so it can only be listed as possible, with the reason `private
   profile, name match only`.

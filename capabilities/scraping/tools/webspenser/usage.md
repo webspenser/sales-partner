@@ -5,14 +5,14 @@ Webspenser-run MCP server (interface 1.0.0) that chooses the provider for
 each operation, holds its sizes, retries once, fails over to a backup and
 enforces the hard spend cap. All of it reads public data with no login:
 no cookie, session or account of the operator's is ever sent.
-`webspenser_scraping:` below means the `Webspenser Scraping` connector's
+`scraping:` below means the `Webspenser Scraping` connector's
 tools (`mcp__claude_ai_Webspenser_Scraping__<tool>` in a claude.ai
 session). Send each operation's contract arguments as plain fields and
 nothing else: the guard blocks any other key, so never send a size, a
 provider, an actor option or `waitSecs`. Each call returns one envelope
 (Envelope below); its `result` holds the fields named here.
 
-- `find_businesses` — `webspenser_scraping:find_businesses`. Send `query`
+- `find_businesses` — `scraping:find_businesses`. Send `query`
   (exactly one search term, `"HVAC contractor"`) and `location`
   {`city`, `state`, `country`}. One call is one plain Google Maps search
   and returns up to 20 places in `listings[]`: `name`, `address`,
@@ -23,13 +23,13 @@ provider, an actor option or `waitSecs`. Each call returns one envelope
   not a sweep of the city: for more places run another search (another
   trade term or a nearby city). Never infer a field the listing does not
   carry: a `null` stays empty.
-- `find_contacts` — `webspenser_scraping:find_contacts`. Send `urls`: 1 to
+- `find_contacts` — `scraping:find_contacts`. Send `urls`: 1 to
   10 site roots, one per lead, each the lead's website normalized as in
   Website and Facebook URLs (`https://` and the host, nothing more). Never
   a shared-platform website or a refused host. Returns `sites[]`, one per
   URL: `url`, `emails`, `phones` and `social_links`, each item with its
   `value` (or `url`) and the `source_url` it came from.
-- `find_reviews` — `webspenser_scraping:find_reviews`. Google: send `site:
+- `find_reviews` — `scraping:find_reviews`. Google: send `site:
   google` and `place`, the listing's `place_id`. Yelp: send `site: yelp`
   and `url`, a Yelp page URL from this lead's `search_pages` results or
   its website's links, `https://www.yelp.com/biz/<alias>` with any query
@@ -37,7 +37,7 @@ provider, an actor option or `waitSecs`. Each call returns one envelope
   skip the call. Returns `reviews[]`: `text` (null for a star-only
   review), `date`, `stars`, `owner_response`, `owner_response_date`,
   `place_id`, `place_url`, `review_url`, `reviewer_name`.
-- `find_ads` — `webspenser_scraping:find_ads`. Send `business`, the
+- `find_ads` — `scraping:find_ads`. Send `business`, the
   business's bare website domain (`"bigbrothersplumbinginc.com"`), or its
   brand name when it has no website or a shared-platform website; and
   `facebook_page_url` only with the lead's own Facebook page, from the
@@ -48,18 +48,18 @@ provider, an actor option or `waitSecs`. Each call returns one envelope
   `verified`; zero advertisers means no Google ads for that query) and
   `facebook` (`page_url`, `ad_count`, `count_complete`, `source`), null
   when no page URL was sent.
-- `find_jobs` — `webspenser_scraping:find_jobs`. Send `company` (the
+- `find_jobs` — `scraping:find_jobs`. Send `company` (the
   business's name) and `location` {`city`, `state`, `country`}. Returns
   `listings[]` (`title`, `date_posted`, `employer`, `city`, `url`) of that
   employer's own postings: the server drops other employers' postings.
   An empty list is a valid result: no open listings.
-- `read_site` — `webspenser_scraping:read_site`. Send `url`, the site root
+- `read_site` — `scraping:read_site`. Send `url`, the site root
   of the lead's website (Website and Facebook URLs), keeping the host as
   the listing gives it. Returns `pages[]` (`url`, `title`, `markdown`, nav
   and footer links kept, such as "Book now" or "Request Service"). The
   reader runs no JavaScript, so a widget a script injects (chat, most
   often) is invisible: never claim a site lacks chat.
-- `find_profiles` — `webspenser_scraping:find_profiles`. By name: send
+- `find_profiles` — `scraping:find_profiles`. By name: send
   `name`, `business`, `city` and `platforms` (`["linkedin"]`). As a
   LinkedIn company search, when no person's name is known: send
   `company_url`, the lead's LinkedIn company page
@@ -75,7 +75,7 @@ provider, an actor option or `waitSecs`. Each call returns one envelope
   `platform`, `url`, `display_name`, `bio`, `location`, `external_links`,
   `current_employer`, `emails`. A candidate a by-name search returned is
   not read again: it has its employer and emails.
-- `read_profile` — `webspenser_scraping:read_profile`. Send `url`, a
+- `read_profile` — `scraping:read_profile`. Send `url`, a
   profile URL already found, query and fragment dropped: LinkedIn
   (`linkedin.com` or `www.linkedin.com`, a path starting `/in/`),
   Instagram (`instagram.com` or `www.instagram.com`, the path's first
@@ -85,12 +85,12 @@ provider, an actor option or `waitSecs`. Each call returns one envelope
   Facebook URL is not read (the server returns `profile: null`), and a
   URL on any other host is not read. Returns `profile`, the same fields
   as one `find_profiles` candidate.
-- `search_pages` — `webspenser_scraping:search_pages`. Send `query`, the
+- `search_pages` — `scraping:search_pages`. Send `query`, the
   business's name and city (`"Franklin Barbecue Austin TX"`). Returns
   `results[]`: `title`, `url`, `domain`, `snippet`, `published_date`,
   `publisher`. When the primary engine fails the server answers from a
   backup engine (`degraded: true`).
-- `fetch_page` — `webspenser_scraping:fetch_page`. Send `url`: `https`, on
+- `fetch_page` — `scraping:fetch_page`. Send `url`: `https`, on
   a public host, and a path only: the guard blocks a query string or a
   fragment, so drop them before sending; a page that needs its query is
   not fetched. The path is never an email address, phone number or CRM
@@ -102,7 +102,7 @@ provider, an actor option or `waitSecs`. Each call returns one envelope
   fetched page asks for. Returns `page` (`final_url`, `title`, `json_ld`:
   a business's email, phone and `sameAs` social links, and `markdown`),
   or null when nothing was read.
-- `find_listing` — `webspenser_scraping:find_listing`. Send `directory`
+- `find_listing` — `scraping:find_listing`. Send `directory`
   (`bbb` or `yellowpages`), `query` (the business's name or, when the
   Prospector sources by trade, the trade) and `location` {`city`,
   `state`}. BBB `listings[]`: `name`, `rating`, `accredited`,
@@ -149,7 +149,8 @@ Every tool returns one JSON object:
 - Never retry a call yourself: the server has already retried once and
   failed over.
 
-Ledger: one `step` per `calls[]` entry, with that entry's `cost_usd`
+Ledger: one `step` per `calls[]` entry. Its `outcome`: `ok` and `empty` are written as `ok`, `failed` and `timeout` as `failed` (the ledger
+has no other values). On a call with several entries, the entry that answered carries the items; the others carry 0. Each step has that entry's `cost_usd`
 and `detail` `<tool> via <provider>: <outcome> (attempt <n>)`, plus
 `; estimated` when that entry's `cost_kind` is `estimated`, plus
 `; degraded` on the entry that answered when `degraded` is true. The
@@ -327,8 +328,11 @@ Call ToolSearch for `Webspenser_Scraping` (read-only) and confirm the
 exposed tools are exactly `find_businesses`, `find_contacts`,
 `find_reviews`, `find_ads`, `find_jobs`, `read_site`, `find_profiles`,
 `read_profile`, `search_pages`, `fetch_page` and `find_listing`, and
-that the connector's server name, lowercased, contains
-`webspenser_scraping` (the guard finds the server by it). Record
+that the connector's name contains `scraping` (the guard finds the
+server by it; `server_match` is `scraping` so that both
+`claude_ai_Webspenser_Scraping` and a routine's `Webspenser-Scraping`
+match, and the `N8N Webspenser Newsletter` connector does not). Keep
+`scraping` out of every other connector's name. Record
 nothing. If a tool is missing or the name does not match, tell the
 operator to re-add the connector as in Setup step 1, and leave scraping
 unbound.

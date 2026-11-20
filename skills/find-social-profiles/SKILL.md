@@ -6,7 +6,7 @@ description: Use when a contact is identified and their social profiles are stil
 This skill reads public profiles and records what it finds. It will
 never follow, connect, like, comment, post or message on any platform:
 following and messaging are the operator's. Reading a public profile,
-including through an actor, is allowed; acting on one is not. The
+including through the scraping server, is allowed; acting on one is not. The
 requirement behind every step is that no wrong person ends up in a
 confident field. A missing profile costs the operator a search; a wrong
 one costs them a message to a stranger.
@@ -33,7 +33,7 @@ one costs them a message to a stranger.
   `Approved` or later before the writes, it returns `approved` and
   writes nothing (step 4).
 
-The Preparer's cap and time-budget rules for Apify spend apply to every
+The Preparer's cap and time-budget rules for scraping spend apply to every
 `find_profiles` and `read_profile` call. This skill does not set them.
 
 ## Procedure
@@ -46,7 +46,7 @@ The Preparer's cap and time-budget rules for Apify spend apply to every
    platform, an anchor like its other social pages.
    A LinkedIn profile URL already known for the contact (an anchor) is read with `read_profile`
    (LinkedIn, email-search mode) instead of searching, for its employer
-   and emails; a candidate a by-name `find_profiles` search (`Full + email search`) returned is not read again; a company-search
+   and emails; a candidate a by-name `find_profiles` search returned is not read again; a company-search
    candidate (Short mode, no email) is read.
    Use `read_profile` (Instagram and TikTok) on a
    business social page to find people it tags or links to, and on a
@@ -147,9 +147,10 @@ The Preparer's cap and time-budget rules for Apify spend apply to every
 
 ## Failure modes
 
-- `find_profiles` or `read_profile` fails: retry once. A guard block is never retried: it counts as a failed second try. If it fails
-  again, treat that platform as not searched, say so in the report, and
-  return `stopped` rather than marking the contact checked.
+- `find_profiles` or `read_profile` returns `unavailable` or a guard block: treat that platform as not searched, say so in the report, and
+  return `stopped` rather than marking the contact checked. Never retry
+  it: the server already retried. `input_refused` skips the platform for
+  this contact.
 - A candidate's profile is private or empty: it has no bio or links to
   score, so it can only be listed as possible, with the reason `private
   profile, name match only`.

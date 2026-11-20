@@ -24,7 +24,7 @@ one-search-per-contact limits are instructions; no guard counts calls.
 
 Each call is a ledger `step` (`capabilities/ledger/contract.md`) whose
 `detail` starts with `search_web`, with its cost in `cost_usd`. Its spend
-is not scraping spend: the Preparer's Apify caps leave it out. A guard
+is not scraping spend: the Preparer's scraping caps leave it out. A guard
 block on a web search call stops the activity and calls
 `notify_owner(kind: error)` naming the block; it is never retried.
 

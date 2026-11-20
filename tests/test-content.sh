@@ -95,7 +95,7 @@ assert_contains "$SP/skills/find-decision-makers/SKILL.md" 'an owner is written 
 assert_contains "$SP/AGENT.md" 'a phone number, an address, a distance'
 assert_contains "$SP/subagents/prospector.md" 'Existing leads, read via CRM'
 assert_contains "$SP/subagents/prospector.md" 'Every source listed in `prospecting_sources` is exhausted'
-assert_contains "$SP/subagents/preparer.md" '`apify_contact_info`'
+assert_contains "$SP/subagents/preparer.md" '`contact_info`'
 assert_contains docs/superpowers/specs/2026-09-01-sales-partner-agent-design.md 'holds thirteen cases'
 assert_contains "$SP/AGENT.md" '`schedule_digest` in the instance'"'"'s `schedules.yaml`'
 assert_not_contains "$SP/AGENT.md" 'on the schedule in'
@@ -1022,17 +1022,16 @@ assert_not_contains "$SP/skills/interview-business/SKILL.md" 'Apify connector UR
 
 echo "-- 8.1.0: the Preparer's evidence sources, the per-lead cap, findings and review recency"
 PP="$SP/subagents/preparer.md"
-for w in apify_cap_usd_per_lead 'research capped at $' 'research capped by the 7-day Apify cap' research_capped research_tips \
+for w in scraping_cap_usd_per_lead 'research capped at $' 'research capped by the 7-day scraping cap' research_capped research_tips \
          '`find_reviews`' '`find_ads`' '`find_jobs`' '`read_site`'; do
   assert_contains "$PP" "$w"
 done
 assert_contains "$PP" 'A source not listed in `prospecting_sources` never runs, even when a tip points to it.'
-assert_contains "$PP" 'Before each Apify call for a lead, the Preparer checks the call'"'"'s worst-case estimate against what remains'
+assert_contains "$PP" 'Before each scraping call for a lead, the Preparer checks the call'"'"'s worst case against what remains'
 assert_contains "$PP" 'never raised from a session prompt'
 assert_contains "$PP" 'Continue research on a capped lead'
 assert_not_contains "$PP" 'Research Capped stays false'
 assert_contains "$PP" 'never in a scheduled run'
-assert_contains "$PP" 'always passes `include_personal: true`'
 PR="$SP/subagents/prospector.md"
 assert_contains "$PR" 'Every source listed in `prospecting_sources` is exhausted'
 assert_contains "$PR" 'ignores the Preparer-only sources `contact_info`, `reviews`, `ads`, `jobs`, `site_reader`, `open_web`, `bbb` and `yelp`'
@@ -1041,15 +1040,15 @@ assert_not_contains "$PR" '`google_maps`, `contact_info`,'
 assert_contains "$SP/context/operating-config.md" 'the Preparer, not the Prospector'
 # Fix round 1: rulings A-C, the cap order, the sources-not-run list, one stop_condition per lead
 assert_contains "$PP" 'the `query_place_id` parameter of the'
-assert_contains "$PP" 'With no such parameter, skip the call and list `apify_reviews` among the sources not run.'
+assert_contains "$PP" 'With no such parameter, skip the call and list `reviews` among the sources not run.'
 assert_contains "$PP" 'Every lead the run still researches after the stop gets `research_capped: true` and the 7-day reason start'
 assert_contains "$PP" 'read from the lead'"'"'s current stage reason'
 assert_contains "$PP" 'End with `update_stage(lead_id, "Researched", reason)`.'
 assert_contains "$PP" 'then re-run `score-lead` (`rubric:'
-assert_contains "$PP" 'Before each Apify call, check the 7-day cap first, then the per-lead cap. When the 7-day check fails, the 7-day cap'"'"'s handling and reason start apply, not the per-lead cap'"'"'s.'
+assert_contains "$PP" 'Before each scraping call, check the 7-day cap first, then the per-lead cap. When the 7-day check fails, the 7-day cap'"'"'s handling and reason start apply, not the per-lead cap'"'"'s.'
 assert_contains "$PP" 'name every listed source this lead'"'"'s research picked and did not complete'
-assert_contains "$PP" '`apify_contact_info` when a refused `find_contacts` batch left the lead'
-assert_contains "$PP" '`apify_ads` when either of `find_ads`'"'"' two calls was due and did'
+assert_contains "$PP" '`contact_info` when a refused `find_contacts` batch left the lead'
+assert_contains "$PP" '`ads` when `find_ads` was due and did not run'
 assert_contains "$PP" 'skipping any source already run for this lead in this run'
 assert_contains "$PP" 'Each capped lead gets one `stop_condition` of its own, never one event for several leads'
 assert_not_contains "$PP" 'the report names the sources still not run'
@@ -1060,7 +1059,7 @@ grep -qF 'Set by the agent when research stopped at an Apify cap (per-lead or 7-
   && _report ok "attio research_capped description covers both caps" || _report no "attio research_capped description is narrow"
 assert_not_contains "$SP/capabilities/crm/contract.md" 'a scheduled run stopped at the per-lead Apify cap'
 RC="$SP/skills/research-company/SKILL.md"
-assert_contains "$RC" 'include_personal: true'
+assert_not_contains "$RC" 'include_personal'
 flat_has "$RC" 'A review finding may name its reviewer'
 flat_has "$RC" 'never the reviewer'"'"'s profile URL, photo or ID'
 assert_contains "$RC" 'lacks chat'
@@ -1073,7 +1072,7 @@ DT="$SP/templates/digest.md"
 assert_contains "$SD" '(research capped)'
 assert_contains "$DT" '(research capped)'
 assert_contains "$SD" 'Research Capped'
-assert_contains "$SD" 'apify_cap_usd_per_lead'
+assert_contains "$SD" 'scraping_cap_usd_per_lead'
 assert_contains "$DT" 'per-lead cap'
 assert_contains "$SD" 'per lead'
 
@@ -1081,7 +1080,7 @@ echo "-- 8.1.0: evals for the research sources and the per-lead cap"
 EV="$SP/evals/cases.md"
 for h in \
   '## Case 24: A scheduled lead stopped at the per-lead cap is marked Research Capped and still reaches `Researched`' \
-  '## Case 25: The 7-day Apify cap reached mid-lead caps that lead and every later one' \
+  '## Case 25: The 7-day scraping cap reached mid-lead caps that lead and every later one' \
   '## Case 26: Research goes past the per-lead cap only when the operator says so in a session' \
   '## Case 27: The offers'"'"' research tips pick the sources that run' \
   '## Case 28: A research source not in `prospecting_sources` never runs, even when a tip points to it' \
@@ -1091,8 +1090,8 @@ for h in \
   assert_contains "$EV" "$h"
 done
 for w in 'Cases 24 to 26 positive checks' 'research capped at $0.07; ' 'per-lead cap $0.07; not run: ' \
-  'research capped by the 7-day Apify cap; apify_reviews, apify_site_reader' '7-day Apify cap; not run: ' \
-  '`research_capped: false`' '`continue; `' '`include_personal: true`' '`query_place_id`' 'lacks chat' \
+  'research capped by the 7-day scraping cap; reviews, site_reader' '7-day scraping cap; not run: ' \
+  '`research_capped: false`' '`continue; `' '`query_place_id`' 'lacks chat' \
   'hero_offer=ps-inbound-lead-qualification; offer_evidence=moderate'; do
   assert_contains "$EV" "$w"
 done
@@ -1121,7 +1120,7 @@ SPEC81="$SP/docs/superpowers/specs/2026-10-18-research-scrapers-design.md"
 flat_has "$PP" 'The lead is then completed the same way in every run, scheduled or interactive'
 flat_has "$PP" 'The Preparer never pauses to ask whether to go on: a dispatched sub-agent cannot reach the operator mid-run.'
 flat_has "$PP" 'the main session then asks the operator, for each of those leads, whether to continue and with how much more'
-flat_has "$PP" 'The lead'"'"'s cap for the continue is the amount the operator gave, or a fresh `apify_cap_usd_per_lead` when they named none'
+flat_has "$PP" 'The lead'"'"'s cap for the continue is the amount the operator gave, or a fresh `scraping_cap_usd_per_lead` when they named none'
 assert_not_contains "$PP" 'Pause and ask'
 assert_not_contains "$PP" '**Interactive session.**'
 flat_lacks "$PP" 'the same continue prompt'
@@ -1137,20 +1136,10 @@ for t in 'The Preparer asks nothing mid-run.' 'the main session, not the Prepare
 done
 printf '%s' "$C26" | grep -qF 'Preparer pauses' && _report no "Case 26 still has the Preparer pause" || _report ok "Case 26 has no Preparer pause"
 # I2a: an 8.0 config's missing keys use their defaults
-flat_has "$PP" 'A missing `apify_cap_usd_per_lead` uses its default `0.50`, and a missing `research_budget_per_lead_minutes` uses `15`: neither is a missing input'
+flat_has "$PP" 'A missing `scraping_cap_usd_per_lead` uses its default `0.50`, and a missing `research_budget_per_lead_minutes` uses `15`: neither is a missing input'
 flat_has "$OC" 'Default `0.50`, which also applies when the key is missing'
 flat_has "$OC" 'Default `15`, which also applies when the key is missing'
 # I2b: a listed source without its bindings is skipped for the run, not a stop
-flat_has "$PP" 'that source is skipped for this run and never called. It is recorded as not run'
-flat_has "$PP" '`detail` `<source>; bindings missing: <keys>`'
-flat_has "$PP" 'The run calls `notify_owner(kind: error)` once, naming the missing bindings'
-flat_has "$PP" 'This is not a stop: the activity carries on with the other sources and web search.'
-MB=$(awk '/^\*\*Missing bindings\.\*\*/ { f=1 } f && /^$/ { exit } f' "$PP")
-for b in max_reviews max_review_places max_ads max_ad_queries max_ad_advertisers ads_result_type max_jobs \
-         max_site_pages max_site_depth max_site_urls site_crawler_type site_html_transformer \
-         max_profile_results max_profile_reads max_profile_locations; do
-  printf '%s' "$MB" | grep -qF -- "\`$b\`" && _report ok "Missing bindings names $b" || _report no "Missing bindings lacks $b"
-done
 # I2c: the 8.0 note's four steps put the connector and the tools step before the new source names
 n_url=$(printf '%s\n' "$UP81" | grep -nF 'https://mcp.apify.com?tools=' | head -1 | cut -d: -f1)
 n_tools=$(printf '%s\n' "$UP81" | grep -nF 'Then re-run setup'"'"'s tools step' | head -1 | cut -d: -f1)
@@ -1169,7 +1158,7 @@ done
 assert_not_contains "$SU" 'Run the Google call for every lead'
 flat_has "$PP" 'the site root of the `website` the Maps listing gives, as the start URL: its scheme and host only, with any path or query dropped'
 flat_has "$PP" 'A lead is marked Research Capped (the flag, a capped reason start and a `stop_condition`) only when this list is not empty'
-flat_has "$PP" 'A later lead whose research picked no Apify source has no source not run, so it is not capped'
+flat_has "$PP" 'A later lead whose research picked no scraping source has no source not run, so it is not capped'
 flat_has "$PP" 'up to the next `; ` or the end of the reason'
 flat_has "$PP" 'rewrite the reason with only the capped start (the start and its list) dropped, keeping every other start'
 flat_has "$PP" 'the other starts stay'
@@ -1228,7 +1217,7 @@ n_fc=$(grep -nF 'call `find_contacts`' "$PP" | head -1 | cut -d: -f1)
   && _report ok "preparer.md checks website URLs before the find_contacts batch" \
   || _report no "preparer.md does not check website URLs before the find_contacts batch"
 for t in '`find_contacts; shared-platform website`' '`read_site; website host refused`' '`read_site; https fetch failed`' \
-         '`find_ads facebook; profile id page`' '`apify_site_reader (shared-platform website)`' \
+         '`find_ads facebook; profile id page`' '`site_reader (shared-platform website)`' \
          'never sent as `https://www.facebook.com/profile.php`' 'out one with a shared-platform website or a refused host'; do
   flat_has "$PP" "$t"
 done
@@ -1243,12 +1232,12 @@ for h in \
   assert_contains "$EV" "$h"
 done
 for w in 'Cases 33 and 34 positive checks' '`find_contacts; shared-platform website`' '`read_site; shared-platform website`' \
-  '{"url": "https://www.facebook.com/harborbooks"}' '{"url": "https://smithbookkeeping.com/"}' '`read_site; https fetch failed`' \
+  '{"url": "https://www.facebook.com/harborbooks"}' '`https://smithbookkeeping.com/` in `urls`' '`read_site; https fetch failed`' \
   '{"url": "https://www.facebook.com/lakesidecpa/"}' '`find_ads facebook; profile id page`' \
   '`find_contacts; website host refused`' '`read_site; website host refused`' '{"url": "https://lakesidecpa.com/"}'; do
   assert_contains "$EV" "$w"
 done
-flat_has "$EV" 'a test domain you control that serves only http (Apify fetches from its cloud'
+flat_has "$EV" 'a test domain you control that serves only http (the server fetches from its cloud'
 C34=$(awk '/^## Case 34:/ { f=1; next } f && /^## Case / { f=0 } f' "$EV")
 printf '%s' "$C34" | grep -qF smithbookkeeping && _report no "Case 34 reuses Case 33's smithbookkeeping" || _report ok "Case 34 has its own page name"
 # README: the standard and the one stated limit left
@@ -1277,7 +1266,7 @@ echo "-- 8.2: Exa in the Preparer"
 PR="$SP/subagents/preparer.md"
 flat_has "$PR" 'Web search `search_web` (Exa), once per lead, only when `instance.yaml` has a `bind_web_search` line (find-decision-makers)'
 flat_has "$PR" 'sum `cost_usd` over those `step` events only, leaving out every step whose `detail` starts with `search_web`'
-flat_has "$PR" 'A `search_web` call is not an Apify call: it never counts toward `apify_cap_usd_per_lead` or `apify_spend_cap_usd_per_week`'
+flat_has "$PR" 'A `search_web` call is not a scraping call: it never counts toward `scraping_cap_usd_per_lead` or `scraping_spend_cap_usd_per_week`'
 flat_has "$PR" 'and when a cap stops scraping, Exa keeps running, since it is web search'
 flat_has "$PR" 'A `search_web` call that fails after its one retry is recorded as a failed `step` and research goes on; it is not a stop and does not notify the owner.'
 
@@ -1352,7 +1341,7 @@ for t in 'name: find-social-profiles' 'Anchor first' 'Name or location alone is 
 done
 assert_contains AGENT.md 'Never act on a social platform (follow, connect, message, post). Reading public profiles is fine.'
 assert_not_contains AGENT.md 'Never automate anything on LinkedIn.'
-assert_contains skills/find-decision-makers/SKILL.md 'including through an actor'
+assert_contains skills/find-decision-makers/SKILL.md 'including through the scraping server'
 assert_contains "$FSP" 'never search for X'
 assert_contains "$FSP" 'in platform order (LinkedIn, Instagram, Facebook, TikTok)'
 assert_not_contains "$FSP" 'Facebook, TikTok, X)'
@@ -1382,7 +1371,7 @@ echo "-- profile pass"
 assert_contains "$SP/subagents/preparer.md" 'Profile pass'
 assert_contains "$SP/subagents/preparer.md" 'after every queued lead'
 assert_contains "$SP/subagents/preparer.md" 'oldest `Stage Changed At` first'
-assert_contains "$SP/subagents/preparer.md" '`apify_profiles`'
+assert_contains "$SP/subagents/preparer.md" '`profiles`'
 assert_contains "$SP/subagents/preparer.md" 're-check the stage'
 assert_contains "$SP/subagents/preparer.md" 'not Research Capped'
 assert_contains "$SP/subagents/preparer.md" "no person's name"
@@ -1598,9 +1587,9 @@ echo "-- 8.6.0: drift (carry on and report)"
 for f in "$SP/subagents/preparer.md" "$SP/subagents/prospector.md"; do
   flat_has "$f" 'never retried with changed arguments'
 done
-flat_has "$SP/subagents/preparer.md" 'A guard block on a scraping call does not stop the activity'
+flat_has "$SP/subagents/preparer.md" 'A guard block, `input_refused` or `unavailable` on a scraping call does not stop the activity'
 flat_has "$SP/subagents/prospector.md" 'A guard block, `input_refused` or `unavailable` on a scraping call does not stop the activity'
-flat_has "$SP/subagents/preparer.md" 'the same source is blocked on 2 leads in one run, it is skipped for the rest of the run'
+flat_has "$SP/subagents/preparer.md" 'source is blocked, refused or unavailable on 2 leads in one run, it is skipped for the rest of the run'
 flat_has "$SP/subagents/preparer.md" 'one `notify_owner(kind: error)` at the end of the run'
 SUD="$SP/capabilities/scraping/tools/webspenser/usage.md"
 assert_contains "$SUD" '## Drift'
@@ -1608,7 +1597,7 @@ for t in '`drift: <tool> <field> empty`' '`input_refused` gives `<source> (refus
 flat_has "$SP/capabilities/scraping/contract.md" 'A guard block on a scraping call skips that source for the lead'
 assert_not_contains "$SP/capabilities/scraping/contract.md" 'A guard block on a scraping call stops the activity'
 for h in '## Case 56: An empty mapped field is reported as drift and records nothing' \
-         '## Case 57: A vendor error skips the source for that lead and research goes on' \
+         '## Case 57: An unavailable source is skipped for that lead and research goes on' \
          '## Case 58: A guard block skips the source, and after 2 leads the source is skipped for the run' \
          '## Case 59: A source failing on every lead sends one error at the end of the run'; do
   assert_contains "$SP/evals/cases.md" "$h"
@@ -1640,7 +1629,7 @@ echo "-- 8.6.0: final review fixes"
 FSP="$SP/skills/find-social-profiles/SKILL.md"
 flat_has "$FSP" 'An email `find_profiles` found for a confident candidate goes in `email` only when the field is empty'
 flat_has "$FSP" 'an uncertain candidate'"'"'s email goes only in the possible-profiles section'
-flat_has "$FSP" 'A guard block is never retried'
+flat_has "$FSP" 'Never retry it: the server already retried'
 flat_has "$SP/subagents/preparer.md" 'When the Profile pass writes an email for a contact of a lead with no point of contact, it runs `pick-point-of-contact` for that lead'
 assert_not_contains "$SP/skills/find-decision-makers/SKILL.md" 'LinkedIn email search in `find_profiles`'
 flat_has "$SP/evals/cases.md" 'In the Profile pass, `find-social-profiles` writes'
@@ -1663,7 +1652,7 @@ for t in '`search_pages`' '`fetch_page`' '`max_web_fetches_per_lead`' \
   '| `fetch_page` | $0.002 |'; do flat_has "$SUD" "$t"; done
 flat_has "$SP/capabilities/scraping/contract.md" '| `search_pages` |'
 flat_has "$SP/capabilities/scraping/contract.md" '| `fetch_page` |'
-flat_has "$SP/subagents/preparer.md" '`apify_web`: one `search_pages` call per lead'
+flat_has "$SP/subagents/preparer.md" '`open_web`: one `search_pages` call per lead'
 flat_has "$SP/subagents/preparer.md" 'a page on the lead'"'"'s own website host, a URL from this lead'"'"'s `search_pages` results, or a press item from those results dated within the last 3 months'
 flat_has "$SP/skills/research-company/SKILL.md" 'A press item read with `fetch_page` becomes a `news` finding with its date and URL'
 flat_has "$SP/evals/cases.md" '## Case 62: A recent press item is fetched and an old one is not'
@@ -1673,7 +1662,7 @@ echo "-- 8.7.0: apify_bbb and apify_yellowpages"
 for t in '`find_listing`' '| `find_listing` BBB | $0.10 |' '| `find_listing` YellowPages | $0.10 |' \
   'No listing is a valid result, not drift'; do flat_has "$SUD" "$t"; done
 flat_has "$SP/capabilities/scraping/contract.md" '| `find_listing` |'
-flat_has "$SP/subagents/preparer.md" '`apify_bbb` and `apify_yellowpages`: one `find_listing` call each per lead'
+flat_has "$SP/subagents/preparer.md" '`bbb` and `yellowpages`: one `find_listing` call each per lead'
 flat_has "$SP/subagents/preparer.md" 'matched to the lead by phone or website host; a name-only match is dropped'
 flat_has "$SP/subagents/prospector.md" '`yellowpages` sources leads through `find_listing(directory: yellowpages'
 flat_has "$SP/subagents/prospector.md" 'deduplicated by phone and website like Maps'
@@ -1685,13 +1674,12 @@ flat_has "$SP/evals/cases.md" '## Case 65: No BBB listing is a result, not drift
 echo "-- 8.7.0: apify_yelp"
 for t in 'a Yelp page URL from this lead'"'"'s `search_pages` results or its website'"'"'s links' '| `find_reviews` (Google or Yelp) | $0.02 |'; do flat_has "$SUD" "$t"; done
 flat_has "$SP/capabilities/scraping/contract.md" '`site` (`google`, the default, or `yelp`)'
-flat_has "$SP/subagents/preparer.md" '`apify_yelp`: when reviews are picked and the lead has a Yelp page URL'
+flat_has "$SP/subagents/preparer.md" '`yelp`: when reviews are picked and the lead has a Yelp page URL'
 for t in '`yelp`'; do flat_has "$SP/context/operating-config.md" "$t"; done
 flat_has "$SP/evals/cases.md" '## Case 66: A Yelp complaint is named only in Avoid, like a Google one'
 
 echo "-- 8.7.0: LinkedIn jobs"
 for t in 'the server drops other employers'"'"' postings' '| `find_jobs` | $0.01 |'; do flat_has "$SUD" "$t"; done
-flat_has "$SP/subagents/preparer.md" '`find_jobs` runs Indeed, then LinkedIn'
 flat_has "$SP/evals/cases.md" '## Case 67: A LinkedIn job post from a similarly named company is dropped'
 
 echo "-- 8.7.0: LinkedIn company search and reader"
@@ -1706,8 +1694,7 @@ flat_has "$SP/subagents/preparer.md" 'and the LinkedIn company search through `f
 
 echo "-- 8.7.0: Facebook backup"
 flat_has "$SUD" '| `find_ads` | $0.01, or $0.04 with a `facebook_page_url` |'
-flat_has "$SP/subagents/preparer.md" 'the Facebook backup runs with the same page URL'
-flat_has "$SP/evals/cases.md" '## Case 69: The Facebook backup runs when the primary fails'
+flat_has "$SP/evals/cases.md" '## Case 69: A failover is recorded and its result used'
 
 echo "-- 8.7.0: release"
 assert_contains "$SP/README.md" 'Upgrading from 8.6.0'
@@ -1719,13 +1706,12 @@ for a in apify/web-search apify/web-fetch scrapesage/bbb-scraper delicious_zebu/
 done
 flat_lacks "$SUD" 'Runs ten Apify actors'
 flat_lacks "$SUD" 'lacks one of the ten actors'
-flat_has "$SP/subagents/preparer.md" '`apify_web` needs `max_web_results`; `apify_bbb` needs `max_bbb_results`'
 for t in '`open_web`' '`bbb`' '`yellowpages`' '`yelp`'; do flat_has "$SP/skills/interview-business/SKILL.md" "$t"; done
 
 echo "-- 8.7.0: final review fixes"
 flat_has "$SP/subagents/prospector.md" 'for `find_listing(directory: yellowpages)` it is `yellowpages|<query>|<city>, <state>`'
 flat_has "$SP/subagents/prospector.md" 'its location from the listing'"'"'s `address`'
-flat_has "$SP/skills/find-social-profiles/SKILL.md" 'a candidate a by-name `find_profiles` search (`Full + email search`) returned is not read again'
+flat_has "$SP/skills/find-social-profiles/SKILL.md" 'a candidate a by-name `find_profiles` search returned is not read again'
 flat_lacks "$SP/skills/find-social-profiles/SKILL.md" 'a candidate `find_profiles` returned is not read again'
 flat_has "$SP/skills/research-company/SKILL.md" '**Directory listings (`find_listing`) → `listing`.**'
 flat_has "$SP/skills/research-company/SKILL.md" 'A Yelp review (`find_reviews` with `site: yelp`) follows the same rules'
@@ -1766,5 +1752,23 @@ flat_has "$PR" 'every scraping step carries `cost_usd`'
 flat_has "$PR" 'the listing'"'"'s `listing_url`'
 flat_lacks "$PR" 'Apify'
 flat_lacks "$PR" 'max_places_per_search'
+
+echo "-- 9.0.0: preparer and research skills read envelopes"
+PP=$SP/subagents/preparer.md
+flat_has "$PP" 'add the envelope'"'"'s `cost_usd` to the lead'"'"'s total'
+flat_has "$PP" 'research capped by the scraping server'"'"'s 7-day cap'
+flat_has "$PP" 'research capped by the 7-day scraping cap'
+flat_has "$PP" 'at most `max_web_fetches_per_lead` `fetch_page` calls'
+flat_has "$PP" 'The Preparer never retries a scraping call: the server already retried and failed over'
+flat_lacks "$PP" 'Apify'
+flat_lacks "$PP" 'needs `max_reviews`'
+flat_lacks "$PP" 'bindings/scraping.md'
+FSP2=$SP/skills/find-social-profiles/SKILL.md
+flat_lacks "$FSP2" 'retry once'
+flat_has "$FSP2" '`unavailable` or a guard block: treat that platform as not searched'
+flat_lacks "$FSP2" 'Apify'
+flat_lacks "$SP/skills/find-decision-makers/SKILL.md" 'apify_'
+flat_lacks "$SP/skills/research-company/SKILL.md" 'include_personal'
+flat_lacks "$SP/capabilities/web_search/contract.md" 'Apify'
 
 finish

@@ -294,9 +294,9 @@ First, call `ledger_status`, then write `run_started`
    the sum of `cost_usd` over this cap week's `step` events for `prospect`
    and `prepare` (`find_events`), leaving out every step whose `detail` starts with `search_web` — the same weekly boundary the anchor
    uses, so spend and digest windows line up. Compare it to
-   `apify_spend_cap_usd_per_week` from `operating-config.md`. Report the
+   `scraping_spend_cap_usd_per_week` from `operating-config.md`. Report the
    dollar amount spent, the weekly cap, and the percentage, then the
-   per-lead cap, `apify_cap_usd_per_lead` from the same file, next to
+   per-lead cap, `scraping_cap_usd_per_lead` from the same file, next to
    it as `$<cap> per lead`. The amounts are
    estimates (Apify does not return cost). When the week has
    `search_web` steps, add one line, `Exa web search: $<sum of their

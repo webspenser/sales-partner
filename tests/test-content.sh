@@ -584,19 +584,10 @@ wc -c < "$SP/AGENT.md" | awk '{exit !($1 < 6000)}' && _report ok "AGENT.md under
 echo "-- 7.2: scraping"
 assert_contains "$SP/agent.yaml" 'standard: "7.5"'
 assert_contains "$SP/agent.yaml" 'capabilities: crm, owner_notify, ledger, scraping'
-assert_contains "$SP/capabilities/scraping/contract.md" '`pinned_inputs`'
-assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" 'mcp.apify.com?tools=compass/crawler-google-places,vdrmota/contact-info-scraper'
-assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" 'monthly usage limit'
-assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" 'Send only the arguments listed above, spelled exactly as listed'
-assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" '`estimated`'
-assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" '`get-dataset-items`'
-assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" '`countryCode`'
-assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" '`max_pages_per_call`'
-assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" 'Do not pass `proxyConfig`'
-assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" '`max_search_terms` — search terms per Maps call, and also'
-assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" '`max_sites_per_call`'
-assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" '`max_dataset_items`'
-assert_not_contains "$SP/capabilities/scraping/tools/apify/usage.md" 'Arguments to omit'
+assert_contains "$SP/capabilities/scraping/contract.md" '`allowlisted_tools`'
+assert_not_contains "$SP/capabilities/scraping/contract.md" '`pinned_inputs`'
+assert_contains "$SP/capabilities/scraping/tools/webspenser/usage.md" '`estimated`'
+assert_not_contains "$SP/capabilities/scraping/tools/webspenser/usage.md" 'Arguments to omit'
 
 echo "-- 7.2: Apify wiring"
 assert_contains "$SP/context/operating-config.md" 'apify_contact_info'
@@ -664,9 +655,7 @@ done
 for f in ./capabilities/crm/tools/attio/bootstrap.py ./capabilities/crm/tools/hubspot/bootstrap.py ./capabilities/crm/tools/attio/usage.md ./capabilities/crm/tools/hubspot/usage.md; do
   grep -qE '"(sp_)?score(_breakdown)?"|`(sp_)?score_breakdown`|`sp_score`|\| `score` \|' "$f" && _report no "$f still names the old score field" || _report ok "$f drops the old score field"
 done
-U="$SP/capabilities/scraping/tools/apify/usage.md"
-assert_contains "$U" 'postalCode,location,phone,website,totalScore,reviewsCount,reviewsDistribution,openingHours,placeId'
-assert_contains "$U" 'claimed = `not claimThisBusiness`'
+U="$SP/capabilities/scraping/tools/webspenser/usage.md"
 assert_contains "$SP/capabilities/scraping/contract.md" 'per-star review counts (one to five stars), opening hours (per day), claimed (true or false), temporarily closed (true or false)'
 assert_contains "$SP/evals/cases.md" '## Case 19: The research gate reads the Fit score, and research never rewrites it'
 assert_contains "$SP/README.md" 'Upgrading from 7.2'
@@ -987,40 +976,13 @@ assert_not_contains "$SD" 'Await reply to approach'
 assert_contains "$A" 'Per lead, its Industry and Segment, and its Hero Offer, Offer'
 
 echo "-- 8.1: evidence scrapers (contract, Apify usage)"
-SC="$SP/capabilities/scraping/contract.md"; SU="$SP/capabilities/scraping/tools/apify/usage.md"
+SC="$SP/capabilities/scraping/contract.md"; SU="$SP/capabilities/scraping/tools/webspenser/usage.md"
 for op in find_reviews find_ads find_jobs read_site; do
   grep -qE "^\| \`$op\` \|" "$SC" && _report ok "contract.md has operation $op" || _report no "contract.md missing operation $op"
   assert_contains "$SU" "\`$op\`"
 done
-SETUP=$(awk '/^## Setup/ { f=1; next } f && /^## / { f=0 } f' "$SU")
-for key in max_reviews max_ads max_jobs max_site_pages max_site_depth max_review_places max_ad_queries max_ad_advertisers \
-           ads_result_type site_crawler_type site_html_transformer max_site_urls; do
-  printf '%s' "$SETUP" | grep -qF -- "- \`$key\` — " && _report ok "usage.md Setup lists $key" || _report no "usage.md Setup missing $key"
-done
-for d in '`max_reviews` — reviews per reviews call (default 50)' '`max_ads` — ads per Google query, and the Facebook results limit (default 5)' \
-         '`max_jobs` — job listings per jobs call (default 20)' '`max_site_pages` — pages the site reader reads per call (default 5)' \
-         '`max_site_depth` — link depth for the site reader (default 1)'; do
-  printf '%s' "$SETUP" | grep -qF -- "$d" && _report ok "usage.md Setup: $d" || _report no "usage.md Setup missing: $d"
-done
-printf '%s' "$SETUP" | grep -qF 'mcp.apify.com?tools=compass/crawler-google-places,vdrmota/contact-info-scraper,web_wanderer/google-reviews-scraper,scrapesage/google-ads-transparency-scraper,apify/facebook-ads-scraper,valig/indeed-jobs-scraper,apify/website-content-crawler,harvestapi/linkedin-profile-search-by-name,apify/instagram-profile-scraper,clockworks/tiktok-profile-scraper,apify/web-search,apify/web-fetch,scrapesage/bbb-scraper,delicious_zebu/yellowpages-usa-business-lead-scraper,web_wanderer/yelp-reviews-scraper,valig/linkedin-jobs-scraper,harvestapi/linkedin-profile-search,harvestapi/linkedin-profile-scraper,scrapesage/facebook-ad-library-scraper`' \
-  && _report ok "usage.md Setup gives the nineteen-tool connector URL" || _report no "usage.md Setup lacks the nineteen-tool connector URL"
-assert_contains "$SU" 'always pass `include_personal: true`'
 assert_not_contains "$SU" 'never record reviewer names'
-assert_contains "$SU" 'always pass `onlyTotal: true`'
-assert_contains "$SU" 'With no page URL, skip this call and record no Facebook finding'
-assert_contains "$SU" 'Zero items is a valid result: no open listings'
-assert_contains "$SU" 'the `website` the Maps listing gives'
-assert_contains "$SU" '`"script, style, noscript, svg"`'
 assert_contains "$SU" 'never claim a site lacks chat'
-assert_contains "$SU" 'Do not pass `proxyConfiguration`'
-for t in web_wanderer--google-reviews-scraper scrapesage--google-ads-transparency-scraper apify--facebook-ads-scraper \
-         valig--indeed-jobs-scraper apify--website-content-crawler; do
-  assert_contains "$SU" "\`apify:$t\`"
-  grep -qF "$t" "$SP/capabilities/scraping/tools/apify/guard.yaml" && _report ok "guard.yaml allows $t" || _report no "guard.yaml missing $t"
-done
-for c in '`find_reviews` | $0.02' '`find_ads`, Google | $0.01' '`find_ads`, Facebook | $0.03' '`find_jobs` | $0.005' '`read_site` | $0.03'; do
-  assert_contains "$SU" "$c"
-done
 assert_not_contains "$SU" 'reviewerId,'
 
 # Research Capped: an agent-written checkbox in both CRMs, unlike research_anyway
@@ -1149,11 +1111,6 @@ for t in apify_reviews apify_ads apify_jobs apify_site_reader 'apify_cap_usd_per
 done
 # The 8.0 note's URL is the seven-actor one; usage.md's current URL extends
 # it (8.3 adds the profile actors, and its own upgrade note carries them).
-APIFY_URL=$(grep -o 'https://mcp\.apify\.com?tools=[^`]*' "$SP/capabilities/scraping/tools/apify/usage.md" | head -1)
-UP81_URL=$(printf '%s' "$UP81" | grep -o 'https://mcp\.apify\.com?tools=[^`]*' | head -1)
-[ -n "$APIFY_URL" ] && [ "$UP81_URL" = 'https://mcp.apify.com?tools=compass/crawler-google-places,vdrmota/contact-info-scraper,compass/Google-Maps-Reviews-Scraper,scrapesage/google-ads-transparency-scraper,apify/facebook-ads-scraper,valig/indeed-jobs-scraper,apify/website-content-crawler' ] \
-  && _report ok "8.0 upgrade note carries the connector URL from the Apify usage file" \
-  || _report no "8.0 upgrade note lacks the connector URL from the Apify usage file"
 
 echo "-- 8.1.0: final-review fixes: the cap follow-up, the 8.0 upgrade path, the site root"
 # flat_has / flat_lacks match a phrase with the file's line breaks read as spaces.
@@ -1193,7 +1150,6 @@ for b in max_reviews max_review_places max_ads max_ad_queries max_ad_advertisers
          max_site_pages max_site_depth max_site_urls site_crawler_type site_html_transformer \
          max_profile_results max_profile_reads max_profile_locations; do
   printf '%s' "$MB" | grep -qF -- "\`$b\`" && _report ok "Missing bindings names $b" || _report no "Missing bindings lacks $b"
-  assert_contains "$SU" "\`$b\` —"
 done
 # I2c: the 8.0 note's four steps put the connector and the tools step before the new source names
 n_url=$(printf '%s\n' "$UP81" | grep -nF 'https://mcp.apify.com?tools=' | head -1 | cut -d: -f1)
@@ -1210,12 +1166,8 @@ for t in 'Your scheduled routines install the latest plugin' 'a missing `apify_c
   printf '%s' "$UP81F" | grep -qF -- "$t" && _report ok "8.0 upgrade note says '$t'" || _report no "8.0 upgrade note does not say '$t'"
 done
 # Minors: find_ads' Google call, the site root, first-run checks, the not-run list, a continue's reason
-assert_contains "$SU" 'Run the Google call whenever `find_ads` runs'
 assert_not_contains "$SU" 'Run the Google call for every lead'
-flat_has "$SU" 'the site root of the `website` the Maps listing gives: its scheme and host, with no path or query'
 flat_has "$PP" 'the site root of the `website` the Maps listing gives, as the start URL: its scheme and host only, with any path or query dropped'
-flat_has "$SU" 'Check on the first live run: the probe never ran a page-URL call'
-flat_has "$SU" 'Check on the first live run: the Google Ads, Facebook and Indeed `fields` above come from the actors'"'"' item schemas'
 flat_has "$PP" 'A lead is marked Research Capped (the flag, a capped reason start and a `stop_condition`) only when this list is not empty'
 flat_has "$PP" 'A later lead whose research picked no Apify source has no source not run, so it is not capped'
 flat_has "$PP" 'up to the next `; ` or the end of the reason'
@@ -1224,17 +1176,13 @@ flat_has "$PP" 'the other starts stay'
 
 echo "-- 7.3: fixed values and URL rules on the Apify tools"
 assert_contains "$SP/agent.yaml" 'standard: "7.5"'
-AGD=capabilities/scraping/tools/apify/guard.yaml
-assert_contains "./$AGD" 'fixed:'
+AGD=capabilities/scraping/tools/webspenser/guard.yaml
 assert_contains "./$AGD" 'urls:'
 comment_has() { tr '\n#' '  ' < "$1" | tr -s ' ' | grep -qF -- "$2"; } # the file with comment marks and line breaks flattened
 comment_has "$AGD" "can't be pinned" && _report no "$AGD still says the true/false inputs can't be pinned" || _report ok "$AGD no longer says the true/false inputs can't be pinned"
-for s in 'under the retrieval profile (Standard 7.5)' 'with a fixed value of null and no required' 'Fixed values, each required: include_personal true on reviews'; do
-  comment_has "$AGD" "$s" && _report ok "$AGD says '$s'" || _report no "$AGD does not say '$s'"
-done
 
 echo "-- 7.3: URL normalization for the guarded scrapers; evals and README"
-SU="$SP/capabilities/scraping/tools/apify/usage.md"; PP="$SP/subagents/preparer.md"; EV="$SP/evals/cases.md"
+SU="$SP/capabilities/scraping/tools/webspenser/usage.md"; PP="$SP/subagents/preparer.md"; EV="$SP/evals/cases.md"
 # The shared-platform host list: one sentence in each file, the same hosts in both
 spl() { local t; t=$(tr '\n' ' ' < "$1" | tr -s ' '); case "$t" in *'The shared-platform hosts are '*) ;; *) return ;; esac
         t=${t#*The shared-platform hosts are }; t=${t%%" host."*}; printf '%s' "$t" | grep -o '`[^`]*`' | sort; }
@@ -1272,11 +1220,6 @@ for f in "$SU" "$PP"; do
 done
 # The guard now requires the four settings; usage.md no longer leaves them to instructions.
 for t in 'cannot pin' "can't pin" 'cannot be pinned'; do flat_lacks "$SU" "$t"; done
-flat_has "$SU" 'always pass `include_personal: true`; the guard requires it'
-flat_has "$SU" 'always pass `onlyTotal: true` (the count only; the guard requires it)'
-flat_has "$SU" '(the guard requires both, exactly as written)'
-flat_has "$SU" 'The guard requires every start URL to pass its URL rule'
-flat_has "$SU" '`startUrls` — at most 10 site roots'
 # The Preparer: contact URLs at the site root, the website checks before the contact batch, the not-run records
 flat_has "$PP" 'gather the site roots of the leads being researched'
 n_wu=$(grep -nF '**Website URLs**' "$PP" | head -1 | cut -d: -f1)
@@ -1312,7 +1255,7 @@ printf '%s' "$C34" | grep -qF smithbookkeeping && _report no "Case 34 reuses Cas
 assert_contains "$SP/README.md" 'Agent Standard](https://github.com/webspenser/agent-builder/blob/main/STANDARD.md) 7.5'
 flat_has "$SP/README.md" 'data could still leave in the hostname itself'
 # Odd website forms are normalized in both files, so the guard never receives one it refuses
-for f in "$SP/capabilities/scraping/tools/apify/usage.md" "$SP/subagents/preparer.md"; do
+for f in "$SP/capabilities/scraping/tools/webspenser/usage.md" "$SP/subagents/preparer.md"; do
   flat_has "$f" 'lowercase the scheme (`HTTPS://` is `https://`) and treat a website with no scheme (`example.com`) or a scheme-relative one (`//example.com`) as `https://`, then apply the same host and root rules'
 done
 
@@ -1419,21 +1362,13 @@ assert_contains "$FSP" '`find_profiles` is called for LinkedIn only.'
 assert_not_contains "$FSP" "the lead's city and the platforms still"
 
 echo "-- 8.3: find_profiles and read_profile through Apify"
-SC="$SP/capabilities/scraping/contract.md"; SU="$SP/capabilities/scraping/tools/apify/usage.md"
+SC="$SP/capabilities/scraping/contract.md"; SU="$SP/capabilities/scraping/tools/webspenser/usage.md"
 for op in find_profiles read_profile; do
   assert_contains "$SC" "| \`$op\` |"
   assert_contains "$SU" "\`$op\`"
 done
-setup=$(awk '/^## Setup/,/^## Probe/' "$SU")
-for b in max_profile_results max_profile_reads max_profile_locations; do
-  printf '%s' "$setup" | grep -qF "\`$b\`" && _report ok "usage.md Setup lists $b" || _report no "usage.md Setup misses $b"
-done
 assert_contains "$SU" 'no login'
-assert_contains "$SU" 'never a handle guessed from a name'
-assert_contains "$SU" 'for `linkedin` only, in this release'
-assert_contains "$SU" 'harvestapi/linkedin-profile-search-by-name,apify/instagram-profile-scraper,clockworks/tiktok-profile-scraper'
-assert_contains "$SU" 'verify it after the first live runs'
-assert_contains "$SP/capabilities/scraping/tools/apify/guard.yaml" '# Apify guard policy: ten actors and two reads, under the retrieval'
+flat_has "$SU" 'Only LinkedIn is searched'
 WC="$SP/capabilities/web_search/contract.md"
 assert_contains "$WC" '`find-social-profiles` once per contact'
 assert_contains "$WC" 'one-search-per-lead and'
@@ -1493,7 +1428,7 @@ FDM=skills/find-decision-makers/SKILL.md
 PR=subagents/preparer.md
 AU="$SP/capabilities/crm/tools/attio/usage.md"
 HU="$SP/capabilities/crm/tools/hubspot/usage.md"
-SU="$SP/capabilities/scraping/tools/apify/usage.md"
+SU="$SP/capabilities/scraping/tools/webspenser/usage.md"
 EV="$SP/evals/cases.md"
 ONLY='Only `find-social-profiles` passes `instagram_url`, `facebook_url`, `tiktok_url`, `x_url` and `profiles_checked_at`.'
 # I1: research never passes the new social arguments
@@ -1553,7 +1488,6 @@ assert_contains "$SP/AGENT.md" '`find-social-profiles`'
 flat_has "$SP/README.md" "it can't check what a name or handle contains, so data could in principle ride in one"
 flat_has "$SP/README.md" "Facebook personal profiles have no reader, so they come only from the business's own pages and from Exa"
 flat_has "$PR" 'unless one was already sent this run'
-flat_has "$SU" 'The guard does not require `firstName` or `lastName`'
 awk '/^## Stop conditions/,/^## Scraping/' "$PR" | grep -qF 'Profile pass' && _report ok "Stop conditions point at the Profile pass" || _report no "Stop conditions miss the Profile pass"
 
 echo "-- 8.4.0: point of contact fields"
@@ -1651,13 +1585,11 @@ UP85=$(awk '/^Upgrading from 8.5.0/,/^## Developing/' "$SP/README.md")
 [ -n "$UP85" ] && _report ok "README has the 8.5.0 upgrade note" || _report no "README lacks the 8.5.0 upgrade note"
 printf '%s' "$UP85" | grep -qF "$NEWURL" && _report ok "8.5.0 note has the new connector URL" || _report no "8.5.0 note lacks the new connector URL"
 flat_has "$SP/README.md" 'must contain "apify"'
-grep -qF "$NEWURL" "$SP/capabilities/scraping/tools/apify/usage.md" && _report ok "usage.md has the new connector URL" || _report no "usage.md lacks the new connector URL"
-G="$SP/capabilities/scraping/tools/apify/guard.yaml"
+G="$SP/capabilities/scraping/tools/webspenser/guard.yaml"
 grep -qF 'compass--Google-Maps-Reviews-Scraper]' "$G" && _report no "guard still names the Compass reviews tool in a rule" || _report ok "guard names no Compass reviews tool in a rule"
-for f in "$SP/capabilities/scraping/tools/apify/usage.md" "$SP/subagents/preparer.md" "$SP/skills/research-company/SKILL.md"; do
+for f in "$SP/capabilities/scraping/tools/webspenser/usage.md" "$SP/subagents/preparer.md" "$SP/skills/research-company/SKILL.md"; do
   grep -qF 'personalData' "$f" && _report no "$f still says personalData" || _report ok "$f drops personalData"
 done
-assert_contains "$SP/capabilities/scraping/tools/apify/usage.md" 'Never `place_urls` or `search`'
 flat_has "$SP/skills/research-company/SKILL.md" 'A star-only review has no text (`content` is null): it still dates the listing, but it is never a quoted finding.'
 assert_contains "$SP/docs/superpowers/notes/2026-11-09-reviews-actor-probe.md" 'web_wanderer--google-reviews-scraper'
 assert_contains "$SP/evals/cases.md" '## Case 55: A star-only review dates the listing and is never quoted'
@@ -1669,9 +1601,9 @@ for f in "$SP/subagents/preparer.md" "$SP/subagents/prospector.md"; do
 done
 flat_has "$SP/subagents/preparer.md" 'the same source is blocked on 2 leads in one run, it is skipped for the rest of the run'
 flat_has "$SP/subagents/preparer.md" 'one `notify_owner(kind: error)` at the end of the run'
-SUD="$SP/capabilities/scraping/tools/apify/usage.md"
+SUD="$SP/capabilities/scraping/tools/webspenser/usage.md"
 assert_contains "$SUD" '## Drift'
-for t in '`drift: <tool> <field> empty`' '`<source> (vendor error)`' '`<source> (blocked)`'; do flat_has "$SUD" "$t"; done
+for t in '`drift: <tool> <field> empty`' '`input_refused` gives `<source> (refused)`' '`unavailable` gives `<source> (unavailable)`' '`<source> (blocked)`'; do flat_has "$SUD" "$t"; done
 flat_has "$SP/capabilities/scraping/contract.md" 'A guard block on a scraping call skips that source for the lead'
 assert_not_contains "$SP/capabilities/scraping/contract.md" 'A guard block on a scraping call stops the activity'
 for h in '## Case 56: An empty mapped field is reported as drift and records nothing' \
@@ -1683,13 +1615,7 @@ done
 
 
 echo "-- 8.6.0: personal data"
-grep -E '^\| `find_reviews` \|' "$SU" | grep -qF 'reviewer_name' && _report ok "reviews fields ask for reviewer_name" || _report no "reviews fields lack reviewer_name"
-for k in reviewer_url reviewer_photo_url reviewer_photo reviewer_id; do
-  grep -E '^\| `find_reviews` \|' "$SU" | grep -qE "[\`,]$k[,\`]" && _report no "reviews fields ask for $k" || _report ok "reviews fields never ask for $k"
-done
-flat_has "$SU" '`profileScraperMode` — always `"Full + email search"`'
-flat_has "$SU" '| `find_profiles`, LinkedIn | $0.15 per call |'
-flat_has "$SU" 'emails.email,emails.free,emails.status,emails.deliverable'
+flat_has "$SU" '`reviewer_name` is the only reviewer field'
 flat_has "$SP/capabilities/scraping/contract.md" 'the reviewer'"'"'s name; never the reviewer'"'"'s profile'
 flat_has "$SP/skills/write-talking-points/SKILL.md" 'may cite a review by its reviewer and date'
 FD="$SP/skills/find-decision-makers/SKILL.md"
@@ -1707,7 +1633,6 @@ assert_not_contains "$SP/README.md" 'never the reviewer'"'"'s name'
 echo "-- 8.6.0: release"
 assert_contains "$SP/README.md" 'Upgrading from 8.6.0'
 assert_contains "$SP/README.md" 'Upgrading from 8.5.1'
-flat_has "$SP/capabilities/scraping/tools/apify/usage.md" 'confirm that the Apify monthly usage limit is set'
 
 
 echo "-- 8.6.0: final review fixes"
@@ -1732,9 +1657,9 @@ for t in '; vendor error`' '; blocked`'; do
 done
 
 echo "-- 8.7.0: apify_web"
-for t in '`search_pages`' '`fetch_page`' '"method": "GET"' '`provider: duckduckgo`' '`max_web_fetches`' \
-  'dated within the last 3 months' 'never an email address, phone number or CRM id' '| `search_pages` | $0.002 |' \
-  '| `fetch_page` | $0.002 |' '`max_web_results` — results per `search_pages` call (default 10)'; do flat_has "$SUD" "$t"; done
+for t in '`search_pages`' '`fetch_page`' '`max_web_fetches_per_lead`' \
+  'dated within the last 3 months' 'never an email address, phone number or CRM id' '| `search_pages` | $0.006 |' \
+  '| `fetch_page` | $0.002 |'; do flat_has "$SUD" "$t"; done
 flat_has "$SP/capabilities/scraping/contract.md" '| `search_pages` |'
 flat_has "$SP/capabilities/scraping/contract.md" '| `fetch_page` |'
 flat_has "$SP/subagents/preparer.md" '`apify_web`: one `search_pages` call per lead'
@@ -1744,10 +1669,8 @@ flat_has "$SP/evals/cases.md" '## Case 62: A recent press item is fetched and an
 flat_has "$SP/evals/cases.md" '## Case 63: A search result with a query string is fetched without it'
 
 echo "-- 8.7.0: apify_bbb and apify_yellowpages"
-for t in '`find_listing`' 'businessName,bbbRating,accredited,yearsInBusiness,businessStarted,complaintCount,complaintsLast12Months,customerReviewCount,email,website,phone,principalContacts,profileUrl' \
-  'title,is_claimed,star_rating,rating_count,phone,website,email,address,source_url,categories' \
-  '| `find_listing`, BBB | $0.02 per business |' '| `find_listing`, YellowPages | $0.10 per call |' \
-  '`max_bbb_results` — businesses per BBB `find_listing` call (default 5)' 'No listing is a valid result, not drift'; do flat_has "$SUD" "$t"; done
+for t in '`find_listing`' '| `find_listing` BBB | $0.10 |' '| `find_listing` YellowPages | $0.10 |' \
+  'No listing is a valid result, not drift'; do flat_has "$SUD" "$t"; done
 flat_has "$SP/capabilities/scraping/contract.md" '| `find_listing` |'
 flat_has "$SP/subagents/preparer.md" '`apify_bbb` and `apify_yellowpages`: one `find_listing` call each per lead'
 flat_has "$SP/subagents/preparer.md" 'matched to the lead by phone or website host; a name-only match is dropped'
@@ -1759,25 +1682,19 @@ flat_has "$SP/evals/cases.md" '## Case 64: A BBB principal becomes the point of 
 flat_has "$SP/evals/cases.md" '## Case 65: No BBB listing is a result, not drift'
 
 echo "-- 8.7.0: apify_yelp"
-for t in 'name,businessRating,totalReviews,rating,reviewDate,text,reviewUrl,publicReply,author.name' \
-  'never asks for `author.profile_photo`, `author.friend_count` or any other `author` field but `author.name`' \
-  'a Yelp page URL from this lead'"'"'s `search_pages` results or its website'"'"'s links' '| `find_reviews`, Yelp | $0.02 |'; do flat_has "$SUD" "$t"; done
+for t in 'a Yelp page URL from this lead'"'"'s `search_pages` results or its website'"'"'s links' '| `find_reviews` (Google or Yelp) | $0.02 |'; do flat_has "$SUD" "$t"; done
 flat_has "$SP/capabilities/scraping/contract.md" '`site` (`google`, the default, or `yelp`)'
 flat_has "$SP/subagents/preparer.md" '`apify_yelp`: when reviews are picked and the lead has a Yelp page URL'
 for t in '`apify_yelp`'; do flat_has "$SP/context/operating-config.md" "$t"; done
 flat_has "$SP/evals/cases.md" '## Case 66: A Yelp complaint is named only in Avoid, like a Google one'
 
 echo "-- 8.7.0: LinkedIn jobs"
-for t in '`apify:valig--linkedin-jobs-scraper`' 'title,companyName,location,postedDate,applicationsCount,url' \
-  '`datePosted` — always `"r2592000"`' '| `find_jobs`, LinkedIn | $0.01 |' 'keep only items whose `companyName` matches the lead'; do flat_has "$SUD" "$t"; done
+for t in 'the server drops other employers'"'"' postings' '| `find_jobs` | $0.01 |'; do flat_has "$SUD" "$t"; done
 flat_has "$SP/subagents/preparer.md" '`find_jobs` runs Indeed, then LinkedIn'
 flat_has "$SP/evals/cases.md" '## Case 67: A LinkedIn job post from a similarly named company is dropped'
 
 echo "-- 8.7.0: LinkedIn company search and reader"
-for t in '`apify:harvestapi--linkedin-profile-search`' '`apify:harvestapi--linkedin-profile-scraper`' \
-  '`profileScraperMode` — always `"Short"`' '`"Profile details + email search ($10 per 1k)"`' 'Never pass a MongoDB argument' \
-  '| `find_profiles`, LinkedIn company search | $0.12 per call |' '| `read_profile`, LinkedIn | $0.05 per profile |' \
-  'firstName,lastName,linkedinUrl,summary,location.linkedinText,currentPositions'; do flat_has "$SUD" "$t"; done
+for t in '`company_url`, the lead'"'"'s LinkedIn company page' '| `find_profiles` by company | $0.12 |' '| `read_profile` LinkedIn | $0.05 |'; do flat_has "$SUD" "$t"; done
 flat_lacks "$SUD" 'LinkedIn has no reader'
 flat_has "$SP/skills/find-decision-makers/SKILL.md" 'When no source names an owner and the lead has a LinkedIn company URL, run `find_profiles` as a LinkedIn company search'
 flat_has "$SP/skills/find-social-profiles/SKILL.md" 'A LinkedIn profile URL already known for the contact (an anchor) is read with `read_profile`'
@@ -1787,8 +1704,7 @@ flat_has "$SP/evals/cases.md" '## Case 68: A company search finds the owner and 
 flat_has "$SP/subagents/preparer.md" 'and the LinkedIn company search through `find-decision-makers` when no source names an owner'
 
 echo "-- 8.7.0: Facebook backup"
-for t in '`apify:scrapesage--facebook-ad-library-scraper`' 'only after the primary Facebook call returns a vendor error or a guard block' \
-  'pageName,pageId,isActive,status,startDate,endDate,publisherPlatforms,adLibraryUrl' '| `find_ads`, Facebook backup | $0.02 |'; do flat_has "$SUD" "$t"; done
+flat_has "$SUD" '| `find_ads` | $0.01, or $0.04 with a `facebook_page_url` |'
 flat_has "$SP/subagents/preparer.md" 'the Facebook backup runs with the same page URL'
 flat_has "$SP/evals/cases.md" '## Case 69: The Facebook backup runs when the primary fails'
 
@@ -1798,7 +1714,7 @@ flat_has "$SP/README.md" 'before the next scheduled run'
 for a in apify/web-search apify/web-fetch scrapesage/bbb-scraper delicious_zebu/yellowpages-usa-business-lead-scraper \
   web_wanderer/yelp-reviews-scraper valig/linkedin-jobs-scraper harvestapi/linkedin-profile-search harvestapi/linkedin-profile-scraper \
   scrapesage/facebook-ad-library-scraper; do
-  flat_has "$SUD" "$a"; flat_has "$SP/README.md" "$a"
+  flat_has "$SP/README.md" "$a"
 done
 flat_lacks "$SUD" 'Runs ten Apify actors'
 flat_lacks "$SUD" 'lacks one of the ten actors'
@@ -1808,17 +1724,24 @@ for t in '`apify_web`' '`apify_bbb`' '`apify_yellowpages`' '`apify_yelp`'; do fl
 echo "-- 8.7.0: final review fixes"
 flat_has "$SP/subagents/prospector.md" 'for `find_listing(directory: yellowpages)` it is `yellowpages|<query>|<city>, <state>`'
 flat_has "$SP/subagents/prospector.md" 'every Apify step carries `cost_usd`'
-flat_has "$SUD" 'title,is_claimed,star_rating,rating_count,phone,website,email,address,source_url,categories'
 flat_has "$SP/subagents/prospector.md" 'its location from the listing'"'"'s `address`'
 flat_has "$SP/skills/find-social-profiles/SKILL.md" 'a candidate a by-name `find_profiles` search (`Full + email search`) returned is not read again'
 flat_lacks "$SP/skills/find-social-profiles/SKILL.md" 'a candidate `find_profiles` returned is not read again'
 flat_has "$SP/skills/research-company/SKILL.md" '**Directory listings (`find_listing`) → `listing`.**'
 flat_has "$SP/skills/research-company/SKILL.md" 'A Yelp review (`find_reviews` with `site: yelp`) follows the same rules'
-flat_has "$SUD" '`max_search_terms` — search terms per Maps call, and also the terms per BBB, YellowPages, LinkedIn jobs and LinkedIn company search call'
-flat_has "$SUD" 'and LinkedIn profile URLs per LinkedIn `read_profile` call'
 
 echo "-- 8.7.1: cost estimates from Apify Console"
-flat_has "$SUD" 'Apify Console charges for the 2026-11-09 probe runs'
 flat_lacks "$SUD" 'The three profile estimates'
+
+echo "-- 9.0.0: webspenser scraping tool"
+SUD=$SP/capabilities/scraping/tools/webspenser/usage.md
+flat_has "$SUD" '`webspenser_scraping:find_jobs`'
+flat_has "$SUD" 'one `step` per `calls[]` entry'
+flat_has "$SUD" '`input_refused` gives `<source> (refused)`'
+flat_has "$SUD" 'never carry the reviewer'"'"'s profile URL, photo or ID'
+flat_has "$SUD" 'Never attach the `N8N Webspenser Newsletter` connector'
+flat_lacks "$SUD" 'get-dataset-items'
+assert_contains "$SP/capabilities/scraping/tools/webspenser/identity.yaml" 'server_match: webspenser_scraping'
+[ -z "$(ls capabilities/scraping/tools | grep -vx webspenser)" ] && _report ok "webspenser is the only scraping tool" || _report no "another scraping tool folder remains"
 
 finish

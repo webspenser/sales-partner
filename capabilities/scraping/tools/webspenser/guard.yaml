@@ -1,0 +1,93 @@
+# Webspenser scraping guard policy (sales-partner 9.0.0). The Webspenser
+# Scraping server (sales-partner-mcp, interface 1.0.0) holds which
+# providers run, their sizes, retries, failover and the hard spend cap
+# ($20 per 7 days, $0.50 per provider run). This policy holds what the
+# plugin can see, per the interface's "Plugin guard duties": exactly the
+# 11 tools, each with only its contract arguments (a size key, an actor
+# option or any other extra key is blocked here, not just dropped by the
+# server), and the URL rules for every argument that takes a URL.
+# server_match webspenser_scraping matches the claude.ai connector
+# "Webspenser Scraping" (claude_ai_Webspenser_Scraping), never the
+# N8N Webspenser Newsletter connector, whose instance tools the root
+# guard denies. find_contacts' limit of 10 URLs is the server's schema.
+covers: [no_external_send, allowlisted_tools]
+allow: [find_businesses, find_contacts, find_reviews, find_ads, find_jobs, read_site,
+  find_profiles, read_profile, search_pages, fetch_page, find_listing]
+only_keys:
+  - tools: [find_businesses]
+    at: ["$"]
+    keys: [query, location]
+  - tools: [find_contacts]
+    at: ["$"]
+    keys: [urls]
+  - tools: [find_reviews]
+    at: ["$"]
+    keys: [site, place, url]
+  - tools: [find_ads]
+    at: ["$"]
+    keys: [business, facebook_page_url]
+  - tools: [find_jobs]
+    at: ["$"]
+    keys: [company, location]
+  - tools: [read_site]
+    at: ["$"]
+    keys: [url]
+  - tools: [find_profiles]
+    at: ["$"]
+    keys: [name, business, city, platforms, company_url, roles]
+  - tools: [read_profile]
+    at: ["$"]
+    keys: [url]
+  - tools: [search_pages]
+    at: ["$"]
+    keys: [query]
+  - tools: [fetch_page]
+    at: ["$"]
+    keys: [url]
+  - tools: [find_listing]
+    at: ["$"]
+    keys: [directory, query, location]
+  - tools: [find_businesses, find_jobs, find_listing]
+    at: [location]
+    keys: [city, state, country]
+urls:
+  - tools: [find_contacts]
+    at: ["urls[]"]
+    schemes: [https]
+    hosts: public
+    path: root
+    required: true
+  - tools: [read_site]
+    at: [url]
+    schemes: [https]
+    hosts: public
+    path: root
+    required: true
+  - tools: [fetch_page]
+    at: [url]
+    schemes: [https]
+    hosts: public
+    path: any
+    required: true
+  - tools: [read_profile]
+    at: [url]
+    schemes: [https]
+    hosts: [www.linkedin.com, linkedin.com, www.instagram.com, instagram.com, www.tiktok.com, tiktok.com,
+      www.facebook.com, facebook.com]
+    path: any
+    required: true
+  - tools: [find_ads]
+    at: [facebook_page_url]
+    schemes: [https]
+    hosts: [facebook.com, www.facebook.com]
+    path: any
+  - tools: [find_reviews]
+    at: [url]
+    schemes: [https]
+    hosts: [www.yelp.com]
+    path: /biz
+  - tools: [find_profiles]
+    at: [company_url]
+    schemes: [https]
+    hosts: [www.linkedin.com, linkedin.com]
+    path: /company

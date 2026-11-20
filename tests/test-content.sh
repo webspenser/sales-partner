@@ -1732,4 +1732,13 @@ flat_has "$SP/README.md" 'Upgrading from 8.7: scraping now runs through the Webs
 flat_lacks "$SP/README.md" 'mcp.apify.com'
 [ "$(wc -c < "$SP/AGENT.md")" -le 5983 ] && _report ok "AGENT.md <= 5983 bytes" || _report no "AGENT.md over 5983 bytes"
 
+echo "-- 9.0.0: setup and schedule"
+ST=$SP/skills/setup/SKILL.md; SC=$SP/skills/schedule/SKILL.md
+flat_has "$ST" 'An instance bound to `apify` for scraping is upgraded in this step'
+flat_has "$ST" 'deletes `bindings/scraping.md`'
+flat_has "$ST" 'renames the config keys listed in the README'"'"'s 8.7 upgrade note'
+flat_lacks "$ST" 'max_places_per_search'
+flat_has "$SC" 'never attach the `N8N Webspenser Newsletter` connector'
+flat_has "$SC" 'remove a connector the scraping tool no longer uses (an Apify connector)'
+
 finish

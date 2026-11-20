@@ -82,7 +82,10 @@ instance's GitHub repository as `owner/name`.
      load this agent or its guard: the routine would run unguarded;
    - connectors: attach, for each listed provider, the connector whose
      name contains its `matches` text — no others. `verify` refuses any
-     extra connector, because nothing guards it;
+     extra connector, because nothing guards it. On an existing routine,
+     remove a connector the scraping tool no longer uses (an Apify connector)
+     from every routine; never attach the `N8N Webspenser Newsletter` connector:
+     its n8n instance tools would let the agent run any workflow;
    - schedule: the entry's day and time in the instance's timezone;
      the checker also prints the UTC cron for forms that ask in UTC;
      say that a UTC schedule shifts by an hour when daylight saving

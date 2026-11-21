@@ -129,7 +129,7 @@ in that folder loads the agent. Plugin updates never touch your folder.
 
 Built on [Agent Standard](https://github.com/webspenser/agent-builder/blob/main/STANDARD.md) 7.5
 with [Agent Builder](https://github.com/webspenser/agent-builder).
-Version 9.0.0.
+Version 9.0.1.
 
 ## Use it from source
 
@@ -276,7 +276,7 @@ Upgrading from 8.7: scraping now runs through the Webspenser server
 (the `Webspenser Scraping` connector) instead of your Apify account.
 Webspenser runs the scraping accounts, picks the provider for each
 source, keeps a backup ready and caps spend at $20 a week; nothing
-changes in how leads are found or researched. Install 9.0.0 on a quiet
+changes in how leads are found or researched. Install 9.0.1 on a quiet
 day, with no scheduled run within 24 hours. In order:
 
 1. Add the `Webspenser Scraping` connector in claude.ai
@@ -306,8 +306,8 @@ day, with no scheduled run within 24 hours. In order:
    the weekly cap below the server's $20; 15 is the default.
 3. Re-run `/sales-partner:schedule`. It removes the Apify connector from
    the prospect routine, attaches `Webspenser Scraping`, and sets
-   `agent_version: 9.0.0` and the environment comment
-   `# sales-partner 9.0.0`. Never attach the `N8N Webspenser Newsletter`
+   `agent_version: 9.0.1` and the environment comment
+   `# sales-partner 9.0.1`. Never attach the `N8N Webspenser Newsletter`
    connector.
 4. Rollback: `docs/runbook/cutover.md` in the sales-partner-mcp repo.
 

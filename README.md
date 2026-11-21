@@ -27,9 +27,9 @@ and when.
 - **Evidence from reviews, ads, jobs and the website.** It reads a
   business's recent Google reviews (quoting a snippet with its date,
   link and the reviewer's first name, never their profile or photo), checks whether it runs Google or
-  Facebook ads, looks for open jobs on Indeed, and reads its website,
+  Facebook ads, looks for its open jobs, and reads its website,
   guided by the research tips you gave for each offer. Each source is
-  capped, and a lead's Apify spend stops at $0.50 by default. A lead
+  capped, and a lead's scraping spend stops at $0.50 by default. A lead
   that hit the cap carries a **Research Capped** flag and says which
   sources it skipped, so you can decide whether to continue.
 - **The offer most likely to land.** Each lead gets a Segment, an
@@ -105,8 +105,8 @@ and when.
 - **Airtable**, your own account, for the agent's record of every run. Production needs the Team plan; Free (1,000 records) is fine for a trial.
 - **Claude Code** on a paid Claude plan, which runs the agent and its
   weekly schedule.
-- **Apify**, your own account, with a monthly usage limit you set in
-  Apify Console, for local-business listings, website contact details,
+- The **Webspenser Scraping** connector (Webspenser runs the scraping
+  accounts) for local-business listings, website contact details,
   reviews, ads, jobs, website reading and social profiles.
 
 **Want it set up for you?** [Webspenser](https://www.webspenser.com/lp/agent-builder) offers
@@ -129,7 +129,7 @@ in that folder loads the agent. Plugin updates never touch your folder.
 
 Built on [Agent Standard](https://github.com/webspenser/agent-builder/blob/main/STANDARD.md) 7.5
 with [Agent Builder](https://github.com/webspenser/agent-builder).
-Version 8.7.1.
+Version 9.0.0.
 
 ## Use it from source
 
@@ -149,27 +149,11 @@ Version 8.7.1.
 - A CRM — Attio or HubSpot (`capabilities/crm/tools/`); setup binds it after a read-only check. If a CRM needs fields the probe does not find, setup offers two choices: create them yourself from the tool's `## Setup` steps, or run its `bootstrap.py` with an API key in your own terminal.
 - Resend for owner notifications, on the client's own account (`capabilities/owner_notify/tools/resend/`); setup pins your address and a no-reply sender, and the guard refuses a send to anyone else.
 - Airtable for the ledger (`capabilities/ledger/tools/airtable/`); `bootstrap.py` creates the base, and the guard keeps the record append-only.
-- Apify for scraping (`capabilities/scraping/tools/apify/`): setup connects the restricted connector URL and pins the limits (results per search, pages per site, and so on) the guard enforces.
-  The guard also requires the fixed settings, such as reviews with
-  reviewer names and LinkedIn email search (your choice in 8.6.0), and checks every start URL: Facebook pages only on
-  facebook.com, and only an https site root on a public host for the
-  contact scraper and the site reader. One limit remains: the guard
-  can't tie a website to a lead, so data could still leave in the
-  hostname itself (a made-up subdomain).
-  More actors find and read social profiles (LinkedIn by name, a
-  LinkedIn company search and profile reader, Instagram and TikTok).
-  Web search and page fetch read only https pages on public hosts with
-  no query string; data could still ride in a page's path, the same
-  class of limit as the hostname. They run with no login: the agent never signs
-  in to any platform. Facebook personal profiles have no reader, so they
-  come only from the business's own pages and from Exa. The guard limits
-  which arguments go to the profile actors and how many, but it can't
-  check what a name or handle contains, so data could in principle ride
-  in one.
+- The Webspenser scraping server for scraping (`capabilities/scraping/tools/webspenser/`): one claude.ai connector with 11 tools, one per scraping operation. The server picks the provider behind each tool, holds every size, retries once, fails over to a backup and caps spend at $20 a week; it changes without a plugin release. The guard allows only those 11 tools, only each tool's own arguments (so no size or provider option can be sent), and checks every URL: an https site root on a public host for the contact scraper and the site reader, https public pages with no query string for page fetch, and Facebook, Yelp and LinkedIn URLs only on their own hosts. One limit remains: the guard can't tie a website to a lead, so data could still leave in a hostname, a page's path or a name the agent searches for. Every source reads public data with no login.
 
 - Optional: Exa for web search (`capabilities/web_search/tools/exa/`), through Exa's hosted connector on your own Exa account. When it is connected, research runs one Exa search per lead to find its owner or principal; without it, research runs as before. The guard lets only Exa's basic search run, at its default 10 results.
 
-Each tool's guard policy makes Attio, HubSpot, Resend, Airtable, Apify and Exa unattended-safe.
+Each tool's guard policy makes Attio, HubSpot, Resend, Airtable, the Webspenser scraping server and Exa unattended-safe.
 
 Connect these in your host (connectors or MCP servers). Credentials
 never go in this repo.
@@ -197,7 +181,7 @@ comes from the map listing and decides which leads get researched
 3. Score the leads already in flight once, in an interactive session:
    ask the agent to score every `Scored` lead with the Fit rubric (it
    re-reads each lead's listing with `find_businesses`, which counts
-   toward the Apify spend cap) and every `Researched` lead with the
+   toward the scraping spend cap) and every `Researched` lead with the
    Approach rubric (from its Research rows, adding the newest review
    date where it is missing). Until then, no gate picks those leads up.
 4. The old Score and Score Breakdown fields are no longer read or
@@ -255,36 +239,6 @@ and writing talking points. In order:
    from its Industry, or from its research. Old Email, LinkedIn and Call
    draft notes are left in place.
 
-Upgrading from 8.0: Sales Partner now also reads reviews, ads, jobs and
-the website, and caps each lead's Apify spend. In order:
-
-1. Optional: re-run the interview's offer catalog round to add research
-   tips to each offer (the signals that tell the research where to look).
-2. Replace the Apify connector's URL and re-run setup's tools step. The
-   connector's restricted URL must now list all seven actors, so replace
-   it with:
-
-   `https://mcp.apify.com?tools=compass/crawler-google-places,vdrmota/contact-info-scraper,compass/Google-Maps-Reviews-Scraper,scrapesage/google-ads-transparency-scraper,apify/facebook-ads-scraper,valig/indeed-jobs-scraper,apify/website-content-crawler`
-
-   The connector may now appear as "Apify Actors", with its tools
-   prefixed `mcp__claude_ai_Apify_Actors__`; the guard still matches it.
-   Then re-run setup's tools step. It adds the `research_capped` field
-   (Research Capped), asks for the twelve new scraping bindings and
-   pushes `bindings/scraping.md`.
-3. Update `context/operating-config.md`: add `apify_reviews`,
-   `apify_ads`, `apify_jobs` and `apify_site_reader` to
-   `prospecting_sources`, add `apify_cap_usd_per_lead: 0.50`, and set
-   `research_budget_per_lead_minutes: 15`.
-4. Re-run `/sales-partner:schedule`.
-
-Your scheduled routines install the latest plugin, so they run this
-release before you finish. Research goes on: a missing
-`apify_cap_usd_per_lead` uses `0.50`. Until the tools step pushes the
-new bindings, the new sources are skipped and you get an error
-notification naming the missing bindings. Re-run
-`/sales-partner:schedule` afterwards (step 4): it checks the new
-bindings.
-
 Upgrading from 8.1: decision-maker research can now use Exa, and every
 name it records is graded by its source (a directory-only name is never
 verified). Exa is optional. In order:
@@ -299,25 +253,6 @@ verified). Exa is optional. In order:
    `## Setup`), re-run setup's tools step and answer yes for web search,
    then re-run `/sales-partner:schedule`, attach the `ExaSearch` connector to
    the routine that runs prepare, and do step 1.
-
-Upgrading from 8.2: Sales Partner now finds social profiles for the
-people it researches. Exa is optional; with Exa bound, Instagram,
-Facebook and TikTok get more candidates. In order:
-
-1. Replace the Apify connector's restricted URL with the ten-actor URL.
-   Copy it exactly:
-
-   `https://mcp.apify.com?tools=compass/crawler-google-places,vdrmota/contact-info-scraper,compass/Google-Maps-Reviews-Scraper,scrapesage/google-ads-transparency-scraper,apify/facebook-ads-scraper,valig/indeed-jobs-scraper,apify/website-content-crawler,harvestapi/linkedin-profile-search-by-name,apify/instagram-profile-scraper,clockworks/tiktok-profile-scraper`
-
-2. Re-run setup's tools step. It creates the new CRM fields (with
-   `bootstrap.py` or by hand) and pins the three new scraping bindings
-   `max_profile_results` (5), `max_profile_reads` (10) and
-   `max_profile_locations` (1). Then commit and push
-   `bindings/scraping.md`. Until the new keys are pushed, scheduled
-   runs stop.
-3. Add `apify_profiles` to `prospecting_sources` in
-   `context/operating-config.md`.
-4. Re-run `/sales-partner:schedule`.
 
 Upgrading from 8.3: each new lead now gets a point of contact on the
 pipeline list. In order:
@@ -337,68 +272,48 @@ section. Add `business_name: "<your business>"` to
 `Weekly Digest for <your business>`. Nothing else changes: Resend sends
 the HTML through the same pinned sender and recipients.
 
-Upgrading from 8.5.0: the reviews source now runs on
-`web_wanderer/google-reviews-scraper`. Apify moved the old Compass
-reviews tool to an HTTP server interface the connector could not call,
-so every prepare run stopped at its first review call. Your
-`prospecting_sources` and `bindings/scraping.md` stay as they are.
+Upgrading from 8.7: scraping now runs through the Webspenser server
+(the `Webspenser Scraping` connector) instead of your Apify account.
+Webspenser runs the scraping accounts, picks the provider for each
+source, keeps a backup ready and caps spend at $20 a week; nothing
+changes in how leads are found or researched. Install 9.0.0 on a quiet
+day, with no scheduled run within 24 hours. In order:
 
-1. Replace the Apify connector's URL with:
+1. Add the `Webspenser Scraping` connector in claude.ai
+   (`capabilities/scraping/tools/webspenser/usage.md`, `## Setup`).
+2. Re-run setup's tools step. It checks the connector's 11 tools, binds
+   `webspenser` for scraping, deletes `bindings/scraping.md` (the server
+   holds every size), and renames these keys in
+   `context/operating-config.md`, showing you each change first:
 
-   `https://mcp.apify.com?tools=compass/crawler-google-places,vdrmota/contact-info-scraper,web_wanderer/google-reviews-scraper,scrapesage/google-ads-transparency-scraper,apify/facebook-ads-scraper,valig/indeed-jobs-scraper,apify/website-content-crawler,harvestapi/linkedin-profile-search-by-name,apify/instagram-profile-scraper,clockworks/tiktok-profile-scraper`
+   | Old | New |
+   |---|---|
+   | `apify_google_maps` | `google_maps` |
+   | `apify_contact_info` | `contact_info` |
+   | `apify_reviews` | `reviews` |
+   | `apify_ads` | `ads` |
+   | `apify_jobs` | `jobs` |
+   | `apify_site_reader` | `site_reader` |
+   | `apify_web` | `open_web` |
+   | `apify_bbb` | `bbb` |
+   | `apify_yellowpages` | `yellowpages` |
+   | `apify_yelp` | `yelp` |
+   | `apify_profiles` | `profiles` |
+   | `apify_spend_cap_usd_per_week` | `scraping_spend_cap_usd_per_week` |
+   | `apify_cap_usd_per_lead` | `scraping_cap_usd_per_lead` |
 
-   Other named actors and the `docs` and `runs` tools may stay on the
-   connector: the guard refuses any tool it does not allow. Leave off
-   the `actors` and `api` tool groups. The connector's name must contain "apify"
-   (for example "Apify Actors" or "Apify Connector"), because the guard
-   finds the server by that word.
-2. Start a new session so the agent loads the new tool.
+   It also adds `max_web_fetches_per_lead: 5` (it was a binding). Keep
+   the weekly cap below the server's $20; 15 is the default.
+3. Re-run `/sales-partner:schedule`. It removes the Apify connector from
+   the prospect routine, attaches `Webspenser Scraping`, and sets
+   `agent_version: 9.0.0` and the environment comment
+   `# sales-partner 9.0.0`. Never attach the `N8N Webspenser Newsletter`
+   connector.
+4. Rollback: `docs/runbook/cutover.md` in the sales-partner-mcp repo.
 
-Upgrading from 8.6.0: 8.7.0 adds nine Apify tools under the same
-guard: web search and page fetch (`apify_web`: press, news and pages
-from a lead's own site and search results, paths only), BBB
-(`apify_bbb`: rating, complaints, years, owners), YellowPages
-(`apify_yellowpages`: a listing for research, and leads by trade and
-city for the Prospector), Yelp reviews (`apify_yelp`), LinkedIn jobs
-(part of `apify_jobs`), a LinkedIn company search and profile reader
-(part of `apify_profiles`: the owner of a business that names no one,
-and their email) and a Facebook Ad Library backup (part of `apify_ads`,
-used only when the primary Facebook call fails).
-
-1. Replace the Apify connector's URL with:
-
-   `https://mcp.apify.com?tools=compass/crawler-google-places,vdrmota/contact-info-scraper,web_wanderer/google-reviews-scraper,scrapesage/google-ads-transparency-scraper,apify/facebook-ads-scraper,valig/indeed-jobs-scraper,apify/website-content-crawler,harvestapi/linkedin-profile-search-by-name,apify/instagram-profile-scraper,clockworks/tiktok-profile-scraper,apify/web-search,apify/web-fetch,scrapesage/bbb-scraper,delicious_zebu/yellowpages-usa-business-lead-scraper,web_wanderer/yelp-reviews-scraper,valig/linkedin-jobs-scraper,harvestapi/linkedin-profile-search,harvestapi/linkedin-profile-scraper,scrapesage/facebook-ad-library-scraper`
-2. Run setup's tools step to add `max_web_results` (default 10),
-   `max_bbb_results` (default 5) and `max_web_fetches` (default 5) to
-   `bindings/scraping.md`, then commit and push it. Do this before the next scheduled run: the scheduled-run gate refuses to
-   start while a value the guard pins is missing.
-3. Add `apify_web`, `apify_bbb`, `apify_yellowpages` and `apify_yelp` to
-   `prospecting_sources` in `context/operating-config.md` if you want
-   them; a source left out never runs.
-4. Start a new session so the agent loads the new guard.
-
-Upgrading from 8.5.1: the Apify guard now follows the retrieval profile
-(Agent Standard 7.5). It names the actors it allows, caps every result
-and page count, refuses code, headers, cookies, proxies and each actor's
-paid add-ons, and lets any other new vendor input pass, so a small
-vendor change no longer blocks every call. Three behaviors change:
-
-- A scraping source that fails (an empty field, a vendor error or a
-  guard block) is skipped for that lead and research goes on; the run
-  report says what happened. A source blocked on 2 leads is skipped for
-  the rest of the run, and a source that fails on every lead sends one
-  error notification at the end.
-- Review findings and talking points can name a reviewer by first name
-  and date. Profile links, photos and IDs are never kept.
-- The LinkedIn search runs in `Full + email search` mode, and an email it
-  finds for an owner, a Gmail address included, can become the point of
-  contact. Its cost estimate is $0.15 per search; check the real charge
-  in Apify Console after the first runs.
-
-Your connector URL, `prospecting_sources` and `bindings/scraping.md`
-stay as they are. Confirm that the Apify monthly usage limit is set in
-Apify Console: it is the hard stop on spend. Start a new session so the
-agent loads the new guard.
+A config that still names an old key stops the run with
+`<old> was renamed <new> in 9.0.0`, so nothing runs on a default you
+did not choose.
 
 ## Developing
 

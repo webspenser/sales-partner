@@ -23,8 +23,8 @@ never a provider's tools.
 | `find_listing` | `directory` (`bbb` or `yellowpages`), `query` (the business's name, or a trade when sourcing), `location` (city, state) | BBB: name, rating, accredited, years in business, complaint counts, review count, email, website, phone, principal contacts (name, title), profile URL. YellowPages: name, claimed, rating, review count, phone, website, email, address, categories, listing URL. None is a valid "no listing" result; plus the run's cost (estimated) | Same |
 
 Each call is a ledger `step` (`capabilities/ledger/contract.md`) with its
-cost in `cost_usd`; an operation that makes two provider calls, such as
-`find_ads`, records a step for each. A guard block on a scraping call skips that source for the lead
+cost in `cost_usd`; the tool reports each provider call it made, and each
+is a step. A guard block on a scraping call skips that source for the lead
 (the run goes on with the other sources) and is never retried with
 changed arguments; the tool's usage says how drift and blocks are
 reported.
@@ -32,6 +32,6 @@ reported.
 ## Invariants
 
 - `no_external_send` — the scraper never sends a message to anyone.
-- `allowlisted_actors` — only the actors the tool names run.
-- `pinned_inputs` — every input that limits a call's size comes only from
-  values pinned in `bindings/scraping.md` at interactive setup.
+- `allowlisted_tools` — only the tools the bound tool names run; which
+  providers serve each tool is held by the scraping server, outside the
+  guard's view.

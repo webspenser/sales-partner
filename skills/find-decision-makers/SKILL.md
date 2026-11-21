@@ -4,7 +4,7 @@ description: Use when the target company is known but the right person is not �
 ---
 
 This skill reads public pages only. Reading a public LinkedIn profile,
-including through an actor, is allowed; acting on LinkedIn is not — no
+including through the scraping server, is allowed; acting on LinkedIn is not — no
 automated connection request, follow, message or post, and no scrape
 behind a login. A LinkedIn profile URL found on a public company page or
 public search is a legitimate source.
@@ -37,7 +37,7 @@ public search is a legitimate source.
    with the BBB profile URL in `Notes`.
    When no source names an owner and the lead has a LinkedIn company URL, run `find_profiles` as a LinkedIn company search
    (`company_url`, roles owner and executive; only when
-   `apify_profiles` is listed). A result whose current position is at
+   `profiles` is listed). A result whose current position is at
    this business, with an owner, founder, president or partner title, is
    a decision-maker (Strong: a LinkedIn profile whose current role is at
    this business); `Notes` keep its LinkedIn URL. Its email comes later,

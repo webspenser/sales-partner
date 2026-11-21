@@ -116,8 +116,7 @@ skill, if this agent has one.
       `covers`, refuse to bind it and say why. For `owner_only_send` or
       `pinned_inputs`, ask the user for each pinned value the tool's
       `usage.md` `## Setup` lists (for example `recipient_email`, offering
-      the addresses the interview collected, or a cap such as
-      `max_places_per_search`, offering the defaults it lists), repeat
+      the addresses the interview collected), repeat
       each back, and write them as plain `<key>: <value>`
       lines to `bindings/<capability>.md` only after the user confirms.
       Owner sends and pinned calls are refused until that file matches
@@ -130,6 +129,14 @@ skill, if this agent has one.
       pushed, do not bind the capability.
    5. Add `bind_<capability>: <provider>` (or `custom`) to
       `instance.yaml`, replacing an earlier line for that capability.
+      An instance bound to `apify` for scraping is upgraded in this step
+      (9.0.0 has no Apify tool): it runs the `webspenser` tool's Probe;
+      on a pass it replaces `bind_scraping: apify` with `bind_scraping: webspenser`,
+      deletes `bindings/scraping.md` (the server holds every size), and
+      renames the config keys listed in the README's 8.7 upgrade note in
+      the instance's `context/operating-config.md`, showing the operator
+      each change before writing it and adding `max_web_fetches_per_lead: 5`.
+      Then commit and push, as for any binding.
    6. Source mode only: merge into `.claude/settings.json` a
       `PreToolUse` hook with matcher `mcp__.*` and command
       `"$CLAUDE_PROJECT_DIR/hooks/guard.sh"`, unless one is there

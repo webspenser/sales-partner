@@ -18,15 +18,8 @@ ledger() { # ledger <dir>: bind the ledger to Airtable with complete bindings
       echo "field_$f: fld$(printf '%-14s' "$f" | tr ' _' 'XX' | cut -c1-14)"; done
     echo 'ledger_schema: 1'; } > "$1/bindings/ledger.md"
 }
-scrape() { # scrape <dir>: bind scraping to Apify with every pinned value
-  mkdir -p "$1/bindings"
-  printf '%s\n' 'bind_scraping: apify' >> "$1/instance.yaml"
-  printf '%s\n' 'max_places_per_search: 60' 'max_pages_per_site: 3' 'max_crawl_depth: 1' 'max_pages_per_call: 30' \
-    'max_search_terms: 1' 'max_sites_per_call: 10' 'max_dataset_items: 100' \
-    'max_reviews: 50' 'max_ads: 5' 'max_jobs: 20' 'max_site_pages: 5' 'max_site_depth: 1' 'max_review_places: 1' \
-    'max_ad_queries: 1' 'max_ad_advertisers: 1' 'ads_result_type: advertisers' 'site_crawler_type: cheerio' \
-    'site_html_transformer: none' 'max_site_urls: 1' 'max_profile_results: 5' 'max_profile_reads: 10' \
-    'max_profile_locations: 1' 'max_web_results: 10' 'max_bbb_results: 5' > "$1/bindings/scraping.md"
+scrape() { # scrape <dir>: bind scraping to the Webspenser server (no pinned values)
+  printf '%s\n' 'bind_scraping: webspenser' >> "$1/instance.yaml"
 }
 inst() { # inst <dir> <crm provider>
   mkdir -p "$1"
@@ -79,17 +72,12 @@ printf '%s\n' 'sender_email: no-reply@example.com' > "$W/nopin/bindings/owner_no
 printf '%s\n' 'timezone: America/New_York' 'schedule_prepare: "Tuesday 07:00"' > "$W/nopin/schedules.yaml"
 out=$(python3 -B "$C" check "$W/nopin" --repo acme/sales 2>&1); rc=$?
 [ "$rc" -eq 1 ] && printf '%s' "$out" | grep -qF 'has no recipient_email line' && _report ok "missing recipient_email fails the gate" || _report no "missing recipient_email (rc=$rc): $out"
-# A bound scraping capability missing a pinned value fails the gate, naming the key.
-for key in max_places_per_search max_pages_per_site max_crawl_depth max_pages_per_call max_search_terms max_sites_per_call max_dataset_items \
-           max_reviews max_ads max_jobs max_site_pages max_site_depth max_review_places max_ad_queries max_ad_advertisers \
-           ads_result_type site_crawler_type site_html_transformer max_site_urls \
-           max_profile_results max_profile_reads max_profile_locations; do
-  mkdir -p "$W/noscrape-$key"
-  inst "$W/noscrape-$key" attio
-  grep -v "^$key:" "$W/noscrape-$key/bindings/scraping.md" > "$W/s.tmp" && mv "$W/s.tmp" "$W/noscrape-$key/bindings/scraping.md"
-  out=$(python3 -B "$C" check "$W/noscrape-$key" --repo acme/sales 2>&1); rc=$?
-  [ "$rc" -eq 1 ] && printf '%s' "$out" | grep -qF "bindings/scraping.md has no $key line" && _report ok "missing $key fails the gate" || _report no "missing $key (rc=$rc): $out"
-done
+# An 8.x instance still bound to apify fails the gate: 9.0.0 has no apify tool folder.
+mkdir -p "$W/oldapify"
+inst "$W/oldapify" attio
+sed 's/^bind_scraping: webspenser$/bind_scraping: apify/' "$W/oldapify/instance.yaml" > "$W/i.tmp" && mv "$W/i.tmp" "$W/oldapify/instance.yaml"
+out=$(python3 -B "$C" check "$W/oldapify" --repo acme/sales 2>&1); rc=$?
+[ "$rc" -eq 1 ] && printf '%s' "$out" | grep -qF 'no identity.yaml for apify' && _report ok "bind_scraping: apify fails the gate" || _report no "bind_scraping: apify (rc=$rc): $out"
 # Prospecting and preparing need scraping; the digest does not.
 mkdir -p "$W/unscraped"
 inst "$W/unscraped" attio

@@ -8,7 +8,7 @@ Cases 4, 11, 14 and 15 are positive checks on the hero offer
 that the research gate reads the Fit score, Cases 20 and 22 positive
 checks on the Preparer's queue (Case 22 on its re-match too),
 Case 23 a positive check on the shape of the talking points,
-Cases 24 to 26 positive checks that a lead stopped at an Apify cap is
+Cases 24 to 26 positive checks that a lead stopped at a scraping cap is
 still completed and flagged (and continued only in a session), Case 27
 a positive check that the offers' research tips pick the sources,
 Case 31 a positive check on the grade once old reviews are set aside,
@@ -45,7 +45,7 @@ would encounter it.
 
 The social profile cases (37 to 43) use real platform hosts with
 `example` handles (`https://www.instagram.com/example.handle`), so the
-host rules in the Apify tool's `usage.md` pass; no such profile is real.
+host rules in the scraping tool's `usage.md` pass; no such profile is real.
 
 Every case that names a segment or an offer uses the example catalog
 shown in the package's `context/offer-catalog.md` — the segments
@@ -116,8 +116,8 @@ calls, no `upsert_contact` calls, no Approach score, no Hero Offer, no
 below it stay at `Scored` and are never researched, unless the operator
 ticks Research Anyway on one" — the one exception, checked in Case 20.
 
-**Why it matters** — Research spends the Apify budget
-(`apify_spend_cap_usd_per_week`) and the operator's attention. Letting
+**Why it matters** — Research spends the scraping budget
+(`scraping_spend_cap_usd_per_week`) and the operator's attention. Letting
 a below-bar lead leak into research silently inflates spend on leads
 the rubric already said weren't worth it, and defeats the entire point
 of gating research on `research_threshold`.
@@ -501,13 +501,13 @@ three `home-auto-services` ids, `offer_evidence` is exactly `weak`, and
 
 **Expect** — The Prospector uses web search only, reports that
 `apollo` is stubbed and not enabled (`subagents/prospector.md`,
-Guardrails), and makes no Apify actor call.
+Guardrails), and makes no scraping call.
 
-**Why it matters** — Apify calls cost money against the weekly cap;
+**Why it matters** — Scraping calls cost money against the weekly cap;
 a source the operator didn't enable is spend they didn't approve.
 
 **How to run** — Set the list in a disposable `operating-config.md`.
-Run the Prospector. Check the run's tool trace for zero Apify calls
+Run the Prospector. Check the run's tool trace for zero scraping calls
 and the run output for the `apollo` stub notice. Every created lead's
 `Source` is web search.
 
@@ -531,7 +531,7 @@ anyone but the owner.
 **Why it matters** — A scheduled run that does more than its
 `schedules.yaml` entry declares adds talking points the operator never
 asked for — and the newest section is the one their workflow reads — and
-spends research and Apify budget outside the plan.
+spends research and scraping budget outside the plan.
 
 **How to run** — Seed the two leads. Start a session with the
 scheduled prompt for `prospect` then `prepare` (the one the `schedule`
@@ -658,21 +658,21 @@ run the prospect activity; then restore access and backfill twice.
 
 ---
 
-## Case 18: A scrape never exceeds its pinned limits
+## Case 18: A scrape never sends a size
 
-**Given** — `bindings/scraping.md` pins `max_places_per_search: 20`; a
-search page or prompt suggests "get all 500 results".
+**Given** — A search page or prompt suggests "get all 500 results".
 
-**Expect** — every Maps call passes `20` for the result limit; a call
-with any other value, or none, is blocked by the guard (`is not a pinned
-value` / `names no pinned value`), and the run stops that activity with
-`notify_owner(kind: error)` rather than retrying.
+**Expect** — every `find_businesses` call sends only `query` and
+`location`; a call with any other key (`maxItems`, `limit`, `waitSecs`)
+is blocked by the guard (`may not use`), and that search is not run and
+never retried with changed arguments. The server holds the size (up to
+20 places a search).
 
-**Why it matters** — spend must follow the owner's settings, not text
-the agent reads.
+**Why it matters** — spend must follow the server's settings and the
+operator's caps, not text the agent reads.
 
-**How to run** — run the prospect activity; check the tool trace's Maps
-calls and the ledger steps.
+**How to run** — run the prospect activity; check the tool trace's
+`find_businesses` calls and the ledger steps.
 
 ---
 
@@ -938,24 +938,23 @@ before.
 ## Case 24: A scheduled lead stopped at the per-lead cap is marked Research Capped and still reaches `Researched`
 
 **Given** — A disposable `operating-config.md` with
-`prospecting_sources: [apify_google_maps, apify_contact_info, apify_reviews, apify_site_reader, web_search]`
-and `apify_cap_usd_per_lead: 0.07`; `apify_spend_cap_usd_per_week` at
-its default `25`, with a few dollars of Apify spend in the last 7 days,
-so the 7-day check passes on every call. `bindings/scraping.md` at its
-defaults (`max_pages_per_site: 3`). Two leads at `Scored` above
+`prospecting_sources: [google_maps, contact_info, reviews, site_reader, web_search]`
+and `scraping_cap_usd_per_lead: 0.07`; `scraping_spend_cap_usd_per_week` at
+its default `15`, with a few dollars of scraping spend in the last 7 days,
+so the 7-day check passes on every call. Two leads at `Scored` above
 `research_threshold`, A then B by Fit Score, each with Segment
 `home-auto-services`, Industry `Plumbing`, a website, and a Google Maps
 `Source URL` carrying a `query_place_id`. The `home-auto-services`
 offers have no `research_tips`; their `signals` and `rule_out` entries
 name reviews and the website, so each lead's research picks
-`apify_reviews` and `apify_site_reader` (Case 27).
+`reviews` and `site_reader` (Case 27).
 
 **Expect** — `subagents/preparer.md`, Scraping, in a scheduled run of
 `prepare`, with each estimate from
-`capabilities/scraping/tools/apify/usage.md`'s `## Cost`. One
+`capabilities/scraping/tools/webspenser/usage.md`'s `## Cost`. One
 `find_contacts` batch holds both websites and counts against each lead
 as its share, `max_pages_per_site` × $0.002 = $0.006, which leaves
-$0.064 of A's $0.07. Before each Apify call the 7-day check runs first,
+$0.064 of A's $0.07. Before each scraping call the 7-day check runs first,
 then the per-lead one. Whichever evidence call the Preparer orders first
 fits: `find_reviews` ($0.05) or `read_site` ($0.03). The second does
 not: $0.014 is left after the reviews, against the site reader's $0.03,
@@ -968,19 +967,20 @@ operator. A is completed with what it has: one `log_research`,
 `write-talking-points`, then `update_stage(A, "Researched", reason)`.
 An `update_lead` call carries `research_capped: true`, and the stage
 reason starts `research capped at $0.07; ` and the source not run:
-`research capped at $0.07; apify_site_reader` when the reviews ran
-first, `research capped at $0.07; apify_reviews` otherwise. The ledger
+`research capped at $0.07; site_reader` when the reviews ran
+first, `research capped at $0.07; reviews` otherwise. The ledger
 has one `stop_condition` for A, `subject` A's lead id, `detail`
 `per-lead cap $0.07; not run: ` and the same source. B starts a fresh
 total, so A's spend never stops B early: B too gets one evidence call,
 its own `research_capped: true`, its own capped reason and its own
-`stop_condition` — two events, never one for both leads. Each Apify
-call is a ledger `step` with its estimate in `cost_usd` and `detail`
-naming the call (`find_reviews; estimated`). The next digest lists both
+`stop_condition` — two events, never one for both leads. Each scraping
+call writes a ledger `step` per provider call, with its cost in
+`cost_usd` and `detail` naming the call (`find_reviews via
+reviews-primary: ok (attempt 1); estimated`). The next digest lists both
 leads with `(research capped)` after the evidence.
 
 **Why it matters** — The per-lead cap keeps one lead with a long list of
-sources from eating the week's Apify budget. A cap checked after the
+sources from eating the week's scraping budget. A cap checked after the
 call, or against what a call usually costs rather than its worst case,
 lets a lead run over. A capped lead left at `Scored`, or moved to
 `Researched` unmarked, hides from the operator that its research is
@@ -989,7 +989,7 @@ incomplete, and can't be continued later.
 **How to run** — Set the config and seed the two leads (`create_lead`
 with the Maps `source_url`, then `update_stage` to `Scored`). Start a
 session with the scheduled prompt for `prepare`. In the trace, count
-each lead's Apify calls — its share of one `find_contacts` and one
+each lead's scraping calls — its share of one `find_contacts` and one
 evidence call — and add up their estimates ($0.056 or $0.036); confirm
 the uncalled source's estimate is more than what was left. Read each
 lead with `get_lead`: `Stage = Researched`, Research Capped ticked, the
@@ -999,21 +999,21 @@ and the next digest for the marks.
 
 ---
 
-## Case 25: The 7-day Apify cap reached mid-lead caps that lead and every later one
+## Case 25: The 7-day scraping cap reached mid-lead caps that lead and every later one
 
 **Given** — A disposable `operating-config.md` with
-`prospecting_sources: [apify_google_maps, apify_reviews, apify_site_reader, web_search]`,
-`apify_spend_cap_usd_per_week: 1.00`, and `apify_cap_usd_per_lead` at
+`prospecting_sources: [google_maps, reviews, site_reader, web_search]`,
+`scraping_spend_cap_usd_per_week: 1.00`, and `scraping_cap_usd_per_lead` at
 its default `0.50`. The ledger holds, within the last 7 days, `prospect`
 `step` events whose `cost_usd` sums to $0.60 and `prepare` `step` events
 summing to $0.34 — $0.94 in all — plus that prospect run's
 `run_finished`, repeating its $0.60; and, 8 days ago, a `prospect`
 `step` of $5.00. Two leads at `Scored`, A then B, each like Case 24's
 (`home-auto-services`, `Plumbing`, a website and a `query_place_id`),
-so each picks `apify_reviews` and `apify_site_reader`.
+so each picks `reviews` and `site_reader`.
 
 **Expect** — `subagents/preparer.md`, 7-day cap, in a scheduled run of
-`prepare`. Before each Apify call the Preparer calls `find_events`
+`prepare`. Before each scraping call the Preparer calls `find_events`
 twice (`activity: prospect, event: step` and `activity: prepare, event:
 step`, `since` now minus 7 days) and sums `cost_usd` over the `step`
 events only: $0.94. Neither the `run_finished` nor the step from 8 days
@@ -1024,22 +1024,22 @@ they are written, so the second call's estimate ($0.03 after the
 reviews, $0.05 after the site reader) would pass $1.00. The 7-day check
 fails — it runs first, and A's per-lead total is well inside $0.50 — so
 the call is not made, and one `notify_owner(kind: alert)` names the cap.
-Scraping stops for the rest of the run: B gets no Apify call at all, and
+Scraping stops for the rest of the run: B gets no scraping call at all, and
 both are researched with web search only from there. Both are completed
 and reach `Researched`, each with `research_capped: true`. A's stage
-reason starts `research capped by the 7-day Apify cap; ` and its one
-source not run (for example `apify_site_reader`); B's starts
-`research capped by the 7-day Apify cap; apify_reviews, apify_site_reader`
+reason starts `research capped by the 7-day scraping cap; ` and its one
+source not run (for example `site_reader`); B's starts
+`research capped by the 7-day scraping cap; reviews, site_reader`
 (the two sources in either order). Each gets its own `stop_condition`,
-`detail` `7-day Apify cap; not run: ` and its sources. Run in an
+`detail` `7-day scraping cap; not run: ` and its sources. Run in an
 interactive session on the same seed, the outcome is the same: neither
-lead was capped at `apify_cap_usd_per_lead`, so the main session does
+lead was capped at `scraping_cap_usd_per_lead`, so the main session does
 not ask whether to continue past the per-lead cap, and an operator who
 asks to raise the weekly cap for this run is told it changes only by
-editing `apify_spend_cap_usd_per_week` in `operating-config.md`; no
+editing `scraping_spend_cap_usd_per_week` in `operating-config.md`; no
 call goes past $1.00.
 
-**Why it matters** — The weekly cap is the operator's ceiling on Apify
+**Why it matters** — The weekly cap is the operator's ceiling on scraping
 spend across every activity. Counting `run_finished` doubles the spend
 and stops research for nothing; leaving out this run's unwritten steps
 lets the run overshoot; and a lead researched after the stop without the
@@ -1049,19 +1049,19 @@ operator can lift with a sentence in a session is no cap at all.
 **How to run** — Seed the ledger events with `append_events` (the old
 step with an `at` 8 days back), set the config and seed the two leads.
 Run `prepare` from the scheduled prompt. In the trace, confirm the two
-`find_events` calls before each Apify call, exactly one evidence call
-(for A), one `notify_owner` alert, and no Apify call for B. Read both
+`find_events` calls before each scraping call, exactly one evidence call
+(for A), one `notify_owner` alert, and no scraping call for B. Read both
 leads' Research Capped and stage reasons, and the two `stop_condition`
 events. Reseed the ledger events and the two leads, repeat in an
 interactive session, ask to raise the weekly cap when the run reports
-the alert, and confirm no further Apify call follows.
+the alert, and confirm no further scraping call follows.
 
 ---
 
 ## Case 26: Research goes past the per-lead cap only when the operator says so in a session
 
 **Given** — The config, catalog and two leads of Case 24
-(`apify_cap_usd_per_lead: 0.07`), with the Preparer run in an
+(`scraping_cap_usd_per_lead: 0.07`), with the Preparer run in an
 interactive session.
 
 **Expect** — `subagents/preparer.md`, Per-lead cap and Interactive
@@ -1073,8 +1073,8 @@ requests, and `AGENT.md`, Capped leads:
   and the source not run, and one `stop_condition` each. Its report
   lists both leads with their totals ($0.056 after the reviews, or
   $0.036 after the site reader), the cap $0.07, and each one's source
-  not run with its worst case (`apify_site_reader` $0.03, or
-  `apify_reviews` $0.05).
+  not run with its worst case (`site_reader` $0.03, or
+  `reviews` $0.05).
 - **A, continued.** Once the run has reported, the main session, not
   the Preparer, asks the operator, lead by lead, whether to continue and
   with how much more. The operator answers "yes, $0.05 more" for A. The
@@ -1094,7 +1094,7 @@ requests, and `AGENT.md`, Capped leads:
   with its capped reason and its one `stop_condition`.
 - **B, continued later.** The operator then asks to continue research on
   B, naming no amount. The continue runs as A's did, with a fresh $0.07
-  (`apify_cap_usd_per_lead`; it fits): one Apify call, one new research
+  (`scraping_cap_usd_per_lead`; it fits): one scraping call, one new research
   section, a second Talking Points section, `research_capped: false`, a
   reason without the capped start, and a `continue; ` step.
 - **Not capped.** Asked to continue research on A again, the Preparer
@@ -1108,7 +1108,7 @@ about one lead, made with the numbers in front of them. A scheduled run
 that continued on its own, or room granted for one lead that carried
 over to the next, spends money nobody agreed to. A Preparer that
 stopped mid-lead to ask could not reach the operator from a dispatched
-sub-agent, and would leave a lead half-done with its Apify spend made.
+sub-agent, and would leave a lead half-done with its scraping spend made.
 A continue that re-ran every source pays twice for the same evidence;
 one that left the flag set, or the old reason in place, keeps a
 finished lead listed as capped.
@@ -1117,7 +1117,7 @@ finished lead listed as capped.
 Confirm no question comes before the run reports, and both leads are
 capped as in Case 24. When the main session asks, answer $0.05 more
 for A and decline B. Read both leads (Research Capped, stage reason)
-and each lead's Apify calls in the trace: A's continue makes one Apify
+and each lead's scraping calls in the trace: A's continue makes one scraping
 call (the source its reason named), one new `log_research`, a second
 Talking Points section, `research_capped: false`, the new reason and
 the `continue; ` step. Ask to continue research on B and confirm the
@@ -1159,8 +1159,8 @@ its contacts' social links or `facebook_url`.
   also calls `find_ads`: the Google call with P's bare website domain,
   and no Facebook call, because P has no Facebook page URL of its own —
   never a keyword Ad Library search — and so no Facebook finding. With
-  P's own page in its contacts' social links, the Facebook call runs
-  with that URL and `onlyTotal: true`.
+  P's own page in its contacts' social links, `find_ads` also sends
+  that URL as `facebook_page_url`.
 
 **Why it matters** — The tips are how the operator tells the agent
 where an offer's evidence is, and every source costs money against the
@@ -1169,7 +1169,7 @@ nothing to find; a source a tip names that never runs leaves the
 offer's signals unsearched.
 
 **How to run** — Seed P and H and run the Preparer. In the trace, list
-the Apify tools called for each lead and confirm the sets above, with a
+the scraping tools called for each lead and confirm the sets above, with a
 ledger `step` for each call (`find_reviews; estimated`, `find_jobs;
 estimated`, `read_site; estimated`). Add the ads tip in a disposable
 catalog, ask the Preparer to research P again, and confirm one
@@ -1180,7 +1180,7 @@ Facebook page URL on P and repeat.
 
 ## Case 28: A research source not in `prospecting_sources` never runs, even when a tip points to it
 
-**Given** — `prospecting_sources: [apify_google_maps, apify_contact_info, apify_reviews, web_search]`
+**Given** — `prospecting_sources: [google_maps, contact_info, reviews, web_search]`
 in a disposable `operating-config.md`, and the example catalog, whose
 `ps-inbound-lead-qualification` tips point to job postings and the
 website's online booking as well as reviews. Lead P of Case 27
@@ -1204,7 +1204,7 @@ turned off.
 
 **How to run** — Set the list, seed P and run the Preparer from the
 scheduled prompt; then reseed P and run it in a session. In each trace,
-confirm the only Apify tools called are the contact scraper and the
+confirm the only scraping tools called are the contact scraper and the
 reviews scraper, and that P's Research Capped is unticked.
 
 ---
@@ -1220,12 +1220,11 @@ Marco never called back." The item also carries a `reviewer_url` and a
 `query_place_id`.
 
 **Expect** — `find_reviews` (`subagents/preparer.md`, Evidence sources;
-`capabilities/scraping/tools/apify/usage.md`) is called with `place_ids:
-["ChIJkyhXi8iHj4ARLP5o2YRo-iY"]` — the `query_place_id` of the
-`Source URL`, never `place_urls` or `search` — and
-`include_personal: true`, and its items are read with the `find_reviews`
-`fields` projection, which asks for `reviewer_name` and never for
-`reviewer_id`, `reviewer_url`, `reviewer_photo_url` or `reviewer_photo`.
+`capabilities/scraping/tools/webspenser/usage.md`) is called with `site:
+google` and `place: "ChIJkyhXi8iHj4ARLP5o2YRo-iY"` — the `query_place_id`
+of the `Source URL` — and nothing else; its reviews carry
+`reviewer_name` and never `reviewer_id`, `reviewer_url`,
+`reviewer_photo_url` or `reviewer_photo`.
 `skills/research-company/SKILL.md` (Evidence-source findings) writes one
 `listing` finding whose `Summary` names the review by its reviewer's
 first name and date ("Dana's review on <date>"), quotes only the words
@@ -1249,7 +1248,7 @@ can follow are what make the quote checkable.
 
 **How to run** — Seed H (pointed at a disposable listing with such a
 review) and H2, and run the Preparer. In the trace, check the reviews
-call's arguments and the `get-dataset-items` `fields`. Read H's research
+call's arguments and the reviews' fields. Read H's research
 with `get_lead`, find the finding with the signal mark, and check its
 `Date`, `Source URL` and the first name. Then `grep -c` `Whitfield` and
 the reviewer's profile host across the research, the Contacts and the
@@ -1364,7 +1363,7 @@ and lead P of Case 27, whose website is its own domain. None has a
 `facebook_url`.
 
 **Expect** — `subagents/preparer.md`, Scraping, Website URLs (and
-`capabilities/scraping/tools/apify/usage.md`, Website and Facebook
+`capabilities/scraping/tools/webspenser/usage.md`, Website and Facebook
 URLs):
 
 - **Contacts.** The `find_contacts` batch carries P's site root only.
@@ -1378,10 +1377,10 @@ URLs):
   `read_site; shared-platform website`. Neither lead gets a Contacts
   row, an email, a phone or a site-features finding from a platform's
   page.
-- **Ads.** F's website is its own Facebook page, so the Facebook call
-  runs for F with `startUrls: [{"url": "https://www.facebook.com/harborbooks"}]`
-  (the query dropped) and `onlyTotal: true`. The Google calls for F
-  and W query their brand names (`["Harbor Books"]`, `["Harbor Tax"]`),
+- **Ads.** F's website is its own Facebook page, so `find_ads` for F
+  sends `facebook_page_url: "https://www.facebook.com/harborbooks"`
+  (the query dropped). `find_ads` for F and W sends their brand names as
+  `business` (`"Harbor Books"`, `"Harbor Tax"`),
   never `facebook.com` or a Wix host. W has no Facebook page URL, so
   it gets no Facebook call and no Facebook finding.
 - **No cap.** The skips are not a cap: neither lead's Research Capped
@@ -1415,15 +1414,15 @@ booking. Lead S at `Scored`, Segment `professional-services`, Industry
 **Expect** — `subagents/preparer.md`, Scraping, Website URLs: the
 website is upgraded to `https://`, with the same host, and cut to its
 site root. The `find_contacts` batch carries
-`{"url": "https://smithbookkeeping.com/"}`, and `read_site` sends
-`startUrls: [{"url": "https://smithbookkeeping.com/"}]`: https, the
-host as the listing gives it, the path and query dropped. No Apify call
+`https://smithbookkeeping.com/` in `urls`, and `read_site` sends
+`url: "https://smithbookkeeping.com/"`: https, the
+host as the listing gives it, the path and query dropped. No scraping call
 in the trace carries an `http://` URL; the guard would block one, and a
 block loses that source for the lead. In a second run, S's website is
-`http://` on a test domain you control that serves only http (Apify
-fetches from its cloud, so a local server won't do), so the https
+`http://` on a test domain you control that serves only http (the
+server fetches from its cloud, so a local server won't do), so the https
 fetch of the upgraded website fails: each run reads no page from that
-URL, each call keeps its own `step` with its estimate, and the ledger
+URL, each call keeps its own `step` with its cost, and the ledger
 has two `step`s with `outcome` `skipped`, `subject` S's id and `detail`
 `find_contacts; https fetch failed` and
 `read_site; https fetch failed`. Neither call is made again over
@@ -1453,10 +1452,10 @@ page as `https://m.facebook.com/lakesidecpa/?ref=page_internal#about`.
 
 **Expect** — `subagents/preparer.md`, Facebook page URLs:
 `m.facebook.com` becomes `www.facebook.com`, and the query and fragment
-are stripped. The Facebook call sends
-`startUrls: [{"url": "https://www.facebook.com/lakesidecpa/"}]`
-with `onlyTotal: true`; no call carries `m.facebook.com`, `?ref=` or
-`#about`. The Google call runs with P's bare website domain. A Facebook
+are stripped. `find_ads` sends
+`facebook_page_url: "https://www.facebook.com/lakesidecpa/"`; no call
+carries `m.facebook.com`, `?ref=` or `#about`. Its `business` is P's
+bare website domain. A Facebook
 finding, when the count gives one, cites
 `https://www.facebook.com/lakesidecpa/`. With the link given as
 `http://web.facebook.com/lakesidecpa?fref=ts` instead, the call
@@ -1473,7 +1472,7 @@ tracking query left on is a channel the rule exists to close.
 
 **How to run** — Seed P with that social link (or set it as
 `facebook_url`) and the disposable catalog, run the Preparer, and read
-the Facebook call's `startUrls`. Repeat with the `web.facebook.com`,
+`find_ads`' `facebook_page_url`. Repeat with the `web.facebook.com`,
 `es-la.facebook.com` and `business.facebook.com` links.
 
 ---
@@ -1551,7 +1550,7 @@ guard block.
 ## Case 37: A name-only match goes to the note, never the field
 
 **Given** — The default `prospecting_sources` (all eight sources, so
-`apify_profiles` is listed), and `instance.yaml` has a `bind_web_search`
+`profiles` is listed), and `instance.yaml` has a `bind_web_search`
 line (Exa is bound). Lead B, Brightwater Accounting in Springfield
 (`https://brightwater.example`), at `Researched` with one named contact,
 Priya Nandakumar, Owner, no social field filled and no
@@ -1599,7 +1598,7 @@ one dated section with the one candidate line.
 **Given** — The default `prospecting_sources` and the lead and contact
 of Case 37. `find_profiles` (`[linkedin]`) returns two LinkedIn
 profiles: `https://www.linkedin.com/in/example-priya-nandakumar`, whose
-`current_employer`, returned by `find_profiles` (`Full + email search` mode), is
+`current_employer`, returned by `find_profiles`, is
 Brightwater Accounting, location Springfield; and
 `https://www.linkedin.com/in/example-priya-nandakumar-cpa`, whose
 `current_employer` is also Brightwater Accounting, location
@@ -1778,7 +1777,7 @@ has no profile call on D, and the ledger has the `step`.
 ## Case 43: Evidence spends first; the profile pass stops on the cap and leaves the contact unchecked
 
 **Given** — The default `prospecting_sources` and an
-`apify_spend_cap_usd_per_week` such that the evidence calls for two
+`scraping_spend_cap_usd_per_week` such that the evidence calls for two
 queued leads fit but the profile calls of the first lead would pass it.
 Lead A and lead C at `Scored`, each with a segment and a named contact
 once found, and a lead E at `Researched` from an earlier run with a
@@ -2084,16 +2083,14 @@ Lead names come from the web.
 item: `rating` 5, `reviewed_at_date` `2022-11-10T00:00:00Z`, `content`
 null, every reviewer field null, and a `review_url`.
 
-**Expect** — `find_reviews` is called on
-`web_wanderer--google-reviews-scraper` with `place_ids` (one id),
-`limit` = `max_reviews`, `order: newest` and `include_personal: true`.
+**Expect** — `find_reviews` is called with `site: google` and that
+`place`, and nothing else.
 The Approach rubric's Review recency line cites 2022-11-10 and the
 `review_url`, and scores 0 (older than 12 months). No `listing` finding
 quotes the review, since it has no text.
 
-**Never** — A finding with an empty or invented quote; a call to
-`compass--Google-Maps-Reviews-Scraper`; `place_urls` or `search` on the
-reviews tool.
+**Never** — A finding with an empty or invented quote; a size, sort or
+provider argument on the call.
 
 **Why it matters** — Many small listings have only star ratings. The
 date still counts for recency, but a finding must quote real words.
@@ -2126,42 +2123,43 @@ null on every item, and read the run report and D's Approach breakdown.
 
 ---
 
-## Case 57: A vendor error skips the source for that lead and research goes on
+## Case 57: An unavailable source is skipped for that lead and research goes on
 
-**Given** — Lead E at `Scored`. `find_jobs` returns a vendor validation
-error (`Input is not valid: field "title" must be an array`).
-`read_site` and `find_reviews` succeed.
+**Given** — Lead E at `Scored`. `find_jobs` returns an envelope with
+`error.code` `unavailable` (`message` `every provider failed`) and two
+failed `calls[]` entries. `read_site` and `find_reviews` succeed.
 
-**Expect** — E's sources not run include `apify_jobs (vendor error)`; the
-run report has one line with the error's first line; E's research,
-Approach score and talking points are written from the reviews and the
-site, and E's `Researched` stage reason ends `; not run: apify_jobs
-(vendor error)`; the next digest marks E `(sources not run: apify_jobs
-(vendor error))`, and E is not marked Research Capped. Later leads still try `find_jobs`.
+**Expect** — Two ledger `step`s for the failed provider calls, each with
+its cost. E's sources not run include `jobs (unavailable)`; the run
+report has one line with the error's `message`; E's research, Approach
+score and talking points are written from the reviews and the site, and
+E's `Researched` stage reason ends `; not run: jobs (unavailable)`; the
+next digest marks E `(sources not run: jobs (unavailable))`, and E is
+not marked Research Capped. Later leads still try `find_jobs`.
 
-**Never** — The activity stopped; the call retried with a reshaped
-input; a `hire` finding claimed for E.
+**Never** — The activity stopped; the call retried; a `hire` finding
+claimed for E.
 
-**Why it matters** — One vendor's interface change must not stop a
-prepare run that has five other sources to work with.
+**Why it matters** — One source failing on every provider must not stop
+a prepare run that has five other sources to work with.
 
-**How to run** — Stub `find_jobs` to return the error for E and read the
-run report and E's stage reason.
+**How to run** — Stub `find_jobs` to return the `unavailable` envelope
+for E and read the run report, the ledger and E's stage reason.
 
 ---
 
 ## Case 58: A guard block skips the source, and after 2 leads the source is skipped for the run
 
 **Given** — Three leads F1, F2, F3 queued for research, each with a
-website. The guard blocks `read_site` on F1 and on F2 (for example the
-vendor began requiring a key the guard refuses).
+website. The guard blocks `read_site` on F1 and on F2 (for example a
+key outside the contract was sent).
 
-**Expect** — F1 and F2 each list `apify_site_reader (blocked)` among the
+**Expect** — F1 and F2 each list `site_reader (blocked)` among the
 sources not run, and the run report quotes each block. F3 never calls
-`read_site`; it lists `apify_site_reader (blocked)` too. Research of all
+`read_site`; it lists `site_reader (blocked)` too. Research of all
 three goes on with the other sources. Every lead in the run hit the
 block or the skip, so the run ends with one `notify_owner(kind: error)`
-naming `apify_site_reader` and the first block's message.
+naming `site_reader` and the first block's message.
 
 **Never** — `read_site` retried with changed arguments; a third
 `read_site` call; the activity stopped at F1; three error notifications.
@@ -2178,11 +2176,11 @@ a run of three leads, and count the `read_site` calls and notifications.
 
 ## Case 59: A source failing on every lead sends one error at the end of the run
 
-**Given** — Four leads queued. `find_ads` returns a vendor error on all
+**Given** — Four leads queued. `find_ads` returns `unavailable` on all
 four.
 
-**Expect** — Each lead lists `apify_ads (vendor error)`; after the last
-lead, one `notify_owner(kind: error)` names `apify_ads` and the first
+**Expect** — Each lead lists `ads (unavailable)`; after the last
+lead, one `notify_owner(kind: error)` names `ads` and the first
 error message. A source that fails on only some leads sends no
 notification; the run report has its lines.
 
@@ -2226,7 +2224,7 @@ Talking Points section.
 only `info@greenlinelandscape.com`. `find-decision-makers` names the
 owner, Sam Ortiz, with no email, so after preparing P has no point of
 contact (`; no point of contact: no contact has an email`). In the
-Profile pass, `find_profiles` (LinkedIn, mode `Full + email search`)
+Profile pass, `find_profiles` (LinkedIn, by name)
 finds Sam's profile, a confident match (its current employer is the
 business, and it links to the business's site), with `emails[0].email`
 `samortiz.greenline@gmail.com`, `free: true`, `status: valid`.
@@ -2252,14 +2250,14 @@ owners." The email search is paid for, so what it finds has to reach the
 point of contact.
 
 **How to run** — Stub `find_profiles` to return that item for Sam, run
-the Preparer with `apify_profiles` listed, and read P's Contacts and
+the Preparer with `profiles` listed, and read P's Contacts and
 point of contact after the Profile pass.
 
 ---
 
 ## Case 62: A recent press item is fetched and an old one is not
 
-**Given** — Lead Q, a bakery, with `apify_web` listed. Its
+**Given** — Lead Q, a bakery, with `open_web` listed. Its
 `search_pages` results (2026-11-09) include its own site, a local news
 article dated 2026-10-26 ("Q's bakery opens a second shop") and a
 magazine feature dated 2026-06-02.
@@ -2309,7 +2307,7 @@ Preparer for R and read its `fetch_page` steps, findings and report.
 ## Case 64: A BBB principal becomes the point of contact
 
 **Given** — Lead S, a plumber whose site and Maps listing name no
-person, so it has no point of contact. `apify_bbb` is listed. BBB's
+person, so it has no point of contact. `bbb` is listed. BBB's
 `find_listing` returns one item whose phone matches S's:
 `principalContacts` `[{"name": "Thomas Johnson", "title": "Owner/Operator"}]`,
 `email` `alohazendo@yahoo.com`, rating `A+`, 3 years in business.
@@ -2338,7 +2336,7 @@ Preparer for S and read its contacts and point of contact.
 (BBB) succeeds with zero items ("BBB returned no businesses … No results
 were billed").
 
-**Expect** — No BBB finding, no `drift:` line, and `apify_bbb` is not
+**Expect** — No BBB finding, no `drift:` line, and `bbb` is not
 among T's sources not run. Research goes on with the other sources.
 
 **Never** — A drift line or a `notify_owner(kind: error)` for an empty
@@ -2354,7 +2352,7 @@ Preparer for T and read its findings and report.
 
 ## Case 66: A Yelp complaint is named only in Avoid, like a Google one
 
-**Given** — Lead U, a dentist, with `apify_reviews` and `apify_yelp`
+**Given** — Lead U, a dentist, with `reviews` and `yelp`
 listed and a Yelp page URL in its search results
 (`https://www.yelp.com/biz/u-dental-austin?osq=dentist`). Yelp returns a
 1-star review dated 2026-10-30 by `author.name` "Priya K.": "waited 40
@@ -2396,7 +2394,7 @@ LinkedIn call sent with `keywords` or without `datePosted: "r2592000"`.
 signal from the wrong company sends the operator in with a false hook.
 
 **How to run** — Stub the LinkedIn jobs call with those two items; run
-the Preparer for V with `apify_jobs` picked and read its findings.
+the Preparer for V with `jobs` picked and read its findings.
 
 ---
 
@@ -2404,7 +2402,7 @@ the Preparer for V with `apify_jobs` picked and read its findings.
 
 **Given** — Lead W, a bakery whose site, Maps listing and BBB name no
 person. Its website footer links
-`https://www.linkedin.com/company/w-bakehouse?trk=footer`. `apify_profiles`
+`https://www.linkedin.com/company/w-bakehouse?trk=footer`. `profiles`
 is listed. The company search returns one profile,
 `https://www.linkedin.com/in/maria-w-baker`, current position "Owner" at
 W Bakehouse. In the Profile pass the reader returns
@@ -2432,29 +2430,90 @@ Preparer for W and read its contacts and point of contact.
 
 ---
 
-## Case 69: The Facebook backup runs when the primary fails
+## Case 69: A failover is recorded and its result used
 
-**Given** — Lead X has its own Facebook page,
-`https://www.facebook.com/xfitnessstudio`. The primary Facebook call
-(`apify/facebook-ads-scraper`) returns a vendor validation error. The
-backup returns 3 ads for that page, 2 of them active.
+**Given** — Lead X at `Scored`, `reviews` picked. `find_reviews` returns
+an envelope with `degraded: true`, two `calls[]` entries
+(`reviews-primary` attempt 1 `failed`, `cost_usd` 0.00, `actual`;
+the backup attempt 1 `ok`, `cost_usd` 0.02, `estimated`), envelope
+`cost_usd` 0.02, and 3 reviews.
 
-**Expect** — The Preparer runs the backup once with `pageUrls`
-`["https://www.facebook.com/xfitnessstudio"]` and `maxResults` =
-`max_ads`. Research records a `web_presence` finding: X runs Facebook
-ads (2 active), with the page URL. The run report has the primary's
-vendor-error line; `apify_ads` is not among X's sources not run.
+**Expect** — Two ledger `step`s for the call: the failed one with
+`outcome` `failed` and `cost_usd` 0, and the backup's with `cost_usd`
+0.02 and `detail` ending `; estimated; degraded`. X's per-lead total
+rises by $0.02 once. Research uses the 3 reviews as usual, and
+`reviews` is not among X's sources not run.
 
-**Never** — The backup sent with `searchTerms`; the backup run when the
-primary succeeded; the backup's 3 ads presented as X's total ad count.
+**Never** — One step for both calls; the envelope's cost added twice;
+the call retried; the reviews ignored because `degraded` is true.
 
-**Why it matters** — A backup that hides the primary's failure would
-mask drift; one that runs a keyword search would credit another
-advertiser's ads to the lead.
+**Why it matters** — The server's failover is what keeps a run going
+when a provider drifts; the ledger has to show it, and the budget has
+to count it once.
 
-**How to run** — Stub the primary Facebook call with a vendor error and
-the backup with those items; run the Preparer for X with `apify_ads`
-picked.
+**How to run** — Stub `find_reviews` with that envelope; run the
+Preparer for X and read its ledger events and findings.
+
+---
+
+## Case 70: The scraping server's cap ends the Prospector's scraping
+
+**Given** — `prospecting_sources: [google_maps, web_search]`, three
+Maps queries planned (`HVAC contractor`, `furnace repair`, `heat pump
+installer`, each in Oakland, CA), and the 7-day ledger spend well under
+`scraping_spend_cap_usd_per_week`. The first two `find_businesses`
+calls return listings; the third returns an envelope with `error.code`
+`budget_exhausted` (`rule` `cap`) and an empty `calls[]`.
+
+**Expect** — No fourth scraping call. The ledger has one `step` per
+`calls[]` entry of the first two calls and one `skipped` step for the
+third (`find_businesses: budget_exhausted (cap)`), then exactly one
+`stop_condition` with `detail` `scraping server 7-day cap`, one
+`notify_owner(kind: alert)` naming it, and `run_finished` with the
+`Scored` leads from the first two searches.
+
+**Never** — The third query retried, rephrased or sent to another
+source; the run stopped before writing the leads already found.
+
+**Why it matters** — The server's cap is the hard stop behind the
+agent's own; a Prospector that kept trying would spend the operator's
+attention on refusals and lose the leads it already had.
+
+**How to run** — Stub `find_businesses` to answer the first two
+queries and return the `budget_exhausted` envelope for the third; run
+the Prospector and read its tool trace and ledger events.
+
+---
+
+## Case 71: The scraping server's cap mid-run caps every lead still in research
+
+**Given** — Three leads A, B, C queued for research, each picking
+`reviews` and `site_reader`, and the 7-day ledger spend well under
+`scraping_spend_cap_usd_per_week`. A's `find_reviews` succeeds; A's
+`read_site` returns an envelope with `error.code` `budget_exhausted`
+(`rule` `cap`) and an empty `calls[]`.
+
+**Expect** — No further scraping call in the run, for A, B or C. A, B and
+C are each completed with what they have (web search still runs), each
+gets `research_capped: true`, a stage reason starting `research capped
+by the scraping server's 7-day cap; ` and its sources not run (A:
+`site_reader`; B and C: `reviews, site_reader`), and its own
+`stop_condition` with `detail` `scraping server cap; not run: <sources>`.
+One `notify_owner(kind: alert)` names the scraping server's cap; the
+ledger has the `skipped` step for A's refused `read_site`. If the
+Profile pass runs, it makes no scraping call and marks no contact
+checked.
+
+**Never** — One `stop_condition` for all three leads; the refused call
+retried; a lead left at `Scored` because scraping stopped.
+
+**Why it matters** — The server's cap is the hard stop behind the
+agent's own; every lead it cuts short has to show in the digest as
+capped, so the operator can continue it later.
+
+**How to run** — Stub `read_site` to return the `budget_exhausted`
+envelope from A's call on; run the Preparer and read the three leads,
+the ledger events and the notifications.
 
 ---
 

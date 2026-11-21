@@ -22,7 +22,7 @@ A scheduled prospecting run, or the count of leads at stages `New` and
   list, read for the lead's Industry and Segment (never its offers: the
   hero offer is the Preparer's)
 - `context/operating-config.md` — `leads_per_week`,
-  `prospecting_sources`, `apify_spend_cap_usd_per_week`
+  `prospecting_sources`, `scraping_spend_cap_usd_per_week`
 - Existing leads, read via CRM `query_by_stage` on `New` and
   `Scored`, to keep from re-working a business already in the pipeline.
   When `create_lead` returns an existing lead, read it (`get_lead`) and
@@ -48,12 +48,12 @@ A scheduled prospecting run, or the count of leads at stages `New` and
 
 ## Tools allowed
 - Sourcing tools — only the sources listed in `prospecting_sources`
-  (`operating-config.md`): its own sources are `apify_google_maps`,
-  `apify_yellowpages` and `web_search` (and the `apollo` stub;
+  (`operating-config.md`): its own sources are `google_maps`,
+  `yellowpages` and `web_search` (and the `apollo` stub;
   Guardrails). The source `web_search` is the host's built-in web search, never the `web_search` capability (Exa):
   the Prospector never calls `search_web`. A source not in that list is never used, even when it
-  would find more leads. The Prospector ignores the Preparer-only sources `apify_contact_info`, `apify_reviews`, `apify_ads`, `apify_jobs`, `apify_site_reader`, `apify_web`, `apify_bbb` and `apify_yelp`
-  (and `apify_profiles`; as `operating-config.md` says): they research leads already found,
+  would find more leads. The Prospector ignores the Preparer-only sources `contact_info`, `reviews`, `ads`, `jobs`, `site_reader`, `open_web`, `bbb` and `yelp`
+  (and `profiles`; as `operating-config.md` says): they research leads already found,
   and never source new ones.
 - Scraping `find_businesses`, and `find_listing` with `directory: yellowpages`
 - CRM `create_lead`
@@ -70,9 +70,9 @@ A scheduled prospecting run, or the count of leads at stages `New` and
   `Scored` leads is reached for the run
 - Every source listed in `prospecting_sources` is exhausted — no
   further candidates are returned by any listed query or scrape. Only
-  the Prospector's own sources count (`apify_google_maps`,
-  `apify_yellowpages`, `web_search`); the Preparer-only names are skipped, never waited on
-- The `apify_spend_cap_usd_per_week` cap (from `operating-config.md`) is
+  the Prospector's own sources count (`google_maps`,
+  `yellowpages`, `web_search`); the Preparer-only names are skipped, never waited on
+- The `scraping_spend_cap_usd_per_week` cap (from `operating-config.md`) is
   hit
 
 In a scheduled (unattended) run, never ask the operator a question; if
@@ -81,39 +81,53 @@ what is missing, then stop and report it. Scheduled and interactive runs
 use the same sources: whatever `prospecting_sources` lists.
 
 ## Scraping
-For `apify_google_maps`, make one `find_businesses(query, location)` call
-per query. The location is a city and state (the tool passes them as
-structured `city`, `state` and `countryCode`), never free text: a free-text
-location can resolve to the wrong area. Deduplicate against the CRM, score
+For `google_maps`, make one `find_businesses(query, location)` call
+per query. The location is a city and state, sent structured as
+`location` {`city`, `state`, `country`}, never free text: a free-text
+location can resolve to the wrong area. One search returns up to 20 places per search: for more leads, run another search (another trade
+term or a nearby city), each under the skip rule in Ledger. Deduplicate against the CRM, score
 and create leads as for any other source.
 
-`apify_yellowpages` sources leads through `find_listing(directory: yellowpages, query, location)`: one call per query, the
+`yellowpages` sources leads through `find_listing(directory: yellowpages, query, location)`: one call per query, the
 same trade and city as the Maps query. Its listings are deduplicated by phone and website like Maps, against the CRM and against this
 run's Maps results; a listing with neither phone nor website is not a
 lead. A YellowPages lead takes its location from the listing's `address` (city and state as the listing gives them, not the query's
 city). A YellowPages lead has no Maps place id, so its `Source URL` is
-the listing's `source_url`, and the Preparer's Google reviews call is
-skipped for it until a Maps match is found. Estimate each call at the
-YellowPages line of `usage.md`'s `## Cost`.
+the listing's `listing_url`, and the Preparer's Google reviews call is
+skipped for it until a Maps match is found.
 
-Before each call, add up the Apify spend of the last 7 days (a rolling
+Each call returns the scraping tool's envelope (`usage.md`, Envelope).
+Write one `step` per entry in the envelope's `calls[]`, with that
+entry's `cost_usd` and the `detail` the Envelope gives, under the
+query's `subject` (Ledger); an error with no calls writes the one
+`skipped` step it describes. Use the `result` even when `degraded` is
+true; an empty `result` is a search with no finds. Never retry a call:
+the server has already retried and failed over.
+
+Before each call, add up the scraping spend of the last 7 days (a rolling
 window, not the calendar week): call `find_events` twice, with
 `activity: prospect, event: step` and `activity: prepare, event: step`,
 `since` set to now minus 7 days, and sum `cost_usd` over those `step`
 events only, leaving out every step whose `detail` starts with `search_web` (Exa
-spend is not Apify spend; `run_finished` repeats the run's total, so
+spend is not scraping spend; `run_finished` repeats the run's total, so
 counting it would double the spend). Add this run's own steps not yet written (queued or
-pending). Estimate the next call from `usage.md`'s `## Cost`: for Maps,
-`max_places_per_search` times the per-place estimate. If the spend plus
-that estimate would pass `apify_spend_cap_usd_per_week`, write a
+pending). Take the next call's cost as its worst case from the scraping tool's `## Cost`
+(`find_businesses` $0.08, `find_listing` on YellowPages $0.10). If the
+spend plus that worst case would pass `scraping_spend_cap_usd_per_week`, write a
 `stop_condition` event, call `notify_owner(kind: alert)` naming the cap,
 and stop scraping for this run.
 
-A guard block on a scraping call does not stop the activity: that
-search is not run, the run goes on with the next search, and the block
-is never retried with changed arguments (Drift in the Apify tool's
-`usage.md`); the run report quotes the block. When the same source is
-blocked or fails on every search of a run, the run ends with one `notify_owner(kind: error)` at the end of the run,
+On `budget_exhausted`, make no further scraping call this run: the
+server's own 7-day cap is reached. Write one `stop_condition` event with
+`detail` `scraping server 7-day cap`, call `notify_owner(kind: alert)`
+naming it, and finish the run with the leads found so far.
+
+A guard block, `input_refused` or `unavailable` on a scraping call does
+not stop the activity: that search is not run, the run goes on with the
+next search, and it is never retried with changed arguments (Drift in
+the scraping tool's `usage.md`); the run report quotes the block or the
+error's `message`. When the same source is blocked or fails on every
+search of a run, the run ends with one `notify_owner(kind: error)` at the end of the run,
 naming the source and its first message. A guard block on any other
 capability stops the activity and calls `notify_owner(kind: error)` with
 the block's message. Never retry a guard block.
@@ -147,20 +161,20 @@ carries two more fields, passed to `create_lead` as `industry` and
 ## Ledger
 Call `ledger_status` first; write `run_started` first and `run_finished` last, numbering events with `seq` per `capabilities/ledger/contract.md` (Run bracketing, Failure policy). Write `stop_condition`, `notify_sent` and `error` events when they happen.
 
-One `step` per source query: `subject` is the query for web search; for
+One `step` per provider call of a source query (the envelope's `calls[]`; one for a web search): `subject` is the query for web search; for
 `find_businesses` it is `<query>|<city>, <state>` (for example
 `HVAC contractor|Oakland, CA`), the same format used when matching prior
 steps; for `find_listing(directory: yellowpages)` it is `yellowpages|<query>|<city>, <state>`, so a YellowPages step never matches
 (or suppresses) a Maps query. `items_in` is the results returned,
-`items_out` the new `Scored` leads it produced, and every Apify step carries `cost_usd`, the call's cost (an estimate; `detail` says
-`estimated`). Before choosing
+`items_out` the new `Scored` leads it produced, and every scraping step carries `cost_usd`, the provider call's cost (`detail` says
+`estimated` when the server estimated it). Before choosing
 queries, call
 `find_events(since: 30 days ago, activity: prospect, event: step)` and
 skip any query whose `subject` matches a step with `outcome` `ok` and
 `items_out` 0, unless every remaining query would be skipped. An errored
 or partial step never suppresses a query. If `find_events` fails,
 proceed without skipping. `run_finished` carries the run's totals and
-the Apify spend in `cost_usd`.
+the scraping spend in `cost_usd`.
 
 ## Handoff
 Calls CRM `update_stage(lead_id, "Scored", reason)` on every lead that
@@ -194,6 +208,8 @@ for correct behavior.
   `offer_evidence` or `research_anyway`.
 - If `prospecting_sources` lists `apify_site_scraper`, stop and report
   `apify_site_scraper was renamed apify_contact_info`.
+- If `context/operating-config.md` lists a name renamed in 9.0.0 (an `apify_` source or cap key), stop and report `<old> was renamed <new> in 9.0.0`
+  (the table in the README's 8.7 upgrade note), naming each old key it found.
 - If `apollo` is listed in `prospecting_sources`, report that the
   Apollo tool is stubbed and not yet enabled, and continue with the
   remaining listed sources — never quietly swap in an unlisted one.

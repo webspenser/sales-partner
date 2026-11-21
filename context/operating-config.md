@@ -21,11 +21,12 @@ these keys are what make that countable.
 
 ```yaml
 leads_per_week: 40
-prospecting_sources: [apify_google_maps, apify_contact_info, apify_reviews, apify_ads, apify_jobs, apify_site_reader, apify_profiles, web_search]
+prospecting_sources: [google_maps, contact_info, reviews, ads, jobs, site_reader, profiles, web_search]
 research_quota_per_week: 10
 research_threshold: 60
-apify_spend_cap_usd_per_week: 25
-apify_cap_usd_per_lead: 0.50
+scraping_spend_cap_usd_per_week: 15
+scraping_cap_usd_per_lead: 0.50
+max_web_fetches_per_lead: 5
 research_budget_per_lead_minutes: 15
 tone: "[three adjectives from the interview]"
 business_name: "[the business's name, from the interview]"
@@ -41,41 +42,44 @@ business_name: "[the business's name, from the interview]"
 - **`leads_per_week`** — the Prospector's target count of new `Scored`
   leads per run; see `subagents/prospector.md`'s `Stop conditions`.
 - **`prospecting_sources`** — the sourcing tools the Prospector may
-  use, and the only ones. `apify_google_maps` returns local-business
+  use, and the only ones. `google_maps` returns local-business
   listings (name, address, phone, website, rating, review count)
-  through `find_businesses`; `apify_contact_info` runs `find_contacts`
+  through `find_businesses`; `contact_info` runs `find_contacts`
   (emails, phones and social links from a business's website; used by
-  the Preparer, not the Prospector); `apify_reviews` runs
-  `find_reviews` (a place's Google Maps reviews), `apify_ads` runs
-  `find_ads` (the ads a business is running), `apify_jobs` runs
-  `find_jobs` (a company's job posts) and `apify_site_reader` runs
+  the Preparer, not the Prospector); `reviews` runs
+  `find_reviews` (a place's Google Maps reviews), `ads` runs
+  `find_ads` (the ads a business is running), `jobs` runs
+  `find_jobs` (a company's job posts) and `site_reader` runs
   `read_site` (the text, links and markup of a few pages of a
   business's website); these four are used by the Preparer, which picks
   among them from the lead's segment's offers' `research_tips`;
-  `apify_web` runs `search_pages` and `fetch_page` (open-web search
+  `open_web` runs `search_pages` and `fetch_page` (open-web search
   results and pages: press, news and what the web says about a
-  business); `apify_bbb` runs `find_listing` on BBB (rating,
-  accreditation, years, complaints, owners) and `apify_yellowpages` on
+  business); `bbb` runs `find_listing` on BBB (rating,
+  accreditation, years, complaints, owners) and `yellowpages` on
   YellowPages (a directory listing: claimed, rating, email), and
-  `apify_yelp` runs `find_reviews` on a business's Yelp page; these are
-  used by the Preparer, and `apify_yellowpages` also by the Prospector,
+  `yelp` runs `find_reviews` on a business's Yelp page; these are
+  used by the Preparer, and `yellowpages` also by the Prospector,
   which sources leads from it by trade and city;
-  `apify_profiles` runs `find_profiles` and `read_profile` (the public
+  `profiles` runs `find_profiles` and `read_profile` (the public
   social profiles of a lead's named contacts) in the Preparer's Profile
   pass, after the run's leads are prepared; a list without it means no
   profile pass;
   `web_search` is the host's built-in search, not the Exa `web_search` capability
   (which the Preparer uses on its own when bound); `apollo` is a stubbed tool —
   listing it makes the Prospector report that it is not yet enabled,
-  never substitute another source. Every Apify source draws on
-  `apify_spend_cap_usd_per_week` and, for a lead being researched, on
-  `apify_cap_usd_per_lead`. A source left out of the list is not run,
+  never substitute another source. Every scraping source draws on
+  `scraping_spend_cap_usd_per_week` and, for a lead being researched, on
+  `scraping_cap_usd_per_lead`. A source left out of the list is not run,
   in scheduled and interactive runs alike. To research every new lead, set
   `research_quota_per_week` equal to `leads_per_week` and lower
   `research_budget_per_lead_minutes` so the week's budget still fits.
   The old key `apify_site_scraper` no longer exists:
   apify_site_scraper was renamed apify_contact_info in 7.2.
   A config that still lists it stops the run with that message.
+  The `apify_` source and cap names were renamed in 9.0.0 (the table in
+  the README's 8.7 upgrade note); a config that still lists one stops the
+  run with `<old> was renamed <new> in 9.0.0`.
 - **`research_quota_per_week`** — the ceiling on how many leads the
   Preparer researches per week, applied on top of `research_threshold`;
   see `subagents/preparer.md`'s `Trigger` and `Stop conditions`.
@@ -83,16 +87,16 @@ business_name: "[the business's name, from the interview]"
   rubric in `icp.md`, scored by the Prospector from the listing) a
   `Scored` lead needs to enter research. Default `60`. See `icp.md`'s
   Thresholds section for the full explanation of this gate.
-- **`apify_spend_cap_usd_per_week`** — the ceiling on Apify actor
+- **`scraping_spend_cap_usd_per_week`** — the ceiling on scraping
   spend per week, shared across the Prospector's sourcing and the
   Preparer's research, measured by adding up the ledger `Cost USD` of the
   last 7 days (a rolling window) for the prospect and prepare activities
-  before each Apify call; Apify's
-  account usage limit is the hard stop behind it. Reaching it is a `Stop conditions` trigger and
+  before each scraping call; the Webspenser scraping server's own 7-day
+  cap ($20) is the hard stop behind it, so keep this key below $20. Reaching it is a `Stop conditions` trigger and
   an `AGENT.md` escalation ("Escalate to human when").
-- **`apify_cap_usd_per_lead`** — the ceiling on Apify spend for
-  researching a single lead, in US dollars, summed over the estimated
-  cost of each Apify call for that lead (the contact scraper included).
+- **`scraping_cap_usd_per_lead`** — the ceiling on scraping spend for
+  researching a single lead, in US dollars, summed over the cost the
+  server reports for each scraping call for that lead (the contact scraper included).
   Default `0.50`, which also applies when the key is missing (an 8.0
   config). Before each call the Preparer checks that the call's
   worst-case estimate fits in what remains; if it doesn't, it stops
@@ -101,13 +105,17 @@ business_name: "[the business's name, from the interview]"
   $<cap>; <sources not run>`. That happens in every run; in an
   interactive session the operator is then asked whether to continue
   the lead, and with how much more. It sits inside
-  `apify_spend_cap_usd_per_week`, which stays the ceiling for the week.
+  `scraping_spend_cap_usd_per_week`, which stays the ceiling for the week.
 - **`research_budget_per_lead_minutes`** — the time budget the Preparer
   spends researching a single lead before it stops and hands off with
   whatever hooks it has found; see `subagents/preparer.md`'s `Stop
   conditions`. Default `15`, which also applies when the key is
   missing: a scraping call can wait up to 45 seconds, and a lead may
   use several.
+- **`max_web_fetches_per_lead`** — the most `fetch_page` calls the
+  Preparer makes for one lead (default `5`, which also applies when the
+  key is missing). The guard checks one call at a time and cannot count
+  them, so the Preparer does.
 - **`tone`** — three adjectives describing how the talking points should
   read, filled in by the interview from `business-profile.md`'s Voice
   section. Read by `write-talking-points` when it writes the opener.
